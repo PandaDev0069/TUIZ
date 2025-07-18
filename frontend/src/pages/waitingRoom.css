@@ -1,0 +1,45 @@
+.waiting-room {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  color: white;
+  font-family: 'Poppins', sans-serif;
+}
+
+.waiting-room h1 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.room-code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  margin: 1rem 0;
+  backdrop-filter: blur(5px);
+}
+
+.waiting-message {
+  font-size: 1.2rem;
+  margin: 1rem 0;
+  opacity: 0.9;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.loading {
+  font-size: 2rem;
+  margin-top: 2rem;
+  animation: pulse 2s infinite ease-in-out;
+}

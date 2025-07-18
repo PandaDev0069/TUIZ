@@ -26,15 +26,9 @@ io.on('connection', (socket) => {
     Player ID: ${socket.id}
     Player Name: ${name}`);
     
-    const result = roomManager.joinRoom(room, socket.id, name);
+    const players = roomManager.joinRoom(room, socket.id, name);
     
-    // Check if join was successful
-    if (result.error) {
-      socket.emit('join_error', { message: result.error });
-      return;
-    }
-    
-    // Join the Socket.IO room
+    // Join the Socket.IO room first
     socket.join(room);
     
     console.log(`✅ Room ${room} now has ${players.length} players`);
