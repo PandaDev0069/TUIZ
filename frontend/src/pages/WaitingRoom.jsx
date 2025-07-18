@@ -25,10 +25,16 @@ function WaitingRoom() {
       setPlayers(updatedPlayers)
     })
 
+    // Listen for game start
+    socket.on('start_game', () => {
+      navigate('/quiz', { state: { name, room } })
+    })
+
     // Cleanup listeners
     return () => {
       socket.off('player_joined')
       socket.off('player_left')
+      socket.off('start_game')
     }
   }, [name, room, navigate])
 

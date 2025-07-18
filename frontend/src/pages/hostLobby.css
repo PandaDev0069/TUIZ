@@ -1,19 +1,43 @@
+.lobby-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  max-width: 800px;
+  padding: 0 1rem;
+}
+
 .host-lobby-card {
   background: rgba(255, 255, 255, 0.1);
-  padding: 3rem;
+  padding: 2rem;
   border-radius: 16px;
   backdrop-filter: blur(8px);
   width: 100%;
-  max-width: 600px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   text-align: center;
+}
+
+.code-card {
+  margin-top: 2rem;
+}
+
+.code-card h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.code-card h2 {
+  font-size: 1.8rem;
+  margin-bottom: 2rem;
+  opacity: 0.9;
 }
 
 .room-code-display {
   font-size: 5rem;
   font-weight: bold;
   letter-spacing: 0.5rem;
-  margin: 2rem 0;
+  margin: 1rem 0;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   font-family: 'Courier New', monospace;
   background: rgba(255, 255, 255, 0.15);
@@ -21,14 +45,116 @@
   border-radius: 12px;
 }
 
+.terminal-card {
+  text-align: left;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.terminal-header h3 {
+  font-size: 1.4rem;
+  opacity: 0.9;
+}
+
+.player-count {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.terminal-window {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  height: 300px;
+  overflow-y: auto;
+}
+
+.terminal-content {
+  font-family: 'Courier New', monospace;
+}
+
+.terminal-line {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.prefix {
+  color: #10B981;
+}
+
+.player-name {
+  color: #93C5FD;
+}
+
+.joined-text {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.start-button {
+  margin-top: 1rem;
+  background: #10B981;
+  color: white;
+  font-size: 1.2rem;
+  padding: 1.2rem;
+  width: 100%;
+}
+
+.start-button:hover {
+  background: #059669;
+}
+
+/* Custom scrollbar for terminal window */
+.terminal-window::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminal-window::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.terminal-window::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.terminal-window::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
 @media (max-width: 480px) {
   .host-lobby-card {
     padding: 2rem 1rem;
+  }
+  
+  .host-lobby-card h1 {
+    font-size: 2rem;
+  }
+
+  .host-lobby-card h2 {
+    font-size: 1.5rem;
   }
   
   .room-code-display {
     font-size: 3.5rem;
     letter-spacing: 0.3rem;
     padding: 1.5rem 1rem;
+  }
+
+  .players-list {
+    max-height: 150px;
   }
 }

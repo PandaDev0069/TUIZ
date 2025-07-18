@@ -58,6 +58,11 @@ io.on('connection', (socket) => {
       });
     }
   });
+
+  socket.on('start_game', ({ room }) => {
+    console.log(`▶️ クイズ開始: Room ${room}`);
+    io.to(room).emit('start_game'); // Broadcast to all players in that room
+  });
 });
 
 const PORT = 3001;
