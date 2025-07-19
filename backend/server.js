@@ -204,7 +204,10 @@ io.on('connection', (socket) => {
 });
 
 const PORT = 3001;
-server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+const HOST = '0.0.0.0'; // Listen on all network interfaces
+server.listen(PORT, HOST, () => {
+    console.log(`🚀 Server is running on ${HOST}:${PORT}`);
+    console.log(`📱 Mobile access: Use your computer's local IP address (e.g., 192.168.1.xxx:${PORT})`);
+    console.log(`💻 Local access: http://localhost:${PORT}`);
 });
 
