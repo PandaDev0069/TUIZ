@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import socket from "../socket";
+import IntermediateScoreboard from "../components/IntermediateScoreboard";
 import "./quiz.css";
 
 function Quiz() {
@@ -13,6 +14,10 @@ function Quiz() {
   const [feedback, setFeedback] = useState("");
   const [timer, setTimer] = useState(10);
   const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [questionScore, setQuestionScore] = useState(0);
+  const [showIntermediateScores, setShowIntermediateScores] = useState(false);
+  const [intermediateData, setIntermediateData] = useState(null);
 
   useEffect(() => {
     if (!name || !room) {
@@ -26,6 +31,27 @@ function Quiz() {
       setSelected(null);
       setFeedback("");
       setTimer(10); // Reset timer for new question
+      setQuestionScore(0);
+      setShowIntermediateScores(false);
+    });
+
+    // Handle answer result
+    socket.on('answer_result', (result) => {
+      setScore(result.score);
+      setStreak(result.streak);
+      setQuestionScore(result.questionScore);
+      
+      if (result.correct) {
+        setFeedback(`正解！ +${result.questionScore}点 ${result.streak > 1 ? `🔥 ${result.streak}連続!` : ''}`);
+      } else {
+        setFeedback("不正解...");
+      }
+    });
+
+    // Handle intermediate scoreboard
+    socket.on('show_intermediate_scores', (data) => {
+      setIntermediateData(data);
+      setShowIntermediateScores(true);
     });
 
     // Handle game over
@@ -35,6 +61,8 @@ function Quiz() {
 
     return () => {
       socket.off('question');
+      socket.off('answer_result');
+      socket.off('show_intermediate_scores');
       socket.off('game_over');
     };
   }, [name, room, navigate]);
@@ -79,6 +107,21 @@ function Quiz() {
     };
   }, []);
 
+  const handleIntermediateComplete = () => {
+    setShowIntermediateScores(false);
+  };
+
+  if (showIntermediateScores && intermediateData) {
+    return (
+      <IntermediateScoreboard 
+        top5={intermediateData.top5}
+        currentPlayer={intermediateData.currentPlayer}
+        totalPlayers={intermediateData.totalPlayers}
+        onComplete={handleIntermediateComplete}
+      />
+    );
+  }
+
   if (!question) return (
     <div className="page-container">
       <div className="card">
@@ -91,6 +134,12 @@ function Quiz() {
   return (
     <div className="page-container">
       <div className="quiz-page">
+        <div className="player-stats">
+          <div className="current-score">スコア: {score}</div>
+          {streak > 1 && <div className="streak-badge">🔥 {streak}連続!</div>}
+          {questionScore > 0 && <div className="last-points">+{questionScore}</div>}
+        </div>
+        
         <div className="timer">{timer}</div>
         <h2>{question.question}</h2>
         <ul className="options-list">
@@ -111,10 +160,9 @@ function Quiz() {
             {feedback}
           </p>
         )}
-        {score > 0 && <p className="score">スコア: {score}</p>}
       </div>
     </div>
-  )
+  );
 }
 
 export default Quiz;

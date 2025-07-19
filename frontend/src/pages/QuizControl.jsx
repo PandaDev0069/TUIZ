@@ -12,6 +12,8 @@ function QuizControl() {
   const [nextQuestion, setNextQuestion] = useState(null);
   const [responses, setResponses] = useState([]);
   const [canAdvance, setCanAdvance] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState(null);
 
   useEffect(() => {
     if (!room || !title) {
@@ -37,15 +39,32 @@ function QuizControl() {
       navigate('/scoreboard', { state: { scoreboard, room, isHost: true } });
     });
 
+    // Listen for host analytics
+    socket.on('show_host_analytics', (data) => {
+      setAnalyticsData(data);
+      setShowAnalytics(true);
+    });
+
     return () => {
       socket.off('question');
       socket.off('player_answered');
       socket.off('game_over');
+      socket.off('show_host_analytics');
     };
   }, [room, title, navigate]);
 
   const handleNextQuestion = () => {
     socket.emit('next_question', { room });
+    setResponses([]);
+    setCanAdvance(false);
+  };
+
+  const handleContinueGame = () => {
+    socket.emit('continue_game', { room });
+    setShowAnalytics(false);
+    setAnalyticsData(null);
+    setResponses([]);
+    setCanAdvance(false);
   };
 
   if (!currentQuestion) {
@@ -57,6 +76,74 @@ function QuizControl() {
         </div>
       </div>
     );
+  }
+
+  // Analytics Modal Component
+  const AnalyticsModal = () => (
+    <div className="analytics-overlay">
+      <div className="analytics-modal">
+        <div className="analytics-header">
+          <h2>📊 質問結果分析</h2>
+          <div className="analytics-summary">
+            {analyticsData?.analytics && (
+              <>
+                <div className="stat-item">
+                  <span className="stat-label">回答率:</span>
+                  <span className="stat-value">{analyticsData.analytics.responseRate}%</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">正解率:</span>
+                  <span className="stat-value">{analyticsData.analytics.correctRate}%</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">回答者数:</span>
+                  <span className="stat-value">{analyticsData.analytics.totalResponses}/{analyticsData.analytics.totalPlayers}</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="analytics-content">
+          <div className="answer-distribution">
+            <h3>回答分布</h3>
+            {analyticsData?.analytics?.answerDistribution?.map((count, index) => (
+              <div key={index} className="answer-bar">
+                <span className="answer-label">選択肢 {index + 1}</span>
+                <div className="bar-container">
+                  <div 
+                    className={`bar ${currentQuestion?.correctIndex === index ? 'correct' : ''}`}
+                    style={{ width: `${analyticsData.analytics.totalResponses > 0 ? (count / analyticsData.analytics.totalResponses) * 100 : 0}%` }}
+                  ></div>
+                  <span className="count">{count}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="top-players">
+            <h3>現在の上位プレイヤー</h3>
+            {analyticsData?.leaderboard?.slice(0, 5).map((player, index) => (
+              <div key={player.id} className="player-rank">
+                <span className="rank">#{index + 1}</span>
+                <span className="name">{player.name}</span>
+                <span className="score">{player.score}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="analytics-actions">
+          <button className="continue-button" onClick={handleContinueGame}>
+            次の質問へ進む ➡️
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (showAnalytics && analyticsData) {
+    return <AnalyticsModal />;
   }
 
   return (

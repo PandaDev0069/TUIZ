@@ -1,0 +1,1028 @@
+/* Animations for Kahoot-style experience */
+@keyframes slideInUp {
+  from {
+    transform: translateY(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes podiumReveal {
+  0% {
+    transform: scale(0) translateY(100px);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.1) translateY(-10px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes confettiFloat {
+  0% { 
+    transform: translateY(100vh) rotate(0deg) translateX(0); 
+    opacity: 1; 
+  }
+  100% { 
+    transform: translateY(-100vh) rotate(720deg) translateX(var(--drift)); 
+    opacity: 0; 
+  }
+}
+
+@keyframes titlePulse {
+  0%, 100% { 
+    transform: scale(1);
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  }
+  50% { 
+    transform: scale(1.05);
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+  }
+}
+
+@keyframes crown {
+  0%, 100% { transform: rotate(-5deg) scale(1); }
+  50% { transform: rotate(5deg) scale(1.1); }
+}
+
+@keyframes scoreCountUp {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Confetti System */
+.confetti {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  animation: confettiFloat linear forwards;
+}
+
+@media (max-width: 768px) {
+  .confetti-piece {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+/* Main Container */
+.scoreboard-container {
+  max-width: 1000px;
+  width: 100%;
+  padding: 2rem 1rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+/* Title Section */
+.title {
+  font-size: 3.5rem;
+  margin-bottom: 0.5rem;
+  opacity: 0;
+  animation: bounceIn 1s ease forwards, titlePulse 3s ease-in-out infinite 2s;
+  background: linear-gradient(45deg, #FFD700, #FF6B35, #F7931E, #FFD700);
+  background-size: 300% 300%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 2px;
+}
+
+.subtitle {
+  font-size: 1.6rem;
+  margin-bottom: 3rem;
+  opacity: 0;
+  animation: slideInUp 0.8s ease 0.5s forwards;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Podium Container - Kahoot Style */
+.podium-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 1rem;
+  width: 100%;
+  max-width: 600px;
+  margin: 2rem auto 4rem;
+  height: 400px;
+  perspective: 1200px;
+  position: relative;
+}
+
+/* Individual Podium Places */
+.podium-place {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  position: relative;
+  opacity: 0;
+  transform: translateY(100px) scale(0.8);
+  max-width: 180px;
+}
+
+.podium-place.show {
+  animation: podiumReveal 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Podium Order and Heights */
+.place-1 {
+  order: 2;
+  z-index: 3;
+}
+
+.place-2 {
+  order: 1;
+  z-index: 2;
+}
+
+.place-3 {
+  order: 3;
+  z-index: 1;
+}
+
+/* Player Info Container */
+.player-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1.5rem 0.5rem;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Medal Styling */
+.player-medal {
+  font-size: 3.5rem;
+  margin-bottom: 0.5rem;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+  animation: bounceIn 0.8s ease 1.5s both;
+}
+
+.place-1 .player-medal {
+  font-size: 4rem;
+  animation: bounceIn 0.8s ease 1.5s both, crown 3s ease-in-out infinite 3s;
+}
+
+/* Player Names */
+.player-name {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.7);
+  text-align: center;
+  width: 100%;
+  word-break: break-word;
+  line-height: 1.2;
+  animation: slideInUp 0.6s ease 2s both;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Player Scores */
+.player-score {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: white;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.4rem 0.8rem;
+  border-radius: 25px;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  animation: scoreCountUp 0.8s ease 2.5s both;
+}
+
+/* Podium Block Designs */
+.podium-block {
+  width: 100%;
+  border-radius: 15px 15px 0 0;
+  position: relative;
+  transform-origin: bottom;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  border: 3px solid;
+  background-attachment: fixed;
+  transition: transform 0.3s ease;
+}
+
+.place-1 .podium-block {
+  height: 280px;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 25%, #FFD700 50%, #FFA500 75%, #FFD700 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 3s ease-in-out infinite;
+  border-color: #FFD700;
+  box-shadow: 0 12px 40px rgba(255, 215, 0, 0.5);
+}
+
+.place-1 .podium-block::before {
+  content: '👑';
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 3rem;
+  animation: crown 2s ease-in-out infinite;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+  z-index: 5;
+}
+
+.place-2 .podium-block {
+  height: 220px;
+  background: linear-gradient(135deg, #E8E8E8 0%, #C0C0C0 50%, #E8E8E8 100%);
+  border-color: #C0C0C0;
+  box-shadow: 0 8px 30px rgba(192, 192, 192, 0.4);
+}
+
+.place-3 .podium-block {
+  height: 180px;
+  background: linear-gradient(135deg, #CD7F32 0%, #B8860B 50%, #CD7F32 100%);
+  border-color: #CD7F32;
+  box-shadow: 0 6px 25px rgba(205, 127, 50, 0.4);
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Full Leaderboard Section */
+.scores-list {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 3rem;
+  backdrop-filter: blur(15px);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 700px;
+  opacity: 0;
+  animation: slideInUp 0.8s ease 3.5s forwards;
+}
+
+.scores-list h3 {
+  font-size: 1.8rem;
+  margin-bottom: 2rem;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: center;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Individual Score Rows */
+.score-row {
+  display: flex;
+  align-items: center;
+  padding: 1.2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: 0;
+  transform: translateX(-50px);
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 0.8rem;
+  border-radius: 15px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+
+.score-row.show {
+  animation: slideInUp 0.6s ease forwards;
+}
+
+.score-row:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.score-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+/* Position Number */
+.position {
+  width: 50px;
+  height: 50px;
+  font-weight: 800;
+  color: white;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 50%;
+  margin-right: 1rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Medal Icons for Other Players */
+.medal {
+  width: 50px;
+  font-size: 1.8rem;
+  text-align: center;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Player Names in List */
+.name {
+  flex: 1;
+  text-align: left;
+  margin: 0 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: white;
+  word-break: break-word;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  overflow-wrap: break-word;
+  hyphens: auto;
+  line-height: 1.3;
+}
+
+/* Score Display */
+.score {
+  font-weight: 800;
+  color: #10B981;
+  min-width: 100px;
+  text-align: right;
+  font-size: 1.3rem;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 0.6rem 1rem;
+  border-radius: 25px;
+  border: 2px solid rgba(16, 185, 129, 0.3);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+/* Accuracy Display */
+.accuracy {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.4rem 0.8rem;
+  border-radius: 15px;
+  margin-left: 0.5rem;
+  font-weight: 600;
+}
+
+/* Rank Change Indicators */
+.rank-change {
+  font-size: 1.2rem;
+  margin-left: 0.5rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+/* Player Stats */
+.player-accuracy {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  margin-top: 0.3rem;
+  animation: slideInUp 0.6s ease 3s both;
+}
+
+/* Restart Button - Kahoot Style */
+.restart-button {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: white;
+  font-size: 1.3rem;
+  font-weight: 700;
+  padding: 1.2rem 3rem;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  animation: bounceIn 1s ease 4s forwards;
+  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.4);
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  min-width: 280px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.restart-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.6s ease;
+}
+
+@media (hover: hover) {
+  .restart-button:hover {
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 0 15px 40px rgba(16, 185, 129, 0.5);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  }
+  
+  .restart-button:hover::before {
+    width: 300px;
+    height: 300px;
+  }
+}
+
+.restart-button:active {
+  transform: translateY(-2px) scale(0.98);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+}
+
+/* Mobile Optimizations */
+@media (hover: none) {
+  .score-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .podium-block:hover {
+    transform: none;
+  }
+}
+
+/* Tablet and Small Desktop */
+@media (max-width: 768px) {
+  .scoreboard-container {
+    padding: 1rem 0.5rem;
+    min-height: auto;
+  }
+
+  .title {
+    font-size: 2.2rem;
+    margin-bottom: 0.5rem;
+    letter-spacing: 1px;
+  }
+
+  .subtitle {
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .podium-container {
+    height: 300px;
+    gap: 0.8rem;
+    margin-bottom: 2.5rem;
+    max-width: 500px;
+  }
+
+  .place-1 .podium-block { 
+    height: 220px; 
+  }
+  
+  .place-2 .podium-block { 
+    height: 180px; 
+  }
+  
+  .place-3 .podium-block { 
+    height: 150px; 
+  }
+
+  .place-1 .podium-block::before {
+    font-size: 2.2rem;
+    top: -28px;
+  }
+
+  .player-info {
+    padding: 1rem 0.4rem;
+    gap: 0.4rem;
+  }
+
+  .player-medal {
+    font-size: 2.5rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .place-1 .player-medal {
+    font-size: 3rem;
+  }
+
+  .player-name {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+    line-height: 1.2;
+  }
+
+  .player-score {
+    font-size: 1.1rem;
+    padding: 0.3rem 0.7rem;
+  }
+
+  .player-accuracy {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .scores-list {
+    padding: 1.2rem;
+    margin-bottom: 2rem;
+    max-width: 600px;
+  }
+
+  .scores-list h3 {
+    font-size: 1.4rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .score-row {
+    padding: 0.9rem;
+    margin-bottom: 0.5rem;
+    border-radius: 12px;
+  }
+
+  .position {
+    width: 38px;
+    height: 38px;
+    font-size: 1rem;
+    margin-right: 0.7rem;
+  }
+
+  .medal {
+    width: 38px;
+    font-size: 1.5rem;
+  }
+
+  .name {
+    font-size: 1rem;
+    margin: 0 0.7rem;
+  }
+
+  .score {
+    font-size: 1.1rem;
+    padding: 0.4rem 0.7rem;
+    min-width: 75px;
+  }
+
+  .accuracy {
+    font-size: 0.85rem;
+    padding: 0.3rem 0.6rem;
+    margin-left: 0.4rem;
+  }
+
+  .restart-button {
+    font-size: 1.1rem;
+    padding: 1rem 2rem;
+    min-width: 220px;
+  }
+}
+
+/* Mobile Phones - Enhanced for smaller screens */
+@media (max-width: 480px) {
+  .scoreboard-container {
+    padding: 0.8rem 0.3rem;
+  }
+
+  .title {
+    font-size: 1.8rem;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.4rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .podium-container {
+    height: 240px;
+    margin-bottom: 1.5rem;
+    gap: 0.3rem;
+    max-width: 350px;
+  }
+
+  .place-1 .podium-block { 
+    height: 180px; 
+  }
+  
+  .place-2 .podium-block { 
+    height: 140px; 
+  }
+  
+  .place-3 .podium-block { 
+    height: 110px; 
+  }
+
+  .place-1 .podium-block::before {
+    font-size: 1.8rem;
+    top: -20px;
+  }
+
+  .player-info {
+    padding: 0.6rem 0.15rem;
+    gap: 0.2rem;
+    min-height: 80px;
+    justify-content: center;
+  }
+
+  .player-medal {
+    font-size: 2rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .place-1 .player-medal {
+    font-size: 2.3rem;
+  }
+
+  .player-name {
+    font-size: 0.8rem;
+    line-height: 1.1;
+    margin-bottom: 0.2rem;
+    max-width: 100%;
+    overflow: visible;
+    text-overflow: initial;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+
+  .player-score {
+    font-size: 0.85rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 8px;
+  }
+
+  .player-accuracy {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.3rem;
+    margin-top: 0.1rem;
+  }
+
+  .scores-list {
+    padding: 0.8rem;
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
+  }
+
+  .scores-list h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .score-row {
+    padding: 0.6rem 0.5rem;
+    margin-bottom: 0.3rem;
+    border-radius: 10px;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .position {
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+    margin-right: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .medal {
+    width: 32px;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+
+  .name {
+    font-size: 0.85rem;
+    margin: 0 0.4rem;
+    flex: 1;
+    min-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .score {
+    font-size: 0.9rem;
+    padding: 0.3rem 0.5rem;
+    min-width: 60px;
+    border-radius: 8px;
+  }
+
+  .accuracy {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+    margin-left: 0.2rem;
+    border-radius: 6px;
+  }
+
+  .rank-change {
+    font-size: 1.2rem;
+    margin-left: 0.2rem;
+  }
+
+  .restart-button {
+    width: calc(100% - 1rem);
+    max-width: 280px;
+    font-size: 0.95rem;
+    padding: 0.8rem 1.2rem;
+    min-width: auto;
+    margin: 0 0.5rem;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 360px) {
+  .title {
+    font-size: 1.6rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+  }
+
+  .podium-container {
+    height: 200px;
+    max-width: 320px;
+  }
+
+  .place-1 .podium-block { height: 150px; }
+  .place-2 .podium-block { height: 120px; }
+  .place-3 .podium-block { height: 95px; }
+
+  .player-name {
+    font-size: 0.75rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    line-height: 1.1;
+  }
+
+  .player-score {
+    font-size: 0.8rem;
+  }
+
+  .score-row {
+    padding: 0.5rem;
+  }
+
+  .name {
+    font-size: 0.8rem;
+    min-width: 70px;
+  }
+
+  .position {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+
+  .medal {
+    width: 28px;
+    font-size: 1.1rem;
+  }
+}
+
+.player-accuracy {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.3rem 0.8rem;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.rank-change {
+  font-size: 1.5rem;
+  animation: bounce 0.6s ease-in-out;
+  margin-left: 8px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+@keyframes bounce {
+  0%, 20%, 60%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-12px); }
+  80% { transform: translateY(-6px); }
+}
+
+.accuracy {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.95rem;
+  min-width: 80px;
+  text-align: right;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.3rem 0.8rem;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Streak emoji styling */
+.player-name, .name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Confetti effect */
+.confetti {
+  position: fixed;
+  top: -10px;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #FFD700;
+  border-radius: 50%;
+  animation: confettiFloat 3s linear infinite;
+  --drift: 0px;
+}
+
+.confetti-piece:nth-child(odd) {
+  --drift: -100px;
+}
+
+.confetti-piece:nth-child(even) {
+  --drift: 100px;
+}
+
+.confetti-piece:nth-child(2n) { 
+  background: #FF6B6B; 
+  animation-delay: 0.2s; 
+  --drift: -150px;
+}
+.confetti-piece:nth-child(3n) { 
+  background: #4ECDC4; 
+  animation-delay: 0.4s; 
+  --drift: 120px;
+}
+.confetti-piece:nth-child(4n) { 
+  background: #45B7D1; 
+  animation-delay: 0.6s; 
+  --drift: -80px;
+}
+.confetti-piece:nth-child(5n) { 
+  background: #96CEB4; 
+  animation-delay: 0.8s; 
+  --drift: 200px;
+}
+.confetti-piece:nth-child(6n) { 
+  background: #FECA57; 
+  animation-delay: 1s; 
+  --drift: -200px;
+}
+.confetti-piece:nth-child(7n) { 
+  background: #FF9FF3; 
+  animation-delay: 1.2s; 
+  --drift: 150px;
+}
+.confetti-piece:nth-child(8n) { 
+  background: #54A0FF; 
+  animation-delay: 1.4s; 
+  --drift: -120px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .scoreboard-container {
+    padding: 1rem;
+  }
+  
+  .title {
+    font-size: 2.5rem;
+  }
+  
+  .subtitle {
+    font-size: 1.3rem;
+  }
+  
+  .podium-container {
+    height: 280px;
+    gap: 1rem;
+    padding: 0 1rem;
+  }
+  
+  .podium-block {
+    width: 100px;
+  }
+  
+  .place-1 .podium-block {
+    height: 180px;
+  }
+  
+  .place-2 .podium-block {
+    height: 140px;
+  }
+  
+  .place-3 .podium-block {
+    height: 100px;
+  }
+  
+  .player-medal {
+    font-size: 2.5rem;
+  }
+  
+  .player-name {
+    font-size: 1.1rem;
+    max-width: 120px;
+  }
+  
+  .player-score {
+    font-size: 1.5rem;
+    padding: 0.2rem 0.6rem;
+  }
+  
+  .scores-list {
+    padding: 1.5rem;
+  }
+  
+  .score-row {
+    padding: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .position {
+    width: 50px;
+    font-size: 1rem;
+  }
+  
+  .name {
+    font-size: 1rem;
+    margin: 0;
+    flex: 1;
+    min-width: 120px;
+  }
+  
+  .score {
+    font-size: 1.1rem;
+    min-width: 100px;
+    padding: 0.4rem 0.8rem;
+  }
+  
+  .restart-button {
+    font-size: 1.1rem;
+    padding: 1rem 2rem;
+  }
+}

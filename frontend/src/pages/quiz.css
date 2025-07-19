@@ -4,6 +4,45 @@
   padding: 2rem;
 }
 
+.player-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.current-score {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #10B981;
+}
+
+.streak-badge {
+  background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: bold;
+  animation: pulse 2s infinite;
+}
+
+.last-points {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #FFD700;
+  animation: bounceIn 0.5s ease;
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
 .quiz-page h2 {
   font-size: 2rem;
   margin-bottom: 2rem;

@@ -76,24 +76,129 @@ io.on('connection', (socket) => {
 
   socket.on('submit_answer', ({ room, name, answer }) => {
     const result = roomManager.submitAnswer(room, socket.id, answer);
+    if (result.error) return;
     
-    // Send result back to the player
-    socket.emit('answer_result', result);
+    // Notify host that a player answered
+    socket.to(room).emit('player_answered', { name, playerId: socket.id });
     
-    // Notify host about the submission
-    io.to(room).emit('player_answered', { name });
+    // Emit result to the player who answered
+    socket.emit('answer_result', {
+      correct: result.correct,
+      score: result.score,
+      questionScore: result.questionScore,
+      streak: result.streak,
+      multiplier: result.multiplier,
+      rankChange: result.rankChange
+    });
+
+    // Get updated leaderboard
+    const leaderboard = roomManager.getLeaderboard(room);
+    const top5 = leaderboard.slice(0, 5);
+    
+    // Find player's position if they're not in top 5
+    const playerPosition = leaderboard.findIndex(p => p.id === socket.id);
+    const playerInfo = playerPosition >= 5 ? leaderboard[playerPosition] : null;
+
+    // Emit leaderboard update to all players in the room
+    io.to(room).emit('leaderboard_update', {
+      top5,
+      totalPlayers: leaderboard.length,
+      currentPlayer: playerInfo,
+      questionAnswered: true
+    });
   });
 
   socket.on('next_question', ({ room }) => {
+    if (!room) {
+      console.log('⚠️ No room provided for next question');
+      return;
+    }
+
+    // Show current leaderboard to all players (no auto-advance)
+    const currentLeaderboard = roomManager.getLeaderboard(room);
+    const top5 = currentLeaderboard.slice(0, 5);
+    
+    // Calculate analytics for host
+    const roomData = roomManager.rooms.get(room);
+    let analytics = null;
+    
+    if (roomData && roomData.currentResponses) {
+      const totalPlayers = Array.from(roomData.players.values()).filter(p => p.name !== 'HOST').length;
+      const totalResponses = roomData.currentResponses.length;
+      const correctResponses = roomData.currentResponses.filter(r => r.isCorrect).length;
+      
+      // Calculate answer distribution
+      const answerDistribution = [0, 0, 0, 0];
+      roomData.currentResponses.forEach(response => {
+        if (response.answerIndex !== null && response.answerIndex >= 0 && response.answerIndex < 4) {
+          answerDistribution[response.answerIndex]++;
+        }
+      });
+      
+      analytics = {
+        totalPlayers,
+        totalResponses,
+        responseRate: totalPlayers > 0 ? Math.round((totalResponses / totalPlayers) * 100) : 0,
+        correctRate: totalResponses > 0 ? Math.round((correctResponses / totalResponses) * 100) : 0,
+        answerDistribution
+      };
+    }
+    
+    // Send intermediate scoreboard to players
+    io.to(room).emit('show_intermediate_scores', {
+      top5,
+      totalPlayers: currentLeaderboard.length
+    });
+    
+    // Send detailed analytics to host only
+    const hostSocket = Array.from(io.sockets.sockets.values())
+      .find(s => s.rooms && s.rooms.has(room) && roomData?.players.get(s.id)?.name === 'HOST');
+    
+    if (hostSocket) {
+      hostSocket.emit('show_host_analytics', {
+        leaderboard: currentLeaderboard,
+        analytics,
+        canContinue: true
+      });
+    }
+  });
+
+  socket.on('continue_game', ({ room }) => {
+    if (!room) {
+      console.log('⚠️ No room provided for continue game');
+      return;
+    }
+
     const nextQuestion = roomManager.nextQuestion(room);
     
     if (nextQuestion) {
       // Send next question to all players
       io.to(room).emit('question', nextQuestion);
+      console.log(`➡️ Moving to next question in room ${room}`);
     } else {
       // No more questions, game over
-      const scoreboard = roomManager.getScoreboard(room);
-      io.to(room).emit('game_over', { scoreboard });
+      try {
+        const scoreboard = roomManager.getScoreboard(room) || [];
+        console.log(`📊 Final scoreboard for room ${room}:`, scoreboard);
+        
+        // Emit special events for top 3 players
+        const top3 = scoreboard.slice(0, Math.min(3, scoreboard.length));
+        
+        // First emit game_over to prepare clients
+        io.to(room).emit('game_over', { 
+          scoreboard,
+          top3,
+          totalPlayers: scoreboard.length
+        });
+      } catch (error) {
+        console.error('❌ Error generating scoreboard:', error);
+        // Send a basic game over event if scoreboard fails
+        io.to(room).emit('game_over', { 
+          scoreboard: [],
+          top3: [],
+          totalPlayers: 0
+        });
+      }
     }
   });
 });
