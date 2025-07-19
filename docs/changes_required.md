@@ -6,21 +6,20 @@
 
 
 # Host ui
-.
+
 
 
 # Player ui
-- up and down arrow and - for the change of player ranking in the intermediate score board is not working properly (only showing down arrow for some players but no up arrows and - is showing by default (which is intened) but needs to change into up or down accordingly)(final solution remove the ranking change arrows if not fixable if fixable use triangles with green and red facing up and down and do not render anything for no place change )
 
+# intermediate scoreboard
 
-
-
-- rendering issue of intermediate score board in actual mobile (only for iphone 12 (390 x 844)) the screen is too big for mobile screen to fit and scrol is not working.
+# Quiz/control analytics
+-fix the small screen scrolling and scaling.
 
 # ScoreBoard 
 
-- center the name of the playe in the podium 
+
 
 # Score and logic
-
+- make sure that player is not able to answer after the time is up.
 

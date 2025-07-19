@@ -8,21 +8,6 @@ function IntermediateScoreboard({ top5, currentPlayer, totalPlayers, onComplete 
     setShowAnimation(true);
   }, []);
 
-  const getRankChangeIcon = (change) => {
-    switch (change) {
-      case 'up': return '⬆️';
-      case 'down': return '⬇️';
-      case 'same': return '➖';
-      default: return '🆕';
-    }
-  };
-
-  const getStreakEmoji = (streak) => {
-    if (streak >= 5) return '🔥';
-    if (streak >= 3) return '⭐';
-    return '';
-  };
-
   return (
     <div className="intermediate-scoreboard-overlay">
       <div className="intermediate-scoreboard">
@@ -42,12 +27,9 @@ function IntermediateScoreboard({ top5, currentPlayer, totalPlayers, onComplete 
                 <div className="rank-badge">#{index + 1}</div>
                 <div className="player-content">
                   <div className="player-name">
-                    {player.name} {getStreakEmoji(player.streak)}
+                    {player.name}
                   </div>
                   <div className="player-score">{player.score}pt</div>
-                </div>
-                <div className="rank-change">
-                  {getRankChangeIcon(player.rankChange)}
                 </div>
               </div>
             ))}
@@ -61,12 +43,9 @@ function IntermediateScoreboard({ top5, currentPlayer, totalPlayers, onComplete 
               <div className="rank-badge">#{currentPlayer.rank}</div>
               <div className="player-content">
                 <div className="player-name">
-                  {currentPlayer.name} {getStreakEmoji(currentPlayer.streak)}
+                  {currentPlayer.name}
                 </div>
                 <div className="player-score">{currentPlayer.score}pt</div>
-              </div>
-              <div className="rank-change">
-                {getRankChangeIcon(currentPlayer.rankChange)}
               </div>
             </div>
           </div>
