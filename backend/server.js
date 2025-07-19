@@ -61,7 +61,40 @@ io.on('connection', (socket) => {
 
   socket.on('start_game', ({ room }) => {
     console.log(`▶️ クイズ開始: Room ${room}`);
-    io.to(room).emit('start_game'); // Broadcast to all players in that room
+    
+    // Initialize the game and get first question
+    const firstQuestion = roomManager.initializeGame(room);
+    
+    // First notify everyone game is starting
+    io.to(room).emit('start_game');
+    
+    // Then send first question
+    setTimeout(() => {
+      io.to(room).emit('question', firstQuestion);
+    }, 2000); // Give players 2 seconds to get ready
+  });
+
+  socket.on('submit_answer', ({ room, name, answer }) => {
+    const result = roomManager.submitAnswer(room, socket.id, answer);
+    
+    // Send result back to the player
+    socket.emit('answer_result', result);
+    
+    // Notify host about the submission
+    io.to(room).emit('player_answered', { name });
+  });
+
+  socket.on('next_question', ({ room }) => {
+    const nextQuestion = roomManager.nextQuestion(room);
+    
+    if (nextQuestion) {
+      // Send next question to all players
+      io.to(room).emit('question', nextQuestion);
+    } else {
+      // No more questions, game over
+      const scoreboard = roomManager.getScoreboard(room);
+      io.to(room).emit('game_over', { scoreboard });
+    }
   });
 });
 

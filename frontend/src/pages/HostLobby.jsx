@@ -41,7 +41,8 @@ function HostLobby() {
   }, [room, title, navigate])
 
   const handleStart = () => {
-    socket.emit('start_game', { room })
+    socket.emit('start_game', { room });
+    navigate('/quiz/control', { state: { room, title } });
   }
 
   return (

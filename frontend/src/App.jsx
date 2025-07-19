@@ -5,6 +5,8 @@ import Join from './pages/join'
 import WaitingRoom from './pages/WaitingRoom'
 import Host from './pages/Host'
 import HostLobby from './pages/HostLobby'
+import Quiz from './pages/Quiz'
+import QuizControl from './pages/QuizControl'
 
 function App() {
   useEffect(() => {
@@ -24,7 +26,8 @@ function App() {
       <Route path="/host/lobby" element={<HostLobby />} />
       <Route path="/join" element={<Join />} />
       <Route path="/waiting" element={<WaitingRoom />} />
-      <Route path="/quiz" element={<h1>Quiz Screen (Coming Soon)</h1>} />
+      <Route path="/quiz" element={<Quiz />} />
+      <Route path="/quiz/control" element={<QuizControl />} />
       <Route path="/scoreboard" element={<h1>Scoreboard (Coming Soon)</h1>} />
     </Routes>
   )
