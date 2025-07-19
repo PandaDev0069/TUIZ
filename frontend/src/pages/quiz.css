@@ -52,9 +52,123 @@
 .options-list {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
   margin-bottom: 2rem;
+}
+
+/* Grid layout for 4-option questions */
+.options-list.grid-2x2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Horizontal layout for 2-option questions */
+.options-list.horizontal {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Large buttons layout for true/false */
+.options-list.large-buttons {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+}
+
+.options-list.large-buttons .option-item {
+  padding: 3rem 2rem;
+  font-size: 1.8rem;
+  font-weight: bold;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* Create large O symbol with CSS */
+.options-list.large-buttons .option-item:first-child::before {
+  content: '';
+  width: 80px;
+  height: 80px;
+  border: 6px solid #10B981;
+  border-radius: 50%;
+  background: transparent;
+  display: block;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+}
+
+.options-list.large-buttons .option-item:first-child {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1));
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #10B981;
+}
+
+/* Create large X symbol with CSS */
+.options-list.large-buttons .option-item:last-child::before {
+  content: '';
+  width: 80px;
+  height: 80px;
+  position: relative;
+  display: block;
+}
+
+.options-list.large-buttons .option-item:last-child::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 80px;
+  background: #EF4444;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 3px;
+  box-shadow: 
+    0 0 0 6px #EF4444,
+    0 4px 20px rgba(239, 68, 68, 0.3);
+  z-index: 1;
+}
+
+.options-list.large-buttons .option-item:last-child::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 80px;
+  background: #EF4444;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  border-radius: 3px;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
+  z-index: 1;
+}
+
+.options-list.large-buttons .option-item:last-child {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #EF4444;
+}
+
+.options-list.large-buttons .option-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.options-list.large-buttons .option-item:hover:first-child {
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
+}
+
+.options-list.large-buttons .option-item:hover:last-child {
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
+}
+
+/* Question type indicator */
+.question-type {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+  opacity: 0.8;
 }
 
 .option-item {
@@ -110,7 +224,41 @@
 }
 
 @media (max-width: 640px) {
-  .options-list {
+  .options-list.grid-2x2 {
     grid-template-columns: 1fr;
+  }
+  
+  .options-list.horizontal {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .options-list.large-buttons {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .options-list.large-buttons .option-item {
+    padding: 2.5rem 1.5rem;
+    font-size: 1.6rem;
+  }
+  
+  /* Smaller O symbol for mobile */
+  .options-list.large-buttons .option-item:first-child::before {
+    width: 60px;
+    height: 60px;
+    border-width: 5px;
+  }
+  
+  /* Smaller X symbol for mobile */
+  .options-list.large-buttons .option-item:last-child::before,
+  .options-list.large-buttons .option-item:last-child::after {
+    width: 5px;
+    height: 60px;
+  }
+  
+  .question-type {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.6rem;
   }
 }

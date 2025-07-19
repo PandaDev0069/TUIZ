@@ -1,4 +1,6 @@
 const gameConfig = require('../config/gameConfig');
+const fs = require('fs');
+const path = require('path');
 
 class RoomManager {
   constructor() {
@@ -10,34 +12,32 @@ class RoomManager {
     // Question timer in ms
     this.QUESTION_TIME = gameConfig.timing.questionDisplay;
     
-    // Sample questions (in real app, this would come from a database)
-    this.sampleQuestions = [
-      {
-        question: "日本の首都はどこですか？",
-        options: ["大阪", "東京", "京都", "札幌"],
-        correctIndex: 1
-      },
-      {
-        question: "富士山の高さは？",
-        options: ["2,776m", "3,776m", "4,776m", "5,776m"],
-        correctIndex: 1
-      },
-      {
-        question: "日本で一番大きい湖は？",
-        options: ["琵琶湖", "霞ヶ浦", "サロマ湖", "猪苗代湖"],
-        correctIndex: 0
-      },
-      {
-        question: "日本の国鳥は？",
-        options: ["ツル", "キジ", "ハト", "カラス"],
-        correctIndex: 1
-      },
-      {
-        question: "2024年のオリンピック開催地は？",
-        options: ["東京", "パリ", "ロサンゼルス", "ブリスベン"],
-        correctIndex: 1
-      }
-    ];
+    // Load questions from JSON file
+    this.loadQuestions();
+  }
+
+  loadQuestions() {
+    try {
+      const questionsPath = path.join(__dirname, '../data/questions.json');
+      const questionsData = fs.readFileSync(questionsPath, 'utf8');
+      const parsed = JSON.parse(questionsData);
+      this.sampleQuestions = parsed.questions;
+      console.log(`📝 Loaded ${this.sampleQuestions.length} questions with multiple types`);
+    } catch (error) {
+      console.error('❌ Failed to load questions:', error);
+      // Fallback to hardcoded questions
+      this.sampleQuestions = [
+        {
+          id: 'fallback1',
+          type: 'multiple_choice_4',
+          question: "日本の首都はどこですか？",
+          options: ["大阪", "東京", "京都", "札幌"],
+          correctIndex: 1,
+          timeLimit: 10000,
+          points: 1000
+        }
+      ];
+    }
   }
 
   joinRoom(roomCode, playerId, name) {
@@ -121,6 +121,10 @@ class RoomManager {
       });
 
       console.log(`🎲 Game initialized for room ${roomCode} with ${room.players.size} players`);
+      
+      // Set the start time for the first question immediately
+      room.questionStartTime = Date.now();
+      
       return this.getCurrentQuestion(roomCode);
     } catch (error) {
       console.error('❌ Error initializing game:', error);
@@ -175,10 +179,15 @@ class RoomManager {
     const isCorrect = currentQuestion.correctIndex === answerIndex;
     const currentTime = Date.now();
     
-    // Initialize response tracking if needed
+    // Initialize response tracking if needed and ensure questionStartTime is set
     if (!room.currentResponses) {
       room.currentResponses = [];
+    }
+    
+    // Ensure questionStartTime is set (fallback for first question)
+    if (!room.questionStartTime) {
       room.questionStartTime = currentTime;
+      console.log('⚠️ QuestionStartTime was not set, using current time as fallback');
     }
     
     // Only allow first answer from each player
@@ -215,8 +224,12 @@ class RoomManager {
     let points = gameConfig.points.incorrect;
     
     if (isCorrect) {
-      // Base score calculation using time factor
-      points = Math.round(gameConfig.points.base * timeFactor);
+      // Get question type multiplier
+      const questionType = currentQuestion.type || 'multiple_choice_4';
+      const typeMultiplier = gameConfig.points.multipliers[questionType] || 1.0;
+      
+      // Base score calculation using time factor and question type
+      points = Math.round(gameConfig.points.base * timeFactor * typeMultiplier);
       
       // Update streak FIRST
       streak.current += 1;
@@ -236,6 +249,8 @@ class RoomManager {
         current: streak.current,
         multiplier: streakMultiplier
       });
+      
+      console.log(`✅ ${player.name}: ${points} points (type: ${questionType}, time: ${Math.round(timeFactor*100)}%, streak: ${streak.current}x)`);
     } else {
       // Reset streak on wrong answer
       streak.current = 0;
@@ -246,6 +261,8 @@ class RoomManager {
         current: streak.current,
         multiplier: streakMultiplier
       });
+      
+      console.log(`❌ ${player.name}: 0 points (wrong answer, streak reset)`);
     }
 
     // Update scores

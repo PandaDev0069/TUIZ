@@ -1,0 +1,94 @@
+{
+  "questions": [
+    {
+      "id": "q1",
+      "type": "multiple_choice_4",
+      "question": "日本の首都はどこですか？",
+      "options": ["大阪", "東京", "京都", "札幌"],
+      "correctIndex": 1,
+      "timeLimit": 10000,
+      "points": 1000
+    },
+    {
+      "id": "q2",
+      "type": "true_false",
+      "question": "富士山は日本で一番高い山である",
+      "options": ["正解", "不正解"],
+      "correctIndex": 0,
+      "timeLimit": 8000,
+      "points": 800
+    },
+    {
+      "id": "q3",
+      "type": "multiple_choice_2",
+      "question": "東京オリンピックが開催されたのはどちらの年？",
+      "options": ["2020年", "2021年"],
+      "correctIndex": 1,
+      "timeLimit": 8000,
+      "points": 800
+    },
+    {
+      "id": "q4",
+      "type": "multiple_choice_4",
+      "question": "日本で一番大きい湖は？",
+      "options": ["琵琶湖", "霞ヶ浦", "サロマ湖", "猪苗代湖"],
+      "correctIndex": 0,
+      "timeLimit": 10000,
+      "points": 1000
+    },
+    {
+      "id": "q5",
+      "type": "true_false",
+      "question": "日本の国鳥はキジである",
+      "options": ["正解", "不正解"],
+      "correctIndex": 0,
+      "timeLimit": 8000,
+      "points": 800
+    },
+    {
+      "id": "q6",
+      "type": "multiple_choice_2",
+      "question": "日本は島国ですか、大陸国ですか？",
+      "options": ["島国", "大陸国"],
+      "correctIndex": 0,
+      "timeLimit": 8000,
+      "points": 800
+    },
+    {
+      "id": "q7",
+      "type": "multiple_choice_4",
+      "question": "2024年のオリンピック開催地は？",
+      "options": ["東京", "パリ", "ロサンゼルス", "ブリスベン"],
+      "correctIndex": 1,
+      "timeLimit": 10000,
+      "points": 1000
+    },
+    {
+      "id": "q8",
+      "type": "true_false",
+      "question": "北海道は日本の最南端の島である",
+      "options": ["正解", "不正解"],
+      "correctIndex": 1,
+      "timeLimit": 8000,
+      "points": 800
+    },
+    {
+      "id": "q9",
+      "type": "multiple_choice_2",
+      "question": "日本の通貨単位はどちらですか？",
+      "options": ["円", "ドル"],
+      "correctIndex": 0,
+      "timeLimit": 6000,
+      "points": 600
+    },
+    {
+      "id": "q10",
+      "type": "multiple_choice_4",
+      "question": "日本の47都道府県で最も人口が多いのは？",
+      "options": ["大阪府", "東京都", "神奈川県", "愛知県"],
+      "correctIndex": 1,
+      "timeLimit": 12000,
+      "points": 1200
+    }
+  ]
+}

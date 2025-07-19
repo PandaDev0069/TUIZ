@@ -4,21 +4,23 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 1rem;
 }
 
 .intermediate-scoreboard {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
-  padding: 2rem;
-  max-width: 500px;
-  width: 90%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  animation: slideUp 0.5s ease;
+  border-radius: 24px;
+  padding: 2.5rem;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+  animation: slideUp 0.4s ease-out;
+  border: 2px solid rgba(255, 255, 255, 0.1);
 }
 
 @keyframes slideUp {
@@ -34,21 +36,26 @@
 
 .header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
   color: white;
 }
 
 .header h2 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
+  font-size: 2.2rem;
+  margin-bottom: 0.8rem;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .timer {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: #FFD700;
   font-weight: 500;
-  animation: pulse 1s infinite;
+  background: rgba(255, 215, 0, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  display: inline-block;
 }
 
 @keyframes pulse {
@@ -57,48 +64,64 @@
 }
 
 .top5-list {
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
 }
 
 .score-item {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 1rem;
-  margin-bottom: 0.5rem;
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
-  transform: translateX(-50px);
-  opacity: 0;
-  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 1.2rem;
+  border-radius: 16px;
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.2s ease;
+  animation: fadeInUp 0.3s ease-out;
 }
 
-.score-item.show {
-  transform: translateX(0);
-  opacity: 1;
+@keyframes fadeInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .score-item.rank-1 {
-  background: linear-gradient(90deg, rgba(255, 215, 0, 0.3), rgba(255, 215, 0, 0.1));
-  border: 2px solid rgba(255, 215, 0, 0.5);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(255, 215, 0, 0.1));
+  border: 2px solid rgba(255, 215, 0, 0.6);
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.2);
 }
 
 .score-item.rank-2 {
-  background: linear-gradient(90deg, rgba(192, 192, 192, 0.3), rgba(192, 192, 192, 0.1));
-  border: 2px solid rgba(192, 192, 192, 0.5);
+  background: linear-gradient(135deg, rgba(192, 192, 192, 0.25), rgba(192, 192, 192, 0.1));
+  border: 2px solid rgba(192, 192, 192, 0.6);
+  box-shadow: 0 4px 20px rgba(192, 192, 192, 0.15);
 }
 
 .score-item.rank-3 {
-  background: linear-gradient(90deg, rgba(205, 127, 50, 0.3), rgba(205, 127, 50, 0.1));
-  border: 2px solid rgba(205, 127, 50, 0.5);
+  background: linear-gradient(135deg, rgba(205, 127, 50, 0.25), rgba(205, 127, 50, 0.1));
+  border: 2px solid rgba(205, 127, 50, 0.6);
+  box-shadow: 0 4px 20px rgba(205, 127, 50, 0.15);
 }
 
 .rank {
-  font-size: 1.5rem;
-  font-weight: bold;
+  font-size: 1.8rem;
+  font-weight: 800;
   color: #FFD700;
-  min-width: 3rem;
+  min-width: 4rem;
   text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem;
+  border-radius: 12px;
+  margin-right: 1rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .player-info {
@@ -106,19 +129,28 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 0 1rem;
-  color: white;
 }
 
 .name {
-  font-size: 1.1rem;
-  font-weight: 500;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .score {
-  font-size: 1.2rem;
-  font-weight: bold;
+  font-size: 1.4rem;
+  font-weight: 700;
   color: #10B981;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .rank-change {

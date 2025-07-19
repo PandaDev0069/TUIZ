@@ -412,12 +412,14 @@
 /* Accuracy Display */
 .accuracy {
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.1);
+  color: #1F2937;
+  background: #F9FAFB;
   padding: 0.4rem 0.8rem;
   border-radius: 15px;
   margin-left: 0.5rem;
-  font-weight: 600;
+  font-weight: 700;
+  border: 1px solid #E5E7EB;
+  text-shadow: none;
 }
 
 /* Rank Change Indicators */
@@ -860,14 +862,16 @@
 }
 
 .accuracy {
-  color: rgba(255, 255, 255, 0.8);
+  color: #1F2937;
   font-size: 0.95rem;
   min-width: 80px;
   text-align: right;
-  background: rgba(255, 255, 255, 0.1);
+  background: #F9FAFB;
   padding: 0.3rem 0.8rem;
   border-radius: 15px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid #E5E7EB;
+  font-weight: 700;
+  text-shadow: none;
 }
 
 /* Streak emoji styling */

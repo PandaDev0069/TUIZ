@@ -30,8 +30,52 @@
 .options-list {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
+}
+
+/* Default grid layout for 4-option questions */
+.options-list.grid-2x2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Horizontal layout for 2-option questions */
+.options-list.horizontal {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Large buttons layout for true/false */
+.options-list.large-buttons {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.options-list.large-buttons .option-item {
+  padding: 2rem 1.5rem;
+  font-size: 1.4rem;
+  font-weight: bold;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.options-list.large-buttons .option-item:first-child {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.options-list.large-buttons .option-item:last-child {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Question type indicator for host */
+.question-type-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  opacity: 0.9;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .option-item {

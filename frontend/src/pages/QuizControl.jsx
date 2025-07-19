@@ -67,6 +67,34 @@ function QuizControl() {
     setCanAdvance(false);
   };
 
+  // Get layout class based on question type
+  const getLayoutClass = (questionType) => {
+    switch (questionType) {
+      case 'multiple_choice_4':
+        return 'grid-2x2';
+      case 'multiple_choice_2':
+        return 'horizontal';
+      case 'true_false':
+        return 'large-buttons';
+      default:
+        return 'grid-2x2';
+    }
+  };
+
+  // Get question type display name
+  const getQuestionTypeName = (questionType) => {
+    switch (questionType) {
+      case 'multiple_choice_4':
+        return '4択問題';
+      case 'multiple_choice_2':
+        return '2択問題';
+      case 'true_false':
+        return '○×問題';
+      default:
+        return '問題';
+    }
+  };
+
   if (!currentQuestion) {
     return (
       <div className="page-container">
@@ -152,9 +180,15 @@ function QuizControl() {
         {/* Current Question Display */}
         <div className="main-question-card">
           <h2>現在の質問</h2>
+          
+          {/* Question type badge */}
+          <div className="question-type-badge">
+            {getQuestionTypeName(currentQuestion.type)}
+          </div>
+          
           <div className="question-content">
             <h3>{currentQuestion.question}</h3>
-            <ul className="options-list">
+            <ul className={`options-list ${getLayoutClass(currentQuestion.type)}`}>
               {currentQuestion.options.map((option, i) => (
                 <li key={i} className="option-item">{option}</li>
               ))}

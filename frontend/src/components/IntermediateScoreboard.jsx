@@ -35,8 +35,7 @@ function IntermediateScoreboard({ top5, currentPlayer, totalPlayers, onComplete 
           {top5.map((player, index) => (
             <div 
               key={player.id}
-              className={`score-item rank-${index + 1} ${showAnimation ? 'show' : ''}`}
-              style={{ animationDelay: `${index * 0.1}s` }}
+              className={`score-item rank-${index + 1}`}
             >
               <div className="rank">#{index + 1}</div>
               <div className="player-info">

@@ -111,6 +111,34 @@ function Quiz() {
     setShowIntermediateScores(false);
   };
 
+  // Get layout class based on question type
+  const getLayoutClass = (questionType) => {
+    switch (questionType) {
+      case 'multiple_choice_4':
+        return 'grid-2x2';
+      case 'multiple_choice_2':
+        return 'horizontal';
+      case 'true_false':
+        return 'large-buttons';
+      default:
+        return 'grid-2x2';
+    }
+  };
+
+  // Get question type display name
+  const getQuestionTypeName = (questionType) => {
+    switch (questionType) {
+      case 'multiple_choice_4':
+        return '4択問題';
+      case 'multiple_choice_2':
+        return '2択問題';
+      case 'true_false':
+        return '○×問題';
+      default:
+        return '問題';
+    }
+  };
+
   if (showIntermediateScores && intermediateData) {
     return (
       <IntermediateScoreboard 
@@ -141,8 +169,14 @@ function Quiz() {
         </div>
         
         <div className="timer">{timer}</div>
+        
+        {/* Question type indicator */}
+        <div className="question-type">
+          {getQuestionTypeName(question.type)}
+        </div>
+        
         <h2>{question.question}</h2>
-        <ul className="options-list">
+        <ul className={`options-list ${getLayoutClass(question.type)}`}>
           {question.options.map((opt, i) => (
             <li
               key={i}
