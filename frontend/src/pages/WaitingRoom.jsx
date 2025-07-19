@@ -6,8 +6,8 @@ import "./waitingRoom.css"
 function WaitingRoom() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { name, room } = location.state || {}
-  const [players, setPlayers] = useState([])
+  const { name, room, initialPlayers = [] } = location.state || {}
+  const [players, setPlayers] = useState(initialPlayers)
 
   useEffect(() => {
     if (!name || !room) {
@@ -15,14 +15,21 @@ function WaitingRoom() {
       return
     }
 
+    // Set initial players if provided
+    if (initialPlayers.length > 0) {
+      setPlayers(initialPlayers)
+    }
+
     // Listen for new players joining
     socket.on('player_joined', ({ players: updatedPlayers }) => {
       setPlayers(updatedPlayers)
+      console.log('Waiting room - players joined:', updatedPlayers)
     })
 
     // Listen for players leaving
     socket.on('player_left', ({ players: updatedPlayers }) => {
       setPlayers(updatedPlayers)
+      console.log('Waiting room - players updated:', updatedPlayers)
     })
 
     // Listen for game start
@@ -51,7 +58,7 @@ function WaitingRoom() {
         <div className="loading">⌛</div>
         {players.length > 0 && (
           <div className="players-list">
-            <p>参加者: {players.length}人</p>
+            <p>参加者: {players.filter(p => p.name !== 'HOST').length}人</p>
           </div>
         )}
       </div>

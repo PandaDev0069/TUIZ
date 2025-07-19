@@ -2,25 +2,25 @@
 
 
 ## UI Change ##
+
+
+
 # Host ui
-- the connected players are showing too slowly (参加しました) shows fast but the player name takes too long , no need of animation there
+.
 
-the host score board the it shows the analysis needs update to work with the mulple types of question.
-
-the anwer percentage is showin 100% (but some of the playes didnt answer due to time over)
 
 # Player ui
-- intermediate ui change = the player [ #1 - Player name    {score } ] this should be the box layout
-and if overflowed the player self's ranks name and score should be shown in the bottom 5th place insead of the 5th person. The up arrow for the rank up is not working .
+- up and down arrow and - for the change of player ranking in the intermediate score board is not working properly (only showing down arrow for some players but no up arrows and - is showing by default (which is intened) but needs to change into up or down accordingly)(final solution remove the ranking change arrows if not fixable if fixable use triangles with green and red facing up and down and do not render anything for no place change )
 
 
-- the last player who joined the room , the player count is not showing for that player
 
-- Remove 正解　and 不正解　from o , X question and just put LArge O and X only for proper visibility.
 
-- remove the sparking for displaying streak in the inter-scoreboard
+- rendering issue of intermediate score board in actual mobile (only for iphone 12 (390 x 844)) the screen is too big for mobile screen to fit and scrol is not working.
 
 # ScoreBoard 
 
+- center the name of the playe in the podium 
 
 # Score and logic
+
+

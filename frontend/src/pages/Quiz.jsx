@@ -170,11 +170,6 @@ function Quiz() {
         
         <div className="timer">{timer}</div>
         
-        {/* Question type indicator */}
-        <div className="question-type">
-          {getQuestionTypeName(question.type)}
-        </div>
-        
         <h2>{question.question}</h2>
         <ul className={`options-list ${getLayoutClass(question.type)}`}>
           {question.options.map((opt, i) => (
@@ -185,12 +180,12 @@ function Quiz() {
                 selected !== null ? 'disabled' : ''
               }`}
             >
-              {opt}
+              {question.type === 'true_false' ? '' : opt}
             </li>
           ))}
         </ul>
         {feedback && (
-          <p className={`feedback ${feedback.includes('正解') ? 'correct' : 'wrong'}`}>
+          <p className={`feedback ${feedback.startsWith('正解') ? 'correct' : 'wrong'}`}>
             {feedback}
           </p>
         )}

@@ -20,17 +20,23 @@ function HostLobby() {
 
     // Listen for successful join to get initial player list
     socket.once('joined_successfully', ({ players: initialPlayers }) => {
-      setPlayers(initialPlayers.filter(p => p.name !== 'HOST').map(p => p.name))
+      const playerNames = initialPlayers.filter(p => p.name !== 'HOST').map(p => p.name)
+      setPlayers(playerNames)
+      console.log('Host lobby - initial players:', playerNames)
     })
 
     // Listen for new players joining
     socket.on('player_joined', ({ players: updatedPlayers }) => {
-      setPlayers(updatedPlayers.filter(p => p.name !== 'HOST').map(p => p.name))
+      const playerNames = updatedPlayers.filter(p => p.name !== 'HOST').map(p => p.name)
+      setPlayers(playerNames)
+      console.log('Host lobby - players joined:', playerNames)
     })
 
     // Listen for players leaving
     socket.on('player_left', ({ players: updatedPlayers }) => {
-      setPlayers(updatedPlayers.filter(p => p.name !== 'HOST').map(p => p.name))
+      const playerNames = updatedPlayers.filter(p => p.name !== 'HOST').map(p => p.name)
+      setPlayers(playerNames)
+      console.log('Host lobby - players updated:', playerNames)
     })
 
     return () => {
@@ -68,7 +74,7 @@ function HostLobby() {
               {players.map((name, i) => (
                 <div key={i} className="terminal-line">
                   <span className="prefix">{'>'}</span>
-                  <span className="player-name">{name}</span>
+                  <span className="joined-player-name">{name}</span>
                   <span className="joined-text">が参加しました</span>
                 </div>
               ))}

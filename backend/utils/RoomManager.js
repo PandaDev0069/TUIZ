@@ -147,6 +147,14 @@ class RoomManager {
     const room = this.rooms.get(roomCode);
     if (!room) return null;
 
+    // Update previous ranks based on current standings before moving to next question
+    Array.from(room.players.keys()).forEach(playerId => {
+      if (room.players.get(playerId).name !== 'HOST') {
+        const currentRank = this.calculatePlayerRank(room, playerId);
+        room.previousRanks.set(playerId, currentRank);
+      }
+    });
+
     // Reset responses for new question
     room.currentResponses = [];
     room.questionStartTime = Date.now();
@@ -166,6 +174,12 @@ class RoomManager {
     if (!player || player.name === 'HOST') {
       console.log('⚠️ Invalid player or HOST trying to submit answer');
       return { error: 'Invalid player' };
+    }
+
+    // Handle timeout/no answer case - don't count as a response for analytics
+    if (answerIndex === null || answerIndex === undefined) {
+      console.log(`⏰ ${player.name} (${playerId}) timed out (no answer submitted)`);
+      return { success: true, message: 'Timeout recorded' };
     }
 
     console.log(`📝 ${player.name} (${playerId}) submitted answer ${answerIndex}`);

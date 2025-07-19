@@ -142,9 +142,6 @@ function Scoreboard() {
                 >
                   {player.score?.toLocaleString() || 0}
                 </span>
-                {player.stats && (
-                  <span className="player-accuracy">{player.stats.accuracy}% 正解率</span>
-                )}
                 {player.rankChange && (
                   <span className="rank-change">{getRankChangeIcon(player.rankChange)}</span>
                 )}
@@ -173,9 +170,6 @@ function Scoreboard() {
                   <span className="rank-change">{getRankChangeIcon(player.rankChange)}</span>
                 )}
                 <span className="score">{player.score?.toLocaleString() || 0}</span>
-                {player.stats && (
-                  <span className="accuracy">{player.stats.accuracy}%</span>
-                )}
               </div>
             ))}
           </div>

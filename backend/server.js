@@ -78,8 +78,10 @@ io.on('connection', (socket) => {
     const result = roomManager.submitAnswer(room, socket.id, answer);
     if (result.error) return;
     
-    // Notify host that a player answered
-    socket.to(room).emit('player_answered', { name, playerId: socket.id });
+    // Only notify host if player actually answered (not timeout/null)
+    if (answer !== null && answer !== undefined) {
+      socket.to(room).emit('player_answered', { name, playerId: socket.id });
+    }
     
     // Emit result to the player who answered
     socket.emit('answer_result', {
@@ -127,10 +129,14 @@ io.on('connection', (socket) => {
       const totalResponses = roomData.currentResponses.length;
       const correctResponses = roomData.currentResponses.filter(r => r.isCorrect).length;
       
-      // Calculate answer distribution
-      const answerDistribution = [0, 0, 0, 0];
+      // Get current question to determine option count
+      const currentQuestion = roomData.questions[roomData.currentQuestionIndex];
+      const optionCount = currentQuestion ? currentQuestion.options.length : 4;
+      
+      // Calculate answer distribution based on actual option count
+      const answerDistribution = new Array(optionCount).fill(0);
       roomData.currentResponses.forEach(response => {
-        if (response.answerIndex !== null && response.answerIndex >= 0 && response.answerIndex < 4) {
+        if (response.answerIndex !== null && response.answerIndex >= 0 && response.answerIndex < optionCount) {
           answerDistribution[response.answerIndex]++;
         }
       });
@@ -140,7 +146,8 @@ io.on('connection', (socket) => {
         totalResponses,
         responseRate: totalPlayers > 0 ? Math.round((totalResponses / totalPlayers) * 100) : 0,
         correctRate: totalResponses > 0 ? Math.round((correctResponses / totalResponses) * 100) : 0,
-        answerDistribution
+        answerDistribution,
+        questionType: currentQuestion?.type || 'multiple_choice_4'
       };
     }
     

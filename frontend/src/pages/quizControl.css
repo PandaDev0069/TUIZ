@@ -1,9 +1,9 @@
 .quiz-control {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: 1fr minmax(350px, 500px);
   gap: 2rem;
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px;
   padding: 2rem;
 }
 
@@ -51,19 +51,29 @@
 
 .options-list.large-buttons .option-item {
   padding: 2rem 1.5rem;
-  font-size: 1.4rem;
+  font-size: 1.8rem;
   font-weight: bold;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  position: relative;
 }
 
 .options-list.large-buttons .option-item:first-child {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #10B981;
+  text-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
 }
 
 .options-list.large-buttons .option-item:last-child {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #EF4444;
+  text-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
 }
 
 /* Question type indicator for host */
@@ -162,33 +172,42 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.8);
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   z-index: 1000;
+  padding: 2rem 1rem;
+  overflow-y: auto;
 }
 
 .analytics-modal {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
-  padding: 2rem;
-  max-width: 800px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  max-width: 1200px;
+  width: 100%;
+  max-height: none;
+  overflow-y: visible;
+  box-shadow: none;
   color: white;
+  min-height: calc(100vh - 4rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .analytics-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
+  padding-top: 1rem;
 }
 
 .analytics-header h2 {
-  font-size: 2rem;
-  margin-bottom: 1rem;
+  font-size: 3rem;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .analytics-summary {
@@ -222,15 +241,20 @@
 .analytics-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  margin-bottom: 2rem;
+  gap: 3rem;
+  margin-bottom: 3rem;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .answer-distribution h3,
 .top-players h3 {
-  margin-bottom: 1rem;
-  font-size: 1.3rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.4rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
+
 
 .answer-bar {
   display: flex;

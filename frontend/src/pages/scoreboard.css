@@ -228,6 +228,10 @@
   line-height: 1.2;
   animation: slideInUp 0.6s ease 2s both;
   overflow-wrap: break-word;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.5rem;
   hyphens: auto;
 }
 
@@ -567,6 +571,8 @@
     font-size: 1rem;
     margin-bottom: 0.3rem;
     line-height: 1.2;
+    text-align: center;
+    width: 100%;
   }
 
   .player-score {
@@ -700,6 +706,7 @@
     word-wrap: break-word;
     overflow-wrap: break-word;
     hyphens: auto;
+    text-align: center;
   }
 
   .player-score {
@@ -811,6 +818,7 @@
     overflow-wrap: break-word;
     white-space: normal;
     line-height: 1.1;
+    text-align: center;
   }
 
   .player-score {
@@ -1028,5 +1036,45 @@
   .restart-button {
     font-size: 1.1rem;
     padding: 1rem 2rem;
+  }
+}
+
+/* iPhone 12 specific fixes */
+@media (width: 390px) and (height: 844px) {
+  .page-container {
+    padding: 0.5rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .scoreboard-container {
+    padding: 1rem 0.5rem;
+    max-width: 100%;
+  }
+  
+  .title {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .podium-container {
+    height: 220px;
+    margin-bottom: 1.5rem;
+    max-width: 350px;
+  }
+  
+  .scores-list {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .score-row {
+    padding: 0.8rem;
+    margin-bottom: 0.3rem;
   }
 }

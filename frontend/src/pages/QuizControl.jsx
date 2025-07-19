@@ -134,19 +134,29 @@ function QuizControl() {
 
         <div className="analytics-content">
           <div className="answer-distribution">
-            <h3>回答分布</h3>
-            {analyticsData?.analytics?.answerDistribution?.map((count, index) => (
-              <div key={index} className="answer-bar">
-                <span className="answer-label">選択肢 {index + 1}</span>
-                <div className="bar-container">
-                  <div 
-                    className={`bar ${currentQuestion?.correctIndex === index ? 'correct' : ''}`}
-                    style={{ width: `${analyticsData.analytics.totalResponses > 0 ? (count / analyticsData.analytics.totalResponses) * 100 : 0}%` }}
-                  ></div>
-                  <span className="count">{count}</span>
+            <h3>回答分布 ({getQuestionTypeName(analyticsData?.analytics?.questionType)})</h3>
+            {analyticsData?.analytics?.answerDistribution?.map((count, index) => {
+              const questionType = analyticsData?.analytics?.questionType;
+              let optionLabel = `選択肢 ${index + 1}`;
+              
+              // Custom labels for true/false questions
+              if (questionType === 'true_false') {
+                optionLabel = index === 0 ? '正解 (○)' : '不正解 (×)';
+              }
+              
+              return (
+                <div key={index} className="answer-bar">
+                  <span className="answer-label">{optionLabel}</span>
+                  <div className="bar-container">
+                    <div 
+                      className={`bar ${currentQuestion?.correctIndex === index ? 'correct' : ''}`}
+                      style={{ width: `${analyticsData.analytics.totalResponses > 0 ? (count / analyticsData.analytics.totalResponses) * 100 : 0}%` }}
+                    ></div>
+                    <span className="count">{count}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="top-players">
@@ -181,16 +191,13 @@ function QuizControl() {
         <div className="main-question-card">
           <h2>現在の質問</h2>
           
-          {/* Question type badge */}
-          <div className="question-type-badge">
-            {getQuestionTypeName(currentQuestion.type)}
-          </div>
-          
           <div className="question-content">
             <h3>{currentQuestion.question}</h3>
             <ul className={`options-list ${getLayoutClass(currentQuestion.type)}`}>
               {currentQuestion.options.map((option, i) => (
-                <li key={i} className="option-item">{option}</li>
+                <li key={i} className="option-item">
+                  {currentQuestion.type === 'true_false' ? '' : option}
+                </li>
               ))}
             </ul>
           </div>

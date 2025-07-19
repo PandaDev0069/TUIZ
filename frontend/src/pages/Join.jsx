@@ -30,12 +30,14 @@ function Join() {
     
     setError("");
     console.log('Attempting to join room:', room, 'with name:', name);
-    socket.emit('joinRoom', { name, room });
     
-    socket.on('joined_successfully', ({ players }) => {
+    // Set up listener before emitting
+    socket.once('joined_successfully', ({ players }) => {
       console.log('Join successful! Players in room:', players);
-      navigate('/waiting', { state: { name, room } });
+      navigate('/waiting', { state: { name, room, initialPlayers: players } });
     });
+    
+    socket.emit('joinRoom', { name, room });
   };
 
   const handleKeyPress = (e) => {

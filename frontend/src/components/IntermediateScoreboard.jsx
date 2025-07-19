@@ -19,7 +19,7 @@ function IntermediateScoreboard({ top5, currentPlayer, totalPlayers, onComplete 
 
   const getStreakEmoji = (streak) => {
     if (streak >= 5) return '🔥';
-    if (streak >= 3) return '✨';
+    if (streak >= 3) return '⭐';
     return '';
   };
 
@@ -31,32 +31,43 @@ function IntermediateScoreboard({ top5, currentPlayer, totalPlayers, onComplete 
           <div className="timer">ホストが次の質問を開始するまでお待ちください...</div>
         </div>
 
-        <div className="top5-list">
-          {top5.map((player, index) => (
-            <div 
-              key={player.id}
-              className={`score-item rank-${index + 1}`}
-            >
-              <div className="rank">#{index + 1}</div>
-              <div className="player-info">
-                <span className="name">
-                  {player.name} {getStreakEmoji(player.streak)}
-                </span>
-                <span className="score">{player.score}</span>
+        <div className="leaderboard-section">
+          <h3>上位5位</h3>
+          <div className="top5-grid">
+            {top5.map((player, index) => (
+              <div 
+                key={player.id}
+                className={`score-box rank-${index + 1} ${currentPlayer?.id === player.id ? 'current-player' : ''}`}
+              >
+                <div className="rank-badge">#{index + 1}</div>
+                <div className="player-content">
+                  <div className="player-name">
+                    {player.name} {getStreakEmoji(player.streak)}
+                  </div>
+                  <div className="player-score">{player.score}pt</div>
+                </div>
+                <div className="rank-change">
+                  {getRankChangeIcon(player.rankChange)}
+                </div>
               </div>
-              <div className="rank-change">
-                {getRankChangeIcon(player.rankChange)}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        {currentPlayer && (
-          <div className="current-player-info">
-            <div className="your-rank">
-              <span>あなたの順位: #{currentPlayer.rank}</span>
-              <span>スコア: {currentPlayer.score}</span>
-              <span>{getStreakEmoji(currentPlayer.streak)}</span>
+        {currentPlayer && currentPlayer.rank > 5 && (
+          <div className="current-player-section">
+            <h3>あなたの順位</h3>
+            <div className="score-box current-player-highlight">
+              <div className="rank-badge">#{currentPlayer.rank}</div>
+              <div className="player-content">
+                <div className="player-name">
+                  {currentPlayer.name} {getStreakEmoji(currentPlayer.streak)}
+                </div>
+                <div className="player-score">{currentPlayer.score}pt</div>
+              </div>
+              <div className="rank-change">
+                {getRankChangeIcon(currentPlayer.rankChange)}
+              </div>
             </div>
           </div>
         )}

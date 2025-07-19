@@ -13,7 +13,7 @@
       "id": "q2",
       "type": "true_false",
       "question": "富士山は日本で一番高い山である",
-      "options": ["正解", "不正解"],
+      "options": ["○", "×"],
       "correctIndex": 0,
       "timeLimit": 8000,
       "points": 800
@@ -40,7 +40,7 @@
       "id": "q5",
       "type": "true_false",
       "question": "日本の国鳥はキジである",
-      "options": ["正解", "不正解"],
+      "options": ["○", "×"],
       "correctIndex": 0,
       "timeLimit": 8000,
       "points": 800
@@ -67,7 +67,7 @@
       "id": "q8",
       "type": "true_false",
       "question": "北海道は日本の最南端の島である",
-      "options": ["正解", "不正解"],
+      "options": ["○", "×"],
       "correctIndex": 1,
       "timeLimit": 8000,
       "points": 800
