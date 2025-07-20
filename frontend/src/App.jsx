@@ -1,7 +1,11 @@
 import { Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
 import socket from './socket'
+import { AuthProvider } from './contexts/AuthContext'
 import Home from './pages/Home'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import Dashboard from './pages/Dashboard'
 import Join from './pages/join'
 import WaitingRoom from './pages/WaitingRoom'
 import Host from './pages/Host'
@@ -22,16 +26,21 @@ function App() {
   }, []);
 
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/host" element={<Host/>} />
-      <Route path="/host/lobby" element={<HostLobby />} />
-      <Route path="/join" element={<Join />} />
-      <Route path="/waiting" element={<WaitingRoom />} />
-      <Route path="/quiz" element={<Quiz />} />
-      <Route path="/quiz/control" element={<QuizControl />} />
-      <Route path="/scoreboard" element={<Scoreboard />} />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/host" element={<Host/>} />
+        <Route path="/host/lobby" element={<HostLobby />} />
+        <Route path="/join" element={<Join />} />
+        <Route path="/waiting" element={<WaitingRoom />} />
+        <Route path="/quiz" element={<Quiz />} />
+        <Route path="/quiz/control" element={<QuizControl />} />
+        <Route path="/scoreboard" element={<Scoreboard />} />
+      </Routes>
+    </AuthProvider>
   )
 }
 

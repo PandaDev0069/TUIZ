@@ -5,7 +5,7 @@ function Home() {
   const navigate = useNavigate();
 
   const handleHostLogin = () => {
-    navigate('/host');
+    navigate('/login');
   };
 
   const handleJoinGame = () => {
@@ -18,7 +18,6 @@ function Home() {
         {/* Header Section */}
         <header className="home-header">
           <h1 className="app-title">TUIZ情報王</h1>
-          <p className="app-subtitle">リアルタイム知識クイズゲーム</p>
         </header>
 
         {/* Main Action Section */}

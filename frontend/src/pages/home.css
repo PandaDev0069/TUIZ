@@ -45,11 +45,6 @@
   }
 }
 
-.app-subtitle {
-  font-size: clamp(1.1rem, 3vw, 1.4rem);
-  opacity: 0.9;
-  font-weight: 400;
-}
 
 /* Main Action Section */
 .main-actions {

@@ -1,0 +1,327 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
+import './auth.css';
+
+function Register() {
+  const [formData, setFormData] = useState({
+    email: '',
+    username: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [availability, setAvailability] = useState({});
+
+  const { register, checkAvailability, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+
+    // Check availability for email and username
+    if ((name === 'email' || name === 'username') && value.trim()) {
+      debouncedAvailabilityCheck(name, value);
+    }
+  };
+
+  // Debounced availability check
+  const debouncedAvailabilityCheck = (() => {
+    let timeouts = {};
+    return (field, value) => {
+      clearTimeout(timeouts[field]);
+      timeouts[field] = setTimeout(async () => {
+        if (value.trim()) {
+          const result = await checkAvailability(
+            field === 'email' ? value : null,
+            field === 'username' ? value : null
+          );
+          if (result) {
+            setAvailability(prev => ({
+              ...prev,
+              [field]: result[field]
+            }));
+          }
+        }
+      }, 500);
+    };
+  })();
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Email validation
+    if (!formData.email.trim()) {
+      newErrors.email = 'メールアドレスを入力してください';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = '有効なメールアドレスを入力してください';
+    } else if (availability.email && !availability.email.available) {
+      newErrors.email = 'このメールアドレスは既に使用されています';
+    }
+
+    // Username validation
+    if (!formData.username.trim()) {
+      newErrors.username = 'ユーザー名を入力してください';
+    } else if (formData.username.length < 3 || formData.username.length > 20) {
+      newErrors.username = 'ユーザー名は3-20文字で入力してください';
+    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      newErrors.username = 'ユーザー名は英数字とアンダースコアのみ使用できます';
+    } else if (availability.username && !availability.username.available) {
+      newErrors.username = 'このユーザー名は既に使用されています';
+    }
+
+    // Password validation
+    if (!formData.password) {
+      newErrors.password = 'パスワードを入力してください';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'パスワードは6文字以上で入力してください';
+    }
+
+    // Confirm password validation
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'パスワード確認を入力してください';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'パスワードが一致しません';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    setLoading(true);
+    setErrors({});
+
+    try {
+      const result = await register(
+        formData.email,
+        formData.username,
+        formData.password,
+        formData.confirmPassword
+      );
+      
+      if (result.success) {
+        // Success! AuthContext will handle the redirect
+        console.log('Registration successful');
+      } else {
+        setErrors({ general: result.message });
+      }
+    } catch (error) {
+      setErrors({ general: 'アカウント作成中にエラーが発生しました。もう一度お試しください。' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getFieldStatus = (field) => {
+    if (errors[field]) return 'error';
+    if (availability[field]) {
+      return availability[field].available ? 'success' : 'error';
+    }
+    return '';
+  };
+
+  return (
+    <div className="auth-container">
+      <div className="auth-content">
+        {/* Header */}
+        <div className="auth-header">
+          <h1 className="auth-title">TUIZ情報王</h1>
+          <h2 className="auth-subtitle">新規アカウント作成</h2>
+          <p className="auth-description">
+            クイズ作成・管理のためのアカウントを作成しましょう
+          </p>
+        </div>
+
+        {/* Register Form */}
+        <form className="auth-form" onSubmit={handleSubmit}>
+          {/* General Error */}
+          {errors.general && (
+            <div className="error-message">
+              <span className="error-icon">⚠️</span>
+              {errors.general}
+            </div>
+          )}
+
+          {/* Email Input */}
+          <div className="input-group">
+            <label htmlFor="email" className="input-label">
+              メールアドレス
+            </label>
+            <div className="input-wrapper">
+              <input
+                type="email"
+                id="email"
+                name="email"
+                className={`auth-input ${getFieldStatus('email')}`}
+                placeholder="例: user@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={loading}
+                autoComplete="email"
+              />
+              {getFieldStatus('email') === 'success' && (
+                <span className="validation-icon success">✅</span>
+              )}
+            </div>
+            {errors.email && (
+              <span className="field-error">{errors.email}</span>
+            )}
+          </div>
+
+          {/* Username Input */}
+          <div className="input-group">
+            <label htmlFor="username" className="input-label">
+              ユーザー名
+            </label>
+            <div className="input-wrapper">
+              <input
+                type="text"
+                id="username"
+                name="username"
+                className={`auth-input ${getFieldStatus('username')}`}
+                placeholder="例: quiz_master"
+                value={formData.username}
+                onChange={handleChange}
+                disabled={loading}
+                autoComplete="username"
+              />
+              {getFieldStatus('username') === 'success' && (
+                <span className="validation-icon success">✅</span>
+              )}
+            </div>
+            {errors.username && (
+              <span className="field-error">{errors.username}</span>
+            )}
+            <span className="field-hint">3-20文字、英数字とアンダースコアのみ</span>
+          </div>
+
+          {/* Password Input */}
+          <div className="input-group">
+            <label htmlFor="password" className="input-label">
+              パスワード
+            </label>
+            <div className="input-wrapper has-toggle">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                name="password"
+                className={`auth-input ${errors.password ? 'error' : ''}`}
+                placeholder="6文字以上のパスワード"
+                value={formData.password}
+                onChange={handleChange}
+                disabled={loading}
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={loading}
+                title={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
+            {errors.password && (
+              <span className="field-error">{errors.password}</span>
+            )}
+          </div>
+
+          {/* Confirm Password Input */}
+          <div className="input-group">
+            <label htmlFor="confirmPassword" className="input-label">
+              パスワード確認
+            </label>
+            <div className="input-wrapper has-toggle">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                id="confirmPassword"
+                name="confirmPassword"
+                className={`auth-input ${errors.confirmPassword ? 'error' : ''}`}
+                placeholder="パスワードを再入力"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                disabled={loading}
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                disabled={loading}
+                title={showConfirmPassword ? 'パスワードを隠す' : 'パスワードを表示'}
+              >
+                {showConfirmPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
+            {errors.confirmPassword && (
+              <span className="field-error">{errors.confirmPassword}</span>
+            )}
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            className={`auth-button register-button ${loading ? 'loading' : ''}`}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <span className="loading-spinner"></span>
+                作成中...
+              </>
+            ) : (
+              'アカウント作成'
+            )}
+          </button>
+
+          {/* Login Link */}
+          <div className="auth-links">
+            <p>
+              既にアカウントをお持ちの方は{' '}
+              <Link to="/login" className="auth-link">
+                ログイン
+              </Link>
+            </p>
+          </div>
+        </form>
+
+        {/* Back to Home */}
+        <div className="auth-footer">
+          <Link to="/" className="back-link">
+            ← ホームに戻る
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Register;
