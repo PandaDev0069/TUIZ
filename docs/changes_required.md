@@ -32,3 +32,6 @@
 # Score and logic
 
 
+# create-quiz  metadata form
+
+- the step 1/4 indicator is crammed in beteween previous and next button .

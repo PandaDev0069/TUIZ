@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import MetadataForm from '../components/MetadataForm';
+import QuestionsForm from '../components/QuestionsForm';
 import './createQuiz.css';
 
 function CreateQuiz() {
@@ -31,7 +32,20 @@ function CreateQuiz() {
   });
 
   // Quiz questions state
-  const [questions, setQuestions] = useState([]);
+  const [questions, setQuestions] = useState([
+    {
+      id: Date.now(),
+      text: "",
+      image: "",
+      imageFile: null,
+      timeLimit: 10,
+      points: "standard",
+      answers: [
+        { id: Date.now() + 1, text: "", isCorrect: false, image: "", imageFile: null },
+        { id: Date.now() + 2, text: "", isCorrect: false, image: "", imageFile: null },
+      ],
+    },
+  ]);
 
   // Quiz settings state
   const [settings, setSettings] = useState({
@@ -73,7 +87,13 @@ function CreateQuiz() {
       case 1:
         return metadata.title.trim().length > 0;
       case 2:
-        return questions.length > 0;
+        // Check if all questions are valid
+        return questions.length > 0 && questions.every(question => {
+          const hasValidText = question.text.trim().length > 0;
+          const hasValidAnswers = question.answers.every(a => a.text.trim().length > 0);
+          const hasCorrectAnswer = question.answers.some(a => a.isCorrect);
+          return hasValidText && hasValidAnswers && hasCorrectAnswer;
+        });
       case 3:
         return true; // Settings are optional
       case 4:
@@ -146,11 +166,10 @@ function CreateQuiz() {
             )}
 
             {currentStep === 2 && (
-              <div className="step-content">
-                <h2 className="step-title">❓ 問題作成</h2>
-                <p className="step-description">準備中...</p>
-                {/* TODO: Implement QuestionForm component */}
-              </div>
+              <QuestionsForm 
+                questions={questions} 
+                setQuestions={setQuestions}
+              />
             )}
 
             {currentStep === 3 && (
