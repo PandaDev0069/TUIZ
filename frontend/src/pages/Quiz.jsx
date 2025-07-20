@@ -87,6 +87,7 @@ function Quiz() {
 
   const handleAnswer = (index) => {
     if (selected !== null) return; // Prevent multiple selections
+    if (timer <= 0) return; // Prevent answers after time is up
     setSelected(index);
     
     socket.emit("submit_answer", { 
@@ -168,7 +169,9 @@ function Quiz() {
           {questionScore > 0 && <div className="last-points">+{questionScore}</div>}
         </div>
         
-        <div className="timer">{timer}</div>
+        <div className={`timer ${timer <= 0 ? 'time-up' : ''}`}>
+          {timer <= 0 ? '時間切れ!' : timer}
+        </div>
         
         <h2>{question.question}</h2>
         <ul className={`options-list ${getLayoutClass(question.type)}`}>
@@ -177,7 +180,7 @@ function Quiz() {
               key={i}
               onClick={() => handleAnswer(i)}
               className={`option-item ${selected === i ? 'selected' : ''} ${
-                selected !== null ? 'disabled' : ''
+                selected !== null || timer <= 0 ? 'disabled' : ''
               }`}
             >
               {question.type === 'true_false' ? '' : opt}

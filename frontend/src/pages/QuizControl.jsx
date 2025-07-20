@@ -14,6 +14,9 @@ function QuizControl() {
   const [canAdvance, setCanAdvance] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [analyticsData, setAnalyticsData] = useState(null);
+  const [questionTimer, setQuestionTimer] = useState(null);
+  const [hostTimer, setHostTimer] = useState(0);
+  const [timerInterval, setTimerInterval] = useState(null);
 
   useEffect(() => {
     if (!room || !title) {
@@ -26,6 +29,38 @@ function QuizControl() {
       setCurrentQuestion(question);
       setResponses([]);
       setCanAdvance(false);
+      
+      // Set up timer to automatically enable advancement after question time limit
+      const timeLimit = question.timeLimit || 10000; // Default 10 seconds
+      const timeLimitSeconds = Math.floor(timeLimit / 1000);
+      setHostTimer(timeLimitSeconds);
+      
+      // Clear existing timers
+      if (questionTimer) {
+        clearTimeout(questionTimer);
+      }
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+      
+      // Visual countdown timer
+      const interval = setInterval(() => {
+        setHostTimer(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      setTimerInterval(interval);
+      
+      // Auto-enable advancement timer
+      const timer = setTimeout(() => {
+        setCanAdvance(true);
+      }, timeLimit);
+      
+      setQuestionTimer(timer);
     });
 
     // Listen for player answers
@@ -50,6 +85,14 @@ function QuizControl() {
       socket.off('player_answered');
       socket.off('game_over');
       socket.off('show_host_analytics');
+      
+      // Clean up timers
+      if (questionTimer) {
+        clearTimeout(questionTimer);
+      }
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
     };
   }, [room, title, navigate]);
 
@@ -57,6 +100,17 @@ function QuizControl() {
     socket.emit('next_question', { room });
     setResponses([]);
     setCanAdvance(false);
+    
+    // Clear existing timers
+    if (questionTimer) {
+      clearTimeout(questionTimer);
+      setQuestionTimer(null);
+    }
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      setTimerInterval(null);
+    }
+    setHostTimer(0);
   };
 
   const handleContinueGame = () => {
@@ -65,6 +119,17 @@ function QuizControl() {
     setAnalyticsData(null);
     setResponses([]);
     setCanAdvance(false);
+    
+    // Clear existing timers
+    if (questionTimer) {
+      clearTimeout(questionTimer);
+      setQuestionTimer(null);
+    }
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      setTimerInterval(null);
+    }
+    setHostTimer(0);
   };
 
   // Get layout class based on question type
@@ -189,7 +254,12 @@ function QuizControl() {
       <div className="quiz-control">
         {/* Current Question Display */}
         <div className="main-question-card">
-          <h2>現在の質問</h2>
+          <div className="question-header">
+            <h2>現在の質問</h2>
+            <div className={`host-timer ${hostTimer <= 0 ? 'time-up' : ''}`}>
+              {hostTimer <= 0 ? '時間切れ!' : `残り ${hostTimer}秒`}
+            </div>
+          </div>
           
           <div className="question-content">
             <h3>{currentQuestion.question}</h3>
@@ -214,12 +284,23 @@ function QuizControl() {
               </div>
             ))}
           </div>
+          
+          {/* Manual override button */}
+          {!canAdvance && responses.length > 0 && (
+            <button 
+              className="button override-button"
+              onClick={() => setCanAdvance(true)}
+            >
+              手動で次へ ({responses.length}人が回答済み)
+            </button>
+          )}
+          
           <button 
             className={`button next-button ${!canAdvance ? 'disabled' : ''}`}
             onClick={handleNextQuestion}
             disabled={!canAdvance}
           >
-            次の質問へ
+            {hostTimer <= 0 ? '次の質問へ' : `次の質問へ (${hostTimer}秒後に有効)`}
           </button>
         </div>
       </div>

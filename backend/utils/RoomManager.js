@@ -182,6 +182,19 @@ class RoomManager {
       return { success: true, message: 'Timeout recorded' };
     }
 
+    // Check if time limit exceeded (server-side validation)
+    const currentTime = Date.now();
+    if (room.questionStartTime) {
+      const timeElapsed = currentTime - room.questionStartTime;
+      const currentQuestion = room.questions[room.currentQuestionIndex];
+      const timeLimit = currentQuestion?.timeLimit || this.QUESTION_TIME;
+      
+      if (timeElapsed > timeLimit) {
+        console.log(`⏰ ${player.name} (${playerId}) attempted to answer after time limit (${timeElapsed}ms > ${timeLimit}ms)`);
+        return { error: 'Time limit exceeded' };
+      }
+    }
+
     console.log(`📝 ${player.name} (${playerId}) submitted answer ${answerIndex}`);
 
     const currentQuestion = room.questions[room.currentQuestionIndex];
@@ -191,7 +204,6 @@ class RoomManager {
     }
 
     const isCorrect = currentQuestion.correctIndex === answerIndex;
-    const currentTime = Date.now();
     
     // Initialize response tracking if needed and ensure questionStartTime is set
     if (!room.currentResponses) {
