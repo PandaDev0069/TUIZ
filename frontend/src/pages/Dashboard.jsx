@@ -59,7 +59,6 @@ function Dashboard() {
                 <div className="action-icon">✏️</div>
                 <h3>新しいクイズを作成</h3>
                 <p>オリジナルクイズを作成して管理しましょう</p>
-                <div className="action-badge coming-soon">準備中</div>
               </div>
 
               <div className="action-card" onClick={handleQuickStart}>

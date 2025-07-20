@@ -101,8 +101,10 @@
 
 .action-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .action-card {
@@ -116,6 +118,11 @@
   position: relative;
   overflow: hidden;
   text-align: center;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .action-card:not(.disabled):hover {
@@ -244,6 +251,20 @@
 }
 
 /* Responsive Design */
+@media (max-width: 1200px) {
+  .action-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .action-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.2rem;
+  }
+}
+
 @media (max-width: 768px) {
   .dashboard-header {
     flex-direction: column;
@@ -262,7 +283,7 @@
   }
 
   .action-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
   }
 
@@ -272,6 +293,13 @@
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 580px) {
+  .action-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
 }
 
@@ -294,6 +322,7 @@
 
   .action-card {
     padding: 1.2rem;
+    min-height: 180px;
   }
 
   .action-icon {
