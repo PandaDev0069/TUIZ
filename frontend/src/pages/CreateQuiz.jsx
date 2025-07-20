@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import MetadataForm from '../components/MetadataForm';
 import QuestionsForm from '../components/QuestionsForm';
+import SettingsForm from '../components/SettingsForm';
+import QuestionReorderModal from '../components/QuestionReorderModal';
 import './createQuiz.css';
 
 function CreateQuiz() {
@@ -49,12 +51,43 @@ function CreateQuiz() {
 
   // Quiz settings state
   const [settings, setSettings] = useState({
+    // Timing & Flow
     timeLimit: 30,
+    breakDuration: 3,
+    autoAdvance: true,
+    
+    // Question & Answer Ordering
+    questionOrder: "original", // "original", "random-all", "random-per-player", "custom"
+    customQuestionOrder: [],
+    answerOrder: "original", // "original", "randomize", "lock-first", "lock-last"
+    
+    // Gameplay Behavior
     showCorrectAnswer: true,
-    randomizeQuestions: false,
-    randomizeAnswers: true,
+    showExplanations: true,
+    allowAnswerChange: true,
+    allowLateSubmissions: false,
+    
+    // Scoring & Points
+    pointCalculation: "fixed", // "fixed", "time-bonus"
+    streakBonus: false,
+    wrongAnswerPenalty: false,
+    
+    // Player Experience
+    showLeaderboard: true,
+    showProgress: true,
     allowReplay: false,
+    spectatorMode: true,
+    
+    // Advanced Options
+    maxPlayers: 50,
+    autoStart: false,
+    kickInactive: false,
+    inactiveTimeout: 30
   });
+
+  // Modal states for advanced features
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showReorderModal, setShowReorderModal] = useState(false);
 
   const stepTitles = [
     "📋 基本情報",
@@ -80,6 +113,25 @@ function CreateQuiz() {
     console.log('Saving quiz...', { metadata, questions, settings });
     // Navigate back to dashboard
     navigate('/dashboard');
+  };
+
+  const handlePreviewQuiz = () => {
+    setShowPreviewModal(true);
+  };
+
+  const handleReorderQuestions = () => {
+    setShowReorderModal(true);
+  };
+
+  const handleReorderComplete = (newQuestions) => {
+    setQuestions(newQuestions);
+    // Automatically set question order to custom when reordering is used
+    setSettings(prev => ({
+      ...prev,
+      questionOrder: 'custom',
+      customQuestionOrder: newQuestions.map(q => q.id)
+    }));
+    setShowReorderModal(false);
   };
 
   const canProceed = () => {
@@ -173,11 +225,13 @@ function CreateQuiz() {
             )}
 
             {currentStep === 3 && (
-              <div className="step-content">
-                <h2 className="step-title">⚙️ クイズ設定</h2>
-                <p className="step-description">準備中...</p>
-                {/* TODO: Implement SettingsForm component */}
-              </div>
+              <SettingsForm 
+                settings={settings} 
+                setSettings={setSettings}
+                questions={questions}
+                onPreviewQuiz={handlePreviewQuiz}
+                onReorderQuestions={handleReorderQuestions}
+              />
             )}
 
             {currentStep === 4 && (
@@ -224,6 +278,14 @@ function CreateQuiz() {
             )}
           </div>
         </footer>
+
+        {/* Modals */}
+        <QuestionReorderModal
+          isOpen={showReorderModal}
+          onClose={() => setShowReorderModal(false)}
+          questions={questions}
+          setQuestions={handleReorderComplete}
+        />
       </div>
     </div>
   );
