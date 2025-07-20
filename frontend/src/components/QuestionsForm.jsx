@@ -50,10 +50,35 @@ function QuestionsForm({ questions, setQuestions }) {
   // Duplicate question
   const duplicateQuestion = (index) => {
     const questionToDuplicate = questions[index];
+    
+    // Generate the copy name with proper numbering
+    const generateCopyName = (originalText) => {
+      const baseText = originalText.replace(/\s*\(コピー\d*\)$/, ''); // Remove existing copy suffix
+      const existingCopies = questions
+        .map(q => q.text)
+        .filter(text => text.startsWith(baseText))
+        .filter(text => text.match(/\(コピー\d*\)$/));
+      
+      if (existingCopies.length === 0) {
+        return baseText + ' (コピー)';
+      } else {
+        // Find the highest copy number
+        const copyNumbers = existingCopies.map(text => {
+          const match = text.match(/\(コピー(\d*)\)$/);
+          if (match) {
+            return match[1] === '' ? 1 : parseInt(match[1]);
+          }
+          return 1;
+        });
+        const maxNumber = Math.max(...copyNumbers);
+        return baseText + ` (コピー${maxNumber + 1})`;
+      }
+    };
+    
     const duplicatedQuestion = {
       ...questionToDuplicate,
       id: Date.now() + Math.random(),
-      text: questionToDuplicate.text + " (コピー)",
+      text: generateCopyName(questionToDuplicate.text),
       answers: questionToDuplicate.answers.map(answer => ({
         ...answer,
         id: Date.now() + Math.random() + Math.random(),
