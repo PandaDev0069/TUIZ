@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
 import socket from './socket'
+import Home from './pages/Home'
 import Join from './pages/join'
 import WaitingRoom from './pages/WaitingRoom'
 import Host from './pages/Host'
@@ -22,7 +23,7 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<h1>Welcome to Quiz Game</h1>} />
+      <Route path="/" element={<Home />} />
       <Route path="/host" element={<Host/>} />
       <Route path="/host/lobby" element={<HostLobby />} />
       <Route path="/join" element={<Join />} />
