@@ -101,8 +101,17 @@ function QuestionReorderModal({ questions, onReorder, onClose, isOpen }) {
   };
 
   const handleSave = () => {
-    onReorder(localQuestions);
-    onClose();
+    console.log('Save button clicked, reordered questions:', localQuestions);
+    if (onReorder) {
+      onReorder(localQuestions);
+    } else {
+      console.error('onReorder function not provided');
+    }
+    if (onClose) {
+      onClose();
+    } else {
+      console.error('onClose function not provided');
+    }
   };
 
   const handleCancel = () => {
@@ -114,7 +123,7 @@ function QuestionReorderModal({ questions, onReorder, onClose, isOpen }) {
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && handleCancel()}>
-      <div className="reorder-modal">
+      <div className="reorder-modal" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="modal-header">
           <div className="header-left">
@@ -208,10 +217,23 @@ function QuestionReorderModal({ questions, onReorder, onClose, isOpen }) {
 
         {/* Modal Footer */}
         <div className="modal-footer">
-          <button className="footer-btn cancel" onClick={handleCancel}>
+          <button 
+            className="footer-btn cancel" 
+            onClick={handleCancel}
+            type="button"
+          >
             キャンセル
           </button>
-          <button className="footer-btn save" onClick={handleSave}>
+          <button 
+            className="footer-btn save" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Save button clicked!');
+              handleSave();
+            }}
+            type="button"
+          >
             保存
           </button>
         </div>

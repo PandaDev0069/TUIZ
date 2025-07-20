@@ -131,7 +131,6 @@ function CreateQuiz() {
       questionOrder: 'custom',
       customQuestionOrder: newQuestions.map(q => q.id)
     }));
-    setShowReorderModal(false);
   };
 
   const canProceed = () => {
@@ -284,7 +283,7 @@ function CreateQuiz() {
           isOpen={showReorderModal}
           onClose={() => setShowReorderModal(false)}
           questions={questions}
-          setQuestions={handleReorderComplete}
+          onReorder={handleReorderComplete}
         />
       </div>
     </div>

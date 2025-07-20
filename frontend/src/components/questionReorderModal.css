@@ -291,6 +291,8 @@
   gap: 1rem;
   padding: 1.5rem 2rem;
   background: rgba(255, 255, 255, 0.05);
+  position: relative;
+  z-index: 10;
 }
 
 .footer-btn {
@@ -302,6 +304,8 @@
   cursor: pointer;
   transition: all 0.3s ease;
   min-width: 120px;
+  position: relative;
+  z-index: 10;
 }
 
 .footer-btn.cancel {
