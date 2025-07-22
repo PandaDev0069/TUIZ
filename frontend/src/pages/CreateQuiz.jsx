@@ -86,7 +86,6 @@ function CreateQuiz() {
   });
 
   // Modal states for advanced features
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showReorderModal, setShowReorderModal] = useState(false);
 
   const stepTitles = [
@@ -116,7 +115,9 @@ function CreateQuiz() {
   };
 
   const handlePreviewQuiz = () => {
-    setShowPreviewModal(true);
+    // TODO: Implement preview modal functionality
+    console.log('Preview quiz clicked - functionality not yet implemented');
+    // setShowPreviewModal(true);
   };
 
   const handleReorderQuestions = () => {
