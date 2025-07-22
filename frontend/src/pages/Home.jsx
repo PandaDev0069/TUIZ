@@ -26,7 +26,7 @@ function Home() {
             <div className="action-card host-card" onClick={handleHostLogin}>
               <div className="card-icon">🎯</div>
               <h3>ホストとしてログイン</h3>
-              <p>クイズを作成・管理し、プレイヤーをリードしましょう</p>
+              <p>クイズを作成・管理し、クイズを開始、ホスト</p>
               <button className="action-button host-button">
                 ログイン
               </button>
@@ -35,7 +35,7 @@ function Home() {
             <div className="action-card player-card" onClick={handleJoinGame}>
               <div className="card-icon">🎮</div>
               <h3>ゲームに参加</h3>
-              <p>ルームコードを入力してクイズゲームに参加しましょう</p>
+              <p>ルームコードを入力してクイズゲームに参加</p>
               <button className="action-button player-button">
                 ゲーム参加
               </button>

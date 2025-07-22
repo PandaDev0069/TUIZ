@@ -58,7 +58,7 @@ function Dashboard() {
               <div className="action-card" onClick={handleCreateQuiz}>
                 <div className="action-icon">✏️</div>
                 <h3>新しいクイズを作成</h3>
-                <p>オリジナルクイズを作成して管理しましょう</p>
+                <p>オリジナルクイズを作成して管理</p>
               </div>
 
               <div className="action-card" onClick={handleQuickStart}>
