@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "VITE_BACKEND_URL_PROD": "@backend_url_prod",
+    "VITE_SOCKET_URL_PROD": "@socket_url_prod",
+    "VITE_SUPABASE_URL": "@supabase_url",
+    "VITE_SUPABASE_ANON_KEY": "@supabase_anon_key"
+  },
+  "build": {
+    "env": {
+      "VITE_BACKEND_URL_PROD": "@backend_url_prod",
+      "VITE_SOCKET_URL_PROD": "@socket_url_prod"
+    }
+  }
+}

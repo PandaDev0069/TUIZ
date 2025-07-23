@@ -1,0 +1,30 @@
+# Render deployment configuration for backend
+services:
+  - type: web
+    name: tuiz-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: SUPABASE_URL
+        fromService:
+          type: envVarGroup
+          name: supabase
+          property: SUPABASE_URL
+      - key: SUPABASE_SERVICE_KEY
+        fromService:
+          type: envVarGroup
+          name: supabase
+          property: SUPABASE_SERVICE_KEY
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL_PROD
+        value: https://your-frontend-url.vercel.app
+      - key: SOCKET_CORS_ORIGIN_PROD
+        value: https://your-frontend-url.vercel.app
