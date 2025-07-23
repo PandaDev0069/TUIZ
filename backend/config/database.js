@@ -1,245 +1,476 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const bcrypt = require('bcryptjs');
+require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
+
+// Supabase configuration
+const supabaseUrl = 'https://khpkxopohylfteixbggo.supabase.co';
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 class DatabaseManager {
   constructor() {
-    // Create database file in backend directory
-    const dbPath = path.join(__dirname, '..', 'tuiz.db');
-    this.db = new Database(dbPath);
+    // Initialize Supabase client
+    this.supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Enable foreign keys
-    this.db.pragma('foreign_keys = ON');
+    console.log('✅ Supabase client initialized successfully');
+    console.log('📍 Supabase URL:', supabaseUrl);
+    console.log('🔑 Supabase Key:', supabaseKey ? 'Present' : 'Missing');
     
-    // Initialize database schema
-    this.initializeSchema();
-    
-    // Create prepared statements for better performance
-    this.prepareStatements();
-    
-    console.log('✅ Database initialized successfully');
+    // Test connection
+    this.testConnection();
   }
 
-  initializeSchema() {
-    // Users/Hosts table
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE NOT NULL,
-        username TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        last_login DATETIME,
-        is_active BOOLEAN DEFAULT 1,
-        email_verified BOOLEAN DEFAULT 0
-      )
-    `);
-
-    // Quizzes table
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS quizzes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        is_published BOOLEAN DEFAULT 0,
-        settings TEXT DEFAULT '{}',
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
-
-    // Questions table
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS questions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        quiz_id INTEGER NOT NULL,
-        question_text TEXT NOT NULL,
-        question_type TEXT NOT NULL,
-        options TEXT NOT NULL,
-        correct_index INTEGER NOT NULL,
-        time_limit INTEGER DEFAULT 10000,
-        points INTEGER DEFAULT 1000,
-        order_num INTEGER NOT NULL,
-        media_url TEXT,
-        FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
-      )
-    `);
-
-    // Game sessions table for analytics
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS game_sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        quiz_id INTEGER NOT NULL,
-        host_id INTEGER NOT NULL,
-        room_code TEXT NOT NULL,
-        started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        ended_at DATETIME,
-        total_players INTEGER DEFAULT 0,
-        completed BOOLEAN DEFAULT 0,
-        FOREIGN KEY (quiz_id) REFERENCES quizzes(id),
-        FOREIGN KEY (host_id) REFERENCES users(id)
-      )
-    `);
-
-    // Player answers for analytics
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS player_answers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id INTEGER NOT NULL,
-        question_id INTEGER NOT NULL,
-        player_name TEXT NOT NULL,
-        answer_index INTEGER,
-        is_correct BOOLEAN,
-        response_time INTEGER,
-        points_earned INTEGER DEFAULT 0,
-        FOREIGN KEY (session_id) REFERENCES game_sessions(id),
-        FOREIGN KEY (question_id) REFERENCES questions(id)
-      )
-    `);
-
-    console.log('📊 Database schema created successfully');
-  }
-
-  prepareStatements() {
-    // User authentication statements
-    this.statements = {
-      // User operations
-      createUser: this.db.prepare(`
-        INSERT INTO users (email, username, password_hash)
-        VALUES (?, ?, ?)
-      `),
-      
-      findUserByEmail: this.db.prepare(`
-        SELECT * FROM users WHERE email = ? AND is_active = 1
-      `),
-      
-      findUserByUsername: this.db.prepare(`
-        SELECT * FROM users WHERE username = ? AND is_active = 1
-      `),
-      
-      findUserById: this.db.prepare(`
-        SELECT id, email, username, created_at, last_login FROM users 
-        WHERE id = ? AND is_active = 1
-      `),
-      
-      updateLastLogin: this.db.prepare(`
-        UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?
-      `),
-
-      // Quiz operations
-      createQuiz: this.db.prepare(`
-        INSERT INTO quizzes (user_id, title, description, settings)
-        VALUES (?, ?, ?, ?)
-      `),
-      
-      getUserQuizzes: this.db.prepare(`
-        SELECT id, title, description, created_at, updated_at, is_published
-        FROM quizzes WHERE user_id = ? ORDER BY updated_at DESC
-      `),
-      
-      getQuizById: this.db.prepare(`
-        SELECT * FROM quizzes WHERE id = ? AND user_id = ?
-      `),
-
-      // Question operations
-      getQuizQuestions: this.db.prepare(`
-        SELECT * FROM questions WHERE quiz_id = ? ORDER BY order_num
-      `),
-      
-      // Game session operations
-      createGameSession: this.db.prepare(`
-        INSERT INTO game_sessions (quiz_id, host_id, room_code, total_players)
-        VALUES (?, ?, ?, ?)
-      `),
-      
-      endGameSession: this.db.prepare(`
-        UPDATE game_sessions 
-        SET ended_at = CURRENT_TIMESTAMP, completed = 1
-        WHERE room_code = ?
-      `)
-    };
-
-    console.log('⚡ Database prepared statements ready');
-  }
-
-  // User authentication methods
-  async createUser(email, username, password) {
+  async testConnection() {
     try {
-      const hashedPassword = await bcrypt.hash(password, 12);
-      const result = this.statements.createUser.run(email, username, hashedPassword);
-      return { id: result.lastInsertRowid, email, username };
-    } catch (error) {
-      if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-        throw new Error('Email or username already exists');
+      const { data, error } = await this.supabase
+        .from('users')
+        .select('count', { count: 'exact', head: true });
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 = table doesn't exist, which is OK
+        console.error('❌ Database connection test failed:', error);
+      } else {
+        console.log('✅ Database connection test successful');
       }
-      throw error;
+    } catch (err) {
+      console.error('❌ Database connection error:', err.message);
     }
   }
 
-  async authenticateUser(emailOrUsername, password) {
+  // ================================
+  // USER MANAGEMENT
+  // ================================
+  
+  async createUser(userData) {
     try {
-      // Try to find user by email first, then username
-      let user = this.statements.findUserByEmail.get(emailOrUsername);
-      if (!user) {
-        user = this.statements.findUserByUsername.get(emailOrUsername);
+      console.log('🔄 Attempting to create user:', userData.email);
+      
+      // Try Supabase Auth signup
+      const { data, error } = await this.supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            name: userData.name || userData.username,
+            username: userData.username
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Supabase auth signup error:', error);
+        
+        // Handle specific errors
+        if (error.message?.includes('User already registered')) {
+          return { success: false, error: 'Email already exists' };
+        }
+        
+        return { success: false, error: error.message };
       }
-
-      if (!user) {
-        throw new Error('User not found');
+      
+      // Check if user was created
+      if (data.user) {
+        console.log('✅ User created successfully in Supabase Auth:', data.user.id);
+        
+        // Return user info from auth data
+        return { 
+          success: true, 
+          user: {
+            id: data.user.id,
+            email: data.user.email,
+            username: userData.username,
+            name: userData.username
+          }
+        };
       }
-
-      const isValidPassword = await bcrypt.compare(password, user.password_hash);
-      if (!isValidPassword) {
-        throw new Error('Invalid password');
-      }
-
-      // Update last login
-      this.statements.updateLastLogin.run(user.id);
-
-      // Return user without password hash
-      const { password_hash, ...userWithoutPassword } = user;
-      return userWithoutPassword;
+      
+      return { success: false, error: 'User creation failed - no user returned' };
     } catch (error) {
-      throw error;
+      console.error('❌ Create user error:', error);
+      return { success: false, error: error.message };
     }
   }
 
-  getUserById(id) {
-    return this.statements.findUserById.get(id);
+  async authenticateUser(email, password) {
+    try {
+      const { data, error } = await this.supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+      
+      // Return basic user info based on auth data for now
+      // We can enhance this later when database is properly set up
+      return { 
+        success: true, 
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          username: data.user.user_metadata?.name || data.user.email.split('@')[0],
+          name: data.user.user_metadata?.name || data.user.email.split('@')[0],
+          last_active: data.user.last_sign_in_at
+        }, 
+        session: data.session 
+      };
+    } catch (error) {
+      console.error('❌ Authentication error:', error);
+      return { success: false, error: error.message };
+    }
   }
 
-  // Quiz management methods
-  createQuiz(userId, title, description = '', settings = {}) {
-    const result = this.statements.createQuiz.run(
-      userId, 
-      title, 
-      description, 
-      JSON.stringify(settings)
-    );
-    return { id: result.lastInsertRowid, title, description };
+  async getUserById(userId) {
+    try {
+      const { data, error } = await this.supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      
+      return { success: true, user: data };
+    } catch (error) {
+      console.error('❌ Get user error:', error);
+      return { success: false, error: error.message };
+    }
   }
 
-  getUserQuizzes(userId) {
-    return this.statements.getUserQuizzes.all(userId);
+  async updateUserProfile(userId, updates) {
+    try {
+      const { data, error } = await this.supabase
+        .from('users')
+        .update(updates)
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      return { success: true, user: data };
+    } catch (error) {
+      console.error('❌ Update user error:', error);
+      return { success: false, error: error.message };
+    }
   }
 
-  getQuizWithQuestions(quizId, userId) {
-    const quiz = this.statements.getQuizById.get(quizId, userId);
-    if (!quiz) return null;
+  // ================================
+  // QUESTION SETS MANAGEMENT
+  // ================================
+  
+  async createQuestionSet(questionSetData) {
+    try {
+      const { data, error } = await this.supabase
+        .from('question_sets')
+        .insert(questionSetData)
+        .select()
+        .single();
 
-    const questions = this.statements.getQuizQuestions.all(quizId);
-    return { ...quiz, questions };
+      if (error) throw error;
+      
+      return { success: true, questionSet: data };
+    } catch (error) {
+      console.error('❌ Create question set error:', error);
+      return { success: false, error: error.message };
+    }
   }
 
-  // Close database connection
-  close() {
-    this.db.close();
+  async getQuestionSetsByUser(userId) {
+    try {
+      const { data, error } = await this.supabase
+        .from('question_sets')
+        .select(`
+          *,
+          questions:questions(count)
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      return { success: true, questionSets: data };
+    } catch (error) {
+      console.error('❌ Get question sets error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getPublicQuestionSets(limit = 20, offset = 0) {
+    try {
+      const { data, error } = await this.supabase
+        .from('question_sets')
+        .select(`
+          *,
+          users!inner(name),
+          questions:questions(count)
+        `)
+        .eq('is_public', true)
+        .order('times_played', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (error) throw error;
+      
+      return { success: true, questionSets: data };
+    } catch (error) {
+      console.error('❌ Get public question sets error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getQuestionSetWithQuestions(questionSetId) {
+    try {
+      const { data, error } = await this.supabase
+        .from('question_sets')
+        .select(`
+          *,
+          questions:questions(
+            *,
+            answers:answers(*)
+          )
+        `)
+        .eq('id', questionSetId)
+        .single();
+
+      if (error) throw error;
+      
+      return { success: true, questionSet: data };
+    } catch (error) {
+      console.error('❌ Get question set with questions error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // ================================
+  // GAME MANAGEMENT
+  // ================================
+  
+  async createGame(gameData) {
+    try {
+      const { data, error } = await this.supabase
+        .from('games')
+        .insert(gameData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      return { success: true, game: data };
+    } catch (error) {
+      console.error('❌ Create game error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getGameByCode(gameCode) {
+    try {
+      const { data, error } = await this.supabase
+        .from('games')
+        .select(`
+          *,
+          question_sets:question_sets(
+            *,
+            questions:questions(
+              *,
+              answers:answers(*)
+            )
+          ),
+          game_players:game_players(
+            *,
+            players:players(*)
+          )
+        `)
+        .eq('game_code', gameCode)
+        .single();
+
+      if (error) throw error;
+      
+      return { success: true, game: data };
+    } catch (error) {
+      console.error('❌ Get game by code error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async updateGameStatus(gameId, status, additionalData = {}) {
+    try {
+      const updateData = { status, ...additionalData };
+      
+      const { data, error } = await this.supabase
+        .from('games')
+        .update(updateData)
+        .eq('id', gameId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      return { success: true, game: data };
+    } catch (error) {
+      console.error('❌ Update game status error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async addPlayerToGame(gameId, playerData) {
+    try {
+      // First create or get player
+      let playerId;
+      
+      if (playerData.user_id) {
+        // Authenticated user
+        const { data: existingPlayer } = await this.supabase
+          .from('players')
+          .select('id')
+          .eq('user_id', playerData.user_id)
+          .single();
+
+        if (existingPlayer) {
+          playerId = existingPlayer.id;
+        } else {
+          const { data: newPlayer, error: playerError } = await this.supabase
+            .from('players')
+            .insert(playerData)
+            .select('id')
+            .single();
+
+          if (playerError) throw playerError;
+          playerId = newPlayer.id;
+        }
+      } else {
+        // Guest player
+        const { data: newPlayer, error: playerError } = await this.supabase
+          .from('players')
+          .insert(playerData)
+          .select('id')
+          .single();
+
+        if (playerError) throw playerError;
+        playerId = newPlayer.id;
+      }
+
+      // Add player to game
+      const { data, error } = await this.supabase
+        .from('game_players')
+        .insert({
+          game_id: gameId,
+          player_id: playerId,
+          player_name: playerData.name
+        })
+        .select(`
+          *,
+          players:players(*)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      // Update game player count
+      await this.supabase.rpc('increment_game_players', { game_id: gameId });
+      
+      return { success: true, gamePlayer: data };
+    } catch (error) {
+      console.error('❌ Add player to game error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async submitPlayerAnswer(answerData) {
+    try {
+      const { data, error } = await this.supabase
+        .from('player_answers')
+        .insert(answerData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      return { success: true, answer: data };
+    } catch (error) {
+      console.error('❌ Submit player answer error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getGameResults(gameId) {
+    try {
+      const { data, error } = await this.supabase
+        .from('game_results')
+        .select(`
+          *,
+          players:players(name)
+        `)
+        .eq('game_id', gameId)
+        .order('final_rank');
+
+      if (error) throw error;
+      
+      return { success: true, results: data };
+    } catch (error) {
+      console.error('❌ Get game results error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // ================================
+  // REAL-TIME SUBSCRIPTIONS
+  // ================================
+  
+  subscribeToGameChanges(gameId, callback) {
+    return this.supabase
+      .channel(`game-${gameId}`)
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'games',
+          filter: `id=eq.${gameId}`
+        }, 
+        callback
+      )
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'game_players',
+          filter: `game_id=eq.${gameId}`
+        }, 
+        callback
+      )
+      .subscribe();
+  }
+
+  // ================================
+  // UTILITY FUNCTIONS
+  // ================================
+  
+  async generateUniqueGameCode() {
+    let gameCode;
+    let isUnique = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (!isUnique && attempts < maxAttempts) {
+      gameCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      
+      const { data } = await this.supabase
+        .from('games')
+        .select('id')
+        .eq('game_code', gameCode)
+        .single();
+
+      isUnique = !data;
+      attempts++;
+    }
+
+    if (!isUnique) {
+      throw new Error('Failed to generate unique game code');
+    }
+
+    return gameCode;
+  }
+
+  // Close connection (for graceful shutdown)
+  async close() {
+    // Supabase client doesn't need explicit closing
+    console.log('✅ Database connection closed');
   }
 }
 
-// Create singleton instance
-const dbManager = new DatabaseManager();
-
-module.exports = dbManager;
+module.exports = DatabaseManager;   

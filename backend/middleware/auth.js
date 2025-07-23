@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const dbManager = require('../config/database');
 
 // JWT Secret - In production, this should be in environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'tuiz_super_secret_key_change_in_production';
@@ -29,7 +28,7 @@ class AuthMiddleware {
   }
 
   // Middleware to protect routes
-  static authenticateToken(req, res, next) {
+  static async authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
@@ -44,15 +43,17 @@ class AuthMiddleware {
       const decoded = AuthMiddleware.verifyToken(token);
       
       // Get fresh user data from database
-      const user = dbManager.getUserById(decoded.id);
-      if (!user) {
+      const db = new (require('../config/database'))();
+      const result = await db.getUserById(decoded.id);
+      
+      if (!result.success) {
         return res.status(401).json({ 
           success: false, 
           message: 'User not found' 
         });
       }
 
-      req.user = user;
+      req.user = result.user;
       next();
     } catch (error) {
       return res.status(403).json({ 
@@ -63,16 +64,17 @@ class AuthMiddleware {
   }
 
   // Optional middleware - adds user if token is valid, but doesn't require it
-  static optionalAuth(req, res, next) {
+  static async optionalAuth(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
     if (token) {
       try {
         const decoded = AuthMiddleware.verifyToken(token);
-        const user = dbManager.getUserById(decoded.id);
-        if (user) {
-          req.user = user;
+        const db = new (require('../config/database'))();
+        const result = await db.getUserById(decoded.id);
+        if (result.success) {
+          req.user = result.user;
         }
       } catch (error) {
         // Invalid token, but we don't reject the request

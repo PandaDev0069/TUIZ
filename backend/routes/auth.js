@@ -1,8 +1,9 @@
 const express = require('express');
-const dbManager = require('../config/database');
+const DatabaseManager = require('../config/database');
 const AuthMiddleware = require('../middleware/auth');
 
 const router = express.Router();
+const db = new DatabaseManager();
 
 // Input validation helper
 const validateInput = {
@@ -62,7 +63,17 @@ router.post('/register', AuthMiddleware.loginRateLimit(), async (req, res) => {
     }
 
     // Create user
-    const newUser = await dbManager.createUser(email, username, password);
+    const result = await db.createUser({
+      email,
+      username,
+      password
+    });
+    
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+
+    const newUser = result.user;
     
     // Generate token
     const token = AuthMiddleware.generateToken(newUser);
@@ -73,12 +84,12 @@ router.post('/register', AuthMiddleware.loginRateLimit(), async (req, res) => {
       user: {
         id: newUser.id,
         email: newUser.email,
-        username: newUser.username
+        username: newUser.username || newUser.name
       },
       token
     });
 
-    console.log(`✅ New user registered: ${username} (${email})`);
+    console.log(`✅ New user registered: ${newUser.username || newUser.name} (${newUser.email})`);
 
   } catch (error) {
     console.error('Registration error:', error);
@@ -111,7 +122,13 @@ router.post('/login', AuthMiddleware.loginRateLimit(), async (req, res) => {
     }
 
     // Authenticate user
-    const user = await dbManager.authenticateUser(emailOrUsername, password);
+    const result = await db.authenticateUser(emailOrUsername, password);
+    
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+
+    const user = result.user;
     
     // Generate token
     const token = AuthMiddleware.generateToken(user);
@@ -122,18 +139,21 @@ router.post('/login', AuthMiddleware.loginRateLimit(), async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        username: user.username,
-        last_login: user.last_login
+        username: user.username || user.name,
+        last_login: user.last_active
       },
       token
     });
 
-    console.log(`✅ User logged in: ${user.username} (${user.email})`);
+    console.log(`✅ User logged in: ${user.username || user.name} (${user.email})`);
 
   } catch (error) {
     console.error('Login error:', error);
     
-    if (error.message === 'User not found' || error.message === 'Invalid password') {
+    if (error.message.includes('Invalid login credentials') || 
+        error.message.includes('invalid_credentials') ||
+        error.message === 'User not found' || 
+        error.message === 'Invalid password') {
       return res.status(401).json({
         success: false,
         message: 'メールアドレス/ユーザー名またはパスワードが正しくありません。'
@@ -184,13 +204,19 @@ router.post('/check-availability', async (req, res) => {
     };
 
     if (email) {
-      const existingEmail = dbManager.statements.findUserByEmail.get(email);
-      result.email.available = !existingEmail;
+      const { data: emailData } = await db.supabase
+        .from('users')
+        .select('id')
+        .eq('email', email);
+      result.email.available = !emailData || emailData.length === 0;
     }
 
     if (username) {
-      const existingUsername = dbManager.statements.findUserByUsername.get(username);
-      result.username.available = !existingUsername;
+      const { data: usernameData } = await db.supabase
+        .from('users')
+        .select('id')
+        .eq('name', username); // Use 'name' field instead of 'username'
+      result.username.available = !usernameData || usernameData.length === 0;
     }
 
     res.json({

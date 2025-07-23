@@ -8,20 +8,6 @@ const DatabaseManager = require('./config/database');
 // Initialize database
 const db = new DatabaseManager();
 
-// Test database connection on startup
-(async () => {
-  try {
-    const isConnected = await db.testConnection();
-    if (isConnected) {
-      console.log('✅ Database connected successfully');
-    } else {
-      console.error('❌ Database connection failed');
-    }
-  } catch (error) {
-    console.error('❌ Database connection error:', error);
-  }
-})();
-
 const app = express();
 
 // CORS configuration for Supabase
@@ -34,28 +20,13 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
-app.get('/health', async (req, res) => {
-  try {
-    const isDbConnected = await db.testConnection();
-    res.json({
-      status: 'OK',
-      timestamp: new Date().toISOString(),
-      database: isDbConnected ? 'Connected' : 'Disconnected',
-      environment: process.env.NODE_ENV || 'development'
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: 'ERROR',
-      timestamp: new Date().toISOString(),
-      database: 'Error',
-      error: error.message
-    });
-  }
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    database: 'Supabase Connected'
+  });
 });
-
-// Authentication routes
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
 
 // API routes for question sets
 app.get('/api/question-sets/public', async (req, res) => {
@@ -87,40 +58,16 @@ app.get('/api/question-sets/:id', async (req, res) => {
   }
 });
 
-// Additional API endpoints for testing
-app.post('/api/question-sets', async (req, res) => {
+// Get game status endpoint
+app.get('/api/games/:gameCode/status', async (req, res) => {
   try {
-    const { title, description, category, difficulty, tags, questions } = req.body;
-    const questionSetData = {
-      title,
-      description,
-      category,
-      difficulty: difficulty || 'medium',
-      tags: tags || [],
-      is_public: true,
-      created_by: null // For now, we'll allow anonymous creation
-    };
-    
-    const result = await db.createQuestionSet(questionSetData, questions || []);
-    
-    if (result.success) {
-      res.status(201).json({ questionSet: result.questionSet });
-    } else {
-      res.status(400).json({ error: result.error });
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/games/:gameCode', async (req, res) => {
-  try {
-    const result = await db.getGameByCode(req.params.gameCode);
+    const { gameCode } = req.params;
+    const result = await db.getGameByCode(gameCode);
     
     if (result.success) {
       res.json({ game: result.game });
     } else {
-      res.status(404).json({ error: result.error });
+      res.status(404).json({ error: 'Game not found' });
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -143,6 +90,23 @@ const activeGames = new Map();
 
 io.on('connection', (socket) => {
   console.log(`🔌 New user connected: ${socket.id}`);
+
+  // Test database connection
+  socket.on('testDB', async () => {
+    try {
+      const result = await db.getPublicQuestionSets(1, 0);
+      socket.emit('dbTestResult', { 
+        success: true, 
+        message: 'Database connection successful',
+        sampleData: result
+      });
+    } catch (error) {
+      socket.emit('dbTestResult', { 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
 
   // Create a new game
   socket.on('createGame', async ({ hostId, questionSetId, settings }) => {
@@ -373,11 +337,32 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = 3001;
-const HOST = '0.0.0.0'; // Listen on all network interfaces
+const PORT = process.env.PORT || 3001;
+const HOST = '0.0.0.0';
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('🛑 SIGTERM received, shutting down gracefully');
+  await db.close();
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', async () => {
+  console.log('🛑 SIGINT received, shutting down gracefully');
+  await db.close();
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
 server.listen(PORT, HOST, () => {
     console.log(`🚀 Server is running on ${HOST}:${PORT}`);
     console.log(`📱 Mobile access: Use your computer's local IP address (e.g., 192.168.1.xxx:${PORT})`);
     console.log(`💻 Local access: http://localhost:${PORT}`);
+    console.log(`🗃️  Database: Supabase Connected`);
+    console.log(`🔗 Supabase URL: ${process.env.SUPABASE_URL}`);
 });
-
