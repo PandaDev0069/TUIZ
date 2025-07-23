@@ -71,114 +71,89 @@ class DatabaseManager {
         return { success: false, error: 'Email already exists' };
       }
       
-      // NEW APPROACH: Try using regular signup first (not admin API)
-      console.log('� Trying regular signup approach...');
+      // Create user in Supabase Auth first
+      console.log('🔐 Creating user in Supabase Auth...');
       
-      const { data: signupData, error: signupError } = await this.supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            name: userData.name
+      // Strategy: Try creating without user_metadata first to avoid trigger issues
+      let authData, authError;
+      
+      try {
+        const result = await adminClient.auth.admin.createUser({
+          email: userData.email,
+          password: userData.password,
+          email_confirm: true, // Auto-confirm email
+          // Don't set user_metadata initially to avoid trigger issues
+        });
+        authData = result.data;
+        authError = result.error;
+      } catch (createError) {
+        authError = createError;
+      }
+
+      if (authError) {
+        console.error('❌ Supabase admin createUser error:', authError);
+        
+        // If it's a database error related to triggers, try simpler approach
+        if (authError.code === 'unexpected_failure' && authError.message.includes('Database error')) {
+          console.log('🔄 Database trigger error detected - trying minimal user creation...');
+          
+          try {
+            const result = await adminClient.auth.admin.createUser({
+              email: userData.email,
+              password: userData.password,
+              // Absolute minimal data to avoid any trigger issues
+            });
+            authData = result.data;
+            authError = result.error;
+          } catch (minimalError) {
+            console.error('❌ Even minimal approach failed:', minimalError);
+            return { success: false, error: 'User creation failed: ' + minimalError.message };
           }
         }
-      });
-      
-      if (signupError) {
-        console.log('❌ Regular signup failed:', signupError.message);
         
-        // If regular signup fails, try admin approach as last resort
-        console.log('🔄 Falling back to admin createUser...');
-        
-        try {
-          const { data: adminData, error: adminError } = await adminClient.auth.admin.createUser({
-            email: userData.email,
-            password: userData.password,
-            email_confirm: true,
-            user_metadata: { name: userData.name }
-          });
-          
-          if (adminError) {
-            console.error('❌ Admin createUser also failed:', adminError);
-            return { success: false, error: 'User creation failed: ' + adminError.message };
-          }
-          
-          // Use admin result
-          signupData.user = adminData.user;
-          
-        } catch (adminException) {
-          console.error('❌ Admin createUser threw exception:', adminException);
-          return { success: false, error: 'User creation failed: ' + adminException.message };
+        if (authError) {
+          return { success: false, error: authError.message };
         }
       }
       
-      if (!signupData.user) {
-        console.error('❌ No user data returned from signup');
+      if (!authData.user) {
+        console.error('❌ No user data returned from auth creation');
         return { success: false, error: 'Failed to create auth user' };
       }
       
-      console.log('✅ User created in auth.users:', signupData.user.id);
+      console.log('✅ User created in auth.users:', authData.user.id);
       
-      // Wait for potential triggers to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if public user record exists
-      console.log('🔍 Checking if public user record exists...');
-      const { data: existingPublicUser } = await adminClient
+      // Now create user in public.users table
+      console.log('� Creating user record in public.users...');
+      const { data: publicUser, error: publicError } = await adminClient
         .from('users')
-        .select('*')
-        .eq('id', signupData.user.id)
+        .insert({
+          id: authData.user.id, // Use the auth user's ID
+          email: authData.user.email,
+          name: userData.name,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          last_active: new Date().toISOString()
+        })
+        .select()
         .single();
-      
-      if (existingPublicUser) {
-        console.log('✅ Public user record found:', existingPublicUser.name);
-        
-        // Update name if needed
-        if (!existingPublicUser.name || existingPublicUser.name !== userData.name) {
-          console.log('🔄 Updating user name...');
-          await adminClient
-            .from('users')
-            .update({ name: userData.name })
-            .eq('id', signupData.user.id);
-        }
-        
-      } else {
-        // Create public user record manually
-        console.log('📝 Creating public user record manually...');
-        const { error: insertError } = await adminClient
-          .from('users')
-          .insert({
-            id: signupData.user.id,
-            email: signupData.user.email,
-            name: userData.name,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            last_active: new Date().toISOString()
-          });
 
-        if (insertError) {
-          console.error('❌ Failed to create public user record:', insertError);
-          
-          // Clean up auth user
-          console.log('🧹 Cleaning up auth user...');
-          try {
-            await adminClient.auth.admin.deleteUser(signupData.user.id);
-          } catch (cleanupError) {
-            console.error('❌ Failed to cleanup auth user:', cleanupError);
-          }
-          
-          return { success: false, error: 'Failed to create user profile: ' + insertError.message };
-        }
+      if (publicError) {
+        console.error('❌ Failed to create public user record:', publicError);
         
-        console.log('✅ Public user record created successfully');
+        // If public user creation fails, we should delete the auth user to keep things consistent
+        console.log('🧹 Cleaning up auth user due to public user creation failure...');
+        await adminClient.auth.admin.deleteUser(authData.user.id);
+        
+        return { success: false, error: 'Failed to create user profile: ' + publicError.message };
       }
       
-      console.log('✅ User creation completed successfully');
+      console.log('✅ User created successfully in both tables');
       return { 
         success: true, 
         user: {
-          id: signupData.user.id,
-          email: signupData.user.email,
+          id: authData.user.id,
+          email: authData.user.email,
           name: userData.name
         }
       };
@@ -573,4 +548,4 @@ class DatabaseManager {
   }
 }
 
-module.exports = DatabaseManager;
+module.exports = DatabaseManager;   

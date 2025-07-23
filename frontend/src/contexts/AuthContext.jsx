@@ -48,18 +48,31 @@ export const AuthProvider = ({ children }) => {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
 
-    const data = await response.json();
+      // Check if response is HTML (error page)
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/html')) {
+        throw new Error(`API endpoint not found: ${endpoint}`);
+      }
 
-    if (!response.ok) {
-      throw new Error(data.message || 'API call failed');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return data;
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new Error(`Invalid response from server (endpoint: ${endpoint})`);
+      }
+      throw error;
     }
-
-    return data;
   };
 
   // Verify token validity
@@ -88,12 +101,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Login function
-  const login = async (emailOrUsername, password) => {
+  const login = async (emailOrName, password) => {
     try {
       const data = await apiCall('/auth/login', {
         method: 'POST',
         body: JSON.stringify({
-          emailOrUsername,
+          emailOrName,
           password,
         }),
       });
@@ -111,13 +124,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Register function
-  const register = async (email, username, password, confirmPassword) => {
+  const register = async (email, name, password, confirmPassword) => {
     try {
       const data = await apiCall('/auth/register', {
         method: 'POST',
         body: JSON.stringify({
           email,
-          username,
+          name,
           password,
           confirmPassword,
         }),
@@ -144,16 +157,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Check availability function
-  const checkAvailability = async (email, username) => {
+  const checkAvailability = async (email, name) => {
     try {
       const data = await apiCall('/auth/check-availability', {
         method: 'POST',
-        body: JSON.stringify({ email, username }),
+        body: JSON.stringify({ email, name }),
       });
       return data.availability;
     } catch (error) {
       console.error('Availability check failed:', error);
-      return null;
+      // Return a default response if the endpoint fails
+      return {
+        email: { available: true },
+        name: { available: true }
+      };
     }
   };
 

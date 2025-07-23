@@ -6,7 +6,7 @@ import './auth.css';
 function Register() {
   const [formData, setFormData] = useState({
     email: '',
-    username: '',
+    name: '',
     password: '',
     confirmPassword: '',
   });
@@ -41,8 +41,8 @@ function Register() {
       }));
     }
 
-    // Check availability for email and username
-    if ((name === 'email' || name === 'username') && value.trim()) {
+    // Check availability for email and name
+    if ((name === 'email' || name === 'name') && value.trim()) {
       debouncedAvailabilityCheck(name, value);
     }
   };
@@ -56,7 +56,7 @@ function Register() {
         if (value.trim()) {
           const result = await checkAvailability(
             field === 'email' ? value : null,
-            field === 'username' ? value : null
+            field === 'name' ? value : null
           );
           if (result) {
             setAvailability(prev => ({
@@ -81,15 +81,15 @@ function Register() {
       newErrors.email = 'このメールアドレスは既に使用されています';
     }
 
-    // Username validation
-    if (!formData.username.trim()) {
-      newErrors.username = 'ユーザー名を入力してください';
-    } else if (formData.username.length < 3 || formData.username.length > 20) {
-      newErrors.username = 'ユーザー名は3-20文字で入力してください';
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      newErrors.username = 'ユーザー名は英数字とアンダースコアのみ使用できます';
-    } else if (availability.username && !availability.username.available) {
-      newErrors.username = 'このユーザー名は既に使用されています';
+    // Name validation
+    if (!formData.name.trim()) {
+      newErrors.name = '名前を入力してください';
+    } else if (formData.name.length < 3 || formData.name.length > 20) {
+      newErrors.name = '名前は3-20文字で入力してください';
+    } else if (!/^[a-zA-Z0-9_\s]+$/.test(formData.name)) {
+      newErrors.name = '名前は英数字、アンダースコア、スペースのみ使用できます';
+    } else if (availability.name && !availability.name.available) {
+      newErrors.name = 'この名前は既に使用されています';
     }
 
     // Password validation
@@ -121,7 +121,7 @@ function Register() {
     try {
       const result = await register(
         formData.email,
-        formData.username,
+        formData.name,
         formData.password,
         formData.confirmPassword
       );
@@ -195,29 +195,29 @@ function Register() {
             )}
           </div>
 
-          {/* Username Input */}
+          {/* Name Input */}
           <div className="input-group">
-            <label htmlFor="username" className="input-label">
-              ユーザー名
+            <label htmlFor="name" className="input-label">
+              名前
             </label>
             <div className="input-wrapper">
               <input
                 type="text"
-                id="username"
-                name="username"
-                className={`auth-input ${getFieldStatus('username')}`}
-                placeholder="例: quiz_master"
-                value={formData.username}
+                id="name"
+                name="name"
+                className={`auth-input ${getFieldStatus('name')}`}
+                placeholder="例: 田中太郎"
+                value={formData.name}
                 onChange={handleChange}
                 disabled={loading}
-                autoComplete="username"
+                autoComplete="name"
               />
-              {getFieldStatus('username') === 'success' && (
+              {getFieldStatus('name') === 'success' && (
                 <span className="validation-icon success">✅</span>
               )}
             </div>
-            {errors.username && (
-              <span className="field-error">{errors.username}</span>
+            {errors.name && (
+              <span className="field-error">{errors.name}</span>
             )}
             <span className="field-hint">3-20文字、英数字とアンダースコアのみ</span>
           </div>

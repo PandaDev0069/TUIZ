@@ -5,7 +5,7 @@ import './auth.css';
 
 function Login() {
   const [formData, setFormData] = useState({
-    emailOrUsername: '',
+    emailOrName: '',
     password: '',
   });
   const [errors, setErrors] = useState({});
@@ -41,8 +41,8 @@ function Login() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.emailOrUsername.trim()) {
-      newErrors.emailOrUsername = 'メールアドレスまたはユーザー名を入力してください';
+    if (!formData.emailOrName.trim()) {
+      newErrors.emailOrName = 'メールアドレスまたは名前を入力してください';
     }
 
     if (!formData.password) {
@@ -62,7 +62,7 @@ function Login() {
     setErrors({});
 
     try {
-      const result = await login(formData.emailOrUsername, formData.password);
+      const result = await login(formData.emailOrName, formData.password);
       
       if (result.success) {
         // Success! AuthContext will handle the redirect
@@ -105,27 +105,27 @@ function Login() {
             </div>
           )}
 
-          {/* Email/Username Input */}
+          {/* Email/Name Input */}
           <div className="input-group">
-            <label htmlFor="emailOrUsername" className="input-label">
-              メールアドレスまたはユーザー名
+            <label htmlFor="emailOrName" className="input-label">
+              メールアドレスまたは名前
             </label>
             <div className="input-wrapper">
               <input
                 type="text"
-                id="emailOrUsername"
-                name="emailOrUsername"
-                className={`auth-input ${errors.emailOrUsername ? 'error' : ''}`}
-                placeholder="例: user@example.com または username"
-                value={formData.emailOrUsername}
+                id="emailOrName"
+                name="emailOrName"
+                className={`auth-input ${errors.emailOrName ? 'error' : ''}`}
+                placeholder="example@email.com または 田中太郎"
+                value={formData.emailOrName}
                 onChange={handleChange}
                 onKeyPress={handleKeyPress}
                 disabled={loading}
                 autoComplete="username"
               />
             </div>
-            {errors.emailOrUsername && (
-              <span className="field-error">{errors.emailOrUsername}</span>
+            {errors.emailOrName && (
+              <span className="field-error">{errors.emailOrName}</span>
             )}
           </div>
 

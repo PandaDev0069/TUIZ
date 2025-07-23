@@ -19,6 +19,10 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Authentication routes
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 

@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { randomUUID } = require('crypto');
@@ -71,114 +72,129 @@ class DatabaseManager {
         return { success: false, error: 'Email already exists' };
       }
       
-      // NEW APPROACH: Try using regular signup first (not admin API)
-      console.log('� Trying regular signup approach...');
+      // Strategy: Create user without metadata first to avoid trigger issues
+      console.log('🔐 Creating user in Supabase Auth (minimal data)...');
+      let authData, authError;
       
-      const { data: signupData, error: signupError } = await this.supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            name: userData.name
+      try {
+        const result = await adminClient.auth.admin.createUser({
+          email: userData.email,
+          password: userData.password,
+          email_confirm: true, // Auto-confirm email
+          // Don't set user_metadata initially to avoid trigger issues
+        });
+        authData = result.data;
+        authError = result.error;
+      } catch (createError) {
+        authError = createError;
+      }
+
+      if (authError) {
+        console.error('❌ Supabase admin createUser error:', authError);
+        
+        // If it's a database error related to triggers, try even simpler approach
+        if (authError.code === 'unexpected_failure' && authError.message.includes('Database error')) {
+          console.log('🔄 Database trigger error detected - trying absolute minimal user creation...');
+          
+          try {
+            const result = await adminClient.auth.admin.createUser({
+              email: userData.email,
+              password: userData.password,
+              // Absolute minimal data to avoid any trigger issues
+            });
+            authData = result.data;
+            authError = result.error;
+          } catch (minimalError) {
+            console.error('❌ Even minimal approach failed:', minimalError);
+            return { success: false, error: 'User creation failed: ' + minimalError.message };
           }
         }
-      });
-      
-      if (signupError) {
-        console.log('❌ Regular signup failed:', signupError.message);
         
-        // If regular signup fails, try admin approach as last resort
-        console.log('🔄 Falling back to admin createUser...');
-        
-        try {
-          const { data: adminData, error: adminError } = await adminClient.auth.admin.createUser({
-            email: userData.email,
-            password: userData.password,
-            email_confirm: true,
-            user_metadata: { name: userData.name }
-          });
-          
-          if (adminError) {
-            console.error('❌ Admin createUser also failed:', adminError);
-            return { success: false, error: 'User creation failed: ' + adminError.message };
-          }
-          
-          // Use admin result
-          signupData.user = adminData.user;
-          
-        } catch (adminException) {
-          console.error('❌ Admin createUser threw exception:', adminException);
-          return { success: false, error: 'User creation failed: ' + adminException.message };
+        if (authError) {
+          return { success: false, error: authError.message };
         }
       }
       
-      if (!signupData.user) {
-        console.error('❌ No user data returned from signup');
+      if (!authData.user) {
+        console.error('❌ No user data returned from auth creation');
         return { success: false, error: 'Failed to create auth user' };
       }
       
-      console.log('✅ User created in auth.users:', signupData.user.id);
+      console.log('✅ User created in auth.users:', authData.user.id);
       
-      // Wait for potential triggers to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait a moment for any triggers to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Check if public user record exists
-      console.log('🔍 Checking if public user record exists...');
+      // Check if trigger created the public user record
+      console.log('🔍 Checking if trigger created public user record...');
       const { data: existingPublicUser } = await adminClient
         .from('users')
         .select('*')
-        .eq('id', signupData.user.id)
+        .eq('id', authData.user.id)
         .single();
       
       if (existingPublicUser) {
-        console.log('✅ Public user record found:', existingPublicUser.name);
+        console.log('✅ Trigger successfully created public user record');
         
-        // Update name if needed
+        // Update the name if it's missing or incorrect
         if (!existingPublicUser.name || existingPublicUser.name !== userData.name) {
-          console.log('🔄 Updating user name...');
+          console.log('🔄 Updating user name in public record...');
           await adminClient
             .from('users')
             .update({ name: userData.name })
-            .eq('id', signupData.user.id);
+            .eq('id', authData.user.id);
         }
         
       } else {
-        // Create public user record manually
-        console.log('📝 Creating public user record manually...');
-        const { error: insertError } = await adminClient
+        // Trigger didn't work, create manually
+        console.log('📝 Trigger failed - creating user record in public.users manually...');
+        const { data: publicUser, error: publicError } = await adminClient
           .from('users')
           .insert({
-            id: signupData.user.id,
-            email: signupData.user.email,
+            id: authData.user.id, // Use the auth user's ID
+            email: authData.user.email,
             name: userData.name,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             last_active: new Date().toISOString()
-          });
+          })
+          .select()
+          .single();
 
-        if (insertError) {
-          console.error('❌ Failed to create public user record:', insertError);
+        if (publicError) {
+          console.error('❌ Failed to create public user record:', publicError);
           
-          // Clean up auth user
-          console.log('🧹 Cleaning up auth user...');
+          // If public user creation fails, we should delete the auth user to keep things consistent
+          console.log('🧹 Cleaning up auth user due to public user creation failure...');
           try {
-            await adminClient.auth.admin.deleteUser(signupData.user.id);
+            await adminClient.auth.admin.deleteUser(authData.user.id);
           } catch (cleanupError) {
             console.error('❌ Failed to cleanup auth user:', cleanupError);
           }
           
-          return { success: false, error: 'Failed to create user profile: ' + insertError.message };
+          return { success: false, error: 'Failed to create user profile: ' + publicError.message };
         }
         
-        console.log('✅ Public user record created successfully');
+        console.log('✅ Manual public user record created successfully');
       }
       
-      console.log('✅ User creation completed successfully');
+      // Finally, update the auth user metadata
+      console.log('🔄 Updating user metadata...');
+      try {
+        await adminClient.auth.admin.updateUserById(authData.user.id, {
+          user_metadata: { name: userData.name }
+        });
+      } catch (metadataError) {
+        console.warn('⚠️ Failed to update user metadata:', metadataError.message);
+        // Don't fail the entire operation for this
+      }
+      
+      console.log('✅ User created successfully in both tables');
       return { 
         success: true, 
         user: {
-          id: signupData.user.id,
-          email: signupData.user.email,
+          id: authData.user.id,
+          email: authData.user.email,
           name: userData.name
         }
       };

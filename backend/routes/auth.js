@@ -12,8 +12,8 @@ const validateInput = {
     return emailRegex.test(email);
   },
   
-  username: (username) => {
-    return username && username.length >= 3 && username.length <= 20 && /^[a-zA-Z0-9_]+$/.test(username);
+  name: (name) => {
+    return name && name.length >= 3 && name.length <= 20 && /^[a-zA-Z0-9_\s]+$/.test(name);
   },
   
   password: (password) => {
@@ -24,10 +24,10 @@ const validateInput = {
 // Register new user
 router.post('/register', AuthMiddleware.loginRateLimit(), async (req, res) => {
   try {
-    const { email, username, password, confirmPassword } = req.body;
+    const { email, name, password, confirmPassword } = req.body;
 
     // Input validation
-    if (!email || !username || !password || !confirmPassword) {
+    if (!email || !name || !password || !confirmPassword) {
       return res.status(400).json({
         success: false,
         message: 'すべてのフィールドを入力してください。'
@@ -41,10 +41,10 @@ router.post('/register', AuthMiddleware.loginRateLimit(), async (req, res) => {
       });
     }
 
-    if (!validateInput.username(username)) {
+    if (!validateInput.name(name)) {
       return res.status(400).json({
         success: false,
-        message: 'ユーザー名は3-20文字で、英数字とアンダースコアのみ使用できます。'
+        message: '名前は3-20文字で、英数字、アンダースコア、スペースのみ使用できます。'
       });
     }
 
@@ -65,7 +65,7 @@ router.post('/register', AuthMiddleware.loginRateLimit(), async (req, res) => {
     // Create user
     const result = await db.createUser({
       email,
-      username,
+      name,
       password
     });
     
@@ -84,20 +84,20 @@ router.post('/register', AuthMiddleware.loginRateLimit(), async (req, res) => {
       user: {
         id: newUser.id,
         email: newUser.email,
-        username: newUser.username || newUser.name
+        name: newUser.name
       },
       token
     });
 
-    console.log(`✅ New user registered: ${newUser.username || newUser.name} (${newUser.email})`);
+    console.log(`✅ New user registered: ${newUser.name} (${newUser.email})`);
 
   } catch (error) {
     console.error('Registration error:', error);
     
-    if (error.message === 'Email or username already exists') {
+    if (error.message === 'Email already exists') {
       return res.status(400).json({
         success: false,
-        message: 'このメールアドレスまたはユーザー名は既に使用されています。'
+        message: 'このメールアドレスは既に使用されています。'
       });
     }
 
@@ -111,18 +111,18 @@ router.post('/register', AuthMiddleware.loginRateLimit(), async (req, res) => {
 // Login user
 router.post('/login', AuthMiddleware.loginRateLimit(), async (req, res) => {
   try {
-    const { emailOrUsername, password } = req.body;
+    const { emailOrName, password } = req.body;
 
     // Input validation
-    if (!emailOrUsername || !password) {
+    if (!emailOrName || !password) {
       return res.status(400).json({
         success: false,
-        message: 'メールアドレス/ユーザー名とパスワードを入力してください。'
+        message: 'メールアドレス/名前とパスワードを入力してください。'
       });
     }
 
     // Authenticate user
-    const result = await db.authenticateUser(emailOrUsername, password);
+    const result = await db.authenticateUser(emailOrName, password);
     
     if (!result.success) {
       throw new Error(result.error);
@@ -139,13 +139,13 @@ router.post('/login', AuthMiddleware.loginRateLimit(), async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        username: user.username || user.name,
+        name: user.name,
         last_login: user.last_active
       },
       token
     });
 
-    console.log(`✅ User logged in: ${user.username || user.name} (${user.email})`);
+    console.log(`✅ User logged in: ${user.name} (${user.email})`);
 
   } catch (error) {
     console.error('Login error:', error);
@@ -156,7 +156,7 @@ router.post('/login', AuthMiddleware.loginRateLimit(), async (req, res) => {
         error.message === 'Invalid password') {
       return res.status(401).json({
         success: false,
-        message: 'メールアドレス/ユーザー名またはパスワードが正しくありません。'
+        message: 'メールアドレス/名前またはパスワードが正しくありません。'
       });
     }
 
@@ -193,14 +193,14 @@ router.post('/logout', AuthMiddleware.authenticateToken, (req, res) => {
   });
 });
 
-// Check if email/username is available
+// Check if email/name is available
 router.post('/check-availability', async (req, res) => {
   try {
-    const { email, username } = req.body;
+    const { email, name } = req.body;
     
     const result = {
       email: { available: true },
-      username: { available: true }
+      name: { available: true }
     };
 
     if (email) {
@@ -211,12 +211,12 @@ router.post('/check-availability', async (req, res) => {
       result.email.available = !emailData || emailData.length === 0;
     }
 
-    if (username) {
-      const { data: usernameData } = await db.supabase
+    if (name) {
+      const { data: nameData } = await db.supabase
         .from('users')
         .select('id')
-        .eq('name', username); // Use 'name' field instead of 'username'
-      result.username.available = !usernameData || usernameData.length === 0;
+        .eq('name', name);
+      result.name.available = !nameData || nameData.length === 0;
     }
 
     res.json({

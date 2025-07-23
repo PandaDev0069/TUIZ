@@ -11,7 +11,7 @@ class AuthMiddleware {
       { 
         id: user.id, 
         email: user.email, 
-        username: user.username 
+        name: user.name 
       },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
