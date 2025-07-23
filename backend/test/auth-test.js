@@ -23,7 +23,12 @@ async function testAuth() {
     // Test 1: Register new user
     console.log('1️⃣ Testing user registration...');
     try {
-      const registerResponse = await axios.post(`${API_BASE}/api/auth/register`, testUser);
+      const registerResponse = await axios.post(`${API_BASE}/api/auth/register`, {
+        email: testUser.email,
+        name: testUser.name,
+        password: testUser.password,
+        confirmPassword: testUser.password
+      });
       console.log('✅ Registration successful:', {
         success: registerResponse.data.success,
         userId: registerResponse.data.user?.id,
@@ -42,7 +47,7 @@ async function testAuth() {
     console.log('\n2️⃣ Testing user login...');
     try {
       const loginResponse = await axios.post(`${API_BASE}/api/auth/login`, {
-        emailOrUsername: existingUser.email,
+        email: existingUser.email,
         password: existingUser.password
       });
       console.log('✅ Login successful:', {
@@ -89,7 +94,7 @@ async function testAuth() {
 // Check if server is running first
 async function checkServer() {
   try {
-    await axios.get(`${API_BASE}/`);
+    await axios.get(`${API_BASE}/health`);
     console.log('✅ Server is responding\n');
     return true;
   } catch (error) {

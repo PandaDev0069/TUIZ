@@ -15,39 +15,24 @@ function HostLobby() {
       return
     }
 
-    // Join the room as host
-    socket.emit('joinRoom', { name: 'HOST', room })
-
-    // Listen for successful join to get initial player list
-    socket.once('joined_successfully', ({ players: initialPlayers }) => {
-      const playerNames = initialPlayers.filter(p => p.name !== 'HOST').map(p => p.name)
-      setPlayers(playerNames)
-      console.log('Host lobby - initial players:', playerNames)
-    })
-
-    // Listen for new players joining
-    socket.on('player_joined', ({ players: updatedPlayers }) => {
-      const playerNames = updatedPlayers.filter(p => p.name !== 'HOST').map(p => p.name)
-      setPlayers(playerNames)
-      console.log('Host lobby - players joined:', playerNames)
-    })
-
-    // Listen for players leaving
-    socket.on('player_left', ({ players: updatedPlayers }) => {
-      const playerNames = updatedPlayers.filter(p => p.name !== 'HOST').map(p => p.name)
-      setPlayers(playerNames)
-      console.log('Host lobby - players updated:', playerNames)
-    })
+    // Listen for new players joining the game
+    socket.on('playerJoined', ({ player, totalPlayers }) => {
+      console.log('New player joined:', player);
+      // Get updated player list from the game
+      setPlayers(prev => {
+        const updated = [...prev, player.name];
+        console.log('Host lobby - players updated:', updated);
+        return updated;
+      });
+    });
 
     return () => {
-      socket.off('joined_successfully')
-      socket.off('player_joined')
-      socket.off('player_left')
+      socket.off('playerJoined');
     }
   }, [room, title, navigate])
 
   const handleStart = () => {
-    socket.emit('start_game', { room });
+    socket.emit('startGame', { gameCode: room });
     navigate('/quiz/control', { state: { room, title } });
   }
 

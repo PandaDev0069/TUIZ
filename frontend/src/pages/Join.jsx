@@ -12,13 +12,13 @@ function Join() {
   useEffect(() => {
     console.log('Socket connected:', socket.connected);
     
-    socket.on('join_error', ({ message }) => {
+    socket.on('error', ({ message }) => {
       setError(message);
     });
     
     return () => {
-      socket.off('joined_successfully');
-      socket.off('join_error');
+      socket.off('gameJoined');
+      socket.off('error');
     };
   }, []);
 
@@ -29,15 +29,15 @@ function Join() {
     }
     
     setError("");
-    console.log('Attempting to join room:', room, 'with name:', name);
+    console.log('Attempting to join game:', room, 'with name:', name);
     
     // Set up listener before emitting
-    socket.once('joined_successfully', ({ players }) => {
-      console.log('Join successful! Players in room:', players);
-      navigate('/waiting', { state: { name, room, initialPlayers: players } });
+    socket.once('gameJoined', ({ game, player }) => {
+      console.log('Join successful! Game:', game, 'Player:', player);
+      navigate('/waiting', { state: { name, room, initialPlayers: [player] } });
     });
     
-    socket.emit('joinRoom', { name, room });
+    socket.emit('joinGame', { playerName: name, gameCode: room });
   };
 
   const handleKeyPress = (e) => {

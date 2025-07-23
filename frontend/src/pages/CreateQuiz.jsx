@@ -9,7 +9,7 @@ import QuestionReorderModal from '../components/QuestionReorderModal';
 import './createQuiz.css';
 
 function CreateQuiz() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, token, apiCall } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if not authenticated
@@ -87,6 +87,7 @@ function CreateQuiz() {
 
   // Modal states for advanced features
   const [showReorderModal, setShowReorderModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const stepTitles = [
     "📋 基本情報",
@@ -94,6 +95,60 @@ function CreateQuiz() {
     "⚙️ 設定",
     "🎯 確認・保存"
   ];
+
+  // Comprehensive validation function
+  const validateQuizData = (metadata, questions, settings) => {
+    const errors = [];
+    
+    // Validate metadata
+    if (!metadata.title?.trim()) {
+      errors.push('Title is required');
+    }
+    if (metadata.title?.trim().length > 255) {
+      errors.push('Title must be less than 255 characters');
+    }
+    
+    // Validate questions
+    if (questions.length === 0) {
+      errors.push('At least one question is required');
+    }
+    
+    questions.forEach((question, index) => {
+      if (!question.text?.trim()) {
+        errors.push(`Question ${index + 1}: Question text is required`);
+      }
+      if (question.text?.trim().length > 1000) {
+        errors.push(`Question ${index + 1}: Question text must be less than 1000 characters`);
+      }
+      if (question.timeLimit < 5 || question.timeLimit > 300) {
+        errors.push(`Question ${index + 1}: Time limit must be between 5 and 300 seconds`);
+      }
+      
+      // Validate answers
+      if (question.answers.length < 2) {
+        errors.push(`Question ${index + 1}: At least 2 answers are required`);
+      }
+      
+      const hasCorrectAnswer = question.answers.some(a => a.isCorrect);
+      if (!hasCorrectAnswer) {
+        errors.push(`Question ${index + 1}: At least one correct answer is required`);
+      }
+      
+      question.answers.forEach((answer, answerIndex) => {
+        if (!answer.text?.trim()) {
+          errors.push(`Question ${index + 1}, Answer ${answerIndex + 1}: Answer text is required`);
+        }
+        if (answer.text?.trim().length > 500) {
+          errors.push(`Question ${index + 1}, Answer ${answerIndex + 1}: Answer text must be less than 500 characters`);
+        }
+      });
+    });
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  };
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -108,10 +163,173 @@ function CreateQuiz() {
   };
 
   const handleSaveQuiz = async () => {
-    // TODO: Implement quiz saving logic
-    console.log('Saving quiz...', { metadata, questions, settings });
-    // Navigate back to dashboard
-    navigate('/dashboard');
+    try {
+      setIsLoading(true);
+      console.log('Starting quiz save process...');
+      
+      // Step 1: Validate all data thoroughly
+      const validationResult = validateQuizData(metadata, questions, settings);
+      if (!validationResult.isValid) {
+        throw new Error(`Validation failed: ${validationResult.errors.join(', ')}`);
+      }
+      
+      // Step 2: Prepare metadata first
+      const questionSetMetadata = {
+        title: metadata.title.trim(),
+        description: metadata.description?.trim() || '',
+        category: extractCategoryFromTags(metadata.tags),
+        difficulty_level: calculateDifficulty(questions),
+        is_public: metadata.visibility === 'public',
+        estimated_duration: calculateEstimatedDuration(questions, settings)
+      };
+
+      console.log('Step 1 - Question Set Metadata:', questionSetMetadata);
+
+      // Step 3: Create question set first (without questions) using apiCall
+      const questionSetResult = await apiCall('/question-sets/metadata', {
+        method: 'POST',
+        body: JSON.stringify(questionSetMetadata)
+      });
+
+      const questionSetId = questionSetResult.id;
+      console.log('Step 2 - Question Set Created:', questionSetId);
+
+      // Step 4: Add questions one by one with proper validation
+      const savedQuestions = [];
+      for (let i = 0; i < questions.length; i++) {
+        const question = questions[i];
+        console.log(`Step 3.${i + 1} - Processing question ${i + 1}:`, question.text.substring(0, 50) + '...');
+        
+        const questionData = {
+          question_set_id: questionSetId,
+          question_text: question.text.trim(),
+          question_type: determineQuestionType(question),
+          time_limit: question.timeLimit,
+          points: getPointsValue(question.points),
+          difficulty: 'medium',
+          order_index: i,
+          explanation: question.explanation || ''
+        };
+
+        const savedQuestion = await apiCall('/questions', {
+          method: 'POST',
+          body: JSON.stringify(questionData)
+        });
+
+        savedQuestions.push(savedQuestion);
+        console.log(`Question ${i + 1} saved with ID:`, savedQuestion.id);
+
+        // Step 5: Add answers for this question
+        for (let j = 0; j < question.answers.length; j++) {
+          const answer = question.answers[j];
+          console.log(`Step 4.${i + 1}.${j + 1} - Processing answer ${j + 1}:`, answer.text.substring(0, 30) + '...');
+          
+          const answerData = {
+            question_id: savedQuestion.id,
+            answer_text: answer.text.trim(),
+            is_correct: answer.isCorrect,
+            order_index: j
+          };
+
+          const savedAnswer = await apiCall('/answers', {
+            method: 'POST',
+            body: JSON.stringify(answerData)
+          });
+
+          console.log(`Answer ${j + 1} for question ${i + 1} saved with ID:`, savedAnswer.id);
+        }
+      }
+
+      console.log('Step 6 - All questions and answers saved successfully');
+      
+      // Step 6: Final update to question set with total count
+      try {
+        await apiCall(`/question-sets/${questionSetId}/finalize`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            total_questions: questions.length,
+            settings: settings
+          })
+        });
+      } catch (finalizeError) {
+        console.warn('Failed to finalize question set, but quiz was saved:', finalizeError);
+      }
+
+      console.log('Quiz creation completed successfully!');
+      alert('クイズが正常に保存されました！');
+      navigate('/dashboard');
+      
+    } catch (error) {
+      console.error('Error saving quiz:', error);
+      alert('クイズの保存に失敗しました: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Helper function to extract category from tags
+  const extractCategoryFromTags = (tags) => {
+    const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    return tagArray.length > 0 ? tagArray[0] : 'general';
+  };
+
+  // Helper function to calculate difficulty based on questions
+  const calculateDifficulty = (questions) => {
+    const avgTimeLimit = questions.reduce((sum, q) => sum + q.timeLimit, 0) / questions.length;
+    const hasComplexQuestions = questions.some(q => q.answers.length > 4 || q.text.length > 200);
+    
+    if (avgTimeLimit < 10 && hasComplexQuestions) return 'hard';
+    if (avgTimeLimit < 15 || hasComplexQuestions) return 'medium';
+    return 'easy';
+  };
+
+  // Helper function to calculate estimated duration
+  const calculateEstimatedDuration = (questions, settings) => {
+    const questionTime = questions.reduce((sum, q) => sum + q.timeLimit, 0);
+    const breakTime = (questions.length - 1) * settings.breakDuration;
+    return Math.ceil((questionTime + breakTime) / 60); // Convert to minutes
+  };
+
+  // Helper function to format questions for database
+  const formatQuestionsForDatabase = (questions) => {
+    return questions.map((question, index) => ({
+      question_text: question.text,
+      question_type: determineQuestionType(question),
+      time_limit: question.timeLimit,
+      points: getPointsValue(question.points),
+      difficulty: 'medium', // Default, could be calculated per question
+      order_index: index,
+      explanation: '', // Could be added to UI later
+      answers: question.answers.map((answer, answerIndex) => ({
+        answer_text: answer.text,
+        is_correct: answer.isCorrect,
+        order_index: answerIndex
+      }))
+    }));
+  };
+
+  // Helper function to determine question type
+  const determineQuestionType = (question) => {
+    if (question.answers.length === 2) {
+      const texts = question.answers.map(a => a.text.toLowerCase().trim());
+      if (texts.includes('true') && texts.includes('false') || 
+          texts.includes('○') && texts.includes('×') ||
+          texts.includes('はい') && texts.includes('いいえ')) {
+        return 'true_false';
+      }
+    }
+    return 'multiple_choice';
+  };
+
+  // Helper function to get numeric points value
+  const getPointsValue = (pointsSetting) => {
+    switch (pointsSetting) {
+      case 'low': return 500;
+      case 'standard': return 1000;
+      case 'high': return 1500;
+      case 'custom': return 1000; // Could allow custom input later
+      default: return 1000;
+    }
   };
 
   const handlePreviewQuiz = () => {
@@ -271,9 +489,9 @@ function CreateQuiz() {
               <button 
                 className="nav-button primary save-button"
                 onClick={handleSaveQuiz}
-                disabled={!canProceed()}
+                disabled={!canProceed() || isLoading}
               >
-                保存して完了
+                {isLoading ? '保存中...' : '保存して完了'}
               </button>
             )}
           </div>

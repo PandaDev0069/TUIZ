@@ -71,45 +71,28 @@ class DatabaseManager {
         return { success: false, error: 'Email already exists' };
       }
       
-      // NEW APPROACH: Try using regular signup first (not admin API)
-      console.log('� Trying regular signup approach...');
+      // Use admin API to create user with confirmed email (primary approach)
+      console.log('📝 Creating user with admin API (auto-confirmed)...');
       
-      const { data: signupData, error: signupError } = await this.supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            name: userData.name
-          }
-        }
-      });
-      
-      if (signupError) {
-        console.log('❌ Regular signup failed:', signupError.message);
+      let signupData;
+      try {
+        const { data: adminData, error: adminError } = await adminClient.auth.admin.createUser({
+          email: userData.email,
+          password: userData.password,
+          email_confirm: true, // This ensures the user can login immediately
+          user_metadata: { name: userData.name }
+        });
         
-        // If regular signup fails, try admin approach as last resort
-        console.log('🔄 Falling back to admin createUser...');
-        
-        try {
-          const { data: adminData, error: adminError } = await adminClient.auth.admin.createUser({
-            email: userData.email,
-            password: userData.password,
-            email_confirm: true,
-            user_metadata: { name: userData.name }
-          });
-          
-          if (adminError) {
-            console.error('❌ Admin createUser also failed:', adminError);
-            return { success: false, error: 'User creation failed: ' + adminError.message };
-          }
-          
-          // Use admin result
-          signupData.user = adminData.user;
-          
-        } catch (adminException) {
-          console.error('❌ Admin createUser threw exception:', adminException);
-          return { success: false, error: 'User creation failed: ' + adminException.message };
+        if (adminError) {
+          console.error('❌ Admin createUser failed:', adminError);
+          return { success: false, error: 'User creation failed: ' + adminError.message };
         }
+        
+        signupData = { user: adminData.user };
+        
+      } catch (adminException) {
+        console.error('❌ Admin createUser threw exception:', adminException);
+        return { success: false, error: 'User creation failed: ' + adminException.message };
       }
       
       if (!signupData.user) {
@@ -173,13 +156,14 @@ class DatabaseManager {
         console.log('✅ Public user record created successfully');
       }
       
-      console.log('✅ User creation completed successfully');
+      console.log('✅ User creation completed successfully - email confirmed, ready for login');
       return { 
         success: true, 
         user: {
           id: signupData.user.id,
           email: signupData.user.email,
-          name: userData.name
+          name: userData.name,
+          email_confirmed: true
         }
       };
 
@@ -255,17 +239,75 @@ class DatabaseManager {
   // QUESTION SETS MANAGEMENT
   // ================================
   
-  async createQuestionSet(questionSetData) {
+  async createQuestionSet(questionSetData, questions = []) {
     try {
-      const { data, error } = await this.supabase
+      console.log('🔄 Creating question set with admin client to bypass RLS');
+      
+      // Use admin client to bypass RLS policies
+      const adminClient = this.supabaseAdmin || this.supabase;
+      
+      // First, create the question set
+      const { data: questionSet, error: questionSetError } = await adminClient
         .from('question_sets')
         .insert(questionSetData)
         .select()
         .single();
 
-      if (error) throw error;
+      if (questionSetError) {
+        console.error('❌ Question set creation failed:', questionSetError);
+        throw questionSetError;
+      }
       
-      return { success: true, questionSet: data };
+      console.log('✅ Question set created:', questionSet.id);
+      
+      // If there are questions, create them too
+      if (questions && questions.length > 0) {
+        console.log('🔄 Creating', questions.length, 'questions');
+        
+        for (let i = 0; i < questions.length; i++) {
+          const questionData = {
+            ...questions[i],
+            question_set_id: questionSet.id,
+            order_index: i
+          };
+          
+          // Create the question
+          const { data: question, error: questionError } = await adminClient
+            .from('questions')
+            .insert(questionData)
+            .select()
+            .single();
+            
+          if (questionError) {
+            console.error('❌ Question creation failed:', questionError);
+            throw questionError;
+          }
+          
+          console.log('✅ Question created:', question.id);
+          
+          // Create answers for this question
+          if (questions[i].answers && questions[i].answers.length > 0) {
+            const answersData = questions[i].answers.map((answer, answerIndex) => ({
+              ...answer,
+              question_id: question.id,
+              order_index: answerIndex
+            }));
+            
+            const { error: answersError } = await adminClient
+              .from('answers')
+              .insert(answersData);
+              
+            if (answersError) {
+              console.error('❌ Answers creation failed:', answersError);
+              throw answersError;
+            }
+            
+            console.log('✅ Answers created for question:', question.id);
+          }
+        }
+      }
+      
+      return { success: true, questionSet };
     } catch (error) {
       console.error('❌ Create question set error:', error);
       return { success: false, error: error.message };

@@ -1,9 +1,17 @@
 const express = require('express');
-const DatabaseManager = require('../config/database');
+const { createClient } = require('@supabase/supabase-js');
 const AuthMiddleware = require('../middleware/auth');
 
 const router = express.Router();
-const db = new DatabaseManager();
+
+// Supabase configuration
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+// Initialize Supabase clients
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 // Input validation helper
 const validateInput = {
@@ -62,34 +70,75 @@ router.post('/register', AuthMiddleware.loginRateLimit(), async (req, res) => {
       });
     }
 
-    // Create user
-    const result = await db.createUser({
+    // Register user through Supabase Auth
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
-      name,
-      password
+      password,
+      user_metadata: { name },
+      email_confirm: true // Auto-confirm for development
     });
-    
-    if (!result.success) {
-      throw new Error(result.error);
+
+    if (error) {
+      console.error('Supabase registration error:', error);
+      
+      if (error.message.includes('already registered')) {
+        return res.status(400).json({
+          success: false,
+          message: 'このメールアドレスは既に使用されています。'
+        });
+      }
+      
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
     }
 
-    const newUser = result.user;
-    
-    // Generate token
-    const token = AuthMiddleware.generateToken(newUser);
+    // Create user profile in our users table
+    const { error: profileError } = await supabaseAdmin
+      .from('users')
+      .insert({
+        id: data.user.id,
+        email: data.user.email,
+        name: name
+      });
+
+    if (profileError) {
+      console.error('Profile creation error:', profileError);
+      // Don't fail registration if profile creation fails
+    }
+
+    // Generate a session token for immediate login
+    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (sessionError) {
+      console.error('Session creation error:', sessionError);
+      return res.status(201).json({
+        success: true,
+        message: 'アカウントが作成されました。ログインしてください。',
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          name: name
+        }
+      });
+    }
 
     res.status(201).json({
       success: true,
       message: 'アカウントが正常に作成されました。',
       user: {
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name
+        id: data.user.id,
+        email: data.user.email,
+        name: name
       },
-      token
+      token: sessionData.session.access_token
     });
 
-    console.log(`✅ New user registered: ${newUser.name} (${newUser.email})`);
+    console.log(`✅ New user registered: ${name} (${email})`);
 
   } catch (error) {
     console.error('Registration error:', error);
@@ -121,45 +170,73 @@ router.post('/login', AuthMiddleware.loginRateLimit(), async (req, res) => {
       });
     }
 
-    // Authenticate user
-    const result = await db.authenticateUser(emailOrName, password);
+    // Check if emailOrName is an email or name
+    let email = emailOrName;
     
-    if (!result.success) {
-      throw new Error(result.error);
+    // If it's not an email, try to find the email by name
+    if (!validateInput.email(emailOrName)) {
+      const { data: userProfile, error: findError } = await supabaseAdmin
+        .from('users')
+        .select('email')
+        .eq('name', emailOrName)
+        .single();
+      
+      if (findError || !userProfile) {
+        return res.status(401).json({
+          success: false,
+          message: 'メールアドレス/名前またはパスワードが正しくありません。'
+        });
+      }
+      
+      email = userProfile.email;
     }
 
-    const user = result.user;
-    
-    // Generate token
-    const token = AuthMiddleware.generateToken(user);
-
-    res.json({
-      success: true,
-      message: 'ログインしました。',
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        last_login: user.last_active
-      },
-      token
+    // Authenticate user through Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
     });
 
-    console.log(`✅ User logged in: ${user.name} (${user.email})`);
-
-  } catch (error) {
-    console.error('Login error:', error);
-    
-    if (error.message.includes('Invalid login credentials') || 
-        error.message.includes('invalid_credentials') ||
-        error.message === 'User not found' || 
-        error.message === 'Invalid password') {
+    if (error) {
+      console.error('Supabase login error:', error);
       return res.status(401).json({
         success: false,
         message: 'メールアドレス/名前またはパスワードが正しくありません。'
       });
     }
 
+    // Get user profile from our users table
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
+
+    if (profileError || !userProfile) {
+      console.error('Profile fetch error:', profileError);
+      return res.status(500).json({
+        success: false,
+        message: 'ユーザープロフィールの取得に失敗しました。'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'ログインしました。',
+      user: {
+        id: userProfile.id,
+        email: userProfile.email,
+        name: userProfile.name,
+        last_login: new Date().toISOString()
+      },
+      token: data.session.access_token
+    });
+
+    console.log(`✅ User logged in: ${userProfile.name} (${userProfile.email})`);
+
+  } catch (error) {
+    console.error('Login error:', error);
+    
     res.status(500).json({
       success: false,
       message: 'ログイン中にエラーが発生しました。もう一度お試しください。'
@@ -176,13 +253,21 @@ router.get('/profile', AuthMiddleware.authenticateToken, (req, res) => {
 });
 
 // Refresh token
-router.post('/refresh', AuthMiddleware.authenticateToken, (req, res) => {
-  const newToken = AuthMiddleware.generateToken(req.user);
-  
-  res.json({
-    success: true,
-    token: newToken
-  });
+router.post('/refresh', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    // With Supabase, refresh tokens are handled differently
+    // For now, return the existing token or suggest re-login
+    res.json({
+      success: true,
+      message: 'Token refresh not needed with Supabase. Current session is valid.',
+      user: req.user
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Token refresh failed. Please log in again.'
+    });
+  }
 });
 
 // Logout (client-side will remove token)

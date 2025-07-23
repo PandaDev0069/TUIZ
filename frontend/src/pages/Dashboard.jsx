@@ -37,11 +37,11 @@ function Dashboard() {
         <header className="dashboard-header">
           <div className="header-left">
             <h1 className="dashboard-title">TUIZ情報王</h1>
-            <p className="welcome-message">おかえりなさい、{user.username}さん！</p>
+            <p className="welcome-message">おかえりなさい、{user.name}さん！</p>
           </div>
           <div className="header-right">
             <span className="user-info">
-              👤 {user.username}
+              👤 {user.name}
             </span>
             <button className="logout-button" onClick={handleLogout}>
               ログアウト

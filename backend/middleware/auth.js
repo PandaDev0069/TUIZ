@@ -1,29 +1,134 @@
 const jwt = require('jsonwebtoken');
+const { createClient } = require('@supabase/supabase-js');
 
-// JWT Secret - In production, this should be in environment variables
-const JWT_SECRET = process.env.JWT_SECRET || 'tuiz_super_secret_key_change_in_production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+// Supabase configuration
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+const supabaseJwtSecret = process.env.SUPABASE_JWT_SECRET;
+
+// Initialize Supabase admin client for server-side operations
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 class AuthMiddleware {
-  // Generate JWT token
-  static generateToken(user) {
-    return jwt.sign(
-      { 
-        id: user.id, 
-        email: user.email, 
-        name: user.name 
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
+  // Generate Supabase session (login user through Supabase Auth)
+  static async loginUser(email, password) {
+    try {
+      const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return {
+        success: true,
+        user: data.user,
+        session: data.session,
+        token: data.session.access_token
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
   }
 
-  // Verify JWT token
-  static verifyToken(token) {
+  // Register user through Supabase Auth
+  static async registerUser(email, password, userData = {}) {
     try {
-      return jwt.verify(token, JWT_SECRET);
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        user_metadata: userData,
+        email_confirm: true // Auto-confirm email for development
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Create user profile in our users table
+      const { error: profileError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          id: data.user.id,
+          email: data.user.email,
+          name: userData.name || email.split('@')[0]
+        });
+
+      if (profileError) {
+        console.error('Failed to create user profile:', profileError);
+        // Don't fail the registration, profile can be created later
+      }
+
+      // Generate session for the user
+      const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'signup',
+        email: email
+      });
+
+      if (sessionError) {
+        console.error('Failed to generate session:', sessionError);
+      }
+
+      return {
+        success: true,
+        user: data.user,
+        message: 'User registered successfully'
+      };
     } catch (error) {
-      throw new Error('Invalid or expired token');
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // Verify Supabase JWT token
+  static async verifyToken(token) {
+    try {
+      // First try using Supabase's built-in method
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      
+      if (error) {
+        throw new Error('Invalid or expired token: ' + error.message);
+      }
+      
+      if (!user) {
+        throw new Error('No user found for this token');
+      }
+
+      return {
+        success: true,
+        user: user,
+        decoded: {
+          id: user.id,
+          email: user.email,
+          sub: user.id
+        }
+      };
+    } catch (error) {
+      // Fallback to manual JWT verification using Supabase JWT secret
+      if (supabaseJwtSecret) {
+        try {
+          const decoded = jwt.verify(token, supabaseJwtSecret);
+          return {
+            success: true,
+            user: {
+              id: decoded.sub,
+              email: decoded.email
+            },
+            decoded: decoded
+          };
+        } catch (jwtError) {
+          throw new Error('Token verification failed: ' + jwtError.message);
+        }
+      }
+      
+      throw error;
     }
   }
 
@@ -40,22 +145,57 @@ class AuthMiddleware {
     }
 
     try {
-      const decoded = AuthMiddleware.verifyToken(token);
-      
-      // Get fresh user data from database
-      const db = new (require('../config/database'))();
-      const result = await db.getUserById(decoded.id);
+      const result = await AuthMiddleware.verifyToken(token);
       
       if (!result.success) {
         return res.status(401).json({ 
           success: false, 
-          message: 'User not found' 
+          message: 'Invalid token' 
         });
       }
 
-      req.user = result.user;
+      // Get user profile from database
+      const { data: userProfile, error: profileError } = await supabaseAdmin
+        .from('users')
+        .select('*')
+        .eq('id', result.user.id)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'User profile not found' 
+        });
+      }
+
+      // If profile doesn't exist, create it
+      if (!userProfile) {
+        const { data: newProfile, error: createError } = await supabaseAdmin
+          .from('users')
+          .insert({
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.user_metadata?.name || result.user.email?.split('@')[0] || 'User'
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Failed to create user profile:', createError);
+          return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to create user profile' 
+          });
+        }
+
+        req.user = newProfile;
+      } else {
+        req.user = userProfile;
+      }
+
       next();
     } catch (error) {
+      console.error('Authentication error:', error);
       return res.status(403).json({ 
         success: false, 
         message: 'Invalid or expired token' 
@@ -70,11 +210,19 @@ class AuthMiddleware {
 
     if (token) {
       try {
-        const decoded = AuthMiddleware.verifyToken(token);
-        const db = new (require('../config/database'))();
-        const result = await db.getUserById(decoded.id);
+        const result = await AuthMiddleware.verifyToken(token);
+        
         if (result.success) {
-          req.user = result.user;
+          // Get user profile from database
+          const { data: userProfile, error: profileError } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('id', result.user.id)
+            .single();
+
+          if (!profileError && userProfile) {
+            req.user = userProfile;
+          }
         }
       } catch (error) {
         // Invalid token, but we don't reject the request
