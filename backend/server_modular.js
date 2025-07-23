@@ -302,14 +302,12 @@ app.post('/api/debug/test-rls', async (req, res) => {
 // Import and use API route modules
 const questionSetsRoutes = require('./routes/api/questionSets');
 const questionsRoutes = require('./routes/api/questions');
-const answersRoutes = require('./routes/api/answers');
 const debugRoutes = require('./routes/api/debug');
 const gamesRoutes = require('./routes/api/games');
 
 // Mount API routes
 app.use('/api/question-sets', questionSetsRoutes);
 app.use('/api/questions', questionsRoutes);
-app.use('/api/answers', answersRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/games', gamesRoutes);
 
