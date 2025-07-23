@@ -337,6 +337,37 @@ app.get('/api/question-sets/public', async (req, res) => {
   }
 });
 
+// API endpoint to get user's own question sets (must be before :id route)
+app.get('/api/question-sets/my-sets', async (req, res) => {
+  try {
+    // Get authenticated user
+    let authenticatedUser;
+    try {
+      authenticatedUser = await getAuthenticatedUser(req.headers.authorization);
+    } catch (authError) {
+      return res.status(401).json({ error: authError.message });
+    }
+    
+    const { limit = 20, offset = 0 } = req.query;
+    
+    // Get user's question sets
+    const { data: questionSets, error } = await db.supabaseAdmin
+      .from('question_sets')
+      .select('*')
+      .eq('user_id', authenticatedUser.id)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+    
+    res.json({ questionSets: questionSets || [] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/question-sets/:id', async (req, res) => {
   try {
     const result = await db.getQuestionSetWithQuestions(req.params.id);
@@ -736,37 +767,6 @@ app.get('/api/games/:gameCode', async (req, res) => {
     } else {
       res.status(404).json({ error: result.error });
     }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// API endpoint to get user's own question sets
-app.get('/api/question-sets/my-sets', async (req, res) => {
-  try {
-    // Get authenticated user
-    let authenticatedUser;
-    try {
-      authenticatedUser = await getAuthenticatedUser(req.headers.authorization);
-    } catch (authError) {
-      return res.status(401).json({ error: authError.message });
-    }
-    
-    const { limit = 20, offset = 0 } = req.query;
-    
-    // Get user's question sets
-    const { data: questionSets, error } = await db.supabaseAdmin
-      .from('question_sets')
-      .select('*')
-      .eq('user_id', authenticatedUser.id)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-    
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-    
-    res.json({ questionSets: questionSets || [] });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
