@@ -33,6 +33,8 @@
 
     - clean the ui and remove the buttons 
 
+- clean the folders / remove un-necessary and redundant files
+
 - after the current content gets properly adjusted to the backend and db
     prepare for the first deployment of frontend and backend
     
