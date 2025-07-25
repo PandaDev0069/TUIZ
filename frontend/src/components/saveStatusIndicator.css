@@ -1,0 +1,199 @@
+/* Save Status Indicator Styles */
+.save-status-indicator {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.save-status-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-icon {
+  font-size: 16px;
+}
+
+.status-text {
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.save-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Temporary Save Button */
+.temporary-save-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(16, 185, 129, 0.9);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.temporary-save-btn:hover:not(:disabled) {
+  background: rgb(16, 185, 129);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.temporary-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.save-icon {
+  font-size: 14px;
+}
+
+/* Auto Save Toggle */
+.auto-save-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.auto-save-toggle.enabled {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.auto-save-toggle.disabled {
+  background: rgba(156, 163, 175, 0.2);
+  color: #9ca3af;
+  border-color: rgba(156, 163, 175, 0.3);
+}
+
+.auto-save-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.auto-save-toggle.enabled:hover {
+  background: rgba(34, 197, 94, 0.3);
+}
+
+.toggle-icon {
+  font-size: 12px;
+}
+
+.toggle-text {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Status-specific styles */
+.status-unsaved {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.status-unsaved .status-text {
+  color: #f59e0b;
+}
+
+.status-saving {
+  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.status-saving .status-text {
+  color: #3b82f6;
+}
+
+.status-saving .status-icon {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status-saved {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.status-saved .status-text {
+  color: #22c55e;
+}
+
+.status-error {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.status-error .status-text {
+  color: #ef4444;
+}
+
+.status-new {
+  border-color: rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.1);
+}
+
+.status-new .status-text {
+  color: #a855f7;
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .save-status-indicator {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+  
+  .save-status-info {
+    align-self: flex-start;
+  }
+  
+  .save-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .temporary-save-btn {
+    flex: 1;
+    justify-content: center;
+    max-width: 150px;
+  }
+}

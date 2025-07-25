@@ -89,9 +89,22 @@ class AuthMiddleware {
 
   // Verify Supabase JWT token
   static async verifyToken(token) {
+    console.log('🔍 Token verification attempt:', {
+      tokenLength: token?.length,
+      tokenStart: token?.substring(0, 30),
+      tokenEnd: token?.substring(token.length - 10)
+    });
+    
     try {
       // First try using Supabase's built-in method
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      
+      console.log('📋 Supabase getUser result:', {
+        userPresent: !!user,
+        userId: user?.id,
+        userEmail: user?.email,
+        error: error?.message
+      });
       
       if (error) {
         throw new Error('Invalid or expired token: ' + error.message);
@@ -111,10 +124,16 @@ class AuthMiddleware {
         }
       };
     } catch (error) {
+      console.log('❌ Token verification failed:', error.message);
+      
       // Fallback to manual JWT verification using Supabase JWT secret
       if (supabaseJwtSecret) {
         try {
           const decoded = jwt.verify(token, supabaseJwtSecret);
+          console.log('✅ Manual JWT verification successful:', {
+            userId: decoded.sub,
+            email: decoded.email
+          });
           return {
             success: true,
             user: {
@@ -124,6 +143,7 @@ class AuthMiddleware {
             decoded: decoded
           };
         } catch (jwtError) {
+          console.log('❌ Manual JWT verification failed:', jwtError.message);
           throw new Error('Token verification failed: ' + jwtError.message);
         }
       }
@@ -136,6 +156,13 @@ class AuthMiddleware {
   static async authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    console.log('🔐 Auth Debug:', {
+      authHeader: authHeader ? `Bearer ${authHeader.substring(7, 20)}...` : 'None',
+      tokenPresent: !!token,
+      tokenLength: token?.length,
+      tokenStart: token?.substring(0, 20)
+    });
 
     if (!token) {
       return res.status(401).json({ 
@@ -192,6 +219,9 @@ class AuthMiddleware {
       } else {
         req.user = userProfile;
       }
+
+      // Add the original token to the request for user-scoped operations
+      req.userToken = token;
 
       next();
     } catch (error) {
@@ -281,6 +311,21 @@ class AuthMiddleware {
 
       next();
     };
+  }
+
+  // Create a user-scoped Supabase client for RLS operations
+  static createUserScopedClient(userToken) {
+    const { createClient } = require('@supabase/supabase-js');
+    
+    const client = createClient(supabaseUrl, process.env.SUPABASE_ANON_KEY, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${userToken}`
+        }
+      }
+    });
+
+    return client;
   }
 }
 

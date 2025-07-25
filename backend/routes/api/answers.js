@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const DatabaseManager = require('../../config/database');
-const { getAuthenticatedUser } = require('../../helpers/authHelper');
+const AuthMiddleware = require('../../middleware/auth');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -16,7 +16,8 @@ const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: Math.min(parseInt(process.env.MAX_UPLOAD_SIZE) || 10485760, 3 * 1024 * 1024) // 3MB limit for answer images, respect MAX_UPLOAD_SIZE if smaller
+    fileSize: Math.min(parseInt(process.env.MAX_UPLOAD_SIZE) || 52428800, 25 * 1024 * 1024), // 25MB limit for answer images (increased from 3MB), respect MAX_UPLOAD_SIZE if smaller
+    fieldSize: 10 * 1024 * 1024, // 10MB for field data
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -28,23 +29,49 @@ const upload = multer({
 });
 
 // Get all answers for a specific question
-router.get('/question/:id', async (req, res) => {
+router.get('/question/:id', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
-    const { data: answers, error } = await db.supabaseAdmin
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+    
+    // First verify user has access to this question (through question set ownership)
+    const { data: question, error: questionError } = await userSupabase
+      .from('questions')
+      .select('question_set_id')
+      .eq('id', id)
+      .single();
+    
+    if (questionError || !question) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Question not found or access denied' 
+      });
+    }
+    
+    const { data: answers, error } = await userSupabase
       .from('answers')
       .select('*')
       .eq('question_id', id)
       .order('order_index', { ascending: true });
     
     if (error) {
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
     }
     
-    res.json({ answers: answers || [] });
+    res.json({ 
+      success: true,
+      answers: answers || [] 
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 

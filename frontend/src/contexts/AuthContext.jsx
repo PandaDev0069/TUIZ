@@ -63,14 +63,22 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (!response.ok) {
+        console.error('API Error Details:', {
+          endpoint,
+          status: response.status,
+          statusText: response.statusText,
+          responseData: data
+        });
         throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       return data;
     } catch (error) {
       if (error instanceof SyntaxError) {
+        console.error('API Syntax Error:', { endpoint, error });
         throw new Error(`Invalid response from server (endpoint: ${endpoint})`);
       }
+      console.error('API Call Error:', { endpoint, error });
       throw error;
     }
   };

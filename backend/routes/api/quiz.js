@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const DatabaseManager = require('../../config/database');
-const auth = require('../../middleware/auth');
+const AuthMiddleware = require('../../middleware/auth');
 
 // Initialize database manager
 const dbManager = new DatabaseManager();
@@ -42,12 +42,13 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 25 * 1024 * 1024, // 25MB limit (increased from 5MB)
+    fieldSize: 10 * 1024 * 1024, // 10MB for field data
   }
 });
 
 // Upload thumbnail endpoint
-router.post('/upload-thumbnail', auth, upload.single('thumbnail'), async (req, res) => {
+router.post('/upload-thumbnail', AuthMiddleware.authenticateToken, upload.single('thumbnail'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ 
@@ -116,7 +117,7 @@ router.post('/upload-thumbnail', auth, upload.single('thumbnail'), async (req, r
 });
 
 // Create quiz with metadata
-router.post('/create', auth, async (req, res) => {
+router.post('/create', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const {
       title,
@@ -126,7 +127,8 @@ router.post('/create', auth, async (req, res) => {
       estimated_duration,
       thumbnail_url,
       tags,
-      is_public
+      is_public,
+      status
     } = req.body;
 
     // Validate required fields
@@ -137,21 +139,29 @@ router.post('/create', auth, async (req, res) => {
       });
     }
 
-    // Insert quiz set into database
-    const { data: quizData, error: quizError } = await supabase
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+
+    // Insert quiz set into database using user-scoped client
+    const { data: quizData, error: quizError } = await userSupabase
       .from('question_sets')
       .insert([{
+        user_id: req.user.id, // CRITICAL: Set user_id for RLS policy compliance
         title: title.trim(),
         description: description?.trim() || null,
         category: category,
         difficulty_level: difficulty_level,
         estimated_duration: estimated_duration || null,
         thumbnail_url: thumbnail_url || null,
-        tags: tags || [],
+        tags: tags || [], // This should be a text array
         is_public: is_public || false,
-        user_id: req.user.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        status: status || 'published', // Support draft status for progressive save
+        total_questions: 0, // Will be updated as questions are added
+        times_played: 0,
+        average_score: 0.0,
+        completion_rate: 0.0,
+        play_settings: {}
+        // Note: id, created_at, updated_at, last_played_at are handled by database defaults
       }])
       .select()
       .single();
@@ -182,9 +192,12 @@ router.post('/create', auth, async (req, res) => {
 });
 
 // Get user's quizzes
-router.get('/my-quizzes', auth, async (req, res) => {
+router.get('/my-quizzes', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
-    const { data: quizzes, error } = await supabase
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+    
+    const { data: quizzes, error } = await userSupabase
       .from('question_sets')
       .select(`
         id,
@@ -201,7 +214,6 @@ router.get('/my-quizzes', auth, async (req, res) => {
         created_at,
         updated_at
       `)
-      .eq('user_id', req.user.id)
       .order('updated_at', { ascending: false });
 
     if (error) {
@@ -229,11 +241,14 @@ router.get('/my-quizzes', auth, async (req, res) => {
 });
 
 // Get quiz by ID
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const quizId = req.params.id;
 
-    const { data: quiz, error } = await supabase
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+
+    const { data: quiz, error } = await userSupabase
       .from('question_sets')
       .select(`
         *,
@@ -255,7 +270,6 @@ router.get('/:id', auth, async (req, res) => {
         )
       `)
       .eq('id', quizId)
-      .eq('user_id', req.user.id)
       .single();
 
     if (error) {
@@ -282,24 +296,27 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Update quiz metadata
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const quizId = req.params.id;
     const updateData = { ...req.body };
     
-    // Add updated timestamp
-    updateData.updated_at = new Date().toISOString();
+    // Add updated timestamp - let database handle this with DEFAULT
+    // updateData.updated_at = new Date().toISOString();
 
     // Remove fields that shouldn't be updated via this endpoint
     delete updateData.id;
     delete updateData.user_id;
     delete updateData.created_at;
+    delete updateData.updated_at; // Let database handle timestamps
 
-    const { data: quiz, error } = await supabase
+    // Create user-scoped client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+
+    const { data: quiz, error } = await userSupabase
       .from('question_sets')
       .update(updateData)
       .eq('id', quizId)
-      .eq('user_id', req.user.id)
       .select()
       .single();
 
@@ -329,12 +346,13 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // Delete quiz
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const quizId = req.params.id;
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
 
     // First delete all questions associated with this quiz
-    const { error: questionsError } = await supabase
+    const { error: questionsError } = await userSupabase
       .from('questions')
       .delete()
       .eq('question_set_id', quizId);
@@ -349,11 +367,10 @@ router.delete('/:id', auth, async (req, res) => {
     }
 
     // Then delete the quiz itself
-    const { error: quizError } = await supabase
+    const { error: quizError } = await userSupabase
       .from('question_sets')
       .delete()
-      .eq('id', quizId)
-      .eq('user_id', req.user.id);
+      .eq('id', quizId);
 
     if (quizError) {
       console.error('Error deleting quiz:', quizError);
@@ -371,6 +388,236 @@ router.delete('/:id', auth, async (req, res) => {
 
   } catch (error) {
     console.error('Error deleting quiz:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
+// Update quiz status (for progressive saving)
+router.patch('/:id/status', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const quizId = req.params.id;
+    const { status } = req.body;
+
+    // Validate status
+    const validStatuses = ['draft', 'creating', 'published'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be: draft, creating, or published'
+      });
+    }
+
+    const { data: updatedQuiz, error } = await AuthMiddleware.createUserScopedClient(req.userToken)
+      .from('question_sets')
+      .update({
+        status: status
+      })
+      .eq('id', quizId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Status update error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update quiz status',
+        error: error.message
+      });
+    }
+
+    if (!updatedQuiz) {
+      return res.status(404).json({
+        success: false,
+        message: 'Quiz not found or access denied'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Quiz status updated successfully',
+      quiz: updatedQuiz
+    });
+
+  } catch (error) {
+    console.error('Error updating quiz status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
+// Update question count (for progressive saving)
+router.patch('/:id/question-count', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const quizId = req.params.id;
+    const { total_questions } = req.body;
+
+    if (typeof total_questions !== 'number' || total_questions < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'total_questions must be a non-negative number'
+      });
+    }
+
+    const { data: updatedQuiz, error } = await AuthMiddleware.createUserScopedClient(req.userToken)
+      .from('question_sets')
+      .update({
+        total_questions: total_questions
+      })
+      .eq('id', quizId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Question count update error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update question count',
+        error: error.message
+      });
+    }
+
+    if (!updatedQuiz) {
+      return res.status(404).json({
+        success: false,
+        message: 'Quiz not found or access denied'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Question count updated successfully',
+      quiz: updatedQuiz
+    });
+
+  } catch (error) {
+    console.error('Error updating question count:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
+// Publish quiz (final step)
+router.post('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const quizId = req.params.id;
+    const { play_settings = {} } = req.body;
+
+    // First, get the quiz to validate it exists and belongs to user
+    const { data: quiz, error: fetchError } = await supabase
+      .from('question_sets')
+      .select(`
+        *,
+        questions (
+          id,
+          question_text,
+          answers (id)
+        )
+      `)
+      .eq('id', quizId)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (fetchError || !quiz) {
+      return res.status(404).json({
+        success: false,
+        message: 'Quiz not found or access denied'
+      });
+    }
+
+    // Validate quiz is ready for publishing
+    if (!quiz.questions || quiz.questions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot publish quiz without questions'
+      });
+    }
+
+    // Check that all questions have answers
+    const hasIncompleteQuestions = quiz.questions.some(q => !q.answers || q.answers.length < 2);
+    if (hasIncompleteQuestions) {
+      return res.status(400).json({
+        success: false,
+        message: 'All questions must have at least 2 answers'
+      });
+    }
+
+    // Update quiz to published status
+    const { data: publishedQuiz, error: publishError } = await AuthMiddleware.createUserScopedClient(req.userToken)
+      .from('question_sets')
+      .update({
+        status: 'published',
+        play_settings: play_settings,
+        total_questions: quiz.questions.length
+      })
+      .eq('id', quizId)
+      .select()
+      .single();
+
+    if (publishError) {
+      console.error('Publish error:', publishError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to publish quiz',
+        error: publishError.message
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Quiz published successfully',
+      quiz: publishedQuiz
+    });
+
+  } catch (error) {
+    console.error('Error publishing quiz:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
+// Get quiz with questions (for loading drafts)
+router.get('/:id/questions', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const quizId = req.params.id;
+
+    const { data: questions, error } = await supabase
+      .from('questions')
+      .select(`
+        *,
+        answers (*)
+      `)
+      .eq('question_set_id', quizId)
+      .order('order_index', { ascending: true });
+
+    if (error) {
+      console.error('Questions fetch error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch questions',
+        error: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      questions: questions || []
+    });
+
+  } catch (error) {
+    console.error('Error fetching questions:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

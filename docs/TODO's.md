@@ -7,13 +7,16 @@
     - (✅)set proper paths for the thumbnail upload
     - (✅)clean the ui
     - (✅)after completing the metadata section for the quiz creation proceed to quesiton creation page
+    - (✅)Fix delete button color (currently white and cannot be seen until hoverd which shows a shadow ) for the thumbnatil(and fix the aspect ratio)(same for question-image too)
 - ### questtion creation page
     - (✅)properly check the reuired fields from the database schema 
     - (✅)clean the ui 
     - (✅)setup the proper backend paths for the image uploads
     - (✅)properly store the question order 
     - (✅)properly implement Rest of the meta data
-    - add field to add the explanation page(comprehensive explanation system with title, text, and image support via modal)
+    - (✅)add field to add the explanation page(comprehensive explanation system with title, text, and image support via modal)
+    - Fix the button flex in the explantion modal
+    - Fix the image upload in the explanation modal
     - after all required fields are filled proceed to the settings section
 - ### quiz-settings
     - rename the file
@@ -25,7 +28,7 @@
     - preview as host
     - preview as player
     - final confirmation of question order(use same modal as settings)
-    - when everything is confirmed save to db(in beteween the changes give(一時保存) button to save everything for that time if quiz-creation  couldn't be completed at that time)
+    - (✅)when everything is confirmed save to db(in beteween the changes give(一時保存) button to save everything for that time if quiz-creation  couldn't be completed at that time)
 
 ## Actual quiz page
 

@@ -2,16 +2,31 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { showSuccess, showError } from '../utils/toast';
+import { showSuccess, showError, showWarning } from '../utils/toast';
 import MetadataForm from '../components/MetadataForm';
 import QuestionsForm from '../components/QuestionsForm';
 import SettingsForm from '../components/SettingsForm';
 import QuestionReorderModal from '../components/QuestionReorderModal';
+import SaveStatusIndicator from '../components/SaveStatusIndicator';
+import { useQuizCreation } from '../hooks/useQuizCreation';
 import './createQuiz.css';
 
 function CreateQuiz() {
   const { user, isAuthenticated, token, apiCall } = useAuth();
   const navigate = useNavigate();
+
+  // Progressive save functionality
+  const {
+    currentQuizId,
+    saveStatus,
+    lastSaved,
+    autoSaveEnabled,
+    temporarySave,
+    scheduleAutoSave,
+    publishQuiz,
+    markUnsaved,
+    setAutoSaveEnabled
+  } = useQuizCreation();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -202,8 +217,45 @@ function CreateQuiz() {
     };
   };
 
-  const handleNext = () => {
+  // Handle temporary save
+  const handleTemporarySave = async () => {
+    try {
+      if (!metadata.title?.trim()) {
+        showError('タイトルを入力してから一時保存してください');
+        return;
+      }
+      
+      await temporarySave(metadata, questions);
+      showSuccess('一時保存しました');
+    } catch (error) {
+      console.error('Temporary save failed:', error);
+      showError('一時保存に失敗しました: ' + error.message);
+    }
+  };
+
+  // Auto-save when data changes
+  useEffect(() => {
+    if (currentQuizId) {
+      scheduleAutoSave(metadata, questions);
+      markUnsaved();
+    }
+  }, [metadata, questions, currentQuizId, scheduleAutoSave, markUnsaved]);
+
+  // Auto-save when step changes
+  const handleNext = async () => {
     if (currentStep < totalSteps) {
+      // Auto-save before moving to next step (with error handling)
+      try {
+        if (currentQuizId) {
+          await handleTemporarySave();
+        } else if (metadata.title.trim()) {
+          // Create draft if moving from metadata step
+          await temporarySave(metadata, questions);
+        }
+      } catch (error) {
+        console.warn('Auto-save failed, continuing anyway:', error);
+        // Don't block navigation if auto-save fails
+      }
       setCurrentStep(currentStep + 1);
     }
   };
@@ -217,14 +269,44 @@ function CreateQuiz() {
   const handleSaveQuiz = async () => {
     try {
       setIsLoading(true);
-      console.log('Starting quiz save process...');
+      console.log('Starting quiz final save process...');
       
       // Step 1: Validate all data thoroughly
       const validationResult = validateQuizData(metadata, questions, settings);
       if (!validationResult.isValid) {
         throw new Error(`Validation failed: ${validationResult.errors.join(', ')}`);
       }
-      
+
+      // If we have a current quiz ID (from progressive save), publish it
+      if (currentQuizId) {
+        console.log('Publishing existing draft quiz:', currentQuizId);
+        
+        try {
+          // Final update before publishing
+          await temporarySave(metadata, questions);
+          
+          // Publish the quiz
+          const result = await publishQuiz({
+            play_settings: settings
+          });
+          
+          console.log('Quiz published successfully:', result);
+          showSuccess('クイズが正常に作成・公開されました！');
+          
+          // Clear temporary data after successful publish
+          setCurrentQuizId(null);
+          
+          navigate('/dashboard');
+          return;
+        } catch (publishError) {
+          console.error('Failed to publish quiz:', publishError);
+          // If publish fails, try legacy save as fallback
+          console.log('Falling back to legacy save method');
+          showWarning('高度な保存に失敗したため、通常の保存方法で続行します');
+        }
+      }
+
+      // Legacy save process for backward compatibility
       // Step 2: Create quiz with metadata using new API
       const quizData = {
         title: metadata.title.trim(),
@@ -524,6 +606,15 @@ function CreateQuiz() {
             </span>
           </div>
         </header>
+
+        {/* Save Status Indicator */}
+        <SaveStatusIndicator
+          saveStatus={saveStatus}
+          lastSaved={lastSaved}
+          onTemporarySave={handleTemporarySave}
+          autoSaveEnabled={autoSaveEnabled}
+          onToggleAutoSave={() => setAutoSaveEnabled(!autoSaveEnabled)}
+        />
 
         {/* Progress Indicator */}
         <div className="progress-container">

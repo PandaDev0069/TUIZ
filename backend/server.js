@@ -45,8 +45,38 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+// Increase payload limits for image uploads and large quiz data
+app.use(express.json({ 
+  limit: '50mb',
+  parameterLimit: 10000
+}));
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '50mb',
+  parameterLimit: 10000
+}));
+
+// Middleware to handle payload size errors
+app.use((error, req, res, next) => {
+  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+    console.error('Bad JSON body:', error.message);
+    return res.status(400).json({ 
+      error: 'Invalid JSON format',
+      message: 'Request body contains invalid JSON' 
+    });
+  }
+  
+  if (error.type === 'entity.too.large') {
+    console.error('Payload too large:', error.message);
+    return res.status(413).json({ 
+      error: 'Payload too large',
+      message: 'Request payload is too large. Please reduce file sizes or split the request.',
+      limit: '50MB'
+    });
+  }
+  
+  next(error);
+});
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -326,6 +356,33 @@ app.use('/api/debug', debugRoutes);
 app.use('/api/games', gamesRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/upload', uploadRoutes);
+
+// Global error handler - must be after all routes
+app.use((error, req, res, next) => {
+  console.error('Global error handler:', error.message);
+  
+  // Handle specific error types
+  if (error.type === 'entity.too.large') {
+    return res.status(413).json({
+      error: 'Payload too large',
+      message: 'Request payload exceeds the 50MB limit. Please reduce file sizes.',
+      limit: '50MB'
+    });
+  }
+  
+  if (error.name === 'MulterError') {
+    return res.status(400).json({
+      error: 'File upload error',
+      message: error.message
+    });
+  }
+  
+  // Default error response
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : error.message
+  });
+});
 
 // ================================================================
 // SERVER SETUP

@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const DatabaseManager = require('../../config/database');
-const { getAuthenticatedUser } = require('../../helpers/authHelper');
+const AuthMiddleware = require('../../middleware/auth');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -68,33 +68,36 @@ router.get('/public', async (req, res) => {
 });
 
 // Get user's own question sets (must be before :id route)
-router.get('/my-sets', async (req, res) => {
+router.get('/my-sets', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
-    // Get authenticated user
-    let authenticatedUser;
-    try {
-      authenticatedUser = await getAuthenticatedUser(req.headers.authorization);
-    } catch (authError) {
-      return res.status(401).json({ error: authError.message });
-    }
-    
     const { limit = 20, offset = 0 } = req.query;
     
-    // Get user's question sets
-    const { data: questionSets, error } = await db.supabaseAdmin
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+    
+    // Get user's question sets - RLS will automatically filter by user_id
+    const { data: questionSets, error } = await userSupabase
       .from('question_sets')
       .select('*')
-      .eq('user_id', authenticatedUser.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
     
     if (error) {
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
     }
     
-    res.json({ questionSets: questionSets || [] });
+    res.json({ 
+      success: true,
+      questionSets: questionSets || [] 
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
@@ -114,7 +117,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Upload thumbnail for question set
-router.post('/:id/upload-thumbnail', upload.single('thumbnail'), async (req, res) => {
+router.post('/:id/upload-thumbnail', AuthMiddleware.authenticateToken, upload.single('thumbnail'), async (req, res) => {
   try {
     const { id } = req.params;
     const file = req.file;
@@ -126,20 +129,14 @@ router.post('/:id/upload-thumbnail', upload.single('thumbnail'), async (req, res
       });
     }
 
-    // Get authenticated user
-    let authenticatedUser;
-    try {
-      authenticatedUser = await getAuthenticatedUser(req.headers.authorization);
-    } catch (authError) {
-      return res.status(401).json({ error: authError.message });
-    }
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
 
-    // Verify ownership of the question set
-    const { data: questionSet, error: verifyError } = await db.supabaseAdmin
+    // Verify ownership of the question set - RLS will handle this automatically
+    const { data: questionSet, error: verifyError } = await userSupabase
       .from('question_sets')
-      .select('user_id, title')
+      .select('id, title')
       .eq('id', id)
-      .eq('user_id', authenticatedUser.id)
       .single();
 
     if (verifyError || !questionSet) {
@@ -177,8 +174,8 @@ router.post('/:id/upload-thumbnail', upload.single('thumbnail'), async (req, res
 
     const thumbnailUrl = urlData.publicUrl;
 
-    // Update question set's thumbnail_url in database
-    const { data: updateData, error: updateError } = await db.supabaseAdmin
+    // Update question set's thumbnail_url in database using user-scoped client
+    const { data: updateData, error: updateError } = await userSupabase
       .from('question_sets')
       .update({ 
         thumbnail_url: thumbnailUrl,
@@ -202,7 +199,7 @@ router.post('/:id/upload-thumbnail', upload.single('thumbnail'), async (req, res
       });
     }
 
-    console.log(`Thumbnail uploaded for question set ${id} by user:`, authenticatedUser.name);
+    console.log(`Thumbnail uploaded for question set ${id} by user:`, req.user.name);
 
     res.json({
       success: true,
@@ -229,24 +226,18 @@ router.post('/:id/upload-thumbnail', upload.single('thumbnail'), async (req, res
 });
 
 // Delete thumbnail for question set
-router.delete('/:id/thumbnail', async (req, res) => {
+router.delete('/:id/thumbnail', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Get authenticated user
-    let authenticatedUser;
-    try {
-      authenticatedUser = await getAuthenticatedUser(req.headers.authorization);
-    } catch (authError) {
-      return res.status(401).json({ error: authError.message });
-    }
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
 
-    // Get question set and verify ownership
-    const { data: questionSet, error: verifyError } = await db.supabaseAdmin
+    // Get question set and verify ownership - RLS will handle this automatically
+    const { data: questionSet, error: verifyError } = await userSupabase
       .from('question_sets')
-      .select('user_id, thumbnail_url')
+      .select('id, thumbnail_url')
       .eq('id', id)
-      .eq('user_id', authenticatedUser.id)
       .single();
 
     if (verifyError || !questionSet) {
@@ -266,8 +257,8 @@ router.delete('/:id/thumbnail', async (req, res) => {
       }
     }
 
-    // Update database to remove thumbnail_url
-    const { data: updateData, error: updateError } = await db.supabaseAdmin
+    // Update database to remove thumbnail_url using user-scoped client
+    const { data: updateData, error: updateError } = await userSupabase
       .from('question_sets')
       .update({ 
         thumbnail_url: null,
@@ -297,7 +288,7 @@ router.delete('/:id/thumbnail', async (req, res) => {
       }
     }
 
-    console.log(`Thumbnail deleted for question set ${id} by user:`, authenticatedUser.name);
+    console.log(`Thumbnail deleted for question set ${id} by user:`, req.user.name);
 
     res.json({
       success: true,
@@ -315,7 +306,7 @@ router.delete('/:id/thumbnail', async (req, res) => {
 });
 
 // Create question set metadata only
-router.post('/metadata', async (req, res) => {
+router.post('/metadata', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     console.log('Creating question set metadata:', req.body);
     
@@ -323,22 +314,42 @@ router.post('/metadata', async (req, res) => {
     
     // Validate required fields
     if (!title?.trim()) {
-      return res.status(400).json({ error: 'Title is required' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Title is required' 
+      });
     }
     
-    // Get authenticated user
-    let authenticatedUser;
-    try {
-      authenticatedUser = await getAuthenticatedUser(req.headers.authorization);
-      console.log('Authenticated user:', authenticatedUser.id, authenticatedUser.name);
-    } catch (authError) {
-      console.error('Authentication error:', authError.message);
-      return res.status(401).json({ error: authError.message });
-    }
+    console.log('Authenticated user:', req.user.id, req.user.name);
     
-    // Create question set metadata using authenticated user
+    // DEBUG: Add comprehensive logging
+    console.log('=== QUIZ CREATION DEBUG ===');
+    console.log('1. Request Headers:', {
+      authorization: req.headers.authorization?.substring(0, 50) + '...',
+      'content-type': req.headers['content-type']
+    });
+    console.log('2. Authenticated User (req.user):', {
+      id: req.user?.id,
+      email: req.user?.email,
+      name: req.user?.name
+    });
+    console.log('3. User Token (req.userToken):', {
+      tokenExists: !!req.userToken,
+      tokenLength: req.userToken?.length,
+      tokenStart: req.userToken?.substring(0, 50) + '...'
+    });
+    
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+    
+    console.log('4. User Supabase Client Created:', {
+      clientExists: !!userSupabase,
+      hasAuth: !!userSupabase.auth
+    });
+    
+    // Create question set metadata - RLS will automatically set user_id context
     const questionSetData = {
-      user_id: authenticatedUser.id,
+      user_id: req.user.id, // Still need to explicitly set this for INSERT
       title: title.trim(),
       description: description?.trim() || '',
       category: category || 'general',
@@ -351,51 +362,73 @@ router.post('/metadata', async (req, res) => {
       status: status || 'draft'
     };
 
-    const { data: questionSet, error } = await db.supabaseAdmin
+    console.log('5. Question Set Data to Insert:', questionSetData);
+    console.log('6. About to INSERT with user-scoped client...');
+
+    const { data: questionSet, error } = await userSupabase
       .from('question_sets')
       .insert(questionSetData)
       .select()
       .single();
     
     if (error) {
-      console.error('Error creating question set:', error);
-      return res.status(500).json({ error: error.message });
+      console.error('7. INSERT ERROR:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        fullError: error
+      });
+      console.log('=== END DEBUG (ERROR) ===');
+      return res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
     }
     
-    console.log('Question set metadata created:', questionSet.id, 'by user:', authenticatedUser.name);
-    res.json(questionSet);
+    console.log('7. INSERT SUCCESS:', {
+      questionSetId: questionSet?.id,
+      userId: questionSet?.user_id
+    });
+    console.log('=== END DEBUG (SUCCESS) ===');
+    
+    console.log('Question set metadata created:', questionSet.id, 'by user:', req.user.name);
+    res.json({
+      success: true,
+      questionSet: questionSet
+    });
   } catch (error) {
     console.error('Error in question set metadata creation:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
 // Update question set metadata
-router.patch('/:id/metadata', async (req, res) => {
+router.patch('/:id/metadata', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, category, difficulty_level, is_public, estimated_duration, thumbnail_url, tags, status } = req.body;
     
     console.log(`Updating question set metadata for ${id}:`, req.body);
     
-    // Get authenticated user
-    let authenticatedUser;
-    try {
-      authenticatedUser = await getAuthenticatedUser(req.headers.authorization);
-    } catch (authError) {
-      return res.status(401).json({ error: authError.message });
-    }
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
-    // Verify ownership of the question set
-    const { data: questionSet, error: verifyError } = await db.supabaseAdmin
+    // Verify ownership of the question set - RLS will handle this automatically
+    const { data: questionSet, error: verifyError } = await userSupabase
       .from('question_sets')
-      .select('user_id')
+      .select('id')
       .eq('id', id)
-      .eq('user_id', authenticatedUser.id)
       .single();
     
     if (verifyError || !questionSet) {
-      return res.status(403).json({ error: 'Question set not found or unauthorized' });
+      return res.status(403).json({ 
+        success: false,
+        error: 'Question set not found or unauthorized' 
+      });
     }
     
     // Build update object with only provided fields
@@ -413,8 +446,8 @@ router.patch('/:id/metadata', async (req, res) => {
     if (tags !== undefined) updateData.tags = tags;
     if (status !== undefined) updateData.status = status;
     
-    // Update question set metadata
-    const { data: updatedQuestionSet, error } = await db.supabaseAdmin
+    // Update question set metadata using user-scoped client
+    const { data: updatedQuestionSet, error } = await userSupabase
       .from('question_sets')
       .update(updateData)
       .eq('id', id)
@@ -423,47 +456,53 @@ router.patch('/:id/metadata', async (req, res) => {
     
     if (error) {
       console.error('Error updating question set metadata:', error);
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
     }
     
-    console.log('Question set metadata updated:', updatedQuestionSet.id, 'by user:', authenticatedUser.name);
-    res.json(updatedQuestionSet);
+    console.log('Question set metadata updated:', updatedQuestionSet.id, 'by user:', req.user.name);
+    res.json({
+      success: true,
+      questionSet: updatedQuestionSet
+    });
   } catch (error) {
     console.error('Error in question set metadata update:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
 // Finalize question set (update total questions)
-router.patch('/:id/finalize', async (req, res) => {
+router.patch('/:id/finalize', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { total_questions, settings } = req.body;
     
     console.log(`Finalizing question set ${id} with ${total_questions} questions`);
     
-    // Get authenticated user
-    let authenticatedUser;
-    try {
-      authenticatedUser = await getAuthenticatedUser(req.headers.authorization);
-    } catch (authError) {
-      return res.status(401).json({ error: authError.message });
-    }
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
-    // Verify ownership of the question set
-    const { data: questionSet, error: verifyError } = await db.supabaseAdmin
+    // Verify ownership of the question set - RLS will handle this automatically
+    const { data: questionSet, error: verifyError } = await userSupabase
       .from('question_sets')
-      .select('user_id')
+      .select('id')
       .eq('id', id)
-      .eq('user_id', authenticatedUser.id)
       .single();
     
     if (verifyError || !questionSet) {
-      return res.status(403).json({ error: 'Question set not found or unauthorized' });
+      return res.status(403).json({ 
+        success: false,
+        error: 'Question set not found or unauthorized' 
+      });
     }
     
-    // Update question set with final metadata
-    const { data: updatedQuestionSet, error } = await db.supabaseAdmin
+    // Update question set with final metadata using user-scoped client
+    const { data: updatedQuestionSet, error } = await userSupabase
       .from('question_sets')
       .update({
         total_questions: total_questions || 0,
@@ -475,19 +514,28 @@ router.patch('/:id/finalize', async (req, res) => {
     
     if (error) {
       console.error('Error finalizing question set:', error);
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
     }
     
-    console.log('Question set finalized:', updatedQuestionSet.id, 'by user:', authenticatedUser.name);
-    res.json(updatedQuestionSet);
+    console.log('Question set finalized:', updatedQuestionSet.id, 'by user:', req.user.name);
+    res.json({
+      success: true,
+      questionSet: updatedQuestionSet
+    });
   } catch (error) {
     console.error('Error in question set finalization:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
 // Bulk question set creation (keep for backward compatibility)
-router.post('/', async (req, res) => {
+router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { 
       title, 
@@ -499,14 +547,7 @@ router.post('/', async (req, res) => {
       questions 
     } = req.body;
     
-    // Get authenticated user
-    let authenticatedUser;
-    try {
-      authenticatedUser = await getAuthenticatedUser(req.headers.authorization);
-      console.log('Creating question set for authenticated user:', authenticatedUser.id, authenticatedUser.name);
-    } catch (authError) {
-      return res.status(401).json({ error: authError.message });
-    }
+    console.log('Creating question set for authenticated user:', req.user.id, req.user.name);
     
     const questionSetData = {
       title,
@@ -515,7 +556,7 @@ router.post('/', async (req, res) => {
       difficulty_level: difficulty_level || 'medium',
       is_public: is_public !== false, // Default to true for testing
       estimated_duration: estimated_duration || 10,
-      user_id: authenticatedUser.id, // Use the authenticated user ID
+      user_id: req.user.id, // Use the authenticated user ID
       total_questions: questions ? questions.length : 0
     };
     
@@ -525,12 +566,21 @@ router.post('/', async (req, res) => {
     const result = await db.createQuestionSet(questionSetData, questions || []);
     
     if (result.success) {
-      res.status(201).json({ questionSet: result.questionSet });
+      res.status(201).json({ 
+        success: true,
+        questionSet: result.questionSet 
+      });
     } else {
-      res.status(400).json({ error: result.error });
+      res.status(400).json({ 
+        success: false,
+        error: result.error 
+      });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
