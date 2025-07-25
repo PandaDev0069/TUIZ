@@ -9,7 +9,6 @@
 - use the new updated db and update the backend connections and sockets
 -  ## frontend development 
     - (✅)check every single frontend element / login and register are already done 
-    - then create / hook all the buttons to the backend and properly comminucate to the db
     - remove un-necessary AI generated buttons and cases that are not in the db 
         - rework the dashboard to remove the unecessary buttons that dont make any sense
     - rework the quiz creator
@@ -24,7 +23,7 @@
     - clean the dashboard 
     - create a proper fileview for the dashboard to see all the quiz / question-set list in a place
     - create a proper quiz list editing page(use the creator page but fill all the sections/fields with the information)
-    
+    - then create / hook all the buttons to the backend and properly comminucate to the db
     - the actual quiz page
         - create from scratch following all the db requirements and minimal db query during the game
     - make sure the quiz-list / questtion-list gets properly loaded first and then proper sync between all the playes and host
@@ -44,3 +43,31 @@
 
 
 ### Minor
+
+
+
+## New and updated Todo list
+
+- ### meta data creator page
+    - set proper paths for the thumbnail upload
+    - clean the ui
+    - after completing the metadata section for the quiz creation proceed to quesiton creation page
+- ### questtion creation page
+    - properly check the reuired fields from the database schema 
+    - clean the ui 
+    - setup the proper backend paths for the image uploads
+    - properly store the question order 
+    - properly implemen the meta data
+    - add field to add the explanation page(firs figure out how the explanatio page will be)
+    - after all required fields are filled proceed to the settings section
+- ### quiz-settings
+    - rename the file
+    - clean the ui and remove the un-necessary fields that are not in the db
+    - update the re-ordring modal to work for the new db
+    - use proper meta's
+    - procedd to the final confirmation page
+- ### confirmation page
+    - preview as host
+    - preview as player
+    - final confirmation of question order(use same modal as settings)
+    - when everything is confirmed save to db(in beteween the changes give(一時保存) button to save everything for that time if quiz-creation  couldn't be completed at that time)  
