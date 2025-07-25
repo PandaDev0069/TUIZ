@@ -305,6 +305,7 @@ const questionsRoutes = require('./routes/api/questions');
 const answersRoutes = require('./routes/api/answers');
 const debugRoutes = require('./routes/api/debug');
 const gamesRoutes = require('./routes/api/games');
+const quizRoutes = require('./routes/api/quiz');
 
 // Mount API routes
 app.use('/api/question-sets', questionSetsRoutes);
@@ -312,6 +313,7 @@ app.use('/api/questions', questionsRoutes);
 app.use('/api/answers', answersRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/games', gamesRoutes);
+app.use('/api/quiz', quizRoutes);
 
 // ================================================================
 // SERVER SETUP

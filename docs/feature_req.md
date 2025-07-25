@@ -13,3 +13,17 @@
 
 
 ## Host releated
+- logic for points 
+    - (point+ time*boous + ) * 1.3(streak)
+    - 
+- explanatoin 
+ - image
+ - letters on the side
+ -      質問全体の解説
+ -          image
+ -opt                opt
+ text               text 
+ -opt                opt
+ text               text
+
+ host and players' display

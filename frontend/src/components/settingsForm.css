@@ -3,6 +3,26 @@
   padding: 0;
 }
 
+/* Settings form scrollbar styling */
+.settings-form ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.settings-form ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.settings-form ::-webkit-scrollbar-thumb {
+  background: linear-gradient(145deg, #8b5cf6, #a855f7);
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.settings-form ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(145deg, #7c3aed, #9333ea);
+}
+
 .form-header {
   padding: 2rem 2rem 1rem 2rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);

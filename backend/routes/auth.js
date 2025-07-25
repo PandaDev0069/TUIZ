@@ -462,6 +462,65 @@ router.post('/logout', AuthMiddleware.authenticateToken, (req, res) => {
   });
 });
 
+// Delete avatar image
+router.delete('/delete-avatar', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (!user.avatar_url) {
+      return res.status(400).json({
+        success: false,
+        message: 'プロフィール画像が設定されていません。'
+      });
+    }
+
+    // Extract file path from avatar URL
+    const avatarUrl = user.avatar_url;
+    const urlParts = avatarUrl.split('/');
+    const fileName = urlParts[urlParts.length - 1];
+    const filePath = `avatars/${fileName}`;
+
+    // Delete from Supabase Storage
+    const { error: deleteError } = await supabaseAdmin.storage
+      .from('avatars')
+      .remove([filePath]);
+
+    if (deleteError) {
+      console.error('Storage delete error:', deleteError);
+      // Continue anyway, as the file might not exist
+    }
+
+    // Update user's avatar_url in database
+    const { data: updateData, error: updateError } = await supabaseAdmin
+      .from('users')
+      .update({ avatar_url: null })
+      .eq('id', user.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Database update error:', updateError);
+      return res.status(500).json({
+        success: false,
+        message: 'プロフィールの更新に失敗しました。'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'プロフィール画像が削除されました。',
+      user: updateData
+    });
+
+  } catch (error) {
+    console.error('Avatar delete error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'プロフィール画像の削除中にエラーが発生しました。'
+    });
+  }
+});
+
 // Check if email/name is available
 router.post('/check-availability', async (req, res) => {
   try {

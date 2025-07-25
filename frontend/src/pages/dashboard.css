@@ -7,6 +7,29 @@
   font-family: 'Poppins', sans-serif;
 }
 
+/* Dashboard specific scrollbar styles */
+.dashboard-container::-webkit-scrollbar {
+  width: 10px;
+}
+
+.dashboard-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.dashboard-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: all 0.3s ease;
+}
+
+.dashboard-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+  background-clip: content-box;
+}
+
 .dashboard-content {
   max-width: 1400px;
   margin: 0 auto;
@@ -655,4 +678,77 @@
 .empty-state .button:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+/* Message Banner Styles */
+.message-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  margin: 0 2rem 1rem 2rem;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  animation: messageSlideIn 0.3s ease-out;
+  backdrop-filter: blur(8px);
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-banner.success {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #ecfdf5;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.message-banner.error {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #fef2f2;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.message-banner.info {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #dbeafe;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.message-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.message-text {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.message-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message-close:hover {
+  opacity: 1;
 }

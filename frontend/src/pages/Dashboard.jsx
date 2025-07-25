@@ -3,14 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import socket from '../socket';
 import ProfileSettingsModal from '../components/ProfileSettingsModal';
+import ConfirmationModal from '../components/ConfirmationModal';
+import { useConfirmation } from '../hooks/useConfirmation';
 import './dashboard.css';
 
 function Dashboard() {
   const { user, logout, isAuthenticated, apiCall } = useAuth();
   const navigate = useNavigate();
+  const { showConfirmation, confirmationProps } = useConfirmation();
   const [myQuizSets, setMyQuizSets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
   const [stats, setStats] = useState({
     totalQuizSets: 0,
     totalGames: 0,
@@ -25,6 +29,14 @@ function Dashboard() {
       fetchMyQuizSets();
     }
   }, [isAuthenticated, navigate]);
+
+  // Helper function to show messages
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => {
+      setMessage({ type: '', text: '' });
+    }, 5000); // Clear message after 5 seconds
+  };
 
   const fetchMyQuizSets = async () => {
     try {
@@ -94,16 +106,23 @@ function Dashboard() {
   };
 
   const handleDeleteQuiz = async (questionSetId, title) => {
-    const confirmDelete = window.confirm(`"${title}" を削除しますか？この操作は取り消せません。`);
-    if (!confirmDelete) return;
-    
     try {
+      const confirmed = await showConfirmation({
+        title: 'クイズセットを削除',
+        message: `"${title}" を削除しますか？この操作は取り消せません。`,
+        confirmText: '削除する',
+        cancelText: 'キャンセル',
+        type: 'danger'
+      });
+
+      if (!confirmed) return;
+      
       await apiCall(`/question-sets/${questionSetId}`, { method: 'DELETE' });
-      alert('クイズセットが削除されました。');
+      showMessage('success', 'クイズセットが削除されました。');
       fetchMyQuizSets(); // Refresh the list
     } catch (error) {
       console.error('Error deleting quiz set:', error);
-      alert('削除に失敗しました: ' + error.message);
+      showMessage('error', '削除に失敗しました: ' + error.message);
     }
   };
 
@@ -151,6 +170,22 @@ function Dashboard() {
             </button>
           </div>
         </header>
+
+        {/* Message Display */}
+        {message.text && (
+          <div className={`message-banner ${message.type}`}>
+            <span className="message-icon">
+              {message.type === 'success' ? '✅' : message.type === 'error' ? '❌' : 'ℹ️'}
+            </span>
+            <span className="message-text">{message.text}</span>
+            <button 
+              className="message-close"
+              onClick={() => setMessage({ type: '', text: '' })}
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* Main Dashboard */}
         <main className="dashboard-main">
@@ -309,6 +344,9 @@ function Dashboard() {
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
       />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal {...confirmationProps} />
     </div>
   );
 }

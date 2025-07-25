@@ -174,6 +174,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Refresh user data from server
+  const refreshUser = async () => {
+    if (!token) return false;
+    
+    try {
+      const data = await apiCall('/auth/profile');
+      setUser(data.user);
+      localStorage.setItem('tuiz_user', JSON.stringify(data.user));
+      return true;
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+      return false;
+    }
+  };
+
   const value = {
     user,
     token,
@@ -182,6 +197,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     checkAvailability,
+    refreshUser,
     apiCall,
     isAuthenticated: !!user,
   };

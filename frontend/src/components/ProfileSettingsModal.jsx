@@ -1,9 +1,12 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfirmation } from '../hooks/useConfirmation';
+import ConfirmationModal from './ConfirmationModal';
 import './profileSettingsModal.css';
 
 const ProfileSettingsModal = ({ isOpen, onClose }) => {
-  const { user, apiCall } = useAuth();
+  const { user, apiCall, refreshUser } = useAuth();
+  const { showConfirmation, confirmationProps } = useConfirmation();
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
@@ -13,7 +16,28 @@ const ProfileSettingsModal = ({ isOpen, onClose }) => {
   });
   const [preview, setPreview] = useState(user?.avatar_url || '');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [message, setMessage] = useState({ type: '', text: '' });
   const fileInputRef = useRef(null);
+
+  // Update form data and preview when user data changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        avatar_url: user.avatar_url || ''
+      });
+      setPreview(user.avatar_url || '');
+    }
+  }, [user]);
+
+  // Helper function to show messages
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => {
+      setMessage({ type: '', text: '' });
+    }, 5000); // Clear message after 5 seconds
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -30,14 +54,14 @@ const ProfileSettingsModal = ({ isOpen, onClose }) => {
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      alert('サポートされていないファイル形式です。JPEG、PNG、またはWebP形式の画像をアップロードしてください。');
+      showMessage('error', 'サポートされていないファイル形式です。JPEG、PNG、またはWebP形式の画像をアップロードしてください。');
       return;
     }
 
     // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
-      alert('ファイルサイズが大きすぎます。5MB以下の画像をアップロードしてください。');
+      showMessage('error', 'ファイルサイズが大きすぎます。5MB以下の画像をアップロードしてください。');
       return;
     }
 
@@ -86,13 +110,16 @@ const ProfileSettingsModal = ({ isOpen, onClose }) => {
         avatar_url: data.avatar_url
       }));
       
+      // Refresh user data from server to get updated avatar
+      await refreshUser();
+      
       // Clear selected file
       setSelectedFile(null);
       
-      alert('プロフィール画像がアップロードされました！');
+      showMessage('success', 'プロフィール画像がアップロードされました！');
     } catch (error) {
       console.error('Image upload error:', error);
-      alert('画像のアップロードに失敗しました: ' + error.message);
+      showMessage('error', '画像のアップロードに失敗しました: ' + error.message);
     } finally {
       setUploadingImage(false);
     }
@@ -113,44 +140,101 @@ const ProfileSettingsModal = ({ isOpen, onClose }) => {
         })
       });
 
-      // Update user in localStorage
-      const updatedUser = { ...user, ...response.user };
-      localStorage.setItem('tuiz_user', JSON.stringify(updatedUser));
+      // Refresh user data from server
+      await refreshUser();
       
-      alert('プロフィールが更新されました！');
+      showMessage('success', 'プロフィールが更新されました！');
       onClose();
-      
-      // Refresh page to update user data in context
-      window.location.reload();
     } catch (error) {
       console.error('Profile update error:', error);
-      alert('プロフィールの更新に失敗しました: ' + error.message);
+      showMessage('error', 'プロフィールの更新に失敗しました: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRemoveImage = () => {
-    setPreview('');
-    setSelectedFile(null);
-    setFormData(prev => ({
-      ...prev,
-      avatar_url: ''
-    }));
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  const handleRemoveImage = async () => {
+    if (!user?.avatar_url) {
+      // If there's no saved avatar, just clear the local preview
+      setPreview('');
+      setSelectedFile(null);
+      setFormData(prev => ({
+        ...prev,
+        avatar_url: ''
+      }));
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    try {
+      const confirmed = await showConfirmation({
+        title: 'プロフィール画像を削除',
+        message: 'プロフィール画像を削除しますか？この操作は取り消せません。',
+        confirmText: '削除する',
+        cancelText: 'キャンセル',
+        type: 'danger'
+      });
+
+      if (!confirmed) return;
+
+      setUploadingImage(true);
+
+      // Call delete avatar endpoint
+      await apiCall('/auth/delete-avatar', {
+        method: 'DELETE'
+      });
+
+      // Refresh user data from server
+      await refreshUser();
+
+      // Clear local state
+      setPreview('');
+      setSelectedFile(null);
+      setFormData(prev => ({
+        ...prev,
+        avatar_url: ''
+      }));
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      showMessage('success', 'プロフィール画像が削除されました！');
+    } catch (error) {
+      console.error('Avatar removal error:', error);
+      showMessage('error', 'プロフィール画像の削除に失敗しました: ' + error.message);
+    } finally {
+      setUploadingImage(false);
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <>
+      <div className="modal-overlay" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>プロフィール設定</h2>
           <button className="close-button" onClick={onClose}>×</button>
         </div>
+
+        {/* Message Display */}
+        {message.text && (
+          <div className={`message-banner ${message.type}`}>
+            <span className="message-icon">
+              {message.type === 'success' ? '✅' : message.type === 'error' ? '❌' : 'ℹ️'}
+            </span>
+            <span className="message-text">{message.text}</span>
+            <button 
+              className="message-close"
+              onClick={() => setMessage({ type: '', text: '' })}
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="profile-form">
           {/* Avatar Section */}
@@ -195,9 +279,10 @@ const ProfileSettingsModal = ({ isOpen, onClose }) => {
                   <button
                     type="button"
                     onClick={handleRemoveImage}
+                    disabled={uploadingImage}
                     className="remove-button"
                   >
-                    🗑️ 削除
+                    {uploadingImage ? '⏳ 削除中...' : '🗑️ 削除'}
                   </button>
                 )}
               </div>
@@ -281,7 +366,11 @@ const ProfileSettingsModal = ({ isOpen, onClose }) => {
           </div>
         </form>
       </div>
-    </div>
+      </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal {...confirmationProps} />
+    </>
   );
 };
 

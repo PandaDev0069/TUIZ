@@ -23,14 +23,20 @@ function CreateQuiz() {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
 
-  // Quiz metadata state
+  // Quiz metadata state - Updated to match database schema
   const [metadata, setMetadata] = useState({
     title: "",
     description: "",
-    coverImage: "",
-    coverImageFile: null,
-    tags: "",
-    visibility: "private",
+    category: "",
+    difficulty_level: "",
+    estimated_duration: "",
+    estimated_duration_manual: false,
+    thumbnail_url: "",
+    thumbnail_file: null,
+    tags: [],
+    tagsString: "",
+    is_public: false,
+    questionsCount: 0
   });
 
   // Quiz questions state
@@ -89,6 +95,14 @@ function CreateQuiz() {
   const [showReorderModal, setShowReorderModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Update questions count in metadata when questions change
+  useEffect(() => {
+    setMetadata(prev => ({
+      ...prev,
+      questionsCount: questions.length
+    }));
+  }, [questions.length]);
+
   const stepTitles = [
     "📋 基本情報",
     "❓ 問題作成", 
@@ -102,44 +116,56 @@ function CreateQuiz() {
     
     // Validate metadata
     if (!metadata.title?.trim()) {
-      errors.push('Title is required');
+      errors.push('タイトルは必須です');
     }
     if (metadata.title?.trim().length > 255) {
-      errors.push('Title must be less than 255 characters');
+      errors.push('タイトルは255文字以内で入力してください');
+    }
+    if (!metadata.category) {
+      errors.push('カテゴリーを選択してください');
+    }
+    if (!metadata.difficulty_level) {
+      errors.push('難易度レベルを選択してください');
+    }
+    if (metadata.description && metadata.description.length > 1000) {
+      errors.push('説明は1000文字以内で入力してください');
+    }
+    if (metadata.estimated_duration && (metadata.estimated_duration < 1 || metadata.estimated_duration > 180)) {
+      errors.push('推定時間は1-180分の範囲で入力してください');
     }
     
     // Validate questions
     if (questions.length === 0) {
-      errors.push('At least one question is required');
+      errors.push('最低1つの問題が必要です');
     }
     
     questions.forEach((question, index) => {
       if (!question.text?.trim()) {
-        errors.push(`Question ${index + 1}: Question text is required`);
+        errors.push(`問題 ${index + 1}: 問題文は必須です`);
       }
       if (question.text?.trim().length > 1000) {
-        errors.push(`Question ${index + 1}: Question text must be less than 1000 characters`);
+        errors.push(`問題 ${index + 1}: 問題文は1000文字以内で入力してください`);
       }
       if (question.timeLimit < 5 || question.timeLimit > 300) {
-        errors.push(`Question ${index + 1}: Time limit must be between 5 and 300 seconds`);
+        errors.push(`問題 ${index + 1}: タイムリミットは5-300秒の範囲で設定してください`);
       }
       
       // Validate answers
       if (question.answers.length < 2) {
-        errors.push(`Question ${index + 1}: At least 2 answers are required`);
+        errors.push(`問題 ${index + 1}: 最低2つの選択肢が必要です`);
       }
       
       const hasCorrectAnswer = question.answers.some(a => a.isCorrect);
       if (!hasCorrectAnswer) {
-        errors.push(`Question ${index + 1}: At least one correct answer is required`);
+        errors.push(`問題 ${index + 1}: 最低1つの正解を設定してください`);
       }
       
       question.answers.forEach((answer, answerIndex) => {
         if (!answer.text?.trim()) {
-          errors.push(`Question ${index + 1}, Answer ${answerIndex + 1}: Answer text is required`);
+          errors.push(`問題 ${index + 1}, 選択肢 ${answerIndex + 1}: 選択肢のテキストは必須です`);
         }
         if (answer.text?.trim().length > 500) {
-          errors.push(`Question ${index + 1}, Answer ${answerIndex + 1}: Answer text must be less than 500 characters`);
+          errors.push(`問題 ${index + 1}, 選択肢 ${answerIndex + 1}: 選択肢は500文字以内で入力してください`);
         }
       });
     });
@@ -173,40 +199,42 @@ function CreateQuiz() {
         throw new Error(`Validation failed: ${validationResult.errors.join(', ')}`);
       }
       
-      // Step 2: Prepare metadata first
-      const questionSetMetadata = {
+      // Step 2: Create quiz with metadata using new API
+      const quizData = {
         title: metadata.title.trim(),
-        description: metadata.description?.trim() || '',
-        category: extractCategoryFromTags(metadata.tags),
-        difficulty_level: calculateDifficulty(questions),
-        is_public: metadata.visibility === 'public',
-        estimated_duration: calculateEstimatedDuration(questions, settings)
+        description: metadata.description?.trim() || null,
+        category: metadata.category,
+        difficulty_level: metadata.difficulty_level,
+        estimated_duration: metadata.estimated_duration || calculateEstimatedDuration(questions),
+        thumbnail_url: metadata.thumbnail_url || null,
+        tags: metadata.tags || [],
+        is_public: metadata.is_public || false
       };
 
-      console.log('Step 1 - Question Set Metadata:', questionSetMetadata);
+      console.log('Step 1 - Creating quiz with metadata:', quizData);
 
-      // Step 3: Create question set first (without questions) using apiCall
-      const questionSetResult = await apiCall('/question-sets/metadata', {
+      // Create quiz using new API endpoint
+      const quizResult = await apiCall('/quiz/create', {
         method: 'POST',
-        body: JSON.stringify(questionSetMetadata)
+        body: JSON.stringify(quizData)
       });
 
-      const questionSetId = questionSetResult.id;
-      console.log('Step 2 - Question Set Created:', questionSetId);
+      const quizId = quizResult.quiz.id;
+      console.log('Step 2 - Quiz Created:', quizId);
 
-      // Step 4: Add questions one by one with proper validation
+      // Step 3: Add questions one by one
       const savedQuestions = [];
       for (let i = 0; i < questions.length; i++) {
         const question = questions[i];
         console.log(`Step 3.${i + 1} - Processing question ${i + 1}:`, question.text.substring(0, 50) + '...');
         
         const questionData = {
-          question_set_id: questionSetId,
+          question_set_id: quizId,
           question_text: question.text.trim(),
           question_type: determineQuestionType(question),
           time_limit: question.timeLimit,
           points: getPointsValue(question.points),
-          difficulty: 'medium',
+          difficulty: metadata.difficulty_level,
           order_index: i,
           explanation: question.explanation || ''
         };
@@ -219,7 +247,7 @@ function CreateQuiz() {
         savedQuestions.push(savedQuestion);
         console.log(`Question ${i + 1} saved with ID:`, savedQuestion.id);
 
-        // Step 5: Add answers for this question
+        // Step 4: Add answers for this question
         for (let j = 0; j < question.answers.length; j++) {
           const answer = question.answers[j];
           console.log(`Step 4.${i + 1}.${j + 1} - Processing answer ${j + 1}:`, answer.text.substring(0, 30) + '...');
@@ -240,37 +268,25 @@ function CreateQuiz() {
         }
       }
 
-      console.log('Step 6 - All questions and answers saved successfully');
+      console.log('Step 5 - All questions and answers saved successfully');
       
-      // Step 6: Final update to question set with total count
-      try {
-        await apiCall(`/question-sets/${questionSetId}/finalize`, {
-          method: 'PATCH',
-          body: JSON.stringify({
-            total_questions: questions.length,
-            settings: settings
-          })
-        });
-      } catch (finalizeError) {
-        console.warn('Failed to finalize question set, but quiz was saved:', finalizeError);
-      }
-
-      console.log('Quiz creation completed successfully!');
-      alert('クイズが正常に保存されました！');
+      // Show success message and redirect
+      alert('クイズが正常に作成されました！');
       navigate('/dashboard');
-      
+
     } catch (error) {
-      console.error('Error saving quiz:', error);
-      alert('クイズの保存に失敗しました: ' + error.message);
+      console.error('Quiz save error:', error);
+      alert('クイズの保存中にエラーが発生しました: ' + error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Helper function to extract category from tags
-  const extractCategoryFromTags = (tags) => {
-    const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-    return tagArray.length > 0 ? tagArray[0] : 'general';
+  // Helper function to calculate estimated duration
+  const calculateEstimatedDuration = (questions) => {
+    if (!questions.length) return 5;
+    // 30 seconds per question + 10 seconds buffer per question
+    return Math.ceil((questions.length * 0.5) + (questions.length * 0.17));
   };
 
   // Helper function to calculate difficulty based on questions
@@ -281,13 +297,6 @@ function CreateQuiz() {
     if (avgTimeLimit < 10 && hasComplexQuestions) return 'hard';
     if (avgTimeLimit < 15 || hasComplexQuestions) return 'medium';
     return 'easy';
-  };
-
-  // Helper function to calculate estimated duration
-  const calculateEstimatedDuration = (questions, settings) => {
-    const questionTime = questions.reduce((sum, q) => sum + q.timeLimit, 0);
-    const breakTime = (questions.length - 1) * settings.breakDuration;
-    return Math.ceil((questionTime + breakTime) / 60); // Convert to minutes
   };
 
   // Helper function to format questions for database

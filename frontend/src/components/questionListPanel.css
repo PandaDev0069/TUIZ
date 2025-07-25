@@ -13,6 +13,26 @@
   overflow: hidden;
 }
 
+/* Question list panel scrollbar styling */
+.question-list-panel ::-webkit-scrollbar {
+  width: 6px;
+}
+
+.question-list-panel ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.question-list-panel ::-webkit-scrollbar-thumb {
+  background: linear-gradient(145deg, #8b5cf6, #a855f7);
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.question-list-panel ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(145deg, #7c3aed, #9333ea);
+}
+
 /* Panel Header */
 .panel-header {
   padding: 1.5rem;
