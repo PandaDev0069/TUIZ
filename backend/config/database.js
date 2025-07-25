@@ -9,6 +9,11 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
 class DatabaseManager {
   constructor() {
+    // Prevent multiple instances from being created (singleton-like behavior)
+    if (DatabaseManager.instance) {
+      return DatabaseManager.instance;
+    }
+
     // Initialize Supabase client
     this.supabase = createClient(supabaseUrl, supabaseKey);
     
@@ -17,13 +22,17 @@ class DatabaseManager {
       createClient(supabaseUrl, supabaseServiceKey) : 
       null;
     
+    // Only log on first initialization
     console.log('✅ Supabase client initialized successfully');
     console.log('📍 Supabase URL:', supabaseUrl);
     console.log('🔑 Supabase Key:', supabaseKey ? 'Present' : 'Missing');
     console.log('🔐 Supabase Service Key:', supabaseServiceKey ? 'Present' : 'Missing');
     
-    // Test connection
+    // Test connection only once
     this.testConnection();
+    
+    // Store instance for singleton pattern
+    DatabaseManager.instance = this;
   }
 
   async testConnection() {
@@ -614,5 +623,8 @@ class DatabaseManager {
     console.log('✅ Database connection closed');
   }
 }
+
+// Initialize static instance property for singleton pattern
+DatabaseManager.instance = null;
 
 module.exports = DatabaseManager;

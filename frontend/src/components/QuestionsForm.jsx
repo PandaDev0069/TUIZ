@@ -12,11 +12,30 @@ function QuestionsForm({ questions, setQuestions }) {
       text: "",
       image: "",
       imageFile: null,
-      timeLimit: 10,
-      points: "standard",
+      question_type: "multiple_choice",
+      timeLimit: 30,
+      points: 100,
+      difficulty: "medium",
+      order_index: questions.length,
       answers: [
-        { id: Date.now() + Math.random() + 1, text: "", isCorrect: false, image: "", imageFile: null },
-        { id: Date.now() + Math.random() + 2, text: "", isCorrect: false, image: "", imageFile: null },
+        { 
+          id: Date.now() + Math.random() + 1, 
+          text: "", 
+          isCorrect: false, 
+          image: "", 
+          imageFile: null,
+          order_index: 0,
+          answer_explanation: ""
+        },
+        { 
+          id: Date.now() + Math.random() + 2, 
+          text: "", 
+          isCorrect: false, 
+          image: "", 
+          imageFile: null,
+          order_index: 1,
+          answer_explanation: ""
+        },
       ],
     };
     
@@ -28,7 +47,9 @@ function QuestionsForm({ questions, setQuestions }) {
   // Delete question
   const deleteQuestion = (index) => {
     if (questions.length > 1) {
-      const newQuestions = questions.filter((_, i) => i !== index);
+      const newQuestions = questions
+        .filter((_, i) => i !== index)
+        .map((question, newIndex) => ({ ...question, order_index: newIndex }));
       setQuestions(newQuestions);
       
       // Adjust active index if necessary
@@ -79,15 +100,23 @@ function QuestionsForm({ questions, setQuestions }) {
       ...questionToDuplicate,
       id: Date.now() + Math.random(),
       text: generateCopyName(questionToDuplicate.text),
-      answers: questionToDuplicate.answers.map(answer => ({
+      answers: questionToDuplicate.answers.map((answer, answerIndex) => ({
         ...answer,
         id: Date.now() + Math.random() + Math.random(),
+        order_index: answerIndex,
       })),
     };
     
     const newQuestions = [...questions];
     newQuestions.splice(index + 1, 0, duplicatedQuestion);
-    setQuestions(newQuestions);
+    
+    // Update order_index for all questions
+    const reindexedQuestions = newQuestions.map((question, newIndex) => ({
+      ...question,
+      order_index: newIndex
+    }));
+    
+    setQuestions(reindexedQuestions);
     setActiveQuestionIndex(index + 1);
   };
 
@@ -96,7 +125,14 @@ function QuestionsForm({ questions, setQuestions }) {
     if (index > 0) {
       const newQuestions = [...questions];
       [newQuestions[index - 1], newQuestions[index]] = [newQuestions[index], newQuestions[index - 1]];
-      setQuestions(newQuestions);
+      
+      // Update order_index for all questions
+      const reindexedQuestions = newQuestions.map((question, newIndex) => ({
+        ...question,
+        order_index: newIndex
+      }));
+      
+      setQuestions(reindexedQuestions);
       setActiveQuestionIndex(index - 1);
     }
   };
@@ -106,7 +142,14 @@ function QuestionsForm({ questions, setQuestions }) {
     if (index < questions.length - 1) {
       const newQuestions = [...questions];
       [newQuestions[index], newQuestions[index + 1]] = [newQuestions[index + 1], newQuestions[index]];
-      setQuestions(newQuestions);
+      
+      // Update order_index for all questions
+      const reindexedQuestions = newQuestions.map((question, newIndex) => ({
+        ...question,
+        order_index: newIndex
+      }));
+      
+      setQuestions(reindexedQuestions);
       setActiveQuestionIndex(index + 1);
     }
   };

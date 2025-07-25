@@ -1,10 +1,31 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const DatabaseManager = require('../../config/database');
 const { getAuthenticatedUser } = require('../../helpers/authHelper');
 
 // Initialize database
 const db = new DatabaseManager();
+const OrderManager = require('../../utils/OrderManager');
+
+// Initialize order manager
+const orderManager = new OrderManager();
+
+// Configure multer for image uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: parseInt(process.env.MAX_UPLOAD_SIZE) || 5 * 1024 * 1024 // Use env var or default 5MB
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  }
+});
 
 // Get all questions for a specific question set
 router.get('/set/:id', async (req, res) => {
@@ -15,7 +36,7 @@ router.get('/set/:id', async (req, res) => {
       .from('questions')
       .select('*')
       .eq('question_set_id', id)
-      .order('question_order', { ascending: true });
+      .order('order_index', { ascending: true });
     
     if (error) {
       return res.status(500).json({ error: error.message });
@@ -271,6 +292,206 @@ router.post('/bulk', async (req, res) => {
     res.status(201).json({ questions: insertedQuestions });
   } catch (error) {
     console.error('Error in bulk question creation:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Upload image for a question
+router.post('/:id/upload-image', upload.single('image'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+    
+    // Get authenticated user and verify ownership
+    const authenticatedUser = await getAuthenticatedUser(req, res);
+    if (!authenticatedUser) return;
+    
+    // Check if question exists and user owns it (through question set)
+    const { data: questionData, error: questionError } = await db.supabaseAdmin
+      .from('questions')
+      .select(`
+        id,
+        question_sets (
+          id,
+          user_id
+        )
+      `)
+      .eq('id', id)
+      .single();
+    
+    if (questionError || !questionData || questionData.question_sets.user_id !== authenticatedUser.id) {
+      return res.status(403).json({ error: 'Question not found or unauthorized' });
+    }
+    
+    // Generate unique filename
+    const fileExtension = req.file.originalname.split('.').pop();
+    const fileName = `question_${id}_${Date.now()}.${fileExtension}`;
+    const filePath = `${authenticatedUser.id}/${fileName}`;
+    
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await db.supabaseAdmin.storage
+      .from(process.env.STORAGE_BUCKET_QUESTION_IMAGES || 'question-images')
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        cacheControl: '3600',
+        upsert: true
+      });
+    
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError);
+      return res.status(500).json({ error: 'Failed to upload image' });
+    }
+    
+    // Get public URL
+    const { data: { publicUrl } } = db.supabaseAdmin.storage
+      .from(process.env.STORAGE_BUCKET_QUESTION_IMAGES || 'question-images')
+      .getPublicUrl(filePath);
+    
+    // Update question with image URL
+    const { data: updatedQuestion, error: updateError } = await db.supabaseAdmin
+      .from('questions')
+      .update({
+        image_url: publicUrl,
+        image_storage_path: filePath
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Error updating question with image URL:', updateError);
+      return res.status(500).json({ error: updateError.message });
+    }
+    
+    res.json({
+      question: updatedQuestion,
+      image_url: publicUrl
+    });
+    
+  } catch (error) {
+    console.error('Error uploading question image:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete image for a question
+router.delete('/:id/image', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get authenticated user and verify ownership
+    const authenticatedUser = await getAuthenticatedUser(req, res);
+    if (!authenticatedUser) return;
+    
+    // Get question with image info
+    const { data: questionData, error: questionError } = await db.supabaseAdmin
+      .from('questions')
+      .select(`
+        id,
+        image_storage_path,
+        question_sets (
+          id,
+          user_id
+        )
+      `)
+      .eq('id', id)
+      .single();
+    
+    if (questionError || !questionData || questionData.question_sets.user_id !== authenticatedUser.id) {
+      return res.status(403).json({ error: 'Question not found or unauthorized' });
+    }
+    
+    // Delete from storage if path exists
+    if (questionData.image_storage_path) {
+      const { error: deleteError } = await db.supabaseAdmin.storage
+        .from(process.env.STORAGE_BUCKET_QUESTION_IMAGES || 'question-images')
+        .remove([questionData.image_storage_path]);
+      
+      if (deleteError) {
+        console.error('Storage delete error:', deleteError);
+      }
+    }
+    
+    // Update question to remove image references
+    const { data: updatedQuestion, error: updateError } = await db.supabaseAdmin
+      .from('questions')
+      .update({
+        image_url: null,
+        image_storage_path: null
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Error removing question image references:', updateError);
+      return res.status(500).json({ error: updateError.message });
+    }
+    
+    res.json({ question: updatedQuestion });
+    
+  } catch (error) {
+    console.error('Error deleting question image:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reorder questions in a question set
+router.put('/set/:id/reorder', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { questionOrder } = req.body; // Array of question IDs in desired order
+    
+    // Get authenticated user and verify ownership
+    const authenticatedUser = await getAuthenticatedUser(req, res);
+    if (!authenticatedUser) return;
+    
+    // Verify user owns the question set
+    const { data: questionSet, error: setError } = await db.supabaseAdmin
+      .from('question_sets')
+      .select('id, user_id')
+      .eq('id', id)
+      .single();
+    
+    if (setError || !questionSet || questionSet.user_id !== authenticatedUser.id) {
+      return res.status(403).json({ error: 'Question set not found or unauthorized' });
+    }
+    
+    // Validate that all provided question IDs belong to this question set
+    const { data: existingQuestions, error: questionsError } = await db.supabaseAdmin
+      .from('questions')
+      .select('id')
+      .eq('question_set_id', id);
+    
+    if (questionsError) {
+      return res.status(500).json({ error: questionsError.message });
+    }
+    
+    const existingIds = existingQuestions.map(q => q.id);
+    const allValid = questionOrder.every(qId => existingIds.includes(qId));
+    
+    if (!allValid || questionOrder.length !== existingQuestions.length) {
+      return res.status(400).json({ error: 'Invalid question order data' });
+    }
+    
+    // Update the order
+    const success = await orderManager.updateQuestionOrder(id, questionOrder);
+    
+    if (success) {
+      res.json({ 
+        success: true, 
+        message: 'Question order updated successfully',
+        questionOrder
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to update question order' });
+    }
+    
+  } catch (error) {
+    console.error('Error reordering questions:', error);
     res.status(500).json({ error: error.message });
   }
 });

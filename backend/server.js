@@ -6,6 +6,7 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const DatabaseManager = require('./config/database');
 const SupabaseAuthHelper = require('./utils/SupabaseAuthHelper');
+const { validateStorageConfig } = require('./utils/storageConfig');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -13,7 +14,7 @@ const db = new DatabaseManager();
 // Initialize auth helper
 const authHelper = new SupabaseAuthHelper(db.supabaseAdmin);
 
-// Test database connection on startup
+// Test database connection and validate storage configuration on startup
 (async () => {
   try {
     const isConnected = await db.testConnection();
@@ -22,8 +23,17 @@ const authHelper = new SupabaseAuthHelper(db.supabaseAdmin);
     } else {
       console.error('❌ Database connection failed');
     }
+    
+    // Validate storage configuration
+    console.log('\n🔍 Validating storage configuration...');
+    const storageValidation = validateStorageConfig();
+    
+    if (!storageValidation.isValid) {
+      console.error('\n❌ Storage configuration issues detected. Please check your .env file.');
+    }
+    
   } catch (error) {
-    console.error('❌ Database connection error:', error);
+    console.error('❌ Startup validation error:', error);
   }
 })();
 

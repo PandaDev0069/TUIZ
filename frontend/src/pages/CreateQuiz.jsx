@@ -47,11 +47,30 @@ function CreateQuiz() {
       text: "",
       image: "",
       imageFile: null,
-      timeLimit: 10,
-      points: "standard",
+      question_type: "multiple_choice",
+      timeLimit: 30,
+      points: 100,
+      difficulty: "medium",
+      order_index: 0,
       answers: [
-        { id: Date.now() + 1, text: "", isCorrect: false, image: "", imageFile: null },
-        { id: Date.now() + 2, text: "", isCorrect: false, image: "", imageFile: null },
+        { 
+          id: Date.now() + 1, 
+          text: "", 
+          isCorrect: false, 
+          image: "", 
+          imageFile: null,
+          order_index: 0,
+          answer_explanation: ""
+        },
+        { 
+          id: Date.now() + 2, 
+          text: "", 
+          isCorrect: false, 
+          image: "", 
+          imageFile: null,
+          order_index: 1,
+          answer_explanation: ""
+        },
       ],
     },
   ]);
@@ -223,20 +242,24 @@ function CreateQuiz() {
       const quizId = quizResult.quiz.id;
       console.log('Step 2 - Quiz Created:', quizId);
 
-      // Step 3: Add questions one by one
+      // Step 3: Add questions one by one with image uploads
       const savedQuestions = [];
-      for (let i = 0; i < questions.length; i++) {
-        const question = questions[i];
+      
+      // Ensure questions have proper order before saving
+      const orderedQuestions = normalizeQuestionOrder(questions);
+      
+      for (let i = 0; i < orderedQuestions.length; i++) {
+        const question = orderedQuestions[i];
         console.log(`Step 3.${i + 1} - Processing question ${i + 1}:`, question.text.substring(0, 50) + '...');
         
         const questionData = {
           question_set_id: quizId,
           question_text: question.text.trim(),
-          question_type: determineQuestionType(question),
+          question_type: question.question_type || 'multiple_choice',
           time_limit: question.timeLimit,
-          points: getPointsValue(question.points),
-          difficulty: metadata.difficulty_level,
-          order_index: i,
+          points: question.points || 100,
+          difficulty: question.difficulty || 'medium',
+          order_index: i, // Use loop index to ensure sequential ordering
           explanation: question.explanation || ''
         };
 
@@ -248,16 +271,48 @@ function CreateQuiz() {
         savedQuestions.push(savedQuestion);
         console.log(`Question ${i + 1} saved with ID:`, savedQuestion.id);
 
-        // Step 4: Add answers for this question
-        for (let j = 0; j < question.answers.length; j++) {
-          const answer = question.answers[j];
+        // Step 3.5: Upload question image if it exists
+        if (question.imageFile) {
+          console.log(`Step 3.5.${i + 1} - Uploading question image`);
+          try {
+            const formData = new FormData();
+            formData.append('image', question.imageFile);
+            
+            const imageResponse = await fetch(`${import.meta.env.VITE_API_URL}/questions/${savedQuestion.id}/upload-image`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              },
+              body: formData
+            });
+
+            if (!imageResponse.ok) {
+              throw new Error('Failed to upload question image');
+            }
+
+            const imageResult = await imageResponse.json();
+            console.log(`Question ${i + 1} image uploaded:`, imageResult.image_url);
+          } catch (imageError) {
+            console.error(`Failed to upload image for question ${i + 1}:`, imageError);
+            // Continue with save process even if image upload fails
+          }
+        }
+
+        // Step 4: Add answers for this question with image uploads
+        
+        // Ensure answers have proper order before saving
+        const orderedAnswers = normalizeAnswerOrder(question.answers || []);
+        
+        for (let j = 0; j < orderedAnswers.length; j++) {
+          const answer = orderedAnswers[j];
           console.log(`Step 4.${i + 1}.${j + 1} - Processing answer ${j + 1}:`, answer.text.substring(0, 30) + '...');
           
           const answerData = {
             question_id: savedQuestion.id,
             answer_text: answer.text.trim(),
             is_correct: answer.isCorrect,
-            order_index: j
+            order_index: j, // Use loop index to ensure sequential ordering
+            answer_explanation: answer.answer_explanation || ''
           };
 
           const savedAnswer = await apiCall('/answers', {
@@ -266,6 +321,33 @@ function CreateQuiz() {
           });
 
           console.log(`Answer ${j + 1} for question ${i + 1} saved with ID:`, savedAnswer.id);
+
+          // Step 4.5: Upload answer image if it exists
+          if (answer.imageFile) {
+            console.log(`Step 4.5.${i + 1}.${j + 1} - Uploading answer image`);
+            try {
+              const formData = new FormData();
+              formData.append('image', answer.imageFile);
+              
+              const imageResponse = await fetch(`${import.meta.env.VITE_API_URL}/answers/${savedAnswer.id}/upload-image`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: formData
+              });
+
+              if (!imageResponse.ok) {
+                throw new Error('Failed to upload answer image');
+              }
+
+              const imageResult = await imageResponse.json();
+              console.log(`Answer ${j + 1} for question ${i + 1} image uploaded:`, imageResult.image_url);
+            } catch (imageError) {
+              console.error(`Failed to upload image for answer ${j + 1} of question ${i + 1}:`, imageError);
+              // Continue with save process even if image upload fails
+            }
+          }
         }
       }
 
@@ -308,16 +390,17 @@ function CreateQuiz() {
   const formatQuestionsForDatabase = (questions) => {
     return questions.map((question, index) => ({
       question_text: question.text,
-      question_type: determineQuestionType(question),
+      question_type: question.question_type || 'multiple_choice',
       time_limit: question.timeLimit,
-      points: getPointsValue(question.points),
-      difficulty: 'medium', // Default, could be calculated per question
+      points: question.points || 100,
+      difficulty: question.difficulty || 'medium',
       order_index: index,
-      explanation: '', // Could be added to UI later
+      explanation: question.explanation || '',
       answers: question.answers.map((answer, answerIndex) => ({
         answer_text: answer.text,
         is_correct: answer.isCorrect,
-        order_index: answerIndex
+        order_index: answerIndex,
+        answer_explanation: answer.answer_explanation || ''
       }))
     }));
   };
@@ -352,17 +435,39 @@ function CreateQuiz() {
     // setShowPreviewModal(true);
   };
 
+  // Helper function to ensure proper order indices for questions
+  const normalizeQuestionOrder = (questionsArray) => {
+    return questionsArray.map((question, index) => ({
+      ...question,
+      order_index: index
+    }));
+  };
+
+  // Helper function to ensure proper order indices for answers within a question
+  const normalizeAnswerOrder = (answersArray) => {
+    return answersArray.map((answer, index) => ({
+      ...answer,
+      order_index: index
+    }));
+  };
+
   const handleReorderQuestions = () => {
     setShowReorderModal(true);
   };
 
   const handleReorderComplete = (newQuestions) => {
-    setQuestions(newQuestions);
+    // Update order_index for each question based on new position
+    const reorderedQuestions = newQuestions.map((question, index) => ({
+      ...question,
+      order_index: index
+    }));
+    
+    setQuestions(reorderedQuestions);
     // Automatically set question order to custom when reordering is used
     setSettings(prev => ({
       ...prev,
       questionOrder: 'custom',
-      customQuestionOrder: newQuestions.map(q => q.id)
+      customQuestionOrder: reorderedQuestions.map(q => q.id)
     }));
   };
 

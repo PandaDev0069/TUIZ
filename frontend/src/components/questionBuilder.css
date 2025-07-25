@@ -325,6 +325,12 @@
   margin-bottom: 0.75rem;
 }
 
+.answer-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .answer-label {
   font-weight: 500;
   color: white;
@@ -336,6 +342,138 @@
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
+}
+
+.remove-answer-btn {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.remove-answer-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.remove-answer-btn.disabled,
+.remove-answer-btn:disabled {
+  background: rgba(107, 114, 128, 0.2);
+  color: rgba(107, 114, 128, 0.5);
+  border-color: rgba(107, 114, 128, 0.3);
+  cursor: not-allowed;
+}
+
+.remove-answer-btn.disabled:hover,
+.remove-answer-btn:disabled:hover {
+  background: rgba(107, 114, 128, 0.2);
+  border-color: rgba(107, 114, 128, 0.3);
+  transform: none;
+}
+
+.explanation-textarea {
+  margin-top: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.explanation-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Add Answer Buttons */
+.add-answer-btn {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.add-answer-btn:hover {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.5);
+  transform: translateY(-1px);
+}
+
+.add-answer-btn:active {
+  transform: translateY(0);
+}
+
+.add-answer-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin-top: 1rem;
+}
+
+.add-answer-btn-large {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.add-answer-btn-large:hover {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.5);
+  transform: translateY(-1px);
+}
+
+.add-answer-hint {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.answers-tip {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-top: 1rem;
+  color: #60a5fa;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.answers-max-tip {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-top: 1rem;
+  color: #10b981;
+  font-size: 0.9rem;
+  text-align: center;
+  font-weight: 500;
 }
 
 .correct-checkbox input[type="checkbox"] {

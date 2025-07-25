@@ -5,14 +5,14 @@
 
 - ### meta data creator page
     - (✅)set proper paths for the thumbnail upload
-    - clean the ui
-    - after completing the metadata section for the quiz creation proceed to quesiton creation page
+    - (✅)clean the ui
+    - (✅)after completing the metadata section for the quiz creation proceed to quesiton creation page
 - ### questtion creation page
-    - properly check the reuired fields from the database schema 
-    - clean the ui 
-    - setup the proper backend paths for the image uploads
-    - properly store the question order 
-    - properly implemen the meta data
+    - (✅)properly check the reuired fields from the database schema 
+    - (✅)clean the ui 
+    - (✅)setup the proper backend paths for the image uploads
+    - (✅)properly store the question order 
+    - properly implement the meta data
     - add field to add the explanation page(firs figure out how the explanatio page will be)
     - after all required fields are filled proceed to the settings section
 - ### quiz-settings
