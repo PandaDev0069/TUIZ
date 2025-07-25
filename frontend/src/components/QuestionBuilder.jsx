@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import ExplanationModal from './ExplanationModal';
 import './questionBuilder.css';
 
 function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestions, onDeleteQuestion }) {
   const [dragActive, setDragActive] = useState(false);
   const [answerDragActive, setAnswerDragActive] = useState({});
+  const [showExplanationModal, setShowExplanationModal] = useState(false);
 
   // Add keyboard shortcuts
   useEffect(() => {
@@ -368,64 +370,26 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
           )}
         </div>
 
-        {/* Question Explanation */}
+        {/* Question Explanation Button */}
         <div className="input-group">
-          <label className="input-label">
-            問題の解説（任意）
-            <span className="input-hint-inline">回答後に表示される解説</span>
-          </label>
-          
-          {/* Explanation Title */}
-          <input
-            type="text"
-            className="question-input"
-            placeholder="解説タイトル（例: なぜパリが正解なのか？）"
-            value={question.explanation_title || ""}
-            onChange={(e) => updateQuestion({ ...question, explanation_title: e.target.value })}
-            maxLength={100}
-          />
-          <span className="input-hint">
-            {(question.explanation_title || "").length}/100 文字
-          </span>
-          
-          {/* Explanation Text */}
-          <textarea
-            className="question-textarea explanation-textarea"
-            placeholder="例: パリはフランスの首都で、1789年のフランス革命の舞台としても有名な都市です。セーヌ川沿いに位置し、エッフェル塔やルーブル美術館などの名所があります。"
-            value={question.explanation_text || question.explanation || ""}
-            onChange={(e) => updateQuestion({ 
-              ...question, 
-              explanation_text: e.target.value,
-              explanation: e.target.value // Backward compatibility
-            })}
-            rows={3}
-            maxLength={500}
-          />
-          <span className="input-hint">
-            {(question.explanation_text || question.explanation || "").length}/500 文字
-          </span>
-
-          {/* Explanation Image */}
-          <div className="explanation-image-section">
-            <label className="input-label-small">解説画像（任意）</label>
-            <input
-              type="url"
-              className="explanation-image-input"
-              placeholder="画像URL（例: https://example.com/paris.jpg）"
-              value={question.explanation_image_url || ""}
-              onChange={(e) => updateQuestion({ ...question, explanation_image_url: e.target.value })}
-            />
-            {question.explanation_image_url && (
-              <div className="explanation-image-preview">
-                <img 
-                  src={question.explanation_image_url} 
-                  alt="Explanation preview" 
-                  className="preview-image-small"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                  }}
-                />
-              </div>
+          <div className="explanation-button-section">
+            <button
+              type="button"
+              className={`explanation-button ${hasExplanationContent() ? 'has-content' : ''}`}
+              onClick={() => setShowExplanationModal(true)}
+            >
+              <span className="button-icon">📝</span>
+              <span className="button-text">
+                {hasExplanationContent() ? '解説を編集' : '解説を追加'}
+              </span>
+              {hasExplanationContent() && (
+                <span className="content-indicator">●</span>
+              )}
+            </button>
+            {hasExplanationContent() && (
+              <span className="explanation-preview">
+                {question.explanation_title || question.explanation_text || question.explanation || '解説が設定されています'}
+              </span>
             )}
           </div>
         </div>
@@ -829,8 +793,27 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
           </div>
         </div>
       </div>
+
+      {/* Explanation Modal */}
+      <ExplanationModal
+        isOpen={showExplanationModal}
+        onClose={() => setShowExplanationModal(false)}
+        question={question}
+        updateQuestion={updateQuestion}
+      />
     </div>
   );
+
+  // Helper function to check if explanation content exists
+  function hasExplanationContent() {
+    return (
+      (question.explanation_title && question.explanation_title.trim()) ||
+      (question.explanation_text && question.explanation_text.trim()) ||
+      (question.explanation && question.explanation.trim()) ||
+      question.explanation_image ||
+      question.explanation_imageFile
+    );
+  }
 }
 
 export default QuestionBuilder;

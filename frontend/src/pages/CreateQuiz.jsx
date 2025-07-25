@@ -54,7 +54,9 @@ function CreateQuiz() {
       explanation: "", // Backward compatibility
       explanation_title: "",
       explanation_text: "",
-      explanation_image_url: "",
+      explanation_image: "", // For uploaded image preview
+      explanation_imageFile: null, // For uploaded image file
+      explanation_image_url: "", // For image URL from backend
       order_index: 0,
       answers: [
         { 

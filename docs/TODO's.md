@@ -13,7 +13,7 @@
     - (✅)setup the proper backend paths for the image uploads
     - (✅)properly store the question order 
     - (✅)properly implement Rest of the meta data
-    - (✅)add field to add the explanation page(comprehensive explanation system with title, text, and image support)
+    - add field to add the explanation page(comprehensive explanation system with title, text, and image support via modal)
     - after all required fields are filled proceed to the settings section
 - ### quiz-settings
     - rename the file

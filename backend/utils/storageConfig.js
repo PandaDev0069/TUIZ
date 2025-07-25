@@ -17,6 +17,7 @@ const validateStorageConfig = () => {
     'STORAGE_BUCKET_QUIZ_THUMBNAILS': process.env.STORAGE_BUCKET_QUIZ_THUMBNAILS || 'quiz-thumbnails',
     'STORAGE_BUCKET_QUESTION_IMAGES': process.env.STORAGE_BUCKET_QUESTION_IMAGES || 'question-images',
     'STORAGE_BUCKET_ANSWER_IMAGES': process.env.STORAGE_BUCKET_ANSWER_IMAGES || 'answer-images',
+    'STORAGE_BUCKET_EXPLANATION_IMAGES': process.env.STORAGE_BUCKET_EXPLANATION_IMAGES || 'explanation-images',
   };
   
   // File size configuration
