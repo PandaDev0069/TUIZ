@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { showSuccess, showError } from '../utils/toast';
 import MetadataForm from '../components/MetadataForm';
 import QuestionsForm from '../components/QuestionsForm';
 import SettingsForm from '../components/SettingsForm';
@@ -271,12 +272,16 @@ function CreateQuiz() {
       console.log('Step 5 - All questions and answers saved successfully');
       
       // Show success message and redirect
-      alert('クイズが正常に作成されました！');
-      navigate('/dashboard');
+      showSuccess('クイズが正常に作成されました！');
+      
+      // Navigate to dashboard after a short delay to show the toast
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
 
     } catch (error) {
       console.error('Quiz save error:', error);
-      alert('クイズの保存中にエラーが発生しました: ' + error.message);
+      showError('クイズの保存中にエラーが発生しました: ' + error.message);
     } finally {
       setIsLoading(false);
     }

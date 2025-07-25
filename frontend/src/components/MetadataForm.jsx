@@ -1,12 +1,47 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
 import './metadataForm.css';
 
-function MetadataForm({ metadata, setMetadata }) {
+function MetadataForm({ metadata, setMetadata, questionSetId = null, onThumbnailUploadReady = null }) {
   const { apiCall } = useAuth();
+  const { showSuccess, showError, showWarning, showInfo } = useToast();
   const [dragActive, setDragActive] = useState(false);
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // Upload pending thumbnail (called after question set creation)
+  const uploadPendingThumbnail = async (newQuestionSetId) => {
+    if (metadata.thumbnail_pending && metadata.thumbnail_file) {
+      try {
+        const formData = new FormData();
+        formData.append('thumbnail', metadata.thumbnail_file);
+        
+        const response = await apiCall(`/question-sets/${newQuestionSetId}/upload-thumbnail`, {
+          method: 'POST',
+          body: formData,
+          headers: {} // Don't set Content-Type for FormData
+        });
+
+        if (response.success) {
+          return response.thumbnail_url;
+        } else {
+          throw new Error(response.message || 'サムネイルアップロードに失敗しました');
+        }
+      } catch (error) {
+        console.error('Pending thumbnail upload error:', error);
+        throw error;
+      }
+    }
+    return null;
+  };
+
+  // Expose uploadPendingThumbnail function to parent component
+  useEffect(() => {
+    if (onThumbnailUploadReady && typeof onThumbnailUploadReady === 'function') {
+      onThumbnailUploadReady(uploadPendingThumbnail);
+    }
+  }, [onThumbnailUploadReady, uploadPendingThumbnail]);
 
   // Predefined categories for dropdown
   const categories = [
@@ -73,61 +108,61 @@ function MetadataForm({ metadata, setMetadata }) {
   // Handle thumbnail upload
   const handleThumbnailUpload = async (file) => {
     if (!file || !file.type.startsWith('image/')) {
-      alert('画像ファイルを選択してください');
+      showError('画像ファイルを選択してください');
       return;
     }
 
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('ファイルサイズは5MB以下にしてください');
+    // Validate file size (10MB max - increased for quiz thumbnails)
+    if (file.size > 10 * 1024 * 1024) {
+      showError('ファイルサイズは10MB以下にしてください');
       return;
     }
 
     try {
       setUploadingThumbnail(true);
       
-      // Create FormData for upload
-      const formData = new FormData();
-      formData.append('thumbnail', file);
-      
-      // Upload to backend
-      const response = await fetch(`${window.location.hostname === 'localhost' 
-        ? 'http://localhost:3001' 
-        : `http://${window.location.hostname}:3001`}/api/quiz/upload-thumbnail`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('tuiz_token')}`
-        },
-        body: formData
-      });
+      if (questionSetId) {
+        // If we have a question set ID, upload directly to the server
+        const formData = new FormData();
+        formData.append('thumbnail', file);
+        
+        // Upload to backend
+        const response = await apiCall(`/question-sets/${questionSetId}/upload-thumbnail`, {
+          method: 'POST',
+          body: formData,
+          headers: {} // Don't set Content-Type for FormData, let browser set it
+        });
 
-      if (!response.ok) {
-        let errorMessage = 'アップロードに失敗しました';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (parseError) {
-          // If response is not JSON, get the text to see what we're receiving
-          const responseText = await response.text();
-          console.error('Non-JSON response:', responseText);
-          errorMessage = `サーバーエラー (${response.status}): ${response.statusText}`;
+        if (response.success) {
+          // Update metadata with uploaded thumbnail URL
+          setMetadata({ 
+            ...metadata, 
+            thumbnail_url: response.thumbnail_url,
+            thumbnail_file: file 
+          });
+          
+          showSuccess('サムネイル画像がアップロードされました！');
+        } else {
+          throw new Error(response.message || 'アップロードに失敗しました');
         }
-        throw new Error(errorMessage);
+      } else {
+        // If no question set ID yet, store the file temporarily and create a preview URL
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setMetadata({ 
+            ...metadata, 
+            thumbnail_url: e.target.result, // Use data URL for preview
+            thumbnail_file: file,
+            thumbnail_pending: true // Flag to indicate this needs to be uploaded later
+          });
+        };
+        reader.readAsDataURL(file);
+        
+        showInfo('サムネイル画像が選択されました。クイズ保存時にアップロードされます。');
       }
-
-      const data = await response.json();
-      
-      // Update metadata with uploaded thumbnail URL
-      setMetadata({ 
-        ...metadata, 
-        thumbnail_url: data.thumbnail_url,
-        thumbnail_file: file 
-      });
-      
-      alert('サムネイル画像がアップロードされました！');
     } catch (error) {
       console.error('Thumbnail upload error:', error);
-      alert('画像のアップロードに失敗しました: ' + error.message);
+      showError('画像のアップロードに失敗しました: ' + error.message);
     } finally {
       setUploadingThumbnail(false);
     }
@@ -172,12 +207,40 @@ function MetadataForm({ metadata, setMetadata }) {
   };
 
   // Remove thumbnail
-  const removeThumbnail = () => {
-    setMetadata({ 
-      ...metadata, 
-      thumbnail_url: "", 
-      thumbnail_file: null 
-    });
+  const removeThumbnail = async () => {
+    try {
+      if (questionSetId && metadata.thumbnail_url && !metadata.thumbnail_pending) {
+        // If thumbnail is already uploaded to server, delete it
+        const response = await apiCall(`/question-sets/${questionSetId}/thumbnail`, {
+          method: 'DELETE'
+        });
+
+        if (response.success) {
+          showSuccess('サムネイル画像が削除されました');
+        } else {
+          console.warn('Server thumbnail deletion failed:', response.message);
+          showWarning('サーバーからの削除に失敗しましたが、ローカルでは削除されました');
+        }
+      }
+      
+      // Update local state
+      setMetadata({ 
+        ...metadata, 
+        thumbnail_url: null,
+        thumbnail_file: null,
+        thumbnail_pending: false
+      });
+    } catch (error) {
+      console.error('Thumbnail removal error:', error);
+      // Still update local state even if server deletion fails
+      setMetadata({ 
+        ...metadata, 
+        thumbnail_url: null,
+        thumbnail_file: null,
+        thumbnail_pending: false
+      });
+      showWarning('サムネイル画像のローカル削除は完了しましたが、サーバーからの削除に失敗しました');
+    }
   };
 
   return (
@@ -332,7 +395,7 @@ function MetadataForm({ metadata, setMetadata }) {
                   サムネイル画像をアップロード
                 </p>
                 <span className="upload-hint">
-                  推奨サイズ: 16:9 比率、最大5MB
+                  推奨サイズ: 16:9 比率、最大10MB
                 </span>
               </div>
               <input

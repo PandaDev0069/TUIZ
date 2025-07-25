@@ -1,6 +1,7 @@
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { showError } from '../utils/toast';
 import socket from '../socket';
 import ProfileSettingsModal from '../components/ProfileSettingsModal';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -96,7 +97,7 @@ function Dashboard() {
     // Listen for errors
     socket.once('error', ({ message }) => {
       console.error('Game creation failed:', message);
-      alert('ゲーム作成に失敗しました: ' + message);
+      showError('ゲーム作成に失敗しました: ' + message);
     });
   };
 

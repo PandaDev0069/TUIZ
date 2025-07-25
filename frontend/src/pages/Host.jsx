@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { showError } from '../utils/toast';
 import socket from '../socket';
 import './host.css';
 
@@ -43,8 +44,8 @@ function Host() {
 
   const handleCreateRoom = () => {
     if (!title || !selectedQuestionSet) {
-      alert('クイズタイトルと問題セットを選択してください。')
-      return
+      showError('クイズタイトルと問題セットを選択してください。');
+      return;
     }
     
     socket.emit('createGame', { 
@@ -66,7 +67,7 @@ function Host() {
     // Listen for errors
     socket.once('error', ({ message }) => {
       console.error('Game creation failed:', message);
-      alert('ゲーム作成に失敗しました: ' + message);
+      showError('ゲーム作成に失敗しました: ' + message);
     })
   }
 
