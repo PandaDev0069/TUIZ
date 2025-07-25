@@ -42,7 +42,7 @@ function Login() {
     const newErrors = {};
 
     if (!formData.emailOrName.trim()) {
-      newErrors.emailOrName = 'メールアドレスまたは名前を入力してください';
+      newErrors.emailOrName = 'メールアドレスを入力してください';
     }
 
     if (!formData.password) {
@@ -108,7 +108,7 @@ function Login() {
           {/* Email/Name Input */}
           <div className="input-group">
             <label htmlFor="emailOrName" className="input-label">
-              メールアドレスまたは名前
+              メールアドレス(例: TUIZ@example.com)
             </label>
             <div className="input-wrapper">
               <input
@@ -116,7 +116,7 @@ function Login() {
                 id="emailOrName"
                 name="emailOrName"
                 className={`auth-input ${errors.emailOrName ? 'error' : ''}`}
-                placeholder="example@email.com または 田中太郎"
+                placeholder="example@email.com"
                 value={formData.emailOrName}
                 onChange={handleChange}
                 onKeyPress={handleKeyPress}
