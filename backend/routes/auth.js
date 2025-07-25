@@ -1,5 +1,7 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
+const multer = require('multer');
+const path = require('path');
 const AuthMiddleware = require('../middleware/auth');
 
 const router = express.Router();
@@ -12,6 +14,24 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 // Initialize Supabase clients
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('サポートされていないファイル形式です。JPEG、PNG、またはWebP形式の画像をアップロードしてください。'));
+    }
+  }
+});
 
 // Input validation helper
 const validateInput = {
@@ -266,6 +286,170 @@ router.post('/refresh', AuthMiddleware.authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Token refresh failed. Please log in again.'
+    });
+  }
+});
+
+// Upload avatar image
+router.post('/upload-avatar', AuthMiddleware.authenticateToken, upload.single('avatar'), async (req, res) => {
+  try {
+    const user = req.user;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: 'ファイルが選択されていません。'
+      });
+    }
+
+    // Generate unique filename
+    const fileExt = path.extname(file.originalname);
+    const fileName = `${user.id}_${Date.now()}${fileExt}`;
+    const filePath = `avatars/${fileName}`;
+
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+      .from('avatars')
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError);
+      return res.status(500).json({
+        success: false,
+        message: 'ファイルのアップロードに失敗しました。'
+      });
+    }
+
+    // Get public URL
+    const { data: urlData } = supabaseAdmin.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    const avatarUrl = urlData.publicUrl;
+
+    // Update user's avatar_url in database
+    const { data: updateData, error: updateError } = await supabaseAdmin
+      .from('users')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', user.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Database update error:', updateError);
+      
+      // Clean up uploaded file
+      await supabaseAdmin.storage
+        .from('avatars')
+        .remove([filePath]);
+
+      return res.status(500).json({
+        success: false,
+        message: 'プロフィールの更新に失敗しました。'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'プロフィール画像がアップロードされました。',
+      avatar_url: avatarUrl,
+      user: updateData
+    });
+
+  } catch (error) {
+    console.error('Avatar upload error:', error);
+    
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'ファイルサイズが大きすぎます。5MB以下の画像をアップロードしてください。'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || 'ファイルのアップロード中にエラーが発生しました。'
+    });
+  }
+});
+
+// Update user profile
+router.put('/update-profile', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const user = req.user;
+    const { name, avatar_url } = req.body;
+
+    // Validate input
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '表示名を入力してください。'
+      });
+    }
+
+    if (!validateInput.name(name.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: '表示名は3-20文字で、英数字、アンダースコア、スペースのみ使用できます。'
+      });
+    }
+
+    // Check if name is already taken by another user
+    const { data: existingUser } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('name', name.trim())
+      .neq('id', user.id)
+      .single();
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'この表示名は既に使用されています。'
+      });
+    }
+
+    // Update user profile
+    const updateData = {
+      name: name.trim(),
+      updated_at: new Date().toISOString()
+    };
+
+    // Only update avatar_url if it's provided
+    if (avatar_url !== undefined) {
+      updateData.avatar_url = avatar_url;
+    }
+
+    const { data: updatedUser, error: updateError } = await supabaseAdmin
+      .from('users')
+      .update(updateData)
+      .eq('id', user.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Profile update error:', updateError);
+      return res.status(500).json({
+        success: false,
+        message: 'プロフィールの更新に失敗しました。'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'プロフィールが更新されました。',
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'プロフィールの更新中にエラーが発生しました。'
     });
   }
 });

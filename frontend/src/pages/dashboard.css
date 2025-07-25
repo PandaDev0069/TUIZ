@@ -53,6 +53,48 @@
   gap: 1rem;
 }
 
+.profile-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  backdrop-filter: blur(10px);
+}
+
+.profile-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.user-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
 .user-info {
   background: rgba(255, 255, 255, 0.1);
   padding: 0.5rem 1rem;
@@ -65,12 +107,16 @@
   background: rgba(239, 68, 68, 0.2);
   border: 1px solid rgba(239, 68, 68, 0.3);
   color: #fecaca;
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1.2rem;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  min-width: fit-content;
 }
 
 .logout-button:hover {

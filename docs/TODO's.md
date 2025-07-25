@@ -1,11 +1,11 @@
 # This is the TODO file created by developr to update the development todo's for this app.
 
 ## Major
-- figure out all the db schemas , all the db rows
-    - figure out about how we are going to store the order of questions in the question set(may be array or list)
+- (✅)figure out all the db schemas , all the db rows
+    - ✅figure out about how we are going to store the order of questions in the question set(may be array or list)
 
-- setup the image uploading and test the image uploading and importing the images to the ui from the storage bucket
-- migrate the new and updated db schemas in supabase
+- (✅)setup the image uploading and test the image uploading and importing the images to the ui from the storage bucket
+- (✅)migrate the new and updated db schemas in supabase
 - use the new updated db and update the backend connections and sockets
 -  ## frontend development 
     - check every single frontend element / login and register are already done 

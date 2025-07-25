@@ -2,6 +2,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import socket from '../socket';
+import ProfileSettingsModal from '../components/ProfileSettingsModal';
 import './dashboard.css';
 
 function Dashboard() {
@@ -9,6 +10,7 @@ function Dashboard() {
   const navigate = useNavigate();
   const [myQuizSets, setMyQuizSets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [stats, setStats] = useState({
     totalQuizSets: 0,
     totalGames: 0,
@@ -128,9 +130,22 @@ function Dashboard() {
             <p className="welcome-message">おかえりなさい、{user.name}さん！</p>
           </div>
           <div className="header-right">
-            <span className="user-info">
-              👤 {user.name}
-            </span>
+            <button 
+              className="profile-button"
+              onClick={() => setShowProfileModal(true)}
+              title="プロフィール設定"
+            >
+              {user.avatar_url ? (
+                <img 
+                  src={user.avatar_url} 
+                  alt="プロフィール画像" 
+                  className="user-avatar"
+                />
+              ) : (
+                <span className="user-avatar-placeholder">👤</span>
+              )}
+              {user.name}
+            </button>
             <button className="logout-button" onClick={handleLogout}>
               ログアウト
             </button>
@@ -288,6 +303,12 @@ function Dashboard() {
           </section>
         </main>
       </div>
+
+      {/* Profile Settings Modal */}
+      <ProfileSettingsModal 
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+      />
     </div>
   );
 }
