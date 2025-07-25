@@ -46,7 +46,9 @@
 
 
 
-## New and updated Todo list
+# New and updated Todo list
+
+## Quiz creation page
 
 - ### meta data creator page
     - set proper paths for the thumbnail upload
@@ -64,10 +66,59 @@
     - rename the file
     - clean the ui and remove the un-necessary fields that are not in the db
     - update the re-ordring modal to work for the new db
-    - use proper meta's
+    - use proper meta's(inbetween explanation enabled, etc) save that in settings json in the db
     - procedd to the final confirmation page
 - ### confirmation page
     - preview as host
     - preview as player
     - final confirmation of question order(use same modal as settings)
-    - when everything is confirmed save to db(in beteween the changes give(一時保存) button to save everything for that time if quiz-creation  couldn't be completed at that time)  
+    - when everything is confirmed save to db(in beteween the changes give(一時保存) button to save everything for that time if quiz-creation  couldn't be completed at that time)
+
+## Actual quiz page
+
+### Host View
+- #### Quiz start page
+    - 
+- #### Quiz control page
+    -  
+- #### InBetween explanation & rankings/scores page
+    - 
+- #### Final scores page
+    - 
+- #### END screen with stats
+    - 
+### player view
+- #### Join code and name entering page
+    - 
+- #### Waiting page
+    - 
+- #### Quiz page
+    - 
+- #### In between explanation and ranking/scores page(if host has enabled)
+    - 
+- #### Final ranking / winnner/ scores page
+    -  
+- #### Survey page(if the host has created/enabled)
+    - 
+- #### Redirect to join page
+
+## Host dashboars
+- ### Quiz Creation Page redirect
+    - Already implemented but clean the ui a bit
+- ### Create a New game
+    - Needs work
+- ### Stats Page
+    - Comming later
+- ### File
+    - Needs work
+- ### My Quizes
+    - Shows important metas of the most recent 3 question sets
+- ### Other Quizes
+    - Shows popular(more played) quizes from other creators that are made public
+- ### Overall UI
+    - Clean the ui and remove unecessary bloat
+
+## Login / Register
+- May be implement 2FA / email-verification(may be in future)
+- Currently there is no option for password change (needs implementation)
+- update Register page to meet the required metas for the db
