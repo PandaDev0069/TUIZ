@@ -14,9 +14,9 @@
 
 ## Host releated
 - logic for points 
-    - (point+ time*boous + ) * 1.3(streak)
+    - (point+ time*bonus + ) * 1.3(streak)
     - 
-- explanatoin 
+- explanation 
  - image
  - letters on the side
  -      質問全体の解説

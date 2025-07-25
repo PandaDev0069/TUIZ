@@ -52,13 +52,6 @@ function MetadataForm({ metadata, setMetadata }) {
           delete newErrors.category;
         }
         break;
-      case 'estimated_duration':
-        if (value && (value < 1 || value > 180)) {
-          newErrors.estimated_duration = '推定時間は1-180分の範囲で入力してください';
-        } else {
-          delete newErrors.estimated_duration;
-        }
-        break;
     }
     
     setErrors(newErrors);
@@ -109,8 +102,17 @@ function MetadataForm({ metadata, setMetadata }) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'アップロードに失敗しました');
+        let errorMessage = 'アップロードに失敗しました';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (parseError) {
+          // If response is not JSON, get the text to see what we're receiving
+          const responseText = await response.text();
+          console.error('Non-JSON response:', responseText);
+          errorMessage = `サーバーエラー (${response.status}): ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -161,6 +163,14 @@ function MetadataForm({ metadata, setMetadata }) {
     }
   };
 
+  // Handle upload area click
+  const handleUploadClick = () => {
+    const fileInput = document.getElementById('thumbnail-upload');
+    if (fileInput) {
+      fileInput.click();
+    }
+  };
+
   // Remove thumbnail
   const removeThumbnail = () => {
     setMetadata({ 
@@ -169,15 +179,6 @@ function MetadataForm({ metadata, setMetadata }) {
       thumbnail_file: null 
     });
   };
-
-  // Calculate estimated duration based on number of questions
-  useEffect(() => {
-    if (metadata.questionsCount && !metadata.estimated_duration_manual) {
-      // Rough calculation: 30 seconds per question + 10 seconds buffer
-      const estimated = Math.ceil((metadata.questionsCount * 0.5) + (metadata.questionsCount * 0.17));
-      setMetadata(prev => ({ ...prev, estimated_duration: estimated }));
-    }
-  }, [metadata.questionsCount]);
 
   return (
     <div className="metadata-form">
@@ -197,7 +198,7 @@ function MetadataForm({ metadata, setMetadata }) {
           <input
             type="text"
             id="title"
-            className={`form-input ${errors.title ? 'error' : ''}`}
+            className={`form-input ${errors.title || !metadata.title?.trim() ? 'error' : ''}`}
             placeholder="例: 世界の首都クイズ"
             value={metadata.title || ''}
             onChange={(e) => handleInputChange('title', e.target.value)}
@@ -241,7 +242,7 @@ function MetadataForm({ metadata, setMetadata }) {
           </label>
           <select
             id="category"
-            className={`form-select ${errors.category ? 'error' : ''}`}
+            className={`form-select ${errors.category || !metadata.category ? 'error' : ''}`}
             value={metadata.category || ''}
             onChange={(e) => handleInputChange('category', e.target.value)}
             required
@@ -261,7 +262,7 @@ function MetadataForm({ metadata, setMetadata }) {
           <label className="input-label required">
             難易度レベル
           </label>
-          <div className="radio-group difficulty-group">
+          <div className={`radio-group difficulty-group ${!metadata.difficulty_level ? 'error' : ''}`}>
             {difficultyLevels.map((level) => (
               <label key={level.value} className="radio-option">
                 <input
@@ -279,35 +280,6 @@ function MetadataForm({ metadata, setMetadata }) {
               </label>
             ))}
           </div>
-        </div>
-
-        {/* Estimated Duration */}
-        <div className="input-group">
-          <label htmlFor="estimated_duration" className="input-label">
-            推定所要時間（分）
-          </label>
-          <div className="duration-input-group">
-            <input
-              type="number"
-              id="estimated_duration"
-              className={`form-input duration-input ${errors.estimated_duration ? 'error' : ''}`}
-              placeholder="自動計算"
-              value={metadata.estimated_duration || ''}
-              onChange={(e) => {
-                handleInputChange('estimated_duration', parseInt(e.target.value) || '');
-                setMetadata(prev => ({ ...prev, estimated_duration_manual: true }));
-              }}
-              min={1}
-              max={180}
-            />
-            <span className="duration-unit">分</span>
-          </div>
-          <span className="input-hint">
-            空欄の場合は質問数から自動計算されます（1-180分）
-          </span>
-          {errors.estimated_duration && (
-            <span className="field-error">{errors.estimated_duration}</span>
-          )}
         </div>
 
         {/* Tags Input */}
@@ -350,6 +322,8 @@ function MetadataForm({ metadata, setMetadata }) {
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
               onDrop={handleDrop}
+              onClick={handleUploadClick}
+              style={{ cursor: 'pointer' }}
             >
               <div className="upload-content">
                 <div className="upload-icon">📸</div>
@@ -363,10 +337,12 @@ function MetadataForm({ metadata, setMetadata }) {
               </div>
               <input
                 type="file"
+                id="thumbnail-upload"
                 className="file-input"
                 accept="image/*"
                 onChange={handleFileInputChange}
                 disabled={uploadingThumbnail}
+                style={{ display: 'none' }}
               />
               {uploadingThumbnail && (
                 <div className="upload-overlay">
@@ -399,22 +375,44 @@ function MetadataForm({ metadata, setMetadata }) {
         {/* Additional Settings */}
         <div className="input-group">
           <label className="input-label">
-            その他の設定
+            公開設定
           </label>
-          <div className="checkbox-group">
-            <label className="checkbox-option">
+          <div className="radio-group visibility-group">
+            <label className="radio-option">
               <input
-                type="checkbox"
-                checked={metadata.is_public || false}
-                onChange={(e) => setMetadata({ 
-                  ...metadata, 
-                  is_public: e.target.checked 
-                })}
+                type="radio"
+                name="visibility"
+                value="private"
+                checked={!metadata.is_public}
+                onChange={() => setMetadata({ ...metadata, is_public: false })}
               />
-              <span className="checkbox-custom"></span>
-              <span className="checkbox-label">
-                公開クイズとして設定する
-              </span>
+              <span className="radio-custom"></span>
+              <div className="radio-content">
+                <span className="radio-title">
+                  🔒 非公開
+                </span>
+                <span className="radio-description">
+                  自分だけがアクセスできます
+                </span>
+              </div>
+            </label>
+            <label className="radio-option">
+              <input
+                type="radio"
+                name="visibility"
+                value="public"
+                checked={metadata.is_public || false}
+                onChange={() => setMetadata({ ...metadata, is_public: true })}
+              />
+              <span className="radio-custom"></span>
+              <div className="radio-content">
+                <span className="radio-title">
+                  🌐 公開
+                </span>
+                <span className="radio-description">
+                  誰でもアクセスできます
+                </span>
+              </div>
             </label>
           </div>
         </div>
@@ -442,15 +440,9 @@ function MetadataForm({ metadata, setMetadata }) {
               </span>
             </div>
             <div className="summary-item">
-              <span className="summary-label">推定時間:</span>
-              <span className="summary-value">
-                {metadata.estimated_duration ? `${metadata.estimated_duration}分` : '自動計算'}
-              </span>
-            </div>
-            <div className="summary-item">
               <span className="summary-label">公開設定:</span>
               <span className="summary-value">
-                {metadata.is_public ? '公開' : '非公開'}
+                {metadata.is_public ? '🌐 公開' : '🔒 非公開'}
               </span>
             </div>
             <div className="summary-item">

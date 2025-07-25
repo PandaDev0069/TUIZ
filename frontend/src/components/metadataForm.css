@@ -93,6 +93,18 @@
   background: rgba(239, 68, 68, 0.1);
 }
 
+.form-select.error {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.radio-group.error {
+  border: 2px solid #ef4444;
+  border-radius: 12px;
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.05);
+}
+
 .form-select {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -353,6 +365,17 @@
 
 .difficulty-group .radio-option {
   padding: 1.25rem;
+}
+
+.visibility-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.visibility-group .radio-option {
+  padding: 1rem;
+  text-align: center;
 }
 
 .status-group .radio-option {

@@ -8,7 +8,7 @@
 - (✅)migrate the new and updated db schemas in supabase
 - use the new updated db and update the backend connections and sockets
 -  ## frontend development 
-    - check every single frontend element / login and register are already done 
+    - (✅)check every single frontend element / login and register are already done 
     - then create / hook all the buttons to the backend and properly comminucate to the db
     - remove un-necessary AI generated buttons and cases that are not in the db 
         - rework the dashboard to remove the unecessary buttons that dont make any sense
