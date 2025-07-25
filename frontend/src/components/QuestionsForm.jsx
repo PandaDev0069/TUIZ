@@ -16,6 +16,10 @@ function QuestionsForm({ questions, setQuestions }) {
       timeLimit: 30,
       points: 100,
       difficulty: "medium",
+      explanation: "", // Backward compatibility
+      explanation_title: "",
+      explanation_text: "",
+      explanation_image_url: "",
       order_index: questions.length,
       answers: [
         { 

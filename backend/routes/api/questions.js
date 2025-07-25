@@ -61,6 +61,9 @@ router.post('/', async (req, res) => {
       points, 
       difficulty,
       explanation,
+      explanation_title,
+      explanation_text,
+      explanation_image_url,
       order_index 
     } = req.body;
     
@@ -103,7 +106,9 @@ router.post('/', async (req, res) => {
         time_limit: time_limit || 10,
         points: points || 100,
         difficulty: difficulty || 'medium',
-        explanation: explanation?.trim() || '',
+        explanation_title: explanation_title?.trim() || null,
+        explanation_text: explanation_text?.trim() || explanation?.trim() || null, // Backward compatibility
+        explanation_image_url: explanation_image_url || null,
         order_index: order_index || 0
       })
       .select()
@@ -135,6 +140,9 @@ router.put('/:id', async (req, res) => {
       points, 
       difficulty,
       explanation,
+      explanation_title,
+      explanation_text,
+      explanation_image_url,
       order_index 
     } = req.body;
     
@@ -166,7 +174,11 @@ router.put('/:id', async (req, res) => {
     if (time_limit !== undefined) updateData.time_limit = time_limit;
     if (points !== undefined) updateData.points = points;
     if (difficulty !== undefined) updateData.difficulty = difficulty;
-    if (explanation !== undefined) updateData.explanation = explanation.trim();
+    if (explanation_title !== undefined) updateData.explanation_title = explanation_title?.trim() || null;
+    if (explanation_text !== undefined) updateData.explanation_text = explanation_text?.trim() || null;
+    if (explanation_image_url !== undefined) updateData.explanation_image_url = explanation_image_url || null;
+    // Backward compatibility: if old 'explanation' field is used, map to explanation_text
+    if (explanation !== undefined && explanation_text === undefined) updateData.explanation_text = explanation.trim();
     if (order_index !== undefined) updateData.order_index = order_index;
     
     const { data: updatedQuestion, error } = await db.supabaseAdmin

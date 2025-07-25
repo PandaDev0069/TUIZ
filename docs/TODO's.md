@@ -12,8 +12,8 @@
     - (✅)clean the ui 
     - (✅)setup the proper backend paths for the image uploads
     - (✅)properly store the question order 
-    - properly implement the meta data
-    - add field to add the explanation page(firs figure out how the explanatio page will be)
+    - (✅)properly implement Rest of the meta data
+    - (✅)add field to add the explanation page(comprehensive explanation system with title, text, and image support)
     - after all required fields are filled proceed to the settings section
 - ### quiz-settings
     - rename the file

@@ -124,7 +124,8 @@ router.put('/:id', async (req, res) => {
       image_url,
       image_storage_path,
       is_correct, 
-      order_index 
+      order_index,
+      answer_explanation
     } = req.body;
     
     // Get authenticated user
@@ -153,6 +154,7 @@ router.put('/:id', async (req, res) => {
     if (image_storage_path !== undefined) updateData.image_storage_path = image_storage_path;
     if (is_correct !== undefined) updateData.is_correct = is_correct;
     if (order_index !== undefined) updateData.order_index = order_index;
+    if (answer_explanation !== undefined) updateData.answer_explanation = answer_explanation?.trim() || null;
     
     const { data: updatedAnswer, error } = await db.supabaseAdmin
       .from('answers')

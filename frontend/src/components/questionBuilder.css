@@ -89,6 +89,13 @@
   color: #ef4444;
 }
 
+.input-hint-inline {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-left: 0.5rem;
+}
+
 .question-textarea {
   width: 100%;
   padding: 1rem 1.5rem !important;
@@ -387,6 +394,36 @@
 
 .explanation-textarea::placeholder {
   color: rgba(255, 255, 255, 0.5);
+}
+
+.explanation-image-section {
+  margin-top: 1rem;
+}
+
+.explanation-image-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+.explanation-image-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.explanation-image-preview {
+  margin-top: 0.5rem;
+}
+
+.preview-image-small {
+  max-width: 200px;
+  max-height: 120px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Add Answer Buttons */

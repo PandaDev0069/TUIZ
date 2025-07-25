@@ -51,6 +51,10 @@ function CreateQuiz() {
       timeLimit: 30,
       points: 100,
       difficulty: "medium",
+      explanation: "", // Backward compatibility
+      explanation_title: "",
+      explanation_text: "",
+      explanation_image_url: "",
       order_index: 0,
       answers: [
         { 
@@ -260,7 +264,9 @@ function CreateQuiz() {
           points: question.points || 100,
           difficulty: question.difficulty || 'medium',
           order_index: i, // Use loop index to ensure sequential ordering
-          explanation: question.explanation || ''
+          explanation_title: question.explanation_title || '',
+          explanation_text: question.explanation_text || question.explanation || '',
+          explanation_image_url: question.explanation_image_url || ''
         };
 
         const savedQuestion = await apiCall('/questions', {
@@ -395,7 +401,9 @@ function CreateQuiz() {
       points: question.points || 100,
       difficulty: question.difficulty || 'medium',
       order_index: index,
-      explanation: question.explanation || '',
+      explanation_title: question.explanation_title || '',
+      explanation_text: question.explanation_text || question.explanation || '',
+      explanation_image_url: question.explanation_image_url || '',
       answers: question.answers.map((answer, answerIndex) => ({
         answer_text: answer.text,
         is_correct: answer.isCorrect,
