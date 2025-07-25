@@ -13,13 +13,15 @@ function Dashboard() {
   const navigate = useNavigate();
   const { showConfirmation, confirmationProps } = useConfirmation();
   const [myQuizSets, setMyQuizSets] = useState([]);
+  const [draftQuizzes, setDraftQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [stats, setStats] = useState({
     totalQuizSets: 0,
     totalGames: 0,
-    totalPlayers: 0
+    totalPlayers: 0,
+    draftCount: 0
   });
 
   useEffect(() => {
@@ -42,18 +44,28 @@ function Dashboard() {
   const fetchMyQuizSets = async () => {
     try {
       setLoading(true);
-      const response = await apiCall('/question-sets/my-sets');
-      const questionSets = response.questionSets || [];
-      setMyQuizSets(questionSets);
+      
+      // Fetch all quizzes (both published and drafts)
+      const response = await apiCall('/quiz/my-quizzes');
+      const allQuizzes = response.quizzes || [];
+      
+      // Separate published quizzes from drafts
+      const publishedQuizzes = allQuizzes.filter(quiz => quiz.status === 'published');
+      const draftQuizzes = allQuizzes.filter(quiz => quiz.status === 'draft' || quiz.status === 'creating');
+      
+      setMyQuizSets(publishedQuizzes);
+      setDraftQuizzes(draftQuizzes);
       
       // Update stats
       setStats({
-        totalQuizSets: questionSets.length,
-        totalGames: questionSets.reduce((sum, qs) => sum + (qs.times_played || 0), 0),
-        totalPlayers: 0 // Could be calculated from game data if available
+        totalQuizSets: publishedQuizzes.length,
+        totalGames: publishedQuizzes.reduce((sum, qs) => sum + (qs.times_played || 0), 0),
+        totalPlayers: 0, // Could be calculated from game data if available
+        draftCount: draftQuizzes.length
       });
     } catch (error) {
       console.error('Error fetching quiz sets:', error);
+      showMessage('error', 'クイズデータの取得に失敗しました: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -104,6 +116,38 @@ function Dashboard() {
   const handleEditQuiz = (questionSetId) => {
     // Navigate to edit quiz (could be implemented later)
     navigate('/create-quiz', { state: { editMode: true, questionSetId } });
+  };
+
+  const handleContinueEditingDraft = (draftId) => {
+    // Navigate to create quiz with draft data
+    navigate('/create-quiz', { 
+      state: { 
+        editMode: true, 
+        draftMode: true, 
+        questionSetId: draftId 
+      } 
+    });
+  };
+
+  const handleDeleteDraft = async (draftId, title) => {
+    try {
+      const confirmed = await showConfirmation({
+        title: '下書きを削除',
+        message: `"${title}" の下書きを削除しますか？この操作は取り消せません。`,
+        confirmText: '削除する',
+        cancelText: 'キャンセル',
+        type: 'danger'
+      });
+
+      if (!confirmed) return;
+      
+      await apiCall(`/quiz/${draftId}`, { method: 'DELETE' });
+      showMessage('success', '下書きが削除されました。');
+      fetchMyQuizSets(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting draft:', error);
+      showMessage('error', '削除に失敗しました: ' + error.message);
+    }
   };
 
   const handleDeleteQuiz = async (questionSetId, title) => {
@@ -221,6 +265,66 @@ function Dashboard() {
             </div>
           </section>
 
+          {/* Draft Quizzes Section */}
+          {draftQuizzes.length > 0 && (
+            <section className="draft-quizzes">
+              <div className="section-header">
+                <h2>下書き保存されたクイズ</h2>
+                <span className="section-badge">{draftQuizzes.length}件</span>
+              </div>
+              <div className="draft-quizzes-grid">
+                {draftQuizzes.map((draft) => (
+                  <div key={draft.id} className="draft-quiz-card">
+                    <div className="draft-header">
+                      <div className="draft-icon">📝</div>
+                      <div className="draft-info">
+                        <h3 className="draft-title">{draft.title || 'Untitled Quiz'}</h3>
+                        <div className="draft-meta">
+                          <span className="draft-status">
+                            {draft.status === 'draft' ? '下書き' : '作成中'}
+                          </span>
+                          <span className="draft-date">
+                            {new Date(draft.updated_at).toLocaleDateString()} 更新
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {draft.description && (
+                      <p className="draft-description">{draft.description}</p>
+                    )}
+                    
+                    <div className="draft-progress">
+                      <div className="progress-info">
+                        <span className="progress-text">
+                          {draft.total_questions || 0}問作成済み
+                        </span>
+                        {draft.category && (
+                          <span className="draft-category">{draft.category}</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="draft-actions">
+                      <button 
+                        className="action-button primary"
+                        onClick={() => handleContinueEditingDraft(draft.id)}
+                      >
+                        ✏️ 編集を続ける
+                      </button>
+                      <button 
+                        className="action-button danger"
+                        onClick={() => handleDeleteDraft(draft.id, draft.title)}
+                      >
+                        🗑️ 削除
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* My Quiz Sets */}
           <section className="my-quiz-sets">
 
@@ -321,15 +425,15 @@ function Dashboard() {
             <div className="stats-grid">
               <div className="stat-card">
                 <div className="stat-number">{stats.totalQuizSets}</div>
-                <div className="stat-label">作成したクイズ</div>
+                <div className="stat-label">公開済みクイズ</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-number">{stats.draftCount}</div>
+                <div className="stat-label">下書きクイズ</div>
               </div>
               <div className="stat-card">
                 <div className="stat-number">{stats.totalGames}</div>
                 <div className="stat-label">開催したゲーム</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-number">{stats.totalPlayers}</div>
-                <div className="stat-label">参加者総数</div>
               </div>
               <div className="stat-card">
                 <div className="stat-number">{user?.created_at ? '登録済み' : '新規'}</div>

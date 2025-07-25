@@ -593,7 +593,10 @@ router.get('/:id/questions', AuthMiddleware.authenticateToken, async (req, res) 
   try {
     const quizId = req.params.id;
 
-    const { data: questions, error } = await supabase
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+
+    const { data: questions, error } = await userSupabase
       .from('questions')
       .select(`
         *,

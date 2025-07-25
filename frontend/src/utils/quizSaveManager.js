@@ -192,12 +192,12 @@ export class QuizSaveManager {
    * Load existing draft/creating quiz
    */
   async loadDraft(quizId) {
-    const quiz = await this.apiCall(`/quiz/${quizId}`);
-    const questions = await this.apiCall(`/quiz/${quizId}/questions`);
+    const quizResponse = await this.apiCall(`/quiz/${quizId}`);
+    const questionsResponse = await this.apiCall(`/quiz/${quizId}/questions`);
     
     return {
-      quiz,
-      questions
+      quiz: quizResponse.quiz,
+      questions: questionsResponse.questions
     };
   }
 

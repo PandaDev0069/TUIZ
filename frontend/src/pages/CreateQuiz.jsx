@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { showSuccess, showError, showWarning } from '../utils/toast';
 import MetadataForm from '../components/MetadataForm';
 import QuestionsForm from '../components/QuestionsForm';
@@ -14,6 +13,7 @@ import './createQuiz.css';
 function CreateQuiz() {
   const { user, isAuthenticated, token, apiCall } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Progressive save functionality
   const {
@@ -25,7 +25,8 @@ function CreateQuiz() {
     scheduleAutoSave,
     publishQuiz,
     markUnsaved,
-    setAutoSaveEnabled
+    setAutoSaveEnabled,
+    loadDraft
   } = useQuizCreation();
 
   // Redirect if not authenticated
@@ -34,6 +35,93 @@ function CreateQuiz() {
       navigate('/login');
     }
   }, [isAuthenticated, navigate]);
+
+  // Load draft data if editing existing draft (use ref to prevent infinite loops)
+  const draftLoadedRef = useRef(false);
+  
+  useEffect(() => {
+    const loadDraftData = async () => {
+      const state = location.state;
+      const questionSetId = state?.questionSetId;
+      const draftMode = state?.draftMode;
+      
+      if (draftMode && questionSetId && !draftLoadedRef.current && isAuthenticated) {
+        try {
+          setIsDraftLoading(true);
+          draftLoadedRef.current = true; // Prevent re-loading
+          console.log('Loading draft quiz:', questionSetId);
+          
+          // Load the draft data
+          const draftData = await loadDraft(questionSetId);
+          console.log('Draft data loaded:', draftData);
+          
+          // Populate metadata
+          if (draftData.quiz) {
+            setMetadata(prevMetadata => ({
+              ...prevMetadata,
+              title: draftData.quiz.title || '',
+              description: draftData.quiz.description || '',
+              category: draftData.quiz.category || '',
+              difficulty_level: draftData.quiz.difficulty_level || '',
+              estimated_duration: draftData.quiz.estimated_duration || '',
+              thumbnail_url: draftData.quiz.thumbnail_url || '',
+              tags: draftData.quiz.tags || [],
+              is_public: draftData.quiz.is_public || false,
+              questionsCount: draftData.quiz.total_questions || 0
+            }));
+          }
+          
+          // Populate questions if they exist
+          if (draftData.questions && draftData.questions.length > 0) {
+            const formattedQuestions = draftData.questions.map((question, index) => ({
+              id: question.id || Date.now() + index,
+              text: question.question_text || '',
+              image: question.image_url || '',
+              imageFile: null,
+              question_type: question.question_type || 'multiple_choice',
+              timeLimit: question.time_limit || 30,
+              points: question.points || 100,
+              difficulty: question.difficulty || 'medium',
+              explanation: question.explanation_text || '',
+              explanation_title: question.explanation_title || '',
+              explanation_text: question.explanation_text || '',
+              explanation_image: '',
+              explanation_imageFile: null,
+              explanation_image_url: question.explanation_image_url || '',
+              order_index: question.order_index || index,
+              answers: (question.answers || []).map((answer, answerIndex) => ({
+                id: answer.id || Date.now() + index * 100 + answerIndex,
+                text: answer.answer_text || '',
+                isCorrect: answer.is_correct || false,
+                image: answer.image_url || '',
+                imageFile: null,
+                order_index: answer.order_index || answerIndex,
+                answer_explanation: answer.answer_explanation || ''
+              }))
+            }));
+            
+            setQuestions(formattedQuestions);
+            console.log('Questions loaded:', formattedQuestions.length);
+          }
+          
+          showSuccess('下書きを読み込みました');
+          
+        } catch (error) {
+          console.error('Failed to load draft:', error);
+          showError('下書きの読み込みに失敗しました: ' + error.message);
+          draftLoadedRef.current = false; // Reset on error to allow retry
+        } finally {
+          setIsDraftLoading(false);
+          // Allow auto-save after draft loading is complete (with small delay)
+          setTimeout(() => {
+            draftLoadedRef.current = false;
+          }, 2000);
+        }
+      }
+    };
+
+    loadDraftData();
+  }, [isAuthenticated]); // Only depend on authentication, use refs to prevent other dependencies
 
   // Quiz creation steps
   const [currentStep, setCurrentStep] = useState(1);
@@ -135,6 +223,7 @@ function CreateQuiz() {
   // Modal states for advanced features
   const [showReorderModal, setShowReorderModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDraftLoading, setIsDraftLoading] = useState(false);
 
   // Update questions count in metadata when questions change
   useEffect(() => {
@@ -233,13 +322,43 @@ function CreateQuiz() {
     }
   };
 
-  // Auto-save when data changes
+  // Auto-save when data changes (use ref to prevent infinite loops)
+  const autoSaveTimeoutRef = useRef(null);
+  const lastSaveDataRef = useRef({ metadata: null, questions: null });
+  
   useEffect(() => {
-    if (currentQuizId) {
-      scheduleAutoSave(metadata, questions);
-      markUnsaved();
+    // Only auto-save if we're not loading draft and have a current quiz ID
+    if (currentQuizId && !draftLoadedRef.current && isAuthenticated) {
+      // Check if data actually changed to prevent unnecessary saves
+      const currentData = JSON.stringify({ metadata, questions });
+      const lastData = JSON.stringify(lastSaveDataRef.current);
+      
+      if (currentData !== lastData) {
+        // Clear previous timeout
+        if (autoSaveTimeoutRef.current) {
+          clearTimeout(autoSaveTimeoutRef.current);
+        }
+        
+        // Schedule auto-save with debounce
+        autoSaveTimeoutRef.current = setTimeout(async () => {
+          try {
+            console.log('Auto-saving draft data...');
+            await temporarySave(metadata, questions);
+            lastSaveDataRef.current = { metadata: { ...metadata }, questions: [...questions] };
+          } catch (error) {
+            console.warn('Auto-save failed:', error);
+          }
+        }, 2000); // 2 second debounce
+      }
     }
-  }, [metadata, questions, currentQuizId, scheduleAutoSave, markUnsaved]);
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [metadata, questions, currentQuizId, isAuthenticated]);
 
   // Auto-save when step changes
   const handleNext = async () => {
@@ -586,6 +705,21 @@ function CreateQuiz() {
 
   if (!user) return null;
 
+  // Show loading screen while loading draft data
+  if (isDraftLoading) {
+    return (
+      <div className="create-quiz-container">
+        <div className="create-quiz-content">
+          <div className="loading-state">
+            <div className="loading-spinner">⌛</div>
+            <h2>下書きを読み込み中...</h2>
+            <p>データを復元しています。しばらくお待ちください。</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="create-quiz-container">
       <div className="create-quiz-content">
@@ -598,7 +732,9 @@ function CreateQuiz() {
             >
               ← ダッシュボードに戻る
             </button>
-            <h1 className="page-title">クイズ作成</h1>
+            <h1 className="page-title">
+              {location.state?.draftMode ? 'クイズ編集（下書き）' : 'クイズ作成'}
+            </h1>
           </div>
           <div className="header-right">
             <span className="creator-info">
