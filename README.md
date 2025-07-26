@@ -79,4 +79,3 @@ MIT License - see individual sub-repositories for details.
 Each sub-repository has its own contribution guidelines. Please check:
 - [Frontend Contributing](./frontend/README.md#contributing)
 - [Backend Contributing](./backend/README.md#contributing)
-- [Database Schema](./database/README.md)
