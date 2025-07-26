@@ -30,6 +30,5 @@ Thumbs.db
 
 
 # == Database ===
-database/
 *.sqlite
 *.db
