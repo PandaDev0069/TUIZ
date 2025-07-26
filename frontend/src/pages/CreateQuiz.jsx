@@ -143,6 +143,9 @@ function CreateQuiz() {
     questionsCount: 0
   });
 
+  // Image upload functions (refs to hold the upload functions from components)
+  const thumbnailUploadRef = useRef(null);
+
   // Quiz questions state
   const [questions, setQuestions] = useState([
     {
@@ -314,11 +317,100 @@ function CreateQuiz() {
         return;
       }
       
-      await temporarySave(metadata, questions);
-      showSuccess('一時保存しました');
+      // Upload thumbnail FIRST if pending to get the URL
+      let metadataWithThumbnail = { ...metadata };
+      
+      if (metadata.thumbnail_pending && thumbnailUploadRef.current && currentQuizId) {
+        console.log('🖼️ Uploading thumbnail before metadata save');
+        try {
+          const thumbnailUrl = await thumbnailUploadRef.current(currentQuizId);
+          if (thumbnailUrl) {
+            metadataWithThumbnail = {
+              ...metadataWithThumbnail,
+              thumbnail_url: thumbnailUrl,
+              thumbnail_pending: false
+            };
+            
+            // Update local state immediately
+            setMetadata(metadataWithThumbnail);
+            console.log('✅ Thumbnail uploaded, URL included in save:', thumbnailUrl);
+          }
+        } catch (uploadError) {
+          console.error('❌ Thumbnail upload failed:', uploadError.message);
+          showWarning('サムネイルアップロードに失敗しましたが、クイズは保存されます');
+        }
+      }
+      
+      // Save the quiz with the updated metadata (including thumbnail URL)
+      const savedQuizId = await temporarySave(metadataWithThumbnail, questions);
+      
+      // Handle thumbnail upload for NEW quizzes (when no currentQuizId exists yet)
+      if (savedQuizId && metadata.thumbnail_pending && thumbnailUploadRef.current && !currentQuizId) {
+        console.log('🖼️ Uploading thumbnail for new quiz:', savedQuizId);
+        try {
+          const thumbnailUrl = await thumbnailUploadRef.current(savedQuizId);
+          if (thumbnailUrl) {
+            setMetadata(prev => ({
+              ...prev,
+              thumbnail_url: thumbnailUrl,
+              thumbnail_pending: false
+            }));
+            console.log('✅ Thumbnail uploaded for new quiz:', thumbnailUrl);
+            // Only show success message when thumbnail is involved
+            showSuccess('一時保存とサムネイル画像のアップロードが完了しました');
+          } else {
+            // No special message for regular save
+            showSuccess('一時保存しました');
+          }
+        } catch (uploadError) {
+          console.error('❌ Thumbnail upload failed:', uploadError.message);
+          showSuccess('一時保存しました');
+          // Don't show thumbnail error for manual saves - user will retry if needed
+        }
+      } else {
+        // Reduced messaging - only confirm save was successful
+        showSuccess('一時保存しました');
+      }
+      
     } catch (error) {
       console.error('Temporary save failed:', error);
       showError('一時保存に失敗しました: ' + error.message);
+    }
+  };
+
+  // Upload pending images (thumbnail, question images, answer images)
+  const uploadPendingImages = async () => {
+    if (!currentQuizId) {
+      console.log('⚠️ No quiz ID available for image upload');
+      return;
+    }
+
+    try {
+      // Upload thumbnail if pending
+      if (metadata.thumbnail_pending && thumbnailUploadRef.current) {
+        console.log('🖼️ Uploading thumbnail for quiz:', currentQuizId);
+        const thumbnailUrl = await thumbnailUploadRef.current(currentQuizId);
+        if (thumbnailUrl) {
+          // Update local state
+          setMetadata(prev => ({
+            ...prev,
+            thumbnail_url: thumbnailUrl,
+            thumbnail_pending: false
+          }));
+          
+          console.log('✅ Thumbnail uploaded successfully:', thumbnailUrl);
+          showSuccess('サムネイル画像がアップロードされました');
+        }
+      } else {
+        console.log('📝 No thumbnail to upload or thumbnail upload function not ready');
+      }
+
+      // TODO: Upload question images and answer images if needed
+      // This can be implemented similarly when question/answer image upload during intermediate save is needed
+      
+    } catch (error) {
+      console.error('❌ Image upload failed:', error.message);
+      showWarning('画像のアップロードに失敗しました。最終保存時に再試行されます。');
     }
   };
 
@@ -342,11 +434,10 @@ function CreateQuiz() {
         // Schedule auto-save with debounce
         autoSaveTimeoutRef.current = setTimeout(async () => {
           try {
-            console.log('Auto-saving draft data...');
             await temporarySave(metadata, questions);
             lastSaveDataRef.current = { metadata: { ...metadata }, questions: [...questions] };
           } catch (error) {
-            console.warn('Auto-save failed:', error);
+            console.warn('❌ Auto-save failed:', error.message);
           }
         }, 2000); // 2 second debounce
       }
@@ -370,6 +461,8 @@ function CreateQuiz() {
         } else if (metadata.title.trim()) {
           // Create draft if moving from metadata step
           await temporarySave(metadata, questions);
+          // Upload pending images after creating quiz
+          await uploadPendingImages();
         }
       } catch (error) {
         console.warn('Auto-save failed, continuing anyway:', error);
@@ -403,6 +496,9 @@ function CreateQuiz() {
         try {
           // Final update before publishing
           await temporarySave(metadata, questions);
+          
+          // Upload any remaining pending images
+          await uploadPendingImages();
           
           // Publish the quiz
           const result = await publishQuiz({
@@ -788,6 +884,10 @@ function CreateQuiz() {
               <MetadataForm 
                 metadata={metadata} 
                 setMetadata={setMetadata}
+                questionSetId={currentQuizId}
+                onThumbnailUploadReady={(uploadFn) => {
+                  thumbnailUploadRef.current = uploadFn;
+                }}
               />
             )}
 

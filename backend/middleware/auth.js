@@ -9,6 +9,10 @@ const supabaseJwtSecret = process.env.SUPABASE_JWT_SECRET;
 // Initialize Supabase admin client for server-side operations
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+// Simple token cache to avoid re-verifying the same token repeatedly
+const tokenCache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 class AuthMiddleware {
   // Generate Supabase session (login user through Supabase Auth)
   static async loginUser(email, password) {
@@ -89,22 +93,17 @@ class AuthMiddleware {
 
   // Verify Supabase JWT token
   static async verifyToken(token) {
-    console.log('🔍 Token verification attempt:', {
-      tokenLength: token?.length,
-      tokenStart: token?.substring(0, 30),
-      tokenEnd: token?.substring(token.length - 10)
-    });
+    // Check cache first
+    const cacheKey = token;
+    const cached = tokenCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.result;
+    }
     
     try {
       // First try using Supabase's built-in method
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-      
-      console.log('📋 Supabase getUser result:', {
-        userPresent: !!user,
-        userId: user?.id,
-        userEmail: user?.email,
-        error: error?.message
-      });
       
       if (error) {
         throw new Error('Invalid or expired token: ' + error.message);
@@ -114,7 +113,7 @@ class AuthMiddleware {
         throw new Error('No user found for this token');
       }
 
-      return {
+      const result = {
         success: true,
         user: user,
         decoded: {
@@ -123,6 +122,14 @@ class AuthMiddleware {
           sub: user.id
         }
       };
+      
+      // Cache the successful result
+      tokenCache.set(cacheKey, {
+        result,
+        timestamp: Date.now()
+      });
+      
+      return result;
     } catch (error) {
       console.log('❌ Token verification failed:', error.message);
       
@@ -134,7 +141,8 @@ class AuthMiddleware {
             userId: decoded.sub,
             email: decoded.email
           });
-          return {
+          
+          const fallbackResult = {
             success: true,
             user: {
               id: decoded.sub,
@@ -142,6 +150,14 @@ class AuthMiddleware {
             },
             decoded: decoded
           };
+          
+          // Cache the fallback result too
+          tokenCache.set(cacheKey, {
+            result: fallbackResult,
+            timestamp: Date.now()
+          });
+          
+          return fallbackResult;
         } catch (jwtError) {
           console.log('❌ Manual JWT verification failed:', jwtError.message);
           throw new Error('Token verification failed: ' + jwtError.message);
@@ -156,13 +172,6 @@ class AuthMiddleware {
   static async authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-    console.log('🔐 Auth Debug:', {
-      authHeader: authHeader ? `Bearer ${authHeader.substring(7, 20)}...` : 'None',
-      tokenPresent: !!token,
-      tokenLength: token?.length,
-      tokenStart: token?.substring(0, 20)
-    });
 
     if (!token) {
       return res.status(401).json({ 

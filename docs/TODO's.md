@@ -8,7 +8,7 @@
     - (✅)clean the ui
     - (✅)after completing the metadata section for the quiz creation proceed to quesiton creation page
     - (✅)Fix delete button color (currently white and cannot be seen until hoverd which shows a shadow ) for the thumbnatil(and fix the aspect ratio)(same for question-image too)
-    - file saving
+    - (✅)file saving
 - ### questtion creation page
     - (✅)properly check the reuired fields from the database schema 
     - (✅)clean the ui 

@@ -116,6 +116,281 @@ router.post('/upload-thumbnail', AuthMiddleware.authenticateToken, upload.single
   }
 });
 
+// Upload thumbnail for existing quiz
+router.post('/:id/upload-thumbnail', AuthMiddleware.authenticateToken, upload.single('thumbnail'), async (req, res) => {
+  try {
+    const quizId = req.params.id;
+    
+    console.log('🖼️ Thumbnail upload started for quiz:', quizId);
+    console.log('📊 Upload details:', {
+      hasFile: !!req.file,
+      fileName: req.file?.filename,
+      fileSize: req.file?.size,
+      mimeType: req.file?.mimetype,
+      userId: req.user?.id
+    });
+    
+    if (!req.file) {
+      console.error('❌ No file uploaded for quiz:', quizId);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No file uploaded' 
+      });
+    }
+
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+
+    // First, verify the quiz exists and belongs to this user
+    const { data: existingQuiz, error: verifyError } = await userSupabase
+      .from('question_sets')
+      .select('id, user_id, title')
+      .eq('id', quizId)
+      .single();
+
+    if (verifyError) {
+      console.error('❌ Quiz verification error for quiz', quizId, ':', verifyError.message);
+      return res.status(404).json({
+        success: false,
+        message: 'Quiz not found or access denied',
+        error: verifyError.message
+      });
+    }
+
+    if (!existingQuiz) {
+      console.error('❌ Quiz not found:', quizId);
+      return res.status(404).json({
+        success: false,
+        message: 'Quiz not found'
+      });
+    }
+
+    console.log('✅ Quiz verification successful:', existingQuiz.title);
+
+    // Read the uploaded file
+    const filePath = req.file.path;
+    const fileName = req.file.filename;
+    const fileBuffer = fs.readFileSync(filePath);
+
+    console.log('📤 Uploading to Supabase storage:', fileName);
+
+    // Upload to Supabase Storage using user-scoped client
+    const { data: uploadData, error: uploadError } = await userSupabase.storage
+      .from('quiz-thumbnails')
+      .upload(`${req.user.id}/${fileName}`, fileBuffer, {
+        contentType: req.file.mimetype,
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('❌ Supabase upload error:', uploadError);
+      // Clean up local file
+      fs.unlinkSync(filePath);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to upload to storage',
+        error: uploadError.message 
+      });
+    }
+
+    console.log('✅ File uploaded to storage successfully');
+
+    // Get public URL using user-scoped client
+    const { data: urlData } = userSupabase.storage
+      .from('quiz-thumbnails')
+      .getPublicUrl(`${req.user.id}/${fileName}`);
+
+    const thumbnailUrl = urlData.publicUrl;
+    console.log('🔗 Generated thumbnail URL:', thumbnailUrl);
+
+    // Update quiz thumbnail_url in database using user-scoped client
+    console.log('💾 Updating database with thumbnail URL for quiz:', quizId);
+    const { data: updateData, error: updateError } = await userSupabase
+      .from('question_sets')
+      .update({ 
+        thumbnail_url: thumbnailUrl
+      })
+      .eq('id', quizId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('❌ Database update error for quiz', quizId, ':', updateError.message);
+      console.error('❌ Update error details:', updateError);
+      
+      // Clean up uploaded file from storage
+      try {
+        await userSupabase.storage
+          .from('quiz-thumbnails')
+          .remove([`${req.user.id}/${fileName}`]);
+        console.log('🧹 Cleaned up storage file after DB error');
+      } catch (cleanupError) {
+        console.warn('⚠️ Storage cleanup warning:', cleanupError);
+      }
+
+      // Clean up local file
+      fs.unlinkSync(filePath);
+      
+      return res.status(500).json({
+        success: false,
+        message: 'データベースの更新に失敗しました。',
+        error: updateError.message
+      });
+    }
+
+    console.log('✅ Database updated successfully');
+    console.log('📋 Updated quiz data:', updateData);
+
+    // Double-check that the update actually persisted by reading it back
+    console.log('🔍 Verifying database update persistence...');
+    const { data: verifyData, error: readVerifyError } = await userSupabase
+      .from('question_sets')
+      .select('id, title, thumbnail_url')
+      .eq('id', quizId)
+      .single();
+
+    if (readVerifyError) {
+      console.error('❌ Verification read failed:', readVerifyError);
+    } else {
+      console.log('🔍 Verification result:', {
+        id: verifyData.id,
+        title: verifyData.title,
+        thumbnail_url: verifyData.thumbnail_url,
+        urlMatch: verifyData.thumbnail_url === thumbnailUrl
+      });
+      
+      if (verifyData.thumbnail_url !== thumbnailUrl) {
+        console.error('❌ CRITICAL: Database update did not persist! Expected:', thumbnailUrl, 'Got:', verifyData.thumbnail_url);
+        
+        // Try to update again with explicit transaction
+        console.log('🔄 Attempting database update retry...');
+        const { data: retryData, error: retryError } = await userSupabase
+          .from('question_sets')
+          .update({ thumbnail_url: thumbnailUrl })
+          .eq('id', quizId)
+          .select()
+          .single();
+          
+        if (retryError) {
+          console.error('❌ Retry failed:', retryError);
+        } else {
+          console.log('✅ Retry successful:', retryData);
+        }
+      }
+    }
+
+    // Clean up local file
+    fs.unlinkSync(filePath);
+
+    console.log(`🎉 Thumbnail upload completed for quiz: ${quizId} - ${thumbnailUrl}`);
+
+    res.json({
+      success: true,
+      message: 'サムネイル画像がアップロードされました。',
+      thumbnail_url: thumbnailUrl,
+      quiz: updateData
+    });
+
+  } catch (error) {
+    console.error('❌ Thumbnail upload error:', error);
+    
+    // Clean up local file if it exists
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+        console.log('🧹 Cleaned up local file after error');
+      } catch (cleanupError) {
+        console.error('❌ File cleanup error:', cleanupError);
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      message: '画像のアップロードに失敗しました',
+      error: error.message
+    });
+  }
+});
+
+// Delete thumbnail for existing quiz
+router.delete('/:id/thumbnail', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const quizId = req.params.id;
+
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+
+    // Get quiz and verify ownership - RLS will handle this automatically
+    const { data: quiz, error: verifyError } = await userSupabase
+      .from('question_sets')
+      .select('id, thumbnail_url')
+      .eq('id', quizId)
+      .single();
+
+    if (verifyError || !quiz) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'クイズが見つからないか、アクセス権限がありません' 
+      });
+    }
+
+    // Extract file path from thumbnail URL if it exists
+    let filePath = null;
+    if (quiz.thumbnail_url) {
+      const urlParts = quiz.thumbnail_url.split('/');
+      if (urlParts.length > 0) {
+        const fileName = urlParts[urlParts.length - 1];
+        filePath = `${req.user.id}/${fileName}`;
+      }
+    }
+
+    // Update database to remove thumbnail URL
+    const { data: updateData, error: updateError } = await userSupabase
+      .from('question_sets')
+      .update({ 
+        thumbnail_url: null
+      })
+      .eq('id', quizId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Database update error:', updateError);
+      return res.status(500).json({
+        success: false,
+        message: 'データベースの更新に失敗しました。'
+      });
+    }
+
+    // Remove file from storage if it exists
+    if (filePath) {
+      try {
+        await userSupabase.storage
+          .from('quiz-thumbnails')
+          .remove([filePath]);
+      } catch (storageError) {
+        console.warn('Storage deletion warning:', storageError);
+        // Don't fail the request if storage deletion fails
+      }
+    }
+
+    console.log(`Thumbnail deleted for quiz ${quizId} by user:`, req.user.name);
+
+    res.json({
+      success: true,
+      message: 'サムネイル画像が削除されました。',
+      quiz: updateData
+    });
+
+  } catch (error) {
+    console.error('Thumbnail deletion error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'サムネイル画像の削除中にエラーが発生しました。'
+    });
+  }
+});
+
 // Create quiz with metadata
 router.post('/create', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
@@ -155,7 +430,7 @@ router.post('/create', AuthMiddleware.authenticateToken, async (req, res) => {
         thumbnail_url: thumbnail_url || null,
         tags: tags || [], // This should be a text array
         is_public: is_public || false,
-        status: status || 'published', // Support draft status for progressive save
+        status: status || 'draft', // Use draft status for intermediate saves
         total_questions: 0, // Will be updated as questions are added
         times_played: 0,
         average_score: 0.0,
@@ -301,9 +576,6 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
     const quizId = req.params.id;
     const updateData = { ...req.body };
     
-    // Add updated timestamp - let database handle this with DEFAULT
-    // updateData.updated_at = new Date().toISOString();
-
     // Remove fields that shouldn't be updated via this endpoint
     delete updateData.id;
     delete updateData.user_id;
@@ -313,6 +585,60 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
     // Create user-scoped client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
 
+    // First verify the quiz exists and belongs to this user
+    const { data: existingQuiz, error: verifyError } = await userSupabase
+      .from('question_sets')
+      .select('id, user_id, title')
+      .eq('id', quizId)
+      .single();
+
+    if (verifyError) {
+      console.error('Quiz verification error for quiz', quizId, ':', verifyError.message);
+      return res.status(404).json({
+        success: false,
+        message: 'Quiz not found or access denied',
+        error: verifyError.message
+      });
+    }
+
+    if (!existingQuiz) {
+      return res.status(404).json({
+        success: false,
+        message: 'Quiz not found'
+      });
+    }
+
+    console.log(`✅ Quiz updated: ${quizId} (${updateData.title || existingQuiz.title})`);
+    
+    // Validate update data against database constraints
+    if (updateData.difficulty_level && !['easy', 'medium', 'hard', 'expert'].includes(updateData.difficulty_level)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid difficulty level. Must be: easy, medium, hard, or expert'
+      });
+    }
+
+    if (updateData.status && !['draft', 'published', 'archived'].includes(updateData.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be: draft, published, or archived'
+      });
+    }
+
+    if (updateData.estimated_duration && (typeof updateData.estimated_duration !== 'number' || updateData.estimated_duration <= 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Estimated duration must be a positive number'
+      });
+    }
+
+    if (updateData.total_questions && (typeof updateData.total_questions !== 'number' || updateData.total_questions < 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Total questions must be a non-negative number'
+      });
+    }
+
     const { data: quiz, error } = await userSupabase
       .from('question_sets')
       .update(updateData)
@@ -321,7 +647,7 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error updating quiz:', error);
+      console.error('Error updating quiz', quizId, ':', error.message);
       return res.status(500).json({
         success: false,
         message: 'Failed to update quiz',
@@ -351,14 +677,97 @@ router.delete('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
     const quizId = req.params.id;
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
 
-    // First delete all questions associated with this quiz
+    console.log('🗑️ Starting quiz deletion for:', quizId);
+
+    // First, get the quiz data to check for thumbnail
+    const { data: quizData, error: fetchError } = await userSupabase
+      .from('question_sets')
+      .select('id, title, thumbnail_url, user_id')
+      .eq('id', quizId)
+      .single();
+
+    if (fetchError) {
+      console.error('❌ Error fetching quiz for deletion:', fetchError);
+      return res.status(404).json({
+        success: false,
+        message: 'Quiz not found or access denied',
+        error: fetchError.message
+      });
+    }
+
+    if (!quizData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Quiz not found'
+      });
+    }
+
+    console.log('✅ Quiz found for deletion:', quizData.title);
+
+    // Delete thumbnail from storage if it exists
+    if (quizData.thumbnail_url) {
+      try {
+        console.log('🖼️ Deleting thumbnail from storage:', quizData.thumbnail_url);
+        
+        // Extract filename from URL
+        const urlParts = quizData.thumbnail_url.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        const filePath = `${req.user.id}/${fileName}`;
+
+        const { error: storageError } = await userSupabase.storage
+          .from('quiz-thumbnails')
+          .remove([filePath]);
+
+        if (storageError) {
+          console.warn('⚠️ Thumbnail deletion warning:', storageError);
+          // Don't fail the entire deletion if thumbnail cleanup fails
+        } else {
+          console.log('✅ Thumbnail deleted from storage successfully');
+        }
+      } catch (thumbnailError) {
+        console.warn('⚠️ Thumbnail cleanup error:', thumbnailError);
+        // Continue with quiz deletion even if thumbnail cleanup fails
+      }
+    } else {
+      console.log('📝 No thumbnail to delete');
+    }
+
+    // First, get all question IDs for this quiz
+    const { data: questionIds, error: questionIdsError } = await userSupabase
+      .from('questions')
+      .select('id')
+      .eq('question_set_id', quizId);
+
+    if (questionIdsError) {
+      console.warn('⚠️ Error fetching question IDs:', questionIdsError);
+    }
+
+    // Delete all answers for questions in this quiz
+    if (questionIds && questionIds.length > 0) {
+      const questionIdArray = questionIds.map(q => q.id);
+      const { error: answersError } = await userSupabase
+        .from('answers')
+        .delete()
+        .in('question_id', questionIdArray);
+
+      if (answersError) {
+        console.warn('⚠️ Error deleting answers:', answersError);
+        // Continue anyway - the questions deletion might cascade
+      } else {
+        console.log('✅ Answers deleted successfully');
+      }
+    } else {
+      console.log('📝 No questions found, skipping answer deletion');
+    }
+
+    // Delete all questions associated with this quiz
     const { error: questionsError } = await userSupabase
       .from('questions')
       .delete()
       .eq('question_set_id', quizId);
 
     if (questionsError) {
-      console.error('Error deleting questions:', questionsError);
+      console.error('❌ Error deleting questions:', questionsError);
       return res.status(500).json({
         success: false,
         message: 'Failed to delete quiz questions',
@@ -366,14 +775,16 @@ router.delete('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
       });
     }
 
-    // Then delete the quiz itself
+    console.log('✅ Questions deleted successfully');
+
+    // Finally, delete the quiz itself
     const { error: quizError } = await userSupabase
       .from('question_sets')
       .delete()
       .eq('id', quizId);
 
     if (quizError) {
-      console.error('Error deleting quiz:', quizError);
+      console.error('❌ Error deleting quiz:', quizError);
       return res.status(500).json({
         success: false,
         message: 'Failed to delete quiz',
@@ -381,13 +792,15 @@ router.delete('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
       });
     }
 
+    console.log(`🎉 Quiz "${quizData.title}" deleted completely (including thumbnail)`);
+
     res.json({
       success: true,
       message: 'Quiz deleted successfully'
     });
 
   } catch (error) {
-    console.error('Error deleting quiz:', error);
+    console.error('❌ Error deleting quiz:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -402,12 +815,12 @@ router.patch('/:id/status', AuthMiddleware.authenticateToken, async (req, res) =
     const quizId = req.params.id;
     const { status } = req.body;
 
-    // Validate status
-    const validStatuses = ['draft', 'creating', 'published'];
+    // Validate status - use actual database enum values
+    const validStatuses = ['draft', 'published', 'archived'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid status. Must be: draft, creating, or published'
+        message: 'Invalid status. Must be: draft, published, or archived'
       });
     }
 

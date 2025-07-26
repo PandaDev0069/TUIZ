@@ -38,7 +38,7 @@ export const useQuizCreation = () => {
       setCurrentQuizId(quiz.id);
       setSaveStatus('saved');
       setLastSaved(new Date());
-      showSuccess('クイズの下書きを作成しました');
+      // Removed auto success message - let calling function decide what to show
       console.log('Draft quiz created successfully:', quiz.id);
       return quiz.id;
     } catch (error) {
@@ -80,11 +80,11 @@ export const useQuizCreation = () => {
     if (!currentQuizId) {
       // Create draft if doesn't exist
       try {
-        console.log('Creating new draft quiz with enhanced metadata:', enhancedMetadata);
+        console.log('📝 Creating new quiz:', enhancedMetadata.title);
         const quizId = await createDraftQuiz(enhancedMetadata);
         return quizId;
       } catch (error) {
-        console.error('Draft creation failed with error:', error);
+        console.error('❌ Draft creation failed:', error.message);
         // Handle payload size errors specifically
         if (error.message.includes('too large') || error.message.includes('413')) {
           showError('データサイズが大きすぎます。画像を小さくするか、項目を減らしてください。');
@@ -103,22 +103,19 @@ export const useQuizCreation = () => {
       // Use summary data for auto-save to reduce payload size
       const summaryData = getSummaryData(enhancedMetadata, questions);
       
-      console.log('Updating existing quiz with summary data:', summaryData);
+      console.log('💾 Auto-saving:', enhancedMetadata.title);
       
-      // Update metadata with summary data
-      await saveManager.updateMetadata(currentQuizId, summaryData.metadata);
+      // Update metadata with question count in a single API call
+      const metadataWithCount = {
+        ...summaryData.metadata,
+        total_questions: questions.length
+      };
       
-      // Update status to 'creating' if has questions
-      if (questions.length > 0) {
-        await saveManager.setStatusCreating(currentQuizId);
-      }
-      
-      // Update question count
-      await saveManager.updateQuestionCount(currentQuizId, questions.length);
+      await saveManager.updateMetadata(currentQuizId, metadataWithCount);
       
       setSaveStatus('saved');
       setLastSaved(new Date());
-      showSuccess('一時保存しました');
+      // Removed auto success message - let calling function decide what to show
       
       return currentQuizId;
     } catch (error) {
@@ -167,7 +164,7 @@ export const useQuizCreation = () => {
 
     const timer = setTimeout(() => {
       triggerAutoSave(metadata, questions);
-    }, 30000); // Auto-save every 30 seconds
+    }, 60000); // Auto-save every 60 seconds (reduced from 30)
 
     autoSaveTimer.current = timer;
   }, [triggerAutoSave]); // Remove autoSaveTimer from dependencies

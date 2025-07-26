@@ -162,7 +162,7 @@ function Dashboard() {
 
       if (!confirmed) return;
       
-      await apiCall(`/question-sets/${questionSetId}`, { method: 'DELETE' });
+      await apiCall(`/quiz/${questionSetId}`, { method: 'DELETE' });
       showMessage('success', 'クイズセットが削除されました。');
       fetchMyQuizSets(); // Refresh the list
     } catch (error) {

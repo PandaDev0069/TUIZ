@@ -44,23 +44,15 @@ export class QuizSaveManager {
       play_settings: {}
     };
 
-    console.log('Creating draft quiz with data:', draftData);
-
     try {
       const result = await this.apiCall('/quiz/create', {
         method: 'POST',
         body: JSON.stringify(draftData)
       });
 
-      console.log('Draft quiz creation successful:', result);
       return result.quiz;
     } catch (error) {
-      console.error('Draft quiz creation failed:', {
-        error: error.message,
-        data: draftData,
-        fullError: error,
-        stack: error.stack
-      });
+      console.error('❌ Draft creation failed:', error.message);
       
       // Check if it's an authentication error
       if (error.message.includes('token') || error.message.includes('401') || error.message.includes('unauthorized')) {
@@ -77,19 +69,9 @@ export class QuizSaveManager {
   }
 
   /**
-   * Update quiz status to 'creating' when user starts adding questions
-   */
-  async setStatusCreating(quizId) {
-    return await this.apiCall(`/quiz/${quizId}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status: 'creating' })
-    });
-  }
-
-  /**
    * Save quiz metadata updates
    */
-  async updateMetadata(quizId, metadata) {
+  async updateMetadata(quizId, metadata, preserveThumbnail = true) {
     const cleanedMetadata = cleanMetadata(metadata);
     
     // Ensure all required fields are included with proper defaults
@@ -100,11 +82,17 @@ export class QuizSaveManager {
       difficulty_level: cleanedMetadata.difficulty_level || "medium",
       is_public: Boolean(cleanedMetadata.is_public),
       estimated_duration: cleanedMetadata.estimated_duration || 5,
-      tags: Array.isArray(cleanedMetadata.tags) ? cleanedMetadata.tags : [],
-      thumbnail_url: cleanedMetadata.thumbnail_url || null
+      tags: Array.isArray(cleanedMetadata.tags) ? cleanedMetadata.tags : []
     };
 
-    console.log('Updating quiz metadata:', updateData);
+    // Only include thumbnail_url if it's explicitly provided or if preserveThumbnail is false
+    if (cleanedMetadata.thumbnail_url !== undefined || !preserveThumbnail) {
+      updateData.thumbnail_url = cleanedMetadata.thumbnail_url || null;
+    }
+    // If preserveThumbnail is true and no thumbnail_url is provided, don't include it in the update
+    // This prevents overwriting an existing thumbnail_url in the database
+
+    console.log('💾 Updating metadata:', updateData.title);
 
     return await this.apiCall(`/quiz/${quizId}`, {
       method: 'PUT',
@@ -218,11 +206,13 @@ export class QuizSaveManager {
       // Use summary data to minimize payload size for auto-save
       const summaryData = getSummaryData(currentData.metadata, currentData.questions);
       
-      // Update metadata with cleaned data
-      await this.updateMetadata(quizId, summaryData.metadata);
+      // Update metadata with question count in a single API call
+      const metadataWithCount = {
+        ...summaryData.metadata,
+        total_questions: summaryData.questionsCount
+      };
       
-      // Update question count
-      await this.updateQuestionCount(quizId, summaryData.questionsCount);
+      await this.updateMetadata(quizId, metadataWithCount);
       
       return { success: true, timestamp: new Date() };
     } catch (error) {

@@ -39,10 +39,14 @@ export const AuthProvider = ({ children }) => {
   // Make authenticated API calls
   const apiCall = async (endpoint, options = {}) => {
     const url = `${API_BASE}/api${endpoint}`;
-    const headers = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
+    
+    // Handle different content types
+    const headers = { ...options.headers };
+    
+    // Don't set Content-Type for FormData - let browser set it automatically
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (token) {
       headers.Authorization = `Bearer ${token}`;
