@@ -20,7 +20,6 @@
     - Fix the image upload in the explanation modal
     - after all required fields are filled proceed to the settings section
 - ### quiz-settings
-    - rename the file
     - clean the ui and remove the un-necessary fields that are not in the db
     - update the re-ordring modal to work for the new db
     - use proper meta's(inbetween explanation enabled, etc) save that in settings json in the db
