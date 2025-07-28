@@ -926,6 +926,147 @@ router.patch('/:id/status', AuthMiddleware.authenticateToken, async (req, res) =
   }
 });
 
+// Comprehensive publish endpoint
+router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const quizId = req.params.id;
+    const { play_settings } = req.body;
+
+    console.log(`📤 Publishing quiz ${quizId} for user ${req.user.id} (${req.user.name})`);
+    console.log(`🎮 Play settings:`, play_settings);
+
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+
+    // First, get the current quiz to validate it can be published
+    const { data: currentQuiz, error: fetchError } = await userSupabase
+      .from('question_sets')
+      .select(`
+        *,
+        questions (
+          id,
+          question_text,
+          question_type,
+          answers (
+            id,
+            answer_text,
+            is_correct
+          )
+        )
+      `)
+      .eq('id', quizId)
+      .single();
+
+    if (fetchError || !currentQuiz) {
+      console.error(`❌ Quiz ${quizId} not found or access denied:`, fetchError?.message);
+      return res.status(404).json({
+        success: false,
+        message: 'Quiz not found or access denied',
+        error: fetchError?.message
+      });
+    }
+
+    console.log(`📋 Found quiz: "${currentQuiz.title}" with ${currentQuiz.questions?.length || 0} questions`);
+
+    // Validate quiz can be published
+    const validationErrors = [];
+
+    // Check basic metadata
+    if (!currentQuiz.title?.trim()) {
+      validationErrors.push('Quiz title is required');
+    }
+    if (!currentQuiz.category) {
+      validationErrors.push('Quiz category is required');
+    }
+    if (!currentQuiz.difficulty_level) {
+      validationErrors.push('Quiz difficulty level is required');
+    }
+
+    // Check questions
+    if (!currentQuiz.questions || currentQuiz.questions.length === 0) {
+      validationErrors.push('At least one question is required');
+    }
+
+    // Validate each question
+    currentQuiz.questions?.forEach((question, index) => {
+      if (!question.question_text?.trim()) {
+        validationErrors.push(`Question ${index + 1}: Question text is required`);
+      }
+
+      const hasValidAnswers = question.answers?.length >= 2;
+      const hasCorrectAnswer = question.answers?.some(a => a.is_correct);
+
+      if (!hasValidAnswers) {
+        validationErrors.push(`Question ${index + 1}: At least 2 answers are required`);
+      }
+      if (!hasCorrectAnswer) {
+        validationErrors.push(`Question ${index + 1}: At least one correct answer is required`);
+      }
+    });
+
+    if (validationErrors.length > 0) {
+      console.warn(`⚠️ Validation failed for quiz ${quizId}:`, validationErrors);
+      return res.status(400).json({
+        success: false,
+        message: 'Quiz validation failed',
+        validationErrors
+      });
+    }
+
+    console.log(`✅ Quiz ${quizId} passed validation checks`);
+
+    // Update quiz to published status with settings
+    const updateData = {
+      status: 'published',
+      updated_at: new Date().toISOString()
+    };
+
+    // Add play_settings if provided
+    if (play_settings) {
+      updateData.play_settings = play_settings;
+    }
+
+    // Update total_questions to match actual question count
+    if (currentQuiz.questions) {
+      updateData.total_questions = currentQuiz.questions.length;
+    }
+
+    console.log(`🔄 Updating quiz ${quizId} with data:`, updateData);
+
+    const { data: publishedQuiz, error: publishError } = await userSupabase
+      .from('question_sets')
+      .update(updateData)
+      .eq('id', quizId)
+      .select()
+      .single();
+
+    if (publishError) {
+      console.error(`❌ Publish error for quiz ${quizId}:`, publishError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to publish quiz',
+        error: publishError.message
+      });
+    }
+
+    console.log(`🎉 Quiz ${quizId} successfully published by user ${req.user.id} (${req.user.name})`);
+
+    res.json({
+      success: true,
+      message: 'Quiz published successfully',
+      quiz: publishedQuiz
+    });
+
+  } catch (error) {
+    console.error('💥 Error publishing quiz:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
 // Update question count (for progressive saving)
 router.patch('/:id/question-count', AuthMiddleware.authenticateToken, async (req, res) => {
   try {

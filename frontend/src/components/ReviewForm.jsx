@@ -94,16 +94,17 @@ function ReviewForm({
       
       // Prepare publication data
       const publicationData = {
-        status: 'published',
-        play_settings: settings,
-        published_at: new Date().toISOString()
+        play_settings: settings
       };
 
-      await apiCall(`/quiz/${questionSetId}`, {
+      console.log('Publishing quiz with data:', publicationData);
+      
+      const response = await apiCall(`/quiz/${questionSetId}/publish`, {
         method: 'PATCH',
         body: JSON.stringify(publicationData)
       });
 
+      console.log('Publish response:', response);
       showSuccess('クイズが正常に公開されました！');
       
       if (onPublish) {
@@ -112,7 +113,14 @@ function ReviewForm({
       
     } catch (error) {
       console.error('Publishing failed:', error);
-      showError('公開に失敗しました: ' + error.message);
+      
+      // Handle validation errors from backend
+      if (error.validationErrors && error.validationErrors.length > 0) {
+        const errorMessage = '公開に失敗しました:\n' + error.validationErrors.join('\n');
+        showError(errorMessage);
+      } else {
+        showError('公開に失敗しました: ' + (error.message || '不明なエラーが発生しました'));
+      }
     } finally {
       setIsPublishing(false);
     }
