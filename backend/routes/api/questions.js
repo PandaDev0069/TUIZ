@@ -77,6 +77,152 @@ router.get('/set/:id', AuthMiddleware.authenticateToken, async (req, res) => {
 
 // IMPORTANT: Bulk routes must come BEFORE parameterized routes like /:id
 
+// Bulk upload images for questions and answers (to be called before bulk save)
+router.post('/bulk-upload-images', AuthMiddleware.authenticateToken, upload.array('images', 50), async (req, res) => {
+  try {
+    console.log('🖼️ BULK IMAGE UPLOAD ENDPOINT HIT');
+    console.log('Files received:', req.files?.length || 0);
+    console.log('Body data:', JSON.stringify(req.body, null, 2));
+    
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'No image files provided' 
+      });
+    }
+    
+    const { question_set_id, image_mappings } = req.body;
+    
+    if (!question_set_id) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Question set ID is required' 
+      });
+    }
+    
+    // Parse image mappings (sent as JSON string in multipart form)
+    let mappings;
+    try {
+      mappings = JSON.parse(image_mappings || '[]');
+    } catch (e) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid image mappings format' 
+      });
+    }
+    
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+    
+    // Verify the user owns the question set
+    const { data: questionSet, error: verifyError } = await userSupabase
+      .from('question_sets')
+      .select('id')
+      .eq('id', question_set_id)
+      .single();
+    
+    if (verifyError || !questionSet) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Question set not found or unauthorized' 
+      });
+    }
+    
+    const userId = req.user?.id;
+    const uploadResults = [];
+    
+    // Upload each image file
+    for (let i = 0; i < req.files.length; i++) {
+      const file = req.files[i];
+      const mapping = mappings[i];
+      
+      if (!mapping) {
+        console.error('No mapping found for file index:', i);
+        continue;
+      }
+      
+      try {
+        // Generate unique filename based on type
+        const fileExtension = file.originalname.split('.').pop();
+        const timestamp = Date.now();
+        let fileName, bucketName;
+        
+        if (mapping.type === 'question') {
+          fileName = `question_temp_${timestamp}_${i}.${fileExtension}`;
+          bucketName = process.env.STORAGE_BUCKET_QUESTION_IMAGES || 'question-images';
+        } else if (mapping.type === 'answer') {
+          fileName = `answer_temp_${timestamp}_${i}.${fileExtension}`;
+          bucketName = process.env.STORAGE_BUCKET_ANSWER_IMAGES || 'answer-images';
+        } else {
+          console.error('Unknown image type:', mapping.type);
+          continue;
+        }
+        
+        const filePath = `${userId}/${fileName}`;
+        
+        console.log(`📤 Uploading ${mapping.type} image:`, filePath);
+        
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await db.supabaseAdmin.storage
+          .from(bucketName)
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+            cacheControl: '3600',
+            upsert: true
+          });
+        
+        if (uploadError) {
+          console.error('Storage upload error:', uploadError);
+          uploadResults.push({
+            index: i,
+            mapping: mapping,
+            success: false,
+            error: uploadError.message
+          });
+          continue;
+        }
+        
+        // Get public URL
+        const { data: { publicUrl } } = db.supabaseAdmin.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+        
+        console.log(`✅ ${mapping.type} image uploaded:`, publicUrl);
+        
+        uploadResults.push({
+          index: i,
+          mapping: mapping,
+          success: true,
+          url: publicUrl
+        });
+        
+      } catch (error) {
+        console.error(`Error uploading image ${i}:`, error);
+        uploadResults.push({
+          index: i,
+          mapping: mapping,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+    
+    console.log(`🎉 Bulk image upload completed: ${uploadResults.filter(r => r.success).length}/${uploadResults.length} successful`);
+    
+    res.json({
+      success: true,
+      results: uploadResults
+    });
+    
+  } catch (error) {
+    console.error('Error in bulk image upload:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
 // Bulk create questions for a question set
 router.post('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
@@ -115,7 +261,9 @@ router.post('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
       time_limit: q.time_limit || q.timeLimit || 10,
       points: q.points || 100,
       difficulty: q.difficulty || 'medium',
-      explanation: q.explanation?.trim() || '',
+      explanation_title: q.explanation_title?.trim() || '',
+      explanation_text: q.explanation_text?.trim() || q.explanation?.trim() || '',
+      explanation_image_url: q.explanation_image_url || null,
       order_index: q.order_index !== undefined ? q.order_index : index
     }));
     
@@ -199,13 +347,67 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
     const createdQuestions = [];
     const errors = [];
     
-    // Process each question
+    // STEP 1: Handle order conflicts by temporarily setting all existing questions to high order_index values
+    // This prevents unique constraint violations during bulk updates (database has CHECK constraint order_index >= 0)
+    
+    // Helper function to check if an ID is a valid UUID (backend ID)
+    const isValidUUID = (id) => {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      return typeof id === 'string' && uuidRegex.test(id);
+    };
+    
+    // First, get all existing questions from the database for this question set
+    const { data: existingDbQuestions, error: getExistingError } = await userSupabase
+      .from('questions')
+      .select('id')
+      .eq('question_set_id', question_set_id);
+    
+    if (getExistingError) {
+      console.error('Error fetching existing questions:', getExistingError);
+      return res.status(500).json({
+        success: false,
+        error: `Failed to fetch existing questions: ${getExistingError.message}`
+      });
+    }
+    
+    const existingDbQuestionIds = (existingDbQuestions || []).map(q => q.id);
+    console.log('Existing questions in database:', existingDbQuestionIds);
+    
+    // Only set temporary indices for questions that actually exist in the database
+    if (existingDbQuestionIds.length > 0) {
+      console.log('Temporarily setting high order indices for existing questions to avoid conflicts...');
+      
+      for (let i = 0; i < existingDbQuestionIds.length; i++) {
+        const tempOrderIndex = 10000 + i; // Use large positive numbers to avoid conflicts (well above normal range)
+        
+        const { error: tempOrderError } = await userSupabase
+          .from('questions')
+          .update({ order_index: tempOrderIndex })
+          .eq('id', existingDbQuestionIds[i]);
+        
+        if (tempOrderError) {
+          console.error('Error setting temporary order index:', tempOrderError);
+          return res.status(500).json({
+            success: false,
+            error: `Failed to prepare questions for reordering: ${tempOrderError.message}`
+          });
+        }
+      }
+      console.log(`Set temporary high indices for ${existingDbQuestionIds.length} existing questions`);
+    } else {
+      console.log('No existing questions found in database, skipping temporary index step');
+    }
+    
+    // STEP 2: Process each question
     for (let i = 0; i < questions.length; i++) {
       const question = questions[i];
       
       try {
-        // Determine if this is a new question (has temp ID) or existing
-        const isNewQuestion = !question.backend_id || String(question.backend_id).startsWith('temp_');
+        // Determine if this is a new question - check if we have a valid backend UUID
+        const backendId = question.backend_id || question.id;
+        const isNewQuestion = !backendId || !isValidUUID(backendId) || String(backendId).startsWith('temp_');
+        
+        console.log(`Processing question ${i}: ID=${backendId}, isNew=${isNewQuestion}`);
         
         if (isNewQuestion) {
           // Create new question
@@ -217,12 +419,17 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
             time_limit: question.timeLimit || question.time_limit || 10,
             points: question.points || 100,
             difficulty: question.difficulty || 'medium',
-            explanation: question.explanation?.trim() || '',
             explanation_title: question.explanation_title?.trim() || '',
-            explanation_text: question.explanation_text?.trim() || '',
+            explanation_text: question.explanation_text?.trim() || question.explanation?.trim() || '',
             explanation_image_url: question.explanation_image_url || null,
             order_index: i // Use array index as order
           };
+          
+          // Filter out blob URLs from question image
+          if (questionData.image_url && (questionData.image_url.startsWith('blob:') || questionData.image_url.includes('localhost'))) {
+            console.log('Filtering out blob URL from question image:', questionData.image_url);
+            questionData.image_url = null;
+          }
           
           console.log('Creating question with data:', questionData);
           
@@ -246,13 +453,27 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
             for (let j = 0; j < question.answers.length; j++) {
               const answer = question.answers[j];
               
+              // Helper function to check if URL is a blob URL that needs to be filtered out
+              const isBlobUrl = (url) => {
+                return url && (url.startsWith('blob:') || url.includes('localhost'));
+              };
+              
+              const originalImageUrl = answer.image_url || answer.image;
+              const filteredImageUrl = (answer.image_url && !isBlobUrl(answer.image_url)) ? answer.image_url : 
+                                     (answer.image && !isBlobUrl(answer.image)) ? answer.image : null;
+              
+              if (originalImageUrl && filteredImageUrl === null) {
+                console.log(`🚫 Filtered out blob URL from answer ${j}:`, originalImageUrl);
+              }
+              
               const answerData = {
                 question_id: newQuestion.id,
                 answer_text: answer.text?.trim() || '',
                 is_correct: answer.isCorrect || false,
                 order_index: j,
                 answer_explanation: answer.answer_explanation?.trim() || '',
-                image_url: answer.image_url || answer.image || null
+                // Filter out blob URLs - only store actual Supabase storage URLs
+                image_url: filteredImageUrl
               };
               
               console.log('Creating answer with data:', answerData);
@@ -274,6 +495,8 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
           
         } else {
           // Update existing question
+          const questionId = question.backend_id || question.id;
+          
           const questionData = {
             question_text: question.text?.trim() || question.question_text?.trim(),
             question_type: question.question_type || question.type || 'multiple_choice',
@@ -281,19 +504,24 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
             time_limit: question.timeLimit || question.time_limit || 10,
             points: question.points || 100,
             difficulty: question.difficulty || 'medium',
-            explanation: question.explanation?.trim() || '',
             explanation_title: question.explanation_title?.trim() || '',
-            explanation_text: question.explanation_text?.trim() || '',
+            explanation_text: question.explanation_text?.trim() || question.explanation?.trim() || '',
             explanation_image_url: question.explanation_image_url || null,
             order_index: i // Use array index as order
           };
           
-          console.log('Updating question:', question.backend_id, 'with data:', questionData);
+          // Filter out blob URLs from question image
+          if (questionData.image_url && (questionData.image_url.startsWith('blob:') || questionData.image_url.includes('localhost'))) {
+            console.log('Filtering out blob URL from question image:', questionData.image_url);
+            questionData.image_url = null;
+          }
+          
+          console.log('Updating question:', questionId, 'with data:', questionData);
           
           const { data: updatedQuestion, error: updateError } = await userSupabase
             .from('questions')
             .update(questionData)
-            .eq('id', question.backend_id)
+            .eq('id', questionId)
             .select()
             .single();
           
@@ -312,7 +540,7 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
             const { error: deleteError } = await userSupabase
               .from('answers')
               .delete()
-              .eq('question_id', question.backend_id);
+              .eq('question_id', questionId);
             
             if (deleteError) {
               console.error('Error deleting existing answers:', deleteError);
@@ -324,13 +552,27 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
             for (let j = 0; j < question.answers.length; j++) {
               const answer = question.answers[j];
               
+              // Helper function to check if URL is a blob URL that needs to be filtered out
+              const isBlobUrl = (url) => {
+                return url && (url.startsWith('blob:') || url.includes('localhost'));
+              };
+              
+              const originalImageUrl = answer.image_url || answer.image;
+              const filteredImageUrl = (answer.image_url && !isBlobUrl(answer.image_url)) ? answer.image_url : 
+                                     (answer.image && !isBlobUrl(answer.image)) ? answer.image : null;
+              
+              if (originalImageUrl && filteredImageUrl === null) {
+                console.log(`🚫 Filtered out blob URL from answer ${j}:`, originalImageUrl);
+              }
+              
               const answerData = {
-                question_id: question.backend_id,
+                question_id: questionId,
                 answer_text: answer.text?.trim() || '',
                 is_correct: answer.isCorrect || false,
                 order_index: j,
                 answer_explanation: answer.answer_explanation?.trim() || '',
-                image_url: answer.image_url || answer.image || null
+                // Filter out blob URLs - only store actual Supabase storage URLs
+                image_url: filteredImageUrl
               };
               
               console.log('Creating answer with data:', answerData);
@@ -345,7 +587,7 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
                 console.error('Error creating answer:', answerError);
                 errors.push({ index: i, answerIndex: j, error: answerError.message });
               } else {
-                console.log('Answer created:', newAnswer.id, 'for question:', question.backend_id);
+                console.log('Answer created:', newAnswer.id, 'for question:', questionId);
               }
             }
           }
@@ -354,6 +596,36 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
         console.error(`Error processing question ${i}:`, questionError);
         errors.push({ index: i, error: questionError.message });
       }
+    }
+    
+    // STEP 3: Final pass to ensure all questions have correct sequential order indices
+    // This handles any remaining order conflicts and ensures clean sequential ordering
+    console.log('Performing final order index cleanup...');
+    
+    // Get all questions in the set (including newly created ones)
+    const { data: allQuestionsInSet, error: getAllError } = await userSupabase
+      .from('questions')
+      .select('id')
+      .eq('question_set_id', question_set_id)
+      .order('order_index', { ascending: true });
+    
+    if (getAllError) {
+      console.error('Error getting all questions for final ordering:', getAllError);
+      // Continue anyway, don't fail the entire operation
+    } else {
+      // Update each question with sequential order starting from 0
+      for (let i = 0; i < allQuestionsInSet.length; i++) {
+        const { error: finalOrderError } = await userSupabase
+          .from('questions')
+          .update({ order_index: i })
+          .eq('id', allQuestionsInSet[i].id);
+        
+        if (finalOrderError) {
+          console.error(`Error setting final order ${i} for question ${allQuestionsInSet[i].id}:`, finalOrderError);
+          // Continue with other questions
+        }
+      }
+      console.log(`Final order cleanup completed for ${allQuestionsInSet.length} questions`);
     }
     
     // Return results

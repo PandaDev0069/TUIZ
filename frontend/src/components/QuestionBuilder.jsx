@@ -10,7 +10,8 @@ const QuestionBuilder = forwardRef(({
   totalQuestions, 
   onDeleteQuestion,
   questionSetId = null, // Add questionSetId prop for backend communication
-  onQuestionSaved = null // Callback when question is saved to backend
+  onQuestionSaved = null, // Callback when question is saved to backend
+  onImageFileStored = null // New prop to store File objects separately
 }, ref) => {
   const { apiCall } = useAuth();
   const [dragActive, setDragActive] = useState(false);
@@ -363,7 +364,7 @@ const QuestionBuilder = forwardRef(({
   };
 
   // Handle file upload for question image
-  const handleQuestionImageUpload = (file) => {
+  const handleQuestionImageUpload = async (file) => {
     if (!file || !file.type.startsWith('image/')) {
       alert('画像ファイルを選択してください');
       return;
@@ -375,6 +376,7 @@ const QuestionBuilder = forwardRef(({
       return;
     }
 
+    // Create blob URL for immediate preview
     const url = URL.createObjectURL(file);
     updateQuestion({ 
       ...question, 
@@ -382,6 +384,45 @@ const QuestionBuilder = forwardRef(({
       imageFile: file 
     });
     setHasUnsavedChanges(true);
+
+    // Store File object separately to avoid losing it in state
+    if (onImageFileStored) {
+      onImageFileStored(question.id, null, file);
+    }
+
+    // If we have a questionSetId, upload immediately
+    if (questionSetId && question.backend_id) {
+      console.log('🖼️ Uploading question image immediately...');
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        const response = await apiCall(`/questions/${question.backend_id}/upload-image`, {
+          method: 'POST',
+          body: formData,
+          headers: {} // Let browser set Content-Type for FormData
+        });
+        
+        // Replace blob URL with storage URL
+        updateQuestion({ 
+          ...question, 
+          image: response.image_url,
+          image_url: response.image_url,
+          imageFile: null // Clear file after upload
+        });
+        
+        // Clear stored File object
+        if (onImageFileStored) {
+          onImageFileStored(question.id, null, null);
+        }
+        
+        console.log('✅ Question image uploaded immediately:', response.image_url);
+        
+      } catch (error) {
+        console.error('❌ Failed to upload question image immediately:', error);
+        // Keep the blob URL and stored File for bulk upload later
+      }
+    }
   };
 
   // Handle drag events
@@ -517,7 +558,7 @@ const QuestionBuilder = forwardRef(({
   };
 
   // Handle answer image upload
-  const handleAnswerImageUpload = (index, file) => {
+  const handleAnswerImageUpload = async (index, file) => {
     if (!file || !file.type.startsWith('image/')) {
       alert('画像ファイルを選択してください');
       return;
@@ -529,10 +570,48 @@ const QuestionBuilder = forwardRef(({
       return;
     }
 
+    // Create blob URL for immediate preview
     const url = URL.createObjectURL(file);
     updateAnswer(index, 'image', url);
     updateAnswer(index, 'imageFile', file);
     setHasUnsavedChanges(true);
+
+    // Store File object separately to avoid losing it in state
+    if (onImageFileStored) {
+      onImageFileStored(question.id, index, file);
+    }
+
+    // If we have saved answers with backend IDs, upload immediately
+    const answer = question.answers[index];
+    if (questionSetId && answer.backend_id) {
+      console.log('🖼️ Uploading answer image immediately...');
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        const response = await apiCall(`/answers/${answer.backend_id}/upload-image`, {
+          method: 'POST',
+          body: formData,
+          headers: {} // Let browser set Content-Type for FormData
+        });
+        
+        // Replace blob URL with storage URL
+        updateAnswer(index, 'image', response.image_url);
+        updateAnswer(index, 'image_url', response.image_url);
+        updateAnswer(index, 'imageFile', null); // Clear file after upload
+        
+        // Clear stored File object
+        if (onImageFileStored) {
+          onImageFileStored(question.id, index, null);
+        }
+        
+        console.log('✅ Answer image uploaded immediately:', response.image_url);
+        
+      } catch (error) {
+        console.error('❌ Failed to upload answer image immediately:', error);
+        // Keep the blob URL and stored File for bulk upload later
+      }
+    }
   };
 
   // Remove answer image
@@ -603,26 +682,6 @@ const QuestionBuilder = forwardRef(({
           <span className="total">/ {totalQuestions}</span>
         </div>
         <div className="question-actions">
-          <div className="save-status">
-            {isSaving && (
-              <span className="saving-indicator">
-                <span className="spinner">⏳</span>
-                保存中...
-              </span>
-            )}
-            {!isSaving && hasUnsavedChanges && (
-              <span className="unsaved-indicator">
-                <span className="dot">●</span>
-                未保存
-              </span>
-            )}
-            {!isSaving && !hasUnsavedChanges && lastSaved && (
-              <span className="saved-indicator">
-                <span className="checkmark">✓</span>
-                保存済み
-              </span>
-            )}
-          </div>
           <div className="question-type-badge">
             {getQuestionType() === 'true_false' ? '○×問題' : '選択問題'}
           </div>

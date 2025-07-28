@@ -1,4 +1,4 @@
-import { useState, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useState, useRef, useImperativeHandle, forwardRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import QuestionBuilder from './QuestionBuilder';
 import './questionsForm.css';
@@ -6,12 +6,92 @@ import './questionsForm.css';
 const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = null }, ref) => {
   const { apiCall } = useAuth();
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+  const [isUpdatingMetadata, setIsUpdatingMetadata] = useState(false);
   const questionBuilderRefs = useRef([]);
+  
+  // Store File objects separately to avoid losing them in React state
+  const pendingImageFiles = useRef(new Map());
+
+  // Helper functions to manage File objects
+  const storeImageFile = (questionId, answerIndex, file) => {
+    const key = answerIndex !== null ? `${questionId}-answer-${answerIndex}` : `${questionId}-question`;
+    pendingImageFiles.current.set(key, file);
+  };
+
+  const getImageFile = (questionId, answerIndex) => {
+    const key = answerIndex !== null ? `${questionId}-answer-${answerIndex}` : `${questionId}-question`;
+    return pendingImageFiles.current.get(key);
+  };
+
+  const clearImageFile = (questionId, answerIndex) => {
+    const key = answerIndex !== null ? `${questionId}-answer-${answerIndex}` : `${questionId}-question`;
+    pendingImageFiles.current.delete(key);
+  };
+
+  // Update question set metadata based on current questions
+  const updateQuestionSetMetadata = async () => {
+    if (!questionSetId) return;
+
+    try {
+      setIsUpdatingMetadata(true);
+      
+      // Calculate metadata from current questions
+      const totalQuestions = questions.length;
+      const completedQuestions = questions.filter(q => {
+        const hasValidText = q.text.trim().length > 0;
+        const hasValidAnswers = q.answers.every(a => a.text.trim().length > 0);
+        const hasCorrectAnswer = q.answers.some(a => a.isCorrect);
+        return hasValidText && hasValidAnswers && hasCorrectAnswer;
+      }).length;
+      
+      const estimatedDuration = Math.ceil(questions.reduce((total, q) => total + q.timeLimit + 5, 0) / 60);
+      
+      // Update the question set metadata
+      const updateData = {
+        total_questions: totalQuestions,
+        estimated_duration: estimatedDuration
+      };
+
+      // Only log if there are significant changes
+      console.log('� Auto-syncing quiz metadata:', updateData);
+
+      await apiCall(`/quiz/${questionSetId}`, {
+        method: 'PUT',
+        body: JSON.stringify(updateData)
+      });
+
+    } catch (error) {
+      console.error('❌ Failed to sync quiz metadata:', error);
+      // Silently fail to avoid disrupting user workflow
+    } finally {
+      setIsUpdatingMetadata(false);
+    }
+  };
+
+  // Auto-update metadata when questions change (debounced)
+  useEffect(() => {
+    if (!questionSetId || questions.length === 0) return;
+
+    const metadataUpdateTimer = setTimeout(() => {
+      updateQuestionSetMetadata();
+    }, 1000); // Reduced to 1 second for faster updates
+
+    return () => clearTimeout(metadataUpdateTimer);
+  }, [questions, questionSetId]);
+
+  // Also update metadata immediately on specific actions
+  useEffect(() => {
+    if (!questionSetId) return;
+    
+    // Update immediately when questions are added/removed (length changes)
+    updateQuestionSetMetadata();
+  }, [questions.length, questionSetId]);
 
   // Expose functions to parent component
   useImperativeHandle(ref, () => ({
     saveAllQuestions,
-    hasUnsavedChanges
+    hasUnsavedChanges,
+    updateQuestionSetMetadata
   }));
 
   // Add new question
@@ -57,6 +137,131 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
     const newQuestions = [...questions, newQuestion];
     setQuestions(newQuestions);
     setActiveQuestionIndex(newQuestions.length - 1);
+    
+    // Metadata will be updated automatically by useEffect
+  };
+
+  // Helper function to check if a URL is a blob URL
+  const isBlobUrl = (url) => {
+    return url && (url.startsWith('blob:') || url.includes('localhost'));
+  };
+
+  // Upload images that are still blob URLs
+  const uploadPendingImages = async (questionsData, targetQuizId) => {
+    const imagesToUpload = [];
+    const imageMappings = [];
+
+    console.log('🔍 Checking for images to upload in', questionsData.length, 'questions...');
+
+    // Collect all images that need uploading
+    questionsData.forEach((question, questionIndex) => {
+      console.log(`🔍 Question ${questionIndex}:`, {
+        hasImage: !!question.image,
+        imageUrl: question.image,
+        isBlobUrl: isBlobUrl(question.image)
+      });
+
+      // Check question image - use stored File object if available
+      if (isBlobUrl(question.image)) {
+        const file = getImageFile(question.id, null);
+        if (file && file instanceof File) {
+          console.log(`✅ Adding question ${questionIndex} image to upload queue`);
+          imagesToUpload.push(file);
+          imageMappings.push({
+            type: 'question',
+            questionIndex: questionIndex,
+            answerIndex: null
+          });
+        } else {
+          console.log(`⚠️ Question ${questionIndex} has blob URL but no File object found`);
+        }
+      }
+
+      // Check answer images
+      if (question.answers) {
+        question.answers.forEach((answer, answerIndex) => {
+          console.log(`🔍 Question ${questionIndex}, Answer ${answerIndex}:`, {
+            hasImage: !!answer.image,
+            imageUrl: answer.image,
+            isBlobUrl: isBlobUrl(answer.image)
+          });
+
+          if (isBlobUrl(answer.image)) {
+            const file = getImageFile(question.id, answerIndex);
+            if (file && file instanceof File) {
+              console.log(`✅ Adding question ${questionIndex}, answer ${answerIndex} image to upload queue`);
+              imagesToUpload.push(file);
+              imageMappings.push({
+                type: 'answer',
+                questionIndex: questionIndex,
+                answerIndex: answerIndex
+              });
+            } else {
+              console.log(`⚠️ Question ${questionIndex}, answer ${answerIndex} has blob URL but no File object found`);
+            }
+          }
+        });
+      }
+    });
+
+    if (imagesToUpload.length === 0) {
+      console.log('ℹ️ No images to upload, proceeding with bulk save');
+      return questionsData; // No images to upload
+    }
+
+    console.log(`🖼️ Uploading ${imagesToUpload.length} images before bulk save...`);
+
+    try {
+      // Prepare FormData for bulk image upload
+      const formData = new FormData();
+      imagesToUpload.forEach((file, index) => {
+        formData.append('images', file);
+      });
+      formData.append('question_set_id', targetQuizId);
+      formData.append('image_mappings', JSON.stringify(imageMappings));
+
+      // Upload all images at once
+      const uploadResponse = await apiCall('/questions/bulk-upload-images', {
+        method: 'POST',
+        body: formData,
+        headers: {} // Let browser set Content-Type for FormData
+      });
+
+      if (uploadResponse.success && uploadResponse.results) {
+        console.log('✅ Bulk image upload completed');
+        
+        // Update questionsData with the new URLs
+        uploadResponse.results.forEach((result, index) => {
+          if (result.success && result.mapping) {
+            const { questionIndex, answerIndex, type } = result.mapping;
+            
+            if (type === 'question') {
+              questionsData[questionIndex].image_url = result.url;
+              questionsData[questionIndex].image = result.url;
+              questionsData[questionIndex].imageFile = null; // Clear file after upload
+            } else if (type === 'answer' && answerIndex !== null) {
+              questionsData[questionIndex].answers[answerIndex].image_url = result.url;
+              questionsData[questionIndex].answers[answerIndex].image = result.url;
+              questionsData[questionIndex].answers[answerIndex].imageFile = null; // Clear file after upload
+            }
+            
+            console.log(`✅ Updated ${type} image URL:`, result.url);
+          } else {
+            console.error(`❌ Failed to upload image ${index}:`, result.error);
+          }
+        });
+        
+        return questionsData;
+      } else {
+        console.error('❌ Bulk image upload failed:', uploadResponse);
+        // Continue with original data, blob URLs will be filtered out by backend
+        return questionsData;
+      }
+    } catch (error) {
+      console.error('❌ Error during bulk image upload:', error);
+      // Continue with original data, blob URLs will be filtered out by backend
+      return questionsData;
+    }
   };
 
   // Save all questions to backend
@@ -76,30 +281,19 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
         order_index: index
       }));
       
-      // Collect all question data from refs to ensure we have the latest state
-      const questionsData = await Promise.all(
-        normalizedQuestions.map(async (question, index) => {
-          const questionRef = questionBuilderRefs.current[index];
-          if (questionRef && questionRef.getQuestionData) {
-            // Get current data from the ref
-            const currentData = questionRef.getQuestionData();
-            return {
-              ...currentData,
-              order_index: index // Ensure order is correct
-            };
-          }
-          // Fallback to the question from state
-          return {
-            ...question,
-            order_index: index
-          };
-        })
-      );
+      // Collect all question data - use the state directly since refs may not preserve File objects properly  
+      let questionsData = normalizedQuestions.map((question, index) => ({
+        ...question,
+        order_index: index // Ensure order is correct
+      }));
       
       console.log('Performing bulk save for questions:', questionsData.length);
       console.log('Sample question data:', questionsData[0]); // Debug log
+
+      // STEP 1: Upload any pending images first
+      questionsData = await uploadPendingImages(questionsData, targetQuizId);
       
-      // Use bulk update API
+      // STEP 2: Perform bulk save with (potentially updated) question data
       const response = await apiCall('/questions/bulk', {
         method: 'PUT',
         body: JSON.stringify({
@@ -126,6 +320,9 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
         });
         
         setQuestions(updatedQuestions);
+        
+        // Update question set metadata after successful save
+        await updateQuestionSetMetadata();
         
         // Handle partial success with errors
         if (response.errors && response.errors.length > 0) {
@@ -165,6 +362,8 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
       } else if (activeQuestionIndex > index) {
         setActiveQuestionIndex(activeQuestionIndex - 1);
       }
+      
+      // Metadata will be updated automatically by useEffect
     }
   };
 
@@ -225,6 +424,8 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
     
     setQuestions(reindexedQuestions);
     setActiveQuestionIndex(index + 1);
+    
+    // Metadata will be updated automatically by useEffect
   };
 
   // Move question up
@@ -396,6 +597,13 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
             totalQuestions={questions.length}
             onDeleteQuestion={deleteQuestion}
             questionSetId={questionSetId}
+            onImageFileStored={(questionId, answerIndex, file) => {
+              if (file) {
+                storeImageFile(questionId, answerIndex, file);
+              } else {
+                clearImageFile(questionId, answerIndex);
+              }
+            }}
             onQuestionSaved={(savedQuestion) => {
               console.log('Question saved:', savedQuestion);
               // Update the question with backend data if needed
@@ -412,7 +620,15 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
 
         {/* Questions Summary */}
         <div className="questions-summary">
-          <h3 className="summary-title">クイズ概要</h3>
+          <div className="summary-header">
+            <h3 className="summary-title">クイズ概要</h3>
+            {isUpdatingMetadata && (
+              <div className="metadata-update-indicator">
+                <span className="update-spinner">🔄</span>
+                <span className="update-text">同期中...</span>
+              </div>
+            )}
+          </div>
           <div className="summary-stats">
             <div className="stat-item">
               <span className="stat-label">総問題数</span>
