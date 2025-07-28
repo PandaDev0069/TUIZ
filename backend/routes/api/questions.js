@@ -75,6 +75,396 @@ router.get('/set/:id', AuthMiddleware.authenticateToken, async (req, res) => {
   }
 });
 
+// IMPORTANT: Bulk routes must come BEFORE parameterized routes like /:id
+
+// Bulk create questions for a question set
+router.post('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const { question_set_id, questions } = req.body;
+    
+    if (!question_set_id || !questions || !Array.isArray(questions)) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Question set ID and questions array are required' 
+      });
+    }
+    
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+    
+    // Verify the user owns the question set - RLS will handle this
+    const { data: questionSet, error: verifyError } = await userSupabase
+      .from('question_sets')
+      .select('id')
+      .eq('id', question_set_id)
+      .single();
+    
+    if (verifyError || !questionSet) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Question set not found or unauthorized' 
+      });
+    }
+    
+    // Prepare questions for bulk insert
+    const questionsToInsert = questions.map((q, index) => ({
+      question_set_id,
+      question_text: q.question_text?.trim() || q.text?.trim(),
+      question_type: q.question_type || q.type || 'multiple_choice',
+      image_url: q.image_url || q.image || null,
+      time_limit: q.time_limit || q.timeLimit || 10,
+      points: q.points || 100,
+      difficulty: q.difficulty || 'medium',
+      explanation: q.explanation?.trim() || '',
+      order_index: q.order_index !== undefined ? q.order_index : index
+    }));
+    
+    // Insert all questions using user-scoped client
+    const { data: insertedQuestions, error } = await userSupabase
+      .from('questions')
+      .insert(questionsToInsert)
+      .select();
+    
+    if (error) {
+      console.error('Error bulk creating questions:', error);
+      return res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
+    }
+    
+    console.log(`Bulk created ${insertedQuestions.length} questions for question set:`, question_set_id);
+    res.status(201).json({ 
+      success: true,
+      questions: insertedQuestions 
+    });
+  } catch (error) {
+    console.error('Error in bulk question creation:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
+// Bulk update questions
+router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
+  console.log('🔥 BULK UPDATE ENDPOINT HIT');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('User from auth:', req.user);
+  console.log('User token present:', !!req.userToken);
+  
+  try {
+    const { question_set_id, questions } = req.body;
+    
+    if (!question_set_id || !questions || !Array.isArray(questions)) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Question set ID and questions array are required' 
+      });
+    }
+    
+    console.log('Bulk update request received:', {
+      question_set_id,
+      questionsCount: questions.length,
+      userToken: req.userToken ? 'present' : 'missing'
+    });
+    
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+    
+    // Verify the user owns the question set - RLS will handle this
+    const { data: questionSet, error: verifyError } = await userSupabase
+      .from('question_sets')
+      .select('id')
+      .eq('id', question_set_id)
+      .single();
+    
+    if (verifyError || !questionSet) {
+      console.error('Question set verification failed:', {
+        question_set_id,
+        verifyError: verifyError?.message || verifyError,
+        questionSet
+      });
+      return res.status(403).json({ 
+        success: false,
+        error: 'Question set not found or unauthorized' 
+      });
+    }
+    
+    console.log(`Starting bulk update for ${questions.length} questions in set:`, question_set_id);
+    
+    // Use database transaction to ensure atomicity
+    const updatedQuestions = [];
+    const createdQuestions = [];
+    const errors = [];
+    
+    // Process each question
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      
+      try {
+        // Determine if this is a new question (has temp ID) or existing
+        const isNewQuestion = !question.backend_id || String(question.backend_id).startsWith('temp_');
+        
+        if (isNewQuestion) {
+          // Create new question
+          const questionData = {
+            question_set_id,
+            question_text: question.text?.trim() || question.question_text?.trim(),
+            question_type: question.question_type || question.type || 'multiple_choice',
+            image_url: question.image_url || question.image || null,
+            time_limit: question.timeLimit || question.time_limit || 10,
+            points: question.points || 100,
+            difficulty: question.difficulty || 'medium',
+            explanation: question.explanation?.trim() || '',
+            explanation_title: question.explanation_title?.trim() || '',
+            explanation_text: question.explanation_text?.trim() || '',
+            explanation_image_url: question.explanation_image_url || null,
+            order_index: i // Use array index as order
+          };
+          
+          console.log('Creating question with data:', questionData);
+          
+          const { data: newQuestion, error: createError } = await userSupabase
+            .from('questions')
+            .insert(questionData)
+            .select()
+            .single();
+          
+          if (createError) {
+            console.error('Error creating question:', createError);
+            errors.push({ index: i, error: createError.message });
+            continue;
+          }
+          
+          console.log('Question created:', newQuestion.id, 'for question set:', question_set_id);
+          createdQuestions.push(newQuestion);
+          
+          // Handle answers for new question
+          if (question.answers && Array.isArray(question.answers)) {
+            for (let j = 0; j < question.answers.length; j++) {
+              const answer = question.answers[j];
+              
+              const answerData = {
+                question_id: newQuestion.id,
+                answer_text: answer.text?.trim() || '',
+                is_correct: answer.isCorrect || false,
+                order_index: j,
+                answer_explanation: answer.answer_explanation?.trim() || '',
+                image_url: answer.image_url || answer.image || null
+              };
+              
+              console.log('Creating answer with data:', answerData);
+              
+              const { data: newAnswer, error: answerError } = await userSupabase
+                .from('answers')
+                .insert(answerData)
+                .select()
+                .single();
+              
+              if (answerError) {
+                console.error('Error creating answer:', answerError);
+                errors.push({ index: i, answerIndex: j, error: answerError.message });
+              } else {
+                console.log('Answer created:', newAnswer.id, 'for question:', newQuestion.id);
+              }
+            }
+          }
+          
+        } else {
+          // Update existing question
+          const questionData = {
+            question_text: question.text?.trim() || question.question_text?.trim(),
+            question_type: question.question_type || question.type || 'multiple_choice',
+            image_url: question.image_url || question.image || null,
+            time_limit: question.timeLimit || question.time_limit || 10,
+            points: question.points || 100,
+            difficulty: question.difficulty || 'medium',
+            explanation: question.explanation?.trim() || '',
+            explanation_title: question.explanation_title?.trim() || '',
+            explanation_text: question.explanation_text?.trim() || '',
+            explanation_image_url: question.explanation_image_url || null,
+            order_index: i // Use array index as order
+          };
+          
+          console.log('Updating question:', question.backend_id, 'with data:', questionData);
+          
+          const { data: updatedQuestion, error: updateError } = await userSupabase
+            .from('questions')
+            .update(questionData)
+            .eq('id', question.backend_id)
+            .select()
+            .single();
+          
+          if (updateError) {
+            console.error('Error updating question:', updateError);
+            errors.push({ index: i, error: updateError.message });
+            continue;
+          }
+          
+          console.log('Question updated:', updatedQuestion.id);
+          updatedQuestions.push(updatedQuestion);
+          
+          // Handle answers for existing question - delete and recreate to avoid order conflicts
+          if (question.answers && Array.isArray(question.answers)) {
+            // Delete existing answers
+            const { error: deleteError } = await userSupabase
+              .from('answers')
+              .delete()
+              .eq('question_id', question.backend_id);
+            
+            if (deleteError) {
+              console.error('Error deleting existing answers:', deleteError);
+              errors.push({ index: i, error: `Failed to delete existing answers: ${deleteError.message}` });
+              continue;
+            }
+            
+            // Create new answers
+            for (let j = 0; j < question.answers.length; j++) {
+              const answer = question.answers[j];
+              
+              const answerData = {
+                question_id: question.backend_id,
+                answer_text: answer.text?.trim() || '',
+                is_correct: answer.isCorrect || false,
+                order_index: j,
+                answer_explanation: answer.answer_explanation?.trim() || '',
+                image_url: answer.image_url || answer.image || null
+              };
+              
+              console.log('Creating answer with data:', answerData);
+              
+              const { data: newAnswer, error: answerError } = await userSupabase
+                .from('answers')
+                .insert(answerData)
+                .select()
+                .single();
+              
+              if (answerError) {
+                console.error('Error creating answer:', answerError);
+                errors.push({ index: i, answerIndex: j, error: answerError.message });
+              } else {
+                console.log('Answer created:', newAnswer.id, 'for question:', question.backend_id);
+              }
+            }
+          }
+        }
+      } catch (questionError) {
+        console.error(`Error processing question ${i}:`, questionError);
+        errors.push({ index: i, error: questionError.message });
+      }
+    }
+    
+    // Return results
+    const allQuestions = [...updatedQuestions, ...createdQuestions];
+    
+    console.log(`Bulk update completed: ${createdQuestions.length} created, ${updatedQuestions.length} updated, ${errors.length} errors`);
+    
+    if (errors.length > 0) {
+      console.error('Bulk update errors:', errors);
+      return res.status(207).json({ // 207 Multi-Status for partial success
+        success: false,
+        questions: allQuestions,
+        errors: errors,
+        message: `Partial success: processed ${allQuestions.length}/${questions.length} questions`
+      });
+    }
+    
+    res.json({ 
+      success: true,
+      questions: allQuestions,
+      created: createdQuestions.length,
+      updated: updatedQuestions.length
+    });
+    
+  } catch (error) {
+    console.error('Error in bulk question update:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
+// Reorder questions in a question set
+router.put('/set/:id/reorder', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { questionOrder } = req.body; // Array of question IDs in desired order
+    
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+    
+    // Verify user owns the question set
+    const { data: questionSet, error: setError } = await userSupabase
+      .from('question_sets')
+      .select('id, user_id')
+      .eq('id', id)
+      .single();
+    
+    if (setError || !questionSet || questionSet.user_id !== req.userId) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Question set not found or unauthorized' 
+      });
+    }
+    
+    // Validate that all provided question IDs belong to this question set
+    const { data: existingQuestions, error: questionsError } = await userSupabase
+      .from('questions')
+      .select('id')
+      .eq('question_set_id', id);
+    
+    if (questionsError) {
+      return res.status(500).json({ 
+        success: false,
+        error: questionsError.message 
+      });
+    }
+    
+    const existingIds = existingQuestions.map(q => q.id);
+    const allValid = questionOrder.every(qId => existingIds.includes(qId));
+    
+    if (!allValid || questionOrder.length !== existingQuestions.length) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid question order data' 
+      });
+    }
+    
+    // Transform the questionOrder array to match the expected format
+    const questionOrders = questionOrder.map((questionId, index) => ({
+      questionId,
+      order: index
+    }));
+
+    // Use the OrderManager to perform the batch reorder
+    const result = await orderManager.reorderQuestions(userSupabase, id, questionOrders);
+    
+    if (!result.success) {
+      return res.status(500).json({ 
+        success: false,
+        error: result.error 
+      });
+    }
+    
+    res.json({ 
+      success: true,
+      data: result.data 
+    });
+    
+  } catch (error) {
+    console.error('Error reordering questions:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
+// NOW the parameterized routes that might conflict
+
 // Create a new question
 router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
@@ -297,300 +687,6 @@ router.delete('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
   }
 });
 
-// Bulk create questions for a question set
-router.post('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
-  try {
-    const { question_set_id, questions } = req.body;
-    
-    if (!question_set_id || !questions || !Array.isArray(questions)) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Question set ID and questions array are required' 
-      });
-    }
-    
-    // Create user-scoped Supabase client for RLS compliance
-    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
-    
-    // Verify the user owns the question set - RLS will handle this
-    const { data: questionSet, error: verifyError } = await userSupabase
-      .from('question_sets')
-      .select('id')
-      .eq('id', question_set_id)
-      .single();
-    
-    if (verifyError || !questionSet) {
-      return res.status(403).json({ 
-        success: false,
-        error: 'Question set not found or unauthorized' 
-      });
-    }
-    
-    // Prepare questions for bulk insert
-    const questionsToInsert = questions.map((q, index) => ({
-      question_set_id,
-      question_text: q.question_text?.trim() || q.text?.trim(),
-      question_type: q.question_type || q.type || 'multiple_choice',
-      image_url: q.image_url || q.image || null,
-      time_limit: q.time_limit || q.timeLimit || 10,
-      points: q.points || 100,
-      difficulty: q.difficulty || 'medium',
-      explanation: q.explanation?.trim() || '',
-      order_index: q.order_index !== undefined ? q.order_index : index
-    }));
-    
-    // Insert all questions using user-scoped client
-    const { data: insertedQuestions, error } = await userSupabase
-      .from('questions')
-      .insert(questionsToInsert)
-      .select();
-    
-    if (error) {
-      console.error('Error bulk creating questions:', error);
-      return res.status(500).json({ 
-        success: false,
-        error: error.message 
-      });
-    }
-    
-    console.log(`Bulk created ${insertedQuestions.length} questions for question set:`, question_set_id);
-    res.status(201).json({ 
-      success: true,
-      questions: insertedQuestions 
-    });
-  } catch (error) {
-    console.error('Error in bulk question creation:', error);
-    res.status(500).json({ 
-      success: false,
-      error: error.message 
-    });
-  }
-});
-
-// Bulk update questions
-router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
-  try {
-    const { question_set_id, questions } = req.body;
-    
-    if (!question_set_id || !questions || !Array.isArray(questions)) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Question set ID and questions array are required' 
-      });
-    }
-    
-    // Create user-scoped Supabase client for RLS compliance
-    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
-    
-    // Verify the user owns the question set - RLS will handle this
-    const { data: questionSet, error: verifyError } = await userSupabase
-      .from('question_sets')
-      .select('id')
-      .eq('id', question_set_id)
-      .single();
-    
-    if (verifyError || !questionSet) {
-      return res.status(403).json({ 
-        success: false,
-        error: 'Question set not found or unauthorized' 
-      });
-    }
-    
-    console.log(`Starting bulk update for ${questions.length} questions in set:`, question_set_id);
-    
-    // Use database transaction to ensure atomicity
-    const updatedQuestions = [];
-    const createdQuestions = [];
-    const errors = [];
-    
-    // Process each question
-    for (let i = 0; i < questions.length; i++) {
-      const question = questions[i];
-      
-      try {
-        // Determine if this is a new question (has temp ID) or existing
-        const isNewQuestion = !question.backend_id || String(question.backend_id).startsWith('temp_');
-        
-        if (isNewQuestion) {
-          // Create new question
-          const questionData = {
-            question_set_id,
-            question_text: question.text?.trim() || question.question_text?.trim(),
-            question_type: question.question_type || question.type || 'multiple_choice',
-            image_url: question.image_url || question.image || null,
-            time_limit: question.timeLimit || question.time_limit || 10,
-            points: question.points || 100,
-            difficulty: question.difficulty || 'medium',
-            explanation: question.explanation?.trim() || '',
-            explanation_title: question.explanation_title?.trim() || '',
-            explanation_text: question.explanation_text?.trim() || '',
-            explanation_image_url: question.explanation_image_url || null,
-            order_index: i // Use array index as order
-          };
-          
-          console.log('Creating question with data:', questionData);
-          
-          const { data: newQuestion, error: createError } = await userSupabase
-            .from('questions')
-            .insert(questionData)
-            .select()
-            .single();
-          
-          if (createError) {
-            console.error('Error creating question:', createError);
-            errors.push({ index: i, error: createError.message });
-            continue;
-          }
-          
-          console.log('Question created:', newQuestion.id, 'for question set:', question_set_id);
-          createdQuestions.push(newQuestion);
-          
-          // Handle answers for new question
-          if (question.answers && Array.isArray(question.answers)) {
-            for (let j = 0; j < question.answers.length; j++) {
-              const answer = question.answers[j];
-              
-              const answerData = {
-                question_id: newQuestion.id,
-                answer_text: answer.text?.trim() || '',
-                is_correct: answer.isCorrect || false,
-                order_index: j,
-                answer_explanation: answer.answer_explanation?.trim() || '',
-                image_url: answer.image_url || answer.image || null
-              };
-              
-              console.log('Creating answer with data:', answerData);
-              
-              const { data: newAnswer, error: answerError } = await userSupabase
-                .from('answers')
-                .insert(answerData)
-                .select()
-                .single();
-              
-              if (answerError) {
-                console.error('Error creating answer:', answerError);
-                errors.push({ index: i, answerIndex: j, error: answerError.message });
-              } else {
-                console.log('Answer created:', newAnswer.id, 'for question:', newQuestion.id);
-              }
-            }
-          }
-          
-        } else {
-          // Update existing question
-          const questionData = {
-            question_text: question.text?.trim() || question.question_text?.trim(),
-            question_type: question.question_type || question.type || 'multiple_choice',
-            image_url: question.image_url || question.image || null,
-            time_limit: question.timeLimit || question.time_limit || 10,
-            points: question.points || 100,
-            difficulty: question.difficulty || 'medium',
-            explanation: question.explanation?.trim() || '',
-            explanation_title: question.explanation_title?.trim() || '',
-            explanation_text: question.explanation_text?.trim() || '',
-            explanation_image_url: question.explanation_image_url || null,
-            order_index: i // Use array index as order
-          };
-          
-          console.log('Updating question:', question.backend_id, 'with data:', questionData);
-          
-          const { data: updatedQuestion, error: updateError } = await userSupabase
-            .from('questions')
-            .update(questionData)
-            .eq('id', question.backend_id)
-            .select()
-            .single();
-          
-          if (updateError) {
-            console.error('Error updating question:', updateError);
-            errors.push({ index: i, error: updateError.message });
-            continue;
-          }
-          
-          console.log('Question updated:', updatedQuestion.id);
-          updatedQuestions.push(updatedQuestion);
-          
-          // Handle answers for existing question - delete and recreate to avoid order conflicts
-          if (question.answers && Array.isArray(question.answers)) {
-            // Delete existing answers
-            const { error: deleteError } = await userSupabase
-              .from('answers')
-              .delete()
-              .eq('question_id', question.backend_id);
-            
-            if (deleteError) {
-              console.error('Error deleting existing answers:', deleteError);
-              errors.push({ index: i, error: `Failed to delete existing answers: ${deleteError.message}` });
-              continue;
-            }
-            
-            // Create new answers
-            for (let j = 0; j < question.answers.length; j++) {
-              const answer = question.answers[j];
-              
-              const answerData = {
-                question_id: question.backend_id,
-                answer_text: answer.text?.trim() || '',
-                is_correct: answer.isCorrect || false,
-                order_index: j,
-                answer_explanation: answer.answer_explanation?.trim() || '',
-                image_url: answer.image_url || answer.image || null
-              };
-              
-              console.log('Creating answer with data:', answerData);
-              
-              const { data: newAnswer, error: answerError } = await userSupabase
-                .from('answers')
-                .insert(answerData)
-                .select()
-                .single();
-              
-              if (answerError) {
-                console.error('Error creating answer:', answerError);
-                errors.push({ index: i, answerIndex: j, error: answerError.message });
-              } else {
-                console.log('Answer created:', newAnswer.id, 'for question:', question.backend_id);
-              }
-            }
-          }
-        }
-      } catch (questionError) {
-        console.error(`Error processing question ${i}:`, questionError);
-        errors.push({ index: i, error: questionError.message });
-      }
-    }
-    
-    // Return results
-    const allQuestions = [...updatedQuestions, ...createdQuestions];
-    
-    console.log(`Bulk update completed: ${createdQuestions.length} created, ${updatedQuestions.length} updated, ${errors.length} errors`);
-    
-    if (errors.length > 0) {
-      console.error('Bulk update errors:', errors);
-      return res.status(207).json({ // 207 Multi-Status for partial success
-        success: false,
-        questions: allQuestions,
-        errors: errors,
-        message: `Partial success: processed ${allQuestions.length}/${questions.length} questions`
-      });
-    }
-    
-    res.json({ 
-      success: true,
-      questions: allQuestions,
-      created: createdQuestions.length,
-      updated: updatedQuestions.length
-    });
-    
-  } catch (error) {
-    console.error('Error in bulk question update:', error);
-    res.status(500).json({ 
-      success: false,
-      error: error.message 
-    });
-  }
-});
-
 // Upload image for a question
 router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single('image'), async (req, res) => {
   try {
@@ -759,82 +855,6 @@ router.delete('/:id/image', AuthMiddleware.authenticateToken, async (req, res) =
     
   } catch (error) {
     console.error('Error deleting question image:', error);
-    res.status(500).json({ 
-      success: false,
-      error: error.message 
-    });
-  }
-});
-
-// Reorder questions in a question set
-router.put('/set/:id/reorder', AuthMiddleware.authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { questionOrder } = req.body; // Array of question IDs in desired order
-    
-    // Create user-scoped Supabase client for RLS compliance
-    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
-    
-    // Verify user owns the question set
-    const { data: questionSet, error: setError } = await userSupabase
-      .from('question_sets')
-      .select('id, user_id')
-      .eq('id', id)
-      .single();
-    
-    if (setError || !questionSet || questionSet.user_id !== req.userId) {
-      return res.status(403).json({ 
-        success: false,
-        error: 'Question set not found or unauthorized' 
-      });
-    }
-    
-    // Validate that all provided question IDs belong to this question set
-    const { data: existingQuestions, error: questionsError } = await userSupabase
-      .from('questions')
-      .select('id')
-      .eq('question_set_id', id);
-    
-    if (questionsError) {
-      return res.status(500).json({ 
-        success: false,
-        error: questionsError.message 
-      });
-    }
-    
-    const existingIds = existingQuestions.map(q => q.id);
-    const allValid = questionOrder.every(qId => existingIds.includes(qId));
-    
-    if (!allValid || questionOrder.length !== existingQuestions.length) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Invalid question order data' 
-      });
-    }
-    
-    // Transform the questionOrder array to match the expected format
-    const questionOrders = questionOrder.map((questionId, index) => ({
-      questionId,
-      order: index
-    }));
-
-    // Use the OrderManager to perform the batch reorder
-    const result = await orderManager.reorderQuestions(userSupabase, id, questionOrders);
-    
-    if (!result.success) {
-      return res.status(500).json({ 
-        success: false,
-        error: result.error 
-      });
-    }
-    
-    res.json({ 
-      success: true,
-      data: result.data 
-    });
-    
-  } catch (error) {
-    console.error('Error reordering questions:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 

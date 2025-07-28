@@ -346,10 +346,10 @@ function CreateQuiz() {
       const savedQuizId = await temporarySave(metadataWithThumbnail, questions);
       
       // Save all questions to backend if we're on the questions step
-      if (currentStep === 2 && questionsFormRef.current) {
-        console.log('💾 Saving all questions to backend...');
+      if (currentStep === 2 && questionsFormRef.current && savedQuizId) {
+        console.log('💾 Saving all questions to backend with quiz ID:', savedQuizId);
         try {
-          await questionsFormRef.current.saveAllQuestions();
+          await questionsFormRef.current.saveAllQuestions(savedQuizId);
           console.log('✅ All questions saved to backend');
         } catch (questionsError) {
           console.error('❌ Failed to save questions:', questionsError);

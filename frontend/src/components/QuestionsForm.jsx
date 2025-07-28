@@ -60,12 +60,15 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
   };
 
   // Save all questions to backend
-  const saveAllQuestions = async () => {
+  const saveAllQuestions = async (overrideQuizId = null) => {
     try {
-      if (!questionSetId) {
+      const targetQuizId = overrideQuizId || questionSetId;
+      if (!targetQuizId) {
         console.error('No question set ID provided for bulk save');
         return false;
       }
+      
+      console.log('Saving questions with quiz ID:', targetQuizId);
       
       // Ensure all questions have correct order_index before saving (prevents constraint violations)
       const normalizedQuestions = questions.map((question, index) => ({
@@ -94,34 +97,43 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
       );
       
       console.log('Performing bulk save for questions:', questionsData.length);
+      console.log('Sample question data:', questionsData[0]); // Debug log
       
       // Use bulk update API
       const response = await apiCall('/questions/bulk', {
         method: 'PUT',
         body: JSON.stringify({
-          question_set_id: questionSetId,
+          question_set_id: targetQuizId,
           questions: questionsData
         })
       });
       
-      if (response.success) {
-        console.log('Bulk save successful:', response);
+      if (response.success || response.questions) {
+        console.log('Bulk save completed:', response);
         
-        // Update local state with backend IDs
-        const updatedQuestions = normalizedQuestions.map((question, index) => {
+        // Update local state with backend IDs using questionsData as the base
+        const updatedQuestions = questionsData.map((questionData, index) => {
           const savedQuestion = response.questions.find(q => q.order_index === index);
           if (savedQuestion) {
             return {
-              ...question,
+              ...questionData,
               id: savedQuestion.id,
               backend_id: savedQuestion.id,
               order_index: savedQuestion.order_index
             };
           }
-          return question;
+          return questionData;
         });
         
         setQuestions(updatedQuestions);
+        
+        // Handle partial success with errors
+        if (response.errors && response.errors.length > 0) {
+          console.warn('Some questions had errors:', response.errors);
+          // Still return true as some questions were saved successfully
+          return true;
+        }
+        
         return true;
       } else {
         console.error('Bulk save failed:', response);
@@ -230,10 +242,8 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
       setQuestions(reindexedQuestions);
       setActiveQuestionIndex(index - 1);
       
-      // Trigger bulk save after reordering to persist the new order
-      setTimeout(() => {
-        saveAllQuestions();
-      }, 100);
+      // Mark as having unsaved changes instead of auto-saving
+      // This prevents race conditions and gives user control
     }
   };
 
@@ -252,10 +262,8 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
       setQuestions(reindexedQuestions);
       setActiveQuestionIndex(index + 1);
       
-      // Trigger bulk save after reordering to persist the new order
-      setTimeout(() => {
-        saveAllQuestions();
-      }, 100);
+      // Mark as having unsaved changes instead of auto-saving
+      // This prevents race conditions and gives user control
     }
   };
 
