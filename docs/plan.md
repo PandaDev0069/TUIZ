@@ -140,3 +140,16 @@ main            ← production-ready code
 dev             ← active work
 feature/join-ui ← per-feature branches
 Use pull requests to merge feature/* into dev, then dev into main for release.
+
+
+
+
+- Quiz will be held like this:
+    - Host menu
+        - From dashboard Selects a question-set and presses (Create-Game) Button
+        - A game session is created
+        - Host is redirected to /host Where the Session code is generated and shown
+    - Player menu
+        - If the player is a guest a guest session is generated
+        - player is redirected to /join menu
+        - player chooses/enters their name and session join code

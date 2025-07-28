@@ -1,23 +1,70 @@
-# This is a file containing the main points given to ai 
+# Prompt and Workflow – Quiz App
 
-## Main Points of this app
-- This is a Quiz app hosted on
-    - DB: Supabase
-    - Backend: Render
-    - Frontend: Vercel
-- This app needs to be light and fast for hosting 200~300 concurent players in a game session
-- Everything should be free including the hosting.
-- Solutions for reducing latency
-    - Use web-sockets for communication
-    - Use Less queries in between db and backend to keep things light
-    - Store game states in memory/sessio-storage
-    - Sync between the db and backend will be done in background when scores are being shown or explanation screen is on
-- Quiz will be held like this:
-    - Host menu
-        - From dashboard Selects a question-set and presses (Create-Game) Button
-        - A game session is created
-        - Host is redirected to /host Where the Session code is generated and shown
-    - Player menu
-        - If the player is a guest a guest session is generated
-        - player is redirected to /join menu
-        - player chooses/enters their name and session join code
+## Core Details – Quiz App
+
+### Architecture
+- **Database:** Supabase (PostgreSQL with RLS & Storage)
+- **Backend:** Render (Node.js + Express)
+- **Frontend:** Vercel (React + Vite)
+- **Real-time Communication:** Socket.IO over WebSockets
+- **Authentication:** Supabase Auth (JWT-based)
+
+### Scalability & Player Capacity
+- **Target Concurrent Players:** 200–300 per game session
+- **Load Strategy:**
+  - Use in-memory session management for active games
+  - Offload non-critical operations (analytics, logs) to background tasks
+  - Optimize payload size for all WebSocket messages
+
+### Hosting Strategy
+- Use only free-tier services without sacrificing performance
+- Implement rate-limiting to avoid free-tier overuse
+- Plan for easy migration to paid tiers or dedicated servers if traffic increases
+
+### Performance & Optimization Rules
+✅ **WebSockets for real-time communication:** No polling  
+✅ **Minimize database queries:**
+- Cache frequently accessed data in memory
+- Use batched writes for score updates
+
+✅ **Game state management:**
+- Store active session state in server memory or Redis (if free tier available)
+- Fallback to session storage on the client if necessary
+
+✅ **Background Sync:**
+- Perform DB updates during low-load moments (score screens, explanations)
+- Use async workers to avoid blocking gameplay
+
+✅ **Lightweight Assets:**
+- Compress images & serve via CDN
+- Lazy-load non-critical UI components
+
+### Documentation
+- Maintain a **README** with setup instructions.
+- Keep an updated **API contract** for the backend (endpoints, WebSocket events).
+
+---
+
+## Current Status
+*(Keep this updated with the latest progress)*  
+- [Example] Implemented user authentication with Supabase  
+- [Example] Added game session creation and WebSocket connection  
+
+---
+
+## Completed Features
+- [List features that are fully implemented here]
+
+---
+
+## Next Goals
+- [List immediate development goals here]
+
+---
+
+## AI Update Rules
+1. **Every time a feature is added or changed**, append it to **Current Status**.  
+2. When a feature is finalized, move it to **Completed Features**.  
+3. If new optimization strategies or rules are discovered, update the **Core Details** section.  
+4. Always keep architecture and performance sections in sync with actual implementation.  
+5. Use this file as the **master prompt** for all AI/Copilot interactions to avoid hallucinations. 
