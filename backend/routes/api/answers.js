@@ -461,16 +461,15 @@ router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single
 });
 
 // Delete image for an answer
-router.delete('/:id/image', async (req, res) => {
+router.delete('/:id/image', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Get authenticated user and verify ownership
-    const authenticatedUser = await getAuthenticatedUser(req, res);
-    if (!authenticatedUser) return;
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
-    // Get answer with image info
-    const { data: answerData, error: answerError } = await db.supabaseAdmin
+    // Get answer with image info - verify ownership through RLS
+    const { data: answerData, error: answerError } = await userSupabase
       .from('answers')
       .select(`
         id,
@@ -486,8 +485,11 @@ router.delete('/:id/image', async (req, res) => {
       .eq('id', id)
       .single();
     
-    if (answerError || !answerData || answerData.questions.question_sets.user_id !== authenticatedUser.id) {
-      return res.status(403).json({ error: 'Answer not found or unauthorized' });
+    if (answerError || !answerData) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Answer not found or unauthorized' 
+      });
     }
     
     // Delete from storage if URL exists
@@ -508,8 +510,8 @@ router.delete('/:id/image', async (req, res) => {
       }
     }
     
-    // Update answer to remove image references
-    const { data: updatedAnswer, error: updateError } = await db.supabaseAdmin
+    // Update answer to remove image references using user-scoped client
+    const { data: updatedAnswer, error: updateError } = await userSupabase
       .from('answers')
       .update({
         image_url: null
@@ -520,14 +522,23 @@ router.delete('/:id/image', async (req, res) => {
     
     if (updateError) {
       console.error('Error removing answer image references:', updateError);
-      return res.status(500).json({ error: updateError.message });
+      return res.status(500).json({ 
+        success: false,
+        error: updateError.message 
+      });
     }
     
-    res.json({ answer: updatedAnswer });
+    res.json({ 
+      success: true,
+      answer: updatedAnswer 
+    });
     
   } catch (error) {
     console.error('Error deleting answer image:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 

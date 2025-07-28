@@ -87,7 +87,86 @@ function ExplanationModal({ isOpen, onClose, question, updateQuestion }) {
   };
 
   // Remove explanation image
-  const removeExplanationImage = () => {
+  const removeExplanationImage = async () => {
+    console.log('🎯 Starting explanation image removal process...', {
+      hasBackendId: !!question.backend_id,
+      hasImageUrl: !!question.explanation_image_url,
+      imageUrl: question.explanation_image_url,
+      isBlob: question.explanation_image_url?.startsWith('blob:')
+    });
+    
+    try {
+      // If question has a backend ID and an uploaded explanation image, delete from server
+      if (question.backend_id && question.explanation_image_url && !question.explanation_image_url.startsWith('blob:')) {
+        console.log('🗑️ Deleting explanation image from server via question endpoint:', question.explanation_image_url);
+        const response = await apiCall(`/questions/${question.backend_id}/explanation-image`, {
+          method: 'DELETE'
+        });
+        
+        console.log('📥 Explanation image deletion response:', response);
+        
+        if (response.success) {
+          console.log('✅ Explanation image deleted from server successfully');
+        } else {
+          console.warn('⚠️ Server deletion failed, but continuing with local removal');
+        }
+      } else if (question.explanation_image_url && !question.explanation_image_url.startsWith('blob:')) {
+        // If we have an uploaded image but no backend_id, try to delete directly from storage
+        console.log('🗑️ Deleting orphaned explanation image directly from storage:', question.explanation_image_url);
+        
+        try {
+          // Extract bucket and file path from URL
+          const urlParts = question.explanation_image_url.split('/');
+          const bucketIndex = urlParts.findIndex(part => part === 'public');
+          
+          if (bucketIndex !== -1 && bucketIndex + 2 < urlParts.length) {
+            const bucket = urlParts[bucketIndex + 1]; // Should be 'explanation-images'
+            const filePath = urlParts.slice(bucketIndex + 2).join('/');
+            
+            const response = await apiCall('/upload/image', {
+              method: 'DELETE',
+              body: JSON.stringify({
+                bucket: bucket,
+                filePath: filePath
+              }),
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            console.log('📥 Direct storage deletion response:', response);
+            
+            if (response.message) {
+              console.log('✅ Explanation image deleted from storage successfully');
+            } else {
+              console.warn('⚠️ Storage deletion response unclear, but continuing with local removal');
+            }
+          } else {
+            console.warn('⚠️ Could not parse image URL for deletion:', question.explanation_image_url);
+          }
+        } catch (storageError) {
+          console.error('❌ Failed to delete explanation image from storage:', storageError);
+          // Continue with local removal even if storage deletion fails
+        }
+      } else {
+        console.log('⏭️ Skipping server deletion:', {
+          reason: !question.backend_id && !question.explanation_image_url ? 'No backend ID or image URL' : 
+                  !question.explanation_image_url ? 'No image URL' :
+                  !question.backend_id ? 'No backend ID (deleted from storage)' :
+                  'Blob URL (local only)'
+        });
+      }
+    } catch (error) {
+      console.error('❌ Failed to delete explanation image from server:', error);
+      // Continue with local removal even if server deletion fails
+    }
+
+    // Clean up local blob URL if it exists
+    if (question.explanation_image && question.explanation_image.startsWith('blob:')) {
+      URL.revokeObjectURL(question.explanation_image);
+    }
+    
+    // Update local state
     updateQuestion({ 
       ...question, 
       explanation_image_url: null,

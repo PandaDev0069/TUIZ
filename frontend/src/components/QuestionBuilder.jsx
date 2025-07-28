@@ -456,13 +456,51 @@ const QuestionBuilder = forwardRef(({
   };
 
   // Remove question image
-  const removeQuestionImage = () => {
-    if (question.image) {
+  const removeQuestionImage = async () => {
+    console.log('🎯 Starting question image removal process...', {
+      hasBackendId: !!question.backend_id,
+      hasImageUrl: !!question.image_url,
+      imageUrl: question.image_url,
+      isBlob: question.image_url?.startsWith('blob:')
+    });
+    
+    try {
+      // If question has a backend ID and an uploaded image, delete from server
+      if (question.backend_id && question.image_url && !question.image_url.startsWith('blob:')) {
+        console.log('🗑️ Deleting question image from server:', question.image_url);
+        const response = await apiCall(`/questions/${question.backend_id}/image`, {
+          method: 'DELETE'
+        });
+        
+        console.log('📥 Question image deletion response:', response);
+        
+        if (response.success) {
+          console.log('✅ Question image deleted from server successfully');
+        } else {
+          console.warn('⚠️ Server deletion failed, but continuing with local removal');
+        }
+      } else {
+        console.log('⏭️ Skipping server deletion:', {
+          reason: !question.backend_id ? 'No backend ID' : 
+                  !question.image_url ? 'No image URL' : 
+                  'Blob URL (local only)'
+        });
+      }
+    } catch (error) {
+      console.error('❌ Failed to delete question image from server:', error);
+      // Continue with local removal even if server deletion fails
+    }
+
+    // Clean up local blob URL
+    if (question.image && question.image.startsWith('blob:')) {
       URL.revokeObjectURL(question.image);
     }
+    
+    // Update local state
     updateQuestion({ 
       ...question, 
       image: "", 
+      image_url: null,
       imageFile: null 
     });
     setHasUnsavedChanges(true);
@@ -615,12 +653,91 @@ const QuestionBuilder = forwardRef(({
   };
 
   // Remove answer image
-  const removeAnswerImage = (index) => {
+  const removeAnswerImage = async (index) => {
     const answer = question.answers[index];
-    if (answer.image) {
+    
+    console.log('🎯 Starting answer image removal process...', {
+      answerIndex: index,
+      hasBackendId: !!answer.backend_id,
+      hasImageUrl: !!answer.image_url,
+      imageUrl: answer.image_url,
+      isBlob: answer.image_url?.startsWith('blob:')
+    });
+    
+    try {
+      // If answer has a backend ID and an uploaded image, delete from server
+      if (answer.backend_id && answer.image_url && !answer.image_url.startsWith('blob:')) {
+        console.log('🗑️ Deleting answer image from server via answer endpoint:', answer.image_url);
+        const response = await apiCall(`/answers/${answer.backend_id}/image`, {
+          method: 'DELETE'
+        });
+        
+        console.log('📥 Answer image deletion response:', response);
+        
+        if (response.success || response.answer) {
+          console.log('✅ Answer image deleted from server successfully');
+        } else {
+          console.warn('⚠️ Server deletion failed, but continuing with local removal');
+        }
+      } else if (answer.image_url && !answer.image_url.startsWith('blob:')) {
+        // If we have an uploaded image but no backend_id, try to delete directly from storage
+        console.log('🗑️ Deleting orphaned answer image directly from storage:', answer.image_url);
+        
+        try {
+          // Extract bucket and file path from URL
+          const urlParts = answer.image_url.split('/');
+          const bucketIndex = urlParts.findIndex(part => part === 'public');
+          
+          if (bucketIndex !== -1 && bucketIndex + 2 < urlParts.length) {
+            const bucket = urlParts[bucketIndex + 1]; // Should be 'answer-images'
+            const filePath = urlParts.slice(bucketIndex + 2).join('/');
+            
+            const response = await apiCall('/upload/image', {
+              method: 'DELETE',
+              body: JSON.stringify({
+                bucket: bucket,
+                filePath: filePath
+              }),
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            console.log('📥 Direct storage deletion response:', response);
+            
+            if (response.message) {
+              console.log('✅ Answer image deleted from storage successfully');
+            } else {
+              console.warn('⚠️ Storage deletion response unclear, but continuing with local removal');
+            }
+          } else {
+            console.warn('⚠️ Could not parse image URL for deletion:', answer.image_url);
+          }
+        } catch (storageError) {
+          console.error('❌ Failed to delete answer image from storage:', storageError);
+          // Continue with local removal even if storage deletion fails
+        }
+      } else {
+        console.log('⏭️ Skipping server deletion:', {
+          reason: !answer.backend_id && !answer.image_url ? 'No backend ID or image URL' : 
+                  !answer.image_url ? 'No image URL' :
+                  !answer.backend_id ? 'No backend ID (deleted from storage)' :
+                  'Blob URL (local only)'
+        });
+      }
+    } catch (error) {
+      console.error('❌ Failed to delete answer image from server:', error);
+      // Continue with local removal even if server deletion fails
+    }
+
+    // Clean up local blob URL
+    if (answer.image && answer.image.startsWith('blob:')) {
       URL.revokeObjectURL(answer.image);
     }
+    
+    // Update local state
     updateAnswer(index, 'image', '');
+    updateAnswer(index, 'image_url', null);
     updateAnswer(index, 'imageFile', null);
     setHasUnsavedChanges(true);
   };

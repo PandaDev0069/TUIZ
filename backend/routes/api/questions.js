@@ -1134,4 +1134,79 @@ router.delete('/:id/image', AuthMiddleware.authenticateToken, async (req, res) =
   }
 });
 
+// Delete explanation image for a question
+router.delete('/:id/explanation-image', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+    
+    // Get question with explanation image info - RLS will handle ownership verification
+    const { data: questionData, error: questionError } = await userSupabase
+      .from('questions')
+      .select(`
+        id,
+        explanation_image_url
+      `)
+      .eq('id', id)
+      .single();
+    
+    if (questionError || !questionData) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Question not found or unauthorized' 
+      });
+    }
+    
+    // Delete from storage if URL exists
+    if (questionData.explanation_image_url) {
+      // Extract the file path from the URL
+      // Supabase storage URLs are like: https://[project].supabase.co/storage/v1/object/public/[bucket]/[path]
+      const urlParts = questionData.explanation_image_url.split('/');
+      const bucketIndex = urlParts.findIndex(part => part === 'public');
+      if (bucketIndex !== -1 && bucketIndex + 2 < urlParts.length) {
+        const filePath = urlParts.slice(bucketIndex + 2).join('/');
+        const { error: deleteError } = await db.supabaseAdmin.storage
+          .from(process.env.STORAGE_BUCKET_EXPLANATION_IMAGES || 'explanation-images')
+          .remove([filePath]);
+        
+        if (deleteError) {
+          console.error('Storage delete error:', deleteError);
+        }
+      }
+    }
+    
+    // Update question to remove explanation image references using user-scoped client
+    const { data: updatedQuestion, error: updateError } = await userSupabase
+      .from('questions')
+      .update({
+        explanation_image_url: null
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Error removing question explanation image references:', updateError);
+      return res.status(500).json({ 
+        success: false,
+        error: updateError.message 
+      });
+    }
+    
+    res.json({ 
+      success: true,
+      question: updatedQuestion 
+    });
+    
+  } catch (error) {
+    console.error('Error deleting question explanation image:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
 module.exports = router;
