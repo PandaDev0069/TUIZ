@@ -8,10 +8,8 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 ## 🔴 Active Issues
 
 ### High Priority
-22. Answer images storing blob URLs instead of Supabase storage URLs - PARTIALLY FIXED (blob URLs now filtered out)
 11. Question type not being saved properly - backend receiving incorrect data
 12. Intermediate save not working for answers
-13. Explanation Image is not being deleted when the whole question set gets deleted
 14. Explanation description not allowing spaces
 15. Fix big and bulky additional options re-ordering up and down buttons
 
@@ -24,6 +22,72 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 ---
 
 ## ✅ Resolved Issues (Latest First)
+
+### Issue #23: Images Not Being Deleted from Database and Storage Buckets
+**Date:** 2025-01-28 | **Status:** FIXED ✅ | **Severity:** High  
+**Component:** Frontend/Backend API - Image Management
+
+**Problem:**
+When removing images from questions, answers, and explanations, the images were only cleared from local state but not deleted from the database and Supabase storage buckets, causing:
+- Orphaned files accumulating in storage buckets
+- Increased storage costs
+- Database containing invalid image URLs
+- Only thumbnail deletion was working properly
+
+**Root Cause:**
+The image removal functions (`removeQuestionImage`, `removeAnswerImage`, `removeExplanationImage`) only updated local state without making API calls to delete from server. Additionally, some images were uploaded to storage before answers had backend IDs, creating orphaned files.
+
+**Solution:**
+Implemented comprehensive image deletion system following the successful thumbnail deletion pattern:
+
+1. **Fixed API Path Issues**: 
+   - Corrected API paths (removed duplicate `/api` prefixes since `apiCall` function automatically adds `/api/`)
+   - Question images: `/questions/{id}/image` 
+   - Answer images: `/answers/{id}/image`
+   - Explanation images: `/questions/{id}/explanation-image` (new endpoint)
+
+2. **Added New Backend Endpoint**:
+   - Created `DELETE /questions/:id/explanation-image` endpoint for explanation image deletion
+   - Follows same pattern as question/answer image deletion
+   - Deletes from both database and storage bucket
+
+3. **Implemented Dual Deletion Strategy**:
+   - **Primary Path**: Use proper endpoints when backend_id exists
+   - **Fallback Path**: Delete directly from storage using `/upload/image` endpoint for orphaned images without backend_id
+
+4. **Enhanced Error Handling**:
+   - Added comprehensive logging for debugging
+   - Graceful fallback to local removal if server deletion fails
+   - Handles all edge cases (blob URLs, missing IDs, network errors)
+
+**Technical Implementation:**
+```javascript
+// Example: Answer image deletion with fallback
+if (answer.backend_id && answer.image_url && !answer.image_url.startsWith('blob:')) {
+  // Primary: Use answer endpoint
+  await apiCall(`/answers/${answer.backend_id}/image`, { method: 'DELETE' });
+} else if (answer.image_url && !answer.image_url.startsWith('blob:')) {
+  // Fallback: Delete directly from storage
+  await apiCall('/upload/image', { 
+    method: 'DELETE', 
+    body: JSON.stringify({ bucket, filePath }) 
+  });
+}
+```
+
+**Files Modified:**
+- `frontend/src/components/QuestionBuilder.jsx` - Enhanced question and answer image deletion
+- `frontend/src/components/ExplanationModal.jsx` - Enhanced explanation image deletion  
+- `backend/routes/api/questions.js` - Added explanation image deletion endpoint
+- `backend/routes/api/answers.js` - Fixed authentication and response format consistency
+
+**Testing Notes:**
+- All image types now properly delete from both database and storage
+- Works for images with and without backend IDs
+- Storage costs no longer accumulate from orphaned files
+- Comprehensive logging helps identify any remaining issues
+
+---
 
 ### Issue #21: Database Check Constraint Violation with Negative Order Index
 **Date:** 2025-01-28 | **Status:** FIXED ✅ | **Severity:** High  
@@ -192,13 +256,13 @@ Missing bulk update API endpoint for handling multiple questions simultaneously.
 
 ## 📊 Issue Statistics
 
-**Total Issues Tracked:** 21  
-**Resolved:** 16 (76%)  
-**Active:** 5 (24%)  
-**High Priority Active:** 5  
+**Total Issues Tracked:** 23  
+**Resolved:** 18 (78%)  
+**Active:** 5 (22%)  
+**High Priority Active:** 4  
 
 **Resolution Rate by Component:**
-- Backend API: 13/16 resolved (81%)
+- Backend API: 15/18 resolved (83%)
 - Frontend: 3/5 resolved (60%)
 - Database: 3/3 resolved (100%)
 

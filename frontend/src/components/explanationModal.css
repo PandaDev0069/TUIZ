@@ -325,6 +325,9 @@
 
 .footer-buttons {
   display: flex;
+  flex-direction: row;
+  align-items: right;
+  justify-content: space-between; /* Shift buttons to opposite ends */
   gap: 12px;
 }
 
@@ -359,6 +362,9 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap; /* Prevent text wrapping */
+  text-overflow: ellipsis; /* Add ellipsis if text is too long */
+  margin-right: auto; /* Move cancel button to the left */
 }
 
 .btn-secondary:hover {
@@ -432,6 +438,8 @@
   
   .footer-buttons {
     width: 100%;
+    display: flex;
+    justify-content: center;
   }
   
   .btn-primary,

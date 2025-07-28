@@ -17,7 +17,7 @@
     - (✅)properly implement Rest of the meta data
     - (✅)add field to add the explanation page(comprehensive explanation system with title, text, and image support via modal)
     - (✅)Shift the overall position of explantion modal to upward.
-    - (✅)Fix the button flex in the explantion modal
+    - Fix the button flex in the explantion modal
     - (✅)Fix the image upload in the explanation modal
     - (✅)Backend integration for questions and answers creation
     - (✅)Real-time auto-save functionality for questions

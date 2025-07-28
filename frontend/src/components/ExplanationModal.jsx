@@ -333,16 +333,6 @@ function ExplanationModal({ isOpen, onClose, question, updateQuestion }) {
 
         <div className="modal-footer">
           <div className="footer-actions">
-            {hasExplanationContent && (
-              <button 
-                type="button"
-                className="btn-danger-outline btn-small"
-                onClick={clearAllExplanations}
-                title="すべての解説データをクリア"
-              >
-                🗑️ すべてクリア
-              </button>
-            )}
             <div className="footer-buttons">
               <button 
                 type="button"
