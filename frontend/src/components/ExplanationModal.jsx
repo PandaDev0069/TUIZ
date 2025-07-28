@@ -278,7 +278,7 @@ function ExplanationModal({ isOpen, onClose, question, updateQuestion }) {
                 onClick={onClose}
               >
                 <span className="button-icon">💾</span>
-                解説を保存
+                保存
               </button>
             </div>
           </div>
