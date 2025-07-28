@@ -16,9 +16,12 @@
     - (✅)properly store the question order 
     - (✅)properly implement Rest of the meta data
     - (✅)add field to add the explanation page(comprehensive explanation system with title, text, and image support via modal)
-    - Shift the overall position of explantion modal to upward.
+    - (✅)Shift the overall position of explantion modal to upward.
     - (✅)Fix the button flex in the explantion modal
-    - Fix the image upload in the explanation modal
+    - (✅)Fix the image upload in the explanation modal
+    - (✅)Backend integration for questions and answers creation
+    - (✅)Real-time auto-save functionality for questions
+    - (✅)Progressive saving with save status indicators
     - after all required fields are filled proceed to the settings section
 - ### quiz-settings
     - clean the ui and remove the un-necessary fields that are not in the db

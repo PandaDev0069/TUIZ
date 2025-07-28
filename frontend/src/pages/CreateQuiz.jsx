@@ -145,6 +145,7 @@ function CreateQuiz() {
 
   // Image upload functions (refs to hold the upload functions from components)
   const thumbnailUploadRef = useRef(null);
+  const questionsFormRef = useRef(null);
 
   // Quiz questions state
   const [questions, setQuestions] = useState([
@@ -344,6 +345,18 @@ function CreateQuiz() {
       // Save the quiz with the updated metadata (including thumbnail URL)
       const savedQuizId = await temporarySave(metadataWithThumbnail, questions);
       
+      // Save all questions to backend if we're on the questions step
+      if (currentStep === 2 && questionsFormRef.current) {
+        console.log('💾 Saving all questions to backend...');
+        try {
+          await questionsFormRef.current.saveAllQuestions();
+          console.log('✅ All questions saved to backend');
+        } catch (questionsError) {
+          console.error('❌ Failed to save questions:', questionsError);
+          showWarning('メタデータは保存されましたが、一部の質問の保存に失敗しました');
+        }
+      }
+      
       // Handle thumbnail upload for NEW quizzes (when no currentQuizId exists yet)
       if (savedQuizId && metadata.thumbnail_pending && thumbnailUploadRef.current && !currentQuizId) {
         console.log('🖼️ Uploading thumbnail for new quiz:', savedQuizId);
@@ -379,8 +392,10 @@ function CreateQuiz() {
   };
 
   // Upload pending images (thumbnail, question images, answer images)
-  const uploadPendingImages = async () => {
-    if (!currentQuizId) {
+  const uploadPendingImages = async (quizId = null) => {
+    const targetQuizId = quizId || currentQuizId;
+    
+    if (!targetQuizId) {
       console.log('⚠️ No quiz ID available for image upload');
       return;
     }
@@ -388,8 +403,8 @@ function CreateQuiz() {
     try {
       // Upload thumbnail if pending
       if (metadata.thumbnail_pending && thumbnailUploadRef.current) {
-        console.log('🖼️ Uploading thumbnail for quiz:', currentQuizId);
-        const thumbnailUrl = await thumbnailUploadRef.current(currentQuizId);
+        console.log('🖼️ Uploading thumbnail for quiz:', targetQuizId);
+        const thumbnailUrl = await thumbnailUploadRef.current(targetQuizId);
         if (thumbnailUrl) {
           // Update local state
           setMetadata(prev => ({
@@ -414,42 +429,20 @@ function CreateQuiz() {
     }
   };
 
-  // Auto-save when data changes (use ref to prevent infinite loops)
-  const autoSaveTimeoutRef = useRef(null);
-  const lastSaveDataRef = useRef({ metadata: null, questions: null });
-  
+  // Auto-save when data changes - use proper auto-save mechanism
   useEffect(() => {
-    // Only auto-save if we're not loading draft and have a current quiz ID
-    if (currentQuizId && !draftLoadedRef.current && isAuthenticated) {
-      // Check if data actually changed to prevent unnecessary saves
-      const currentData = JSON.stringify({ metadata, questions });
-      const lastData = JSON.stringify(lastSaveDataRef.current);
-      
-      if (currentData !== lastData) {
-        // Clear previous timeout
-        if (autoSaveTimeoutRef.current) {
-          clearTimeout(autoSaveTimeoutRef.current);
-        }
-        
-        // Schedule auto-save with debounce
-        autoSaveTimeoutRef.current = setTimeout(async () => {
-          try {
-            await temporarySave(metadata, questions);
-            lastSaveDataRef.current = { metadata: { ...metadata }, questions: [...questions] };
-          } catch (error) {
-            console.warn('❌ Auto-save failed:', error.message);
-          }
-        }, 2000); // 2 second debounce
-      }
+    // Only schedule auto-save if we have a current quiz ID and are authenticated
+    if (currentQuizId && !draftLoadedRef.current && isAuthenticated && autoSaveEnabled) {
+      scheduleAutoSave(metadata, questions);
     }
     
-    // Cleanup timeout on unmount
+    // Cleanup on unmount or dependency change
     return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
+      if (scheduleAutoSave.cancel) {
+        scheduleAutoSave.cancel();
       }
     };
-  }, [metadata, questions, currentQuizId, isAuthenticated]);
+  }, [metadata, questions, currentQuizId, isAuthenticated, autoSaveEnabled, scheduleAutoSave]);
 
   // Auto-save when step changes
   const handleNext = async () => {
@@ -460,9 +453,11 @@ function CreateQuiz() {
           await handleTemporarySave();
         } else if (metadata.title.trim()) {
           // Create draft if moving from metadata step
-          await temporarySave(metadata, questions);
-          // Upload pending images after creating quiz
-          await uploadPendingImages();
+          const savedQuizId = await temporarySave(metadata, questions);
+          // Upload pending images after creating quiz, pass the quiz ID directly
+          if (savedQuizId) {
+            await uploadPendingImages(savedQuizId);
+          }
         }
       } catch (error) {
         console.warn('Auto-save failed, continuing anyway:', error);
@@ -498,7 +493,7 @@ function CreateQuiz() {
           await temporarySave(metadata, questions);
           
           // Upload any remaining pending images
-          await uploadPendingImages();
+          await uploadPendingImages(currentQuizId);
           
           // Publish the quiz
           const result = await publishQuiz({
@@ -893,8 +888,10 @@ function CreateQuiz() {
 
             {currentStep === 2 && (
               <QuestionsForm 
+                ref={questionsFormRef}
                 questions={questions} 
                 setQuestions={setQuestions}
+                questionSetId={currentQuizId}
               />
             )}
 

@@ -1,14 +1,21 @@
-import { useState } from 'react';
+import { useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import QuestionBuilder from './QuestionBuilder';
 import './questionsForm.css';
 
-function QuestionsForm({ questions, setQuestions }) {
+const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = null }, ref) => {
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+  const questionBuilderRefs = useRef([]);
+
+  // Expose functions to parent component
+  useImperativeHandle(ref, () => ({
+    saveAllQuestions,
+    hasUnsavedChanges
+  }));
 
   // Add new question
   const addQuestion = () => {
     const newQuestion = {
-      id: Date.now() + Math.random(),
+      id: `temp_${Date.now()}_${Math.random()}`, // Use temp ID to identify unsaved questions
       text: "",
       image: "",
       imageFile: null,
@@ -48,6 +55,37 @@ function QuestionsForm({ questions, setQuestions }) {
     const newQuestions = [...questions, newQuestion];
     setQuestions(newQuestions);
     setActiveQuestionIndex(newQuestions.length - 1);
+  };
+
+  // Save all questions to backend
+  const saveAllQuestions = async () => {
+    try {
+      // Save each question with its proper array index
+      const savePromises = questions.map(async (question, index) => {
+        // Find the ref for this question
+        const questionRef = questionBuilderRefs.current[index];
+        if (questionRef) {
+          // Update question order_index before saving
+          const updatedQuestion = { ...question, order_index: index };
+          updateQuestion(index, updatedQuestion);
+          
+          // Force save with correct index
+          return questionRef.forceSave();
+        }
+      }).filter(Boolean); // Remove undefined entries
+      
+      await Promise.all(savePromises);
+      console.log('All questions saved successfully');
+      return true;
+    } catch (error) {
+      console.error('Failed to save some questions:', error);
+      return false;
+    }
+  };
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = () => {
+    return questionBuilderRefs.current.some(ref => ref?.hasUnsavedChanges);
   };
 
   // Delete question
@@ -276,11 +314,30 @@ function QuestionsForm({ questions, setQuestions }) {
         {/* Active Question Builder */}
         {questions.length > 0 && (
           <QuestionBuilder
+            ref={(el) => {
+              // Store ref using question ID for more reliable reference
+              const question = questions[activeQuestionIndex];
+              if (question && question.id) {
+                questionBuilderRefs.current[activeQuestionIndex] = el;
+              }
+            }}
             question={questions[activeQuestionIndex]}
             updateQuestion={(updatedQuestion) => updateQuestion(activeQuestionIndex, updatedQuestion)}
             questionIndex={activeQuestionIndex}
             totalQuestions={questions.length}
             onDeleteQuestion={deleteQuestion}
+            questionSetId={questionSetId}
+            onQuestionSaved={(savedQuestion) => {
+              console.log('Question saved:', savedQuestion);
+              // Update the question with backend data if needed
+              const updatedQuestion = {
+                ...questions[activeQuestionIndex],
+                id: savedQuestion.id,
+                backend_id: savedQuestion.id,
+                order_index: activeQuestionIndex // Ensure order_index is set
+              };
+              updateQuestion(activeQuestionIndex, updatedQuestion);
+            }}
           />
         )}
 
@@ -370,6 +427,6 @@ function QuestionsForm({ questions, setQuestions }) {
       </div>
     </div>
   );
-}
+});
 
 export default QuestionsForm;

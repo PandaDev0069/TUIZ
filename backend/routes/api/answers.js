@@ -75,18 +75,84 @@ router.get('/question/:id', AuthMiddleware.authenticateToken, async (req, res) =
   }
 });
 
+// Delete all answers for a specific question (bulk delete)
+router.delete('/question/:id', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const { id: questionId } = req.params;
+    
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+    
+    // First verify user has access to this question (through question set ownership)
+    const { data: question, error: questionError } = await userSupabase
+      .from('questions')
+      .select('question_set_id')
+      .eq('id', questionId)
+      .single();
+    
+    if (questionError || !question) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Question not found or access denied' 
+      });
+    }
+    
+    // Verify user owns the question set
+    const { data: questionSet, error: setError } = await userSupabase
+      .from('question_sets')
+      .select('user_id')
+      .eq('id', question.question_set_id)
+      .single();
+    
+    if (setError || !questionSet || questionSet.user_id !== req.userId) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Access denied - you can only delete answers for your own questions' 
+      });
+    }
+    
+    // Delete all answers for this question
+    const { data: deletedAnswers, error: deleteError } = await userSupabase
+      .from('answers')
+      .delete()
+      .eq('question_id', questionId)
+      .select();
+    
+    if (deleteError) {
+      console.error('Error deleting answers:', deleteError);
+      return res.status(500).json({ 
+        success: false,
+        error: 'Failed to delete answers' 
+      });
+    }
+    
+    res.json({ 
+      success: true,
+      deleted_count: deletedAnswers ? deletedAnswers.length : 0,
+      message: `Deleted ${deletedAnswers ? deletedAnswers.length : 0} answers for question ${questionId}`
+    });
+  } catch (error) {
+    console.error('Error in bulk delete answers:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
 // Create a new answer
-router.post('/', async (req, res) => {
+router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { 
       question_id, 
       answer_text, 
       image_url,
-      image_storage_path,
       is_correct, 
       order_index,
       answer_explanation
     } = req.body;
+    
+    console.log('Creating answer with data:', { question_id, answer_text, is_correct, order_index });
     
     // Validate required fields
     if (!question_id || !answer_text) {
@@ -95,33 +161,16 @@ router.post('/', async (req, res) => {
       });
     }
     
-    // Get authenticated user and verify ownership of question (through question set)
-    let authenticatedUser;
-    try {
-      authenticatedUser = await getAuthenticatedUser(req.headers.authorization);
-    } catch (authError) {
-      return res.status(401).json({ error: authError.message });
-    }
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
-    // Verify the user owns the question (through question set)
-    const { data: questionData, error: questionError } = await db.supabaseAdmin
-      .from('questions')
-      .select('question_set_id, question_sets!inner(user_id)')
-      .eq('id', question_id)
-      .single();
-    
-    if (questionError || !questionData || questionData.question_sets.user_id !== authenticatedUser.id) {
-      return res.status(403).json({ error: 'Question not found or unauthorized' });
-    }
-    
-    // Create the answer
-    const { data: answer, error } = await db.supabaseAdmin
+    // Create the answer using user-scoped client (RLS will handle permission check)
+    const { data: answer, error } = await userSupabase
       .from('answers')
       .insert({
         question_id,
         answer_text: answer_text.trim(),
         image_url: image_url || null,
-        image_storage_path: image_storage_path || null,
         is_correct: is_correct || false,
         order_index: order_index || 0,
         answer_explanation: answer_explanation || null
@@ -143,47 +192,40 @@ router.post('/', async (req, res) => {
 });
 
 // Update an answer
-router.put('/:id', async (req, res) => {
+router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { 
       answer_text, 
       image_url,
-      image_storage_path,
       is_correct, 
       order_index,
       answer_explanation
     } = req.body;
     
-    // Get authenticated user
-    let authenticatedUser;
-    try {
-      authenticatedUser = await getAuthenticatedUser(req.headers.authorization);
-    } catch (authError) {
-      return res.status(401).json({ error: authError.message });
-    }
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
-    // Verify the user owns the answer (through question -> question set)
-    const { data: answerData, error: answerError } = await db.supabaseAdmin
+    // Verify ownership of the answer (through question set) - RLS will handle this automatically
+    const { data: answerData, error: answerError } = await userSupabase
       .from('answers')
-      .select('question_id, questions!inner(question_sets!inner(user_id))')
+      .select('id')
       .eq('id', id)
       .single();
     
-    if (answerError || !answerData || answerData.questions.question_sets.user_id !== authenticatedUser.id) {
+    if (answerError || !answerData) {
       return res.status(403).json({ error: 'Answer not found or unauthorized' });
     }
     
-    // Update the answer
+    // Update the answer using user-scoped client
     const updateData = {};
     if (answer_text !== undefined) updateData.answer_text = answer_text.trim();
     if (image_url !== undefined) updateData.image_url = image_url;
-    if (image_storage_path !== undefined) updateData.image_storage_path = image_storage_path;
     if (is_correct !== undefined) updateData.is_correct = is_correct;
     if (order_index !== undefined) updateData.order_index = order_index;
     if (answer_explanation !== undefined) updateData.answer_explanation = answer_explanation?.trim() || null;
     
-    const { data: updatedAnswer, error } = await db.supabaseAdmin
+    const { data: updatedAnswer, error } = await userSupabase
       .from('answers')
       .update(updateData)
       .eq('id', id)
@@ -281,7 +323,6 @@ router.post('/bulk', async (req, res) => {
       question_id,
       answer_text: a.answer_text?.trim() || a.text?.trim(),
       image_url: a.image_url || a.image || null,
-      image_storage_path: a.image_storage_path || null,
       is_correct: a.is_correct || a.isCorrect || false,
       order_index: a.order_index !== undefined ? a.order_index : index,
       answer_explanation: a.answer_explanation || null
@@ -307,42 +348,39 @@ router.post('/bulk', async (req, res) => {
 });
 
 // Upload image for an answer
-router.post('/:id/upload-image', upload.single('image'), async (req, res) => {
+router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params;
+    
+    console.log('Uploading answer image for answer:', id);
     
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
     }
     
-    // Get authenticated user and verify ownership
-    const authenticatedUser = await getAuthenticatedUser(req, res);
-    if (!authenticatedUser) return;
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
-    // Check if answer exists and user owns it (through question set)
-    const { data: answerData, error: answerError } = await db.supabaseAdmin
+    // Verify ownership of the answer - RLS will handle this automatically
+    const { data: answerData, error: answerError } = await userSupabase
       .from('answers')
-      .select(`
-        id,
-        questions (
-          id,
-          question_sets (
-            id,
-            user_id
-          )
-        )
-      `)
+      .select('id')
       .eq('id', id)
       .single();
     
-    if (answerError || !answerData || answerData.questions.question_sets.user_id !== authenticatedUser.id) {
+    if (answerError || !answerData) {
       return res.status(403).json({ error: 'Answer not found or unauthorized' });
     }
+    
+    // Get user ID from token
+    const userId = req.user?.id;
     
     // Generate unique filename
     const fileExtension = req.file.originalname.split('.').pop();
     const fileName = `answer_${id}_${Date.now()}.${fileExtension}`;
-    const filePath = `${authenticatedUser.id}/${fileName}`;
+    const filePath = `${userId}/${fileName}`;
+    
+    console.log('Uploading answer image to storage:', filePath);
     
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await db.supabaseAdmin.storage
@@ -363,12 +401,13 @@ router.post('/:id/upload-image', upload.single('image'), async (req, res) => {
       .from(process.env.STORAGE_BUCKET_ANSWER_IMAGES || 'answer-images')
       .getPublicUrl(filePath);
     
-    // Update answer with image URL
-    const { data: updatedAnswer, error: updateError } = await db.supabaseAdmin
+    console.log('Generated answer image public URL:', publicUrl);
+    
+    // Update answer with image URL using user-scoped client
+    const { data: updatedAnswer, error: updateError } = await userSupabase
       .from('answers')
       .update({
-        image_url: publicUrl,
-        image_storage_path: filePath
+        image_url: publicUrl
       })
       .eq('id', id)
       .select()
@@ -378,6 +417,8 @@ router.post('/:id/upload-image', upload.single('image'), async (req, res) => {
       console.error('Error updating answer with image URL:', updateError);
       return res.status(500).json({ error: updateError.message });
     }
+    
+    console.log('Answer image uploaded successfully:', publicUrl);
     
     res.json({
       answer: updatedAnswer,
@@ -404,7 +445,7 @@ router.delete('/:id/image', async (req, res) => {
       .from('answers')
       .select(`
         id,
-        image_storage_path,
+        image_url,
         questions (
           id,
           question_sets (
@@ -420,14 +461,21 @@ router.delete('/:id/image', async (req, res) => {
       return res.status(403).json({ error: 'Answer not found or unauthorized' });
     }
     
-    // Delete from storage if path exists
-    if (answerData.image_storage_path) {
-      const { error: deleteError } = await db.supabaseAdmin.storage
-        .from(process.env.STORAGE_BUCKET_ANSWER_IMAGES || 'answer-images')
-        .remove([answerData.image_storage_path]);
-      
-      if (deleteError) {
-        console.error('Storage delete error:', deleteError);
+    // Delete from storage if URL exists
+    if (answerData.image_url) {
+      // Extract the file path from the URL
+      // Supabase storage URLs are like: https://[project].supabase.co/storage/v1/object/public/[bucket]/[path]
+      const urlParts = answerData.image_url.split('/');
+      const bucketIndex = urlParts.findIndex(part => part === 'public');
+      if (bucketIndex !== -1 && bucketIndex + 2 < urlParts.length) {
+        const filePath = urlParts.slice(bucketIndex + 2).join('/');
+        const { error: deleteError } = await db.supabaseAdmin.storage
+          .from(process.env.STORAGE_BUCKET_ANSWER_IMAGES || 'answer-images')
+          .remove([filePath]);
+        
+        if (deleteError) {
+          console.error('Storage delete error:', deleteError);
+        }
       }
     }
     
@@ -435,8 +483,7 @@ router.delete('/:id/image', async (req, res) => {
     const { data: updatedAnswer, error: updateError } = await db.supabaseAdmin
       .from('answers')
       .update({
-        image_url: null,
-        image_storage_path: null
+        image_url: null
       })
       .eq('id', id)
       .select()

@@ -1,11 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import ExplanationModal from './ExplanationModal';
 import './questionBuilder.css';
 
-function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestions, onDeleteQuestion }) {
+const QuestionBuilder = forwardRef(({ 
+  question, 
+  updateQuestion, 
+  questionIndex, 
+  totalQuestions, 
+  onDeleteQuestion,
+  questionSetId = null, // Add questionSetId prop for backend communication
+  onQuestionSaved = null // Callback when question is saved to backend
+}, ref) => {
+  const { apiCall } = useAuth();
   const [dragActive, setDragActive] = useState(false);
   const [answerDragActive, setAnswerDragActive] = useState({});
   const [showExplanationModal, setShowExplanationModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Expose save function to parent component
+  useImperativeHandle(ref, () => ({
+    forceSave: () => saveQuestionToBackend(),
+    hasUnsavedChanges,
+    isSaving
+  }));
 
   // Add keyboard shortcuts
   useEffect(() => {
@@ -24,6 +44,7 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
             answer_explanation: ""
           }];
           updateQuestion({ ...question, answers: newAnswers });
+          setHasUnsavedChanges(true);
         }
       }
     };
@@ -33,6 +54,284 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [question, updateQuestion]);
+
+  // Auto-save when question data changes (debounced) - DISABLED
+  // Auto-save is now handled by the main CreateQuiz component to avoid conflicts
+  // useEffect(() => {
+  //   if (!hasUnsavedChanges || !questionSetId || !question.id) return;
+  //   
+  //   // Don't auto-save blank questions
+  //   if (!question.text || question.text.trim().length === 0) return;
+  //
+  //   const autoSaveTimer = setTimeout(() => {
+  //     saveQuestionToBackend();
+  //   }, 2000); // Auto-save after 2 seconds of inactivity
+  //
+  //   return () => clearTimeout(autoSaveTimer);
+  // }, [question, hasUnsavedChanges, questionSetId]);
+
+  // Mark as having unsaved changes when question data changes
+  useEffect(() => {
+    // Only mark as having changes if question has meaningful content
+    const hasContent = question.text && question.text.trim().length > 0;
+    const hasAnswers = question.answers && question.answers.length > 0;
+    
+    if (hasContent || hasAnswers) {
+      setHasUnsavedChanges(true);
+    }
+  }, [question.text, question.answers, question.timeLimit, question.points, question.difficulty]);
+
+  // Save question to backend
+  const saveQuestionToBackend = async () => {
+    if (!questionSetId || isSaving) return;
+    
+    // Don't save if question is empty/blank
+    if (!question.text || question.text.trim().length === 0) {
+      console.log('Skipping save for blank question');
+      return;
+    }
+    
+    // Don't save if question has no answers (for question types that require answers)
+    const questionType = getQuestionType();
+    if (questionType !== 'open_ended' && (!question.answers || question.answers.length === 0)) {
+      console.log('Skipping save for question without answers');
+      return;
+    }
+    
+    try {
+      setIsSaving(true);
+      
+      // Prepare question data for backend
+      const questionData = {
+        question_set_id: questionSetId,
+        question_text: question.text.trim(),
+        question_type: getQuestionType(),
+        time_limit: question.timeLimit || 30,
+        points: question.points || 100,
+        difficulty: question.difficulty || 'medium',
+        order_index: question.order_index !== undefined ? question.order_index : questionIndex,
+        explanation_title: question.explanation_title || null,
+        explanation_text: question.explanation_text || question.explanation || null,
+        explanation_image_url: question.explanation_image_url || null
+      };
+
+      let savedQuestion;
+      
+      // Check if this is a new question that needs to be created
+      // A question is "new" if:
+      // 1. It has no backend_id, OR
+      // 2. It has a numeric timestamp ID (frontend-generated), OR  
+      // 3. It has a temp_ prefixed ID
+      const isNewQuestion = !question.backend_id || 
+                          (typeof question.id === 'number') ||
+                          (typeof question.id === 'string' && (question.id.includes('temp_') || /^\d+$/.test(question.id)));
+      
+      if (isNewQuestion) {
+        // This is a new question, create it
+        console.log('Creating new question:', questionData);
+        savedQuestion = await apiCall('/questions', {
+          method: 'POST',
+          body: JSON.stringify(questionData)
+        });
+        
+        // Update the question with the real ID from backend
+        updateQuestion({ 
+          ...question, 
+          id: savedQuestion.id,
+          backend_id: savedQuestion.id
+        });
+        
+      } else {
+        // This is an existing question with a real backend ID, update it
+        const questionId = question.backend_id;
+        console.log('Updating existing question:', questionId, questionData);
+        savedQuestion = await apiCall(`/questions/${questionId}`, {
+          method: 'PUT',
+          body: JSON.stringify(questionData)
+        });
+      }
+
+      // Save answers
+      if (savedQuestion && question.answers.length > 0) {
+        await saveAnswersToBackend(savedQuestion.id);
+      }
+
+      // Upload question image if exists
+      if (question.imageFile && savedQuestion) {
+        await uploadQuestionImage(savedQuestion.id);
+      }
+
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+      
+      if (onQuestionSaved) {
+        onQuestionSaved(savedQuestion);
+      }
+      
+      console.log('Question saved successfully:', savedQuestion.id);
+      
+    } catch (error) {
+      console.error('Failed to save question:', error);
+      // Don't clear unsaved changes flag on error
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Save answers to backend
+  const saveAnswersToBackend = async (questionId) => {
+    const answers = question.answers || [];
+    
+    // Save answers individually, handling duplicates gracefully
+    for (let i = 0; i < answers.length; i++) {
+      const answer = answers[i];
+      
+      const answerData = {
+        question_id: questionId,
+        answer_text: answer.text.trim(),
+        is_correct: answer.isCorrect,
+        order_index: i,
+        answer_explanation: answer.answer_explanation || null
+      };
+
+      try {
+        let savedAnswer;
+        
+        if (!answer.backend_id) {
+          // Try to create new answer
+          console.log('Creating new answer:', answerData);
+          try {
+            savedAnswer = await apiCall('/answers', {
+              method: 'POST',
+              body: JSON.stringify(answerData)
+            });
+            
+            // Update answer with backend ID
+            const updatedAnswers = [...question.answers];
+            updatedAnswers[i] = { ...answer, backend_id: savedAnswer.id };
+            updateQuestion({ ...question, answers: updatedAnswers });
+            
+          } catch (createError) {
+            // If creation fails due to duplicate, try to find existing answer and update
+            if (createError.message.includes('duplicate key') || createError.message.includes('23505')) {
+              console.log('Duplicate detected, attempting to find and update existing answer');
+              
+              try {
+                // Get existing answers for this question
+                const existingAnswers = await apiCall(`/answers/question/${questionId}`);
+                const existingAnswer = existingAnswers.answers?.find(a => a.order_index === i);
+                
+                if (existingAnswer) {
+                  // Update existing answer
+                  savedAnswer = await apiCall(`/answers/${existingAnswer.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(answerData)
+                  });
+                  
+                  // Update local state with backend ID
+                  const updatedAnswers = [...question.answers];
+                  updatedAnswers[i] = { ...answer, backend_id: existingAnswer.id };
+                  updateQuestion({ ...question, answers: updatedAnswers });
+                } else {
+                  throw createError; // Re-throw if we can't find existing answer
+                }
+              } catch (updateError) {
+                console.error(`Failed to handle duplicate for answer ${i}:`, updateError);
+                throw createError; // Re-throw original error
+              }
+            } else {
+              throw createError; // Re-throw if not a duplicate error
+            }
+          }
+          
+        } else {
+          // Update existing answer
+          console.log('Updating existing answer:', answer.backend_id, answerData);
+          savedAnswer = await apiCall(`/answers/${answer.backend_id}`, {
+            method: 'PUT',
+            body: JSON.stringify(answerData)
+          });
+        }
+
+        // Upload answer image if exists
+        if (answer.imageFile && savedAnswer) {
+          await uploadAnswerImage(savedAnswer.id, i);
+        }
+        
+      } catch (error) {
+        console.error(`Failed to save answer ${i}:`, error);
+        // Continue with other answers even if one fails
+      }
+    }
+  };
+
+  // Upload question image
+  const uploadQuestionImage = async (questionId) => {
+    // Don't upload if no file or already uploaded
+    if (!question.imageFile || question.image_url) return;
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', question.imageFile);
+      
+      const response = await apiCall(`/questions/${questionId}/upload-image`, {
+        method: 'POST',
+        body: formData,
+        headers: {} // Let browser set Content-Type for FormData
+      });
+      
+      // Update question with uploaded image URL
+      updateQuestion({ 
+        ...question, 
+        image_url: response.image_url,
+        image: response.image_url,
+        imageFile: null // Clear local file
+      });
+      
+      console.log('Question image uploaded:', response.image_url);
+      
+    } catch (error) {
+      console.error('Failed to upload question image:', error);
+    }
+  };
+
+  // Upload answer image
+  const uploadAnswerImage = async (answerId, answerIndex) => {
+    const answer = question.answers[answerIndex];
+    // Don't upload if no file or already uploaded
+    if (!answer.imageFile || answer.image_url) return;
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', answer.imageFile);
+      
+      const response = await apiCall(`/answers/${answerId}/upload-image`, {
+        method: 'POST',
+        body: formData,
+        headers: {} // Let browser set Content-Type for FormData
+      });
+      
+      // Update answer with uploaded image URL
+      const updatedAnswers = [...question.answers];
+      updatedAnswers[answerIndex] = { 
+        ...answer, 
+        image_url: response.image_url,
+        image: response.image_url,
+        imageFile: null // Clear local file
+      };
+      updateQuestion({ ...question, answers: updatedAnswers });
+      
+      console.log('Answer image uploaded:', response.image_url);
+      
+    } catch (error) {
+      console.error('Failed to upload answer image:', error);
+    }
+  };
+
+  // Manual save function (can be called by parent component)
+  const forceSave = async () => {
+    await saveQuestionToBackend();
+  };
 
   // Helper function to get question type (moved up for use in useEffect)
   const getQuestionType = () => {
@@ -73,6 +372,7 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
       image: url, 
       imageFile: file 
     });
+    setHasUnsavedChanges(true);
   };
 
   // Handle drag events
@@ -115,6 +415,7 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
       image: "", 
       imageFile: null 
     });
+    setHasUnsavedChanges(true);
   };
 
   // Update answer
@@ -122,6 +423,7 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
     const updated = [...question.answers];
     updated[index][key] = value;
     updateQuestion({ ...question, answers: updated });
+    setHasUnsavedChanges(true);
   };
 
   // Add new answer option
@@ -137,6 +439,7 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
         answer_explanation: ""
       }];
       updateQuestion({ ...question, answers: newAnswers });
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -147,6 +450,7 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
         .filter((_, i) => i !== index)
         .map((answer, newIndex) => ({ ...answer, order_index: newIndex }));
       updateQuestion({ ...question, answers: newAnswers });
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -161,6 +465,7 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
         order_index: newIndex 
       }));
       updateQuestion({ ...question, answers: reindexedAnswers });
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -175,6 +480,7 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
         order_index: newIndex 
       }));
       updateQuestion({ ...question, answers: reindexedAnswers });
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -217,6 +523,7 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
     const url = URL.createObjectURL(file);
     updateAnswer(index, 'image', url);
     updateAnswer(index, 'imageFile', file);
+    setHasUnsavedChanges(true);
   };
 
   // Remove answer image
@@ -227,6 +534,7 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
     }
     updateAnswer(index, 'image', '');
     updateAnswer(index, 'imageFile', null);
+    setHasUnsavedChanges(true);
   };
 
   // Ensure at least one correct answer
@@ -242,6 +550,7 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
     }
     
     updateQuestion({ ...question, answers: updated });
+    setHasUnsavedChanges(true);
   };
 
   // Calculate points based on type and difficulty
@@ -285,6 +594,26 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
           <span className="total">/ {totalQuestions}</span>
         </div>
         <div className="question-actions">
+          <div className="save-status">
+            {isSaving && (
+              <span className="saving-indicator">
+                <span className="spinner">⏳</span>
+                保存中...
+              </span>
+            )}
+            {!isSaving && hasUnsavedChanges && (
+              <span className="unsaved-indicator">
+                <span className="dot">●</span>
+                未保存
+              </span>
+            )}
+            {!isSaving && !hasUnsavedChanges && lastSaved && (
+              <span className="saved-indicator">
+                <span className="checkmark">✓</span>
+                保存済み
+              </span>
+            )}
+          </div>
           <div className="question-type-badge">
             {getQuestionType() === 'true_false' ? '○×問題' : '選択問題'}
           </div>
@@ -814,6 +1143,6 @@ function QuestionBuilder({ question, updateQuestion, questionIndex, totalQuestio
       question.explanation_imageFile
     );
   }
-}
+});
 
 export default QuestionBuilder;

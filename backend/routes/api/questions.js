@@ -83,7 +83,6 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
       question_text, 
       question_type,
       image_url,
-      image_storage_path,
       time_limit, 
       points, 
       difficulty,
@@ -93,6 +92,15 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
       explanation_image_url,
       order_index 
     } = req.body;
+    
+    console.log('Creating question with data:', { 
+      question_text, 
+      question_type, 
+      order_index, 
+      time_limit, 
+      points, 
+      difficulty 
+    });
     
     // Validate required fields
     if (!question_set_id || !question_text) {
@@ -127,7 +135,6 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
         question_text: question_text.trim(),
         question_type: question_type || 'multiple_choice',
         image_url: image_url || null,
-        image_storage_path: image_storage_path || null,
         time_limit: time_limit || 10,
         points: points || 100,
         difficulty: difficulty || 'medium',
@@ -148,10 +155,7 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
     }
     
     console.log('Question created:', question.id, 'for question set:', question_set_id);
-    res.status(201).json({
-      success: true,
-      question: question
-    });
+    res.status(201).json(question); // Return question object directly
   } catch (error) {
     console.error('Error in question creation:', error);
     res.status(500).json({ 
@@ -169,7 +173,6 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
       question_text, 
       question_type,
       image_url,
-      image_storage_path,
       time_limit, 
       points, 
       difficulty,
@@ -202,7 +205,6 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
     if (question_text !== undefined) updateData.question_text = question_text.trim();
     if (question_type !== undefined) updateData.question_type = question_type;
     if (image_url !== undefined) updateData.image_url = image_url;
-    if (image_storage_path !== undefined) updateData.image_storage_path = image_storage_path;
     if (time_limit !== undefined) updateData.time_limit = time_limit;
     if (points !== undefined) updateData.points = points;
     if (difficulty !== undefined) updateData.difficulty = difficulty;
@@ -217,7 +219,6 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
       .from('questions')
       .update(updateData)
       .eq('id', id)
-      .eq('id', id)
       .select()
       .single();
     
@@ -230,10 +231,7 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
     }
     
     console.log('Question updated:', updatedQuestion.id);
-    res.json({
-      success: true,
-      question: updatedQuestion
-    });
+    res.json(updatedQuestion); // Return question object directly
   } catch (error) {
     console.error('Error in question update:', error);
     res.status(500).json({ 
@@ -328,7 +326,6 @@ router.post('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
       question_text: q.question_text?.trim() || q.text?.trim(),
       question_type: q.question_type || q.type || 'multiple_choice',
       image_url: q.image_url || q.image || null,
-      image_storage_path: q.image_storage_path || null,
       time_limit: q.time_limit || q.timeLimit || 10,
       points: q.points || 100,
       difficulty: q.difficulty || 'medium',
@@ -359,39 +356,39 @@ router.post('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
 });
 
 // Upload image for a question
-router.post('/:id/upload-image', upload.single('image'), async (req, res) => {
+router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params;
+    
+    console.log('Uploading question image for question:', id);
     
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
     }
     
-    // Get authenticated user and verify ownership
-    const authenticatedUser = await getAuthenticatedUser(req, res);
-    if (!authenticatedUser) return;
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
-    // Check if question exists and user owns it (through question set)
-    const { data: questionData, error: questionError } = await db.supabaseAdmin
+    // Verify ownership of the question - RLS will handle this automatically
+    const { data: questionData, error: questionError } = await userSupabase
       .from('questions')
-      .select(`
-        id,
-        question_sets (
-          id,
-          user_id
-        )
-      `)
+      .select('id')
       .eq('id', id)
       .single();
     
-    if (questionError || !questionData || questionData.question_sets.user_id !== authenticatedUser.id) {
+    if (questionError || !questionData) {
       return res.status(403).json({ error: 'Question not found or unauthorized' });
     }
+    
+    // Get user ID from token
+    const userId = req.user?.id;
     
     // Generate unique filename
     const fileExtension = req.file.originalname.split('.').pop();
     const fileName = `question_${id}_${Date.now()}.${fileExtension}`;
-    const filePath = `${authenticatedUser.id}/${fileName}`;
+    const filePath = `${userId}/${fileName}`;
+    
+    console.log('Uploading to storage:', filePath);
     
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await db.supabaseAdmin.storage
@@ -412,12 +409,13 @@ router.post('/:id/upload-image', upload.single('image'), async (req, res) => {
       .from(process.env.STORAGE_BUCKET_QUESTION_IMAGES || 'question-images')
       .getPublicUrl(filePath);
     
-    // Update question with image URL
-    const { data: updatedQuestion, error: updateError } = await db.supabaseAdmin
+    console.log('Generated public URL:', publicUrl);
+    
+    // Update question with image URL using user-scoped client
+    const { data: updatedQuestion, error: updateError } = await userSupabase
       .from('questions')
       .update({
-        image_url: publicUrl,
-        image_storage_path: filePath
+        image_url: publicUrl
       })
       .eq('id', id)
       .select()
@@ -427,6 +425,8 @@ router.post('/:id/upload-image', upload.single('image'), async (req, res) => {
       console.error('Error updating question with image URL:', updateError);
       return res.status(500).json({ error: updateError.message });
     }
+    
+    console.log('Question image uploaded successfully:', publicUrl);
     
     res.json({
       question: updatedQuestion,
@@ -453,7 +453,7 @@ router.delete('/:id/image', async (req, res) => {
       .from('questions')
       .select(`
         id,
-        image_storage_path,
+        image_url,
         question_sets (
           id,
           user_id
@@ -466,14 +466,21 @@ router.delete('/:id/image', async (req, res) => {
       return res.status(403).json({ error: 'Question not found or unauthorized' });
     }
     
-    // Delete from storage if path exists
-    if (questionData.image_storage_path) {
-      const { error: deleteError } = await db.supabaseAdmin.storage
-        .from(process.env.STORAGE_BUCKET_QUESTION_IMAGES || 'question-images')
-        .remove([questionData.image_storage_path]);
-      
-      if (deleteError) {
-        console.error('Storage delete error:', deleteError);
+    // Delete from storage if URL exists
+    if (questionData.image_url) {
+      // Extract the file path from the URL
+      // Supabase storage URLs are like: https://[project].supabase.co/storage/v1/object/public/[bucket]/[path]
+      const urlParts = questionData.image_url.split('/');
+      const bucketIndex = urlParts.findIndex(part => part === 'public');
+      if (bucketIndex !== -1 && bucketIndex + 2 < urlParts.length) {
+        const filePath = urlParts.slice(bucketIndex + 2).join('/');
+        const { error: deleteError } = await db.supabaseAdmin.storage
+          .from(process.env.STORAGE_BUCKET_QUESTION_IMAGES || 'question-images')
+          .remove([filePath]);
+        
+        if (deleteError) {
+          console.error('Storage delete error:', deleteError);
+        }
       }
     }
     
@@ -481,8 +488,7 @@ router.delete('/:id/image', async (req, res) => {
     const { data: updatedQuestion, error: updateError } = await db.supabaseAdmin
       .from('questions')
       .update({
-        image_url: null,
-        image_storage_path: null
+        image_url: null
       })
       .eq('id', id)
       .select()

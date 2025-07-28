@@ -732,19 +732,80 @@ router.delete('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
       console.log('📝 No thumbnail to delete');
     }
 
-    // First, get all question IDs for this quiz
-    const { data: questionIds, error: questionIdsError } = await userSupabase
+    // First, get all question data with image URLs for cleanup
+    const { data: questionsWithImages, error: questionIdsError } = await userSupabase
       .from('questions')
-      .select('id')
+      .select('id, image_url, explanation_image_url')
       .eq('question_set_id', quizId);
 
     if (questionIdsError) {
-      console.warn('⚠️ Error fetching question IDs:', questionIdsError);
+      console.warn('⚠️ Error fetching question data:', questionIdsError);
+    }
+
+    // Get all answer data with image URLs for cleanup
+    let answersWithImages = [];
+    if (questionsWithImages && questionsWithImages.length > 0) {
+      const questionIdArray = questionsWithImages.map(q => q.id);
+      const { data: answerData, error: answerError } = await userSupabase
+        .from('answers')
+        .select('id, image_url')
+        .in('question_id', questionIdArray);
+      
+      if (answerError) {
+        console.warn('⚠️ Error fetching answer data:', answerError);
+      } else {
+        answersWithImages = answerData || [];
+      }
+    }
+
+    // Clean up all images from storage
+    const imagesToDelete = [];
+    
+    // Collect question images and explanation images
+    if (questionsWithImages) {
+      questionsWithImages.forEach(question => {
+        if (question.image_url) imagesToDelete.push(question.image_url);
+        if (question.explanation_image_url) imagesToDelete.push(question.explanation_image_url);
+      });
+    }
+    
+    // Collect answer images
+    answersWithImages.forEach(answer => {
+      if (answer.image_url) imagesToDelete.push(answer.image_url);
+    });
+
+    // Delete images from storage
+    if (imagesToDelete.length > 0) {
+      console.log(`🖼️ Deleting ${imagesToDelete.length} images from storage`);
+      
+      for (const imageUrl of imagesToDelete) {
+        try {
+          // Extract file path from URL
+          const urlParts = imageUrl.split('/');
+          const bucketIndex = urlParts.findIndex(part => part === 'public');
+          if (bucketIndex !== -1 && bucketIndex + 2 < urlParts.length) {
+            const bucketName = urlParts[bucketIndex + 1];
+            const filePath = urlParts.slice(bucketIndex + 2).join('/');
+            
+            const { error: deleteError } = await userSupabase.storage
+              .from(bucketName)
+              .remove([filePath]);
+            
+            if (deleteError) {
+              console.warn(`⚠️ Failed to delete image ${filePath}:`, deleteError);
+            } else {
+              console.log(`✅ Deleted image: ${filePath}`);
+            }
+          }
+        } catch (imageError) {
+          console.warn(`⚠️ Error deleting image ${imageUrl}:`, imageError);
+        }
+      }
     }
 
     // Delete all answers for questions in this quiz
-    if (questionIds && questionIds.length > 0) {
-      const questionIdArray = questionIds.map(q => q.id);
+    if (questionsWithImages && questionsWithImages.length > 0) {
+      const questionIdArray = questionsWithImages.map(q => q.id);
       const { error: answersError } = await userSupabase
         .from('answers')
         .delete()
