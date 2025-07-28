@@ -5,6 +5,7 @@ import { showSuccess, showError, showWarning } from '../utils/toast';
 import MetadataForm from '../components/MetadataForm';
 import QuestionsForm from '../components/QuestionsForm';
 import SettingsForm from '../components/SettingsForm';
+import ReviewForm from '../components/ReviewForm';
 import QuestionReorderModal from '../components/QuestionReorderModal';
 import SaveStatusIndicator from '../components/SaveStatusIndicator';
 import { useQuizCreation } from '../hooks/useQuizCreation';
@@ -102,6 +103,24 @@ function CreateQuiz() {
             
             setQuestions(formattedQuestions);
             console.log('Questions loaded:', formattedQuestions.length);
+          }
+
+          // Populate settings if they exist in the draft
+          if (draftData.quiz && draftData.quiz.play_settings) {
+            const draftSettings = {
+              players_cap: draftData.quiz.play_settings.players_cap || 50,
+              game_settings: {
+                autoAdvance: draftData.quiz.play_settings.autoAdvance || false,
+                hybridMode: draftData.quiz.play_settings.hybridMode || false,
+                showExplanations: draftData.quiz.play_settings.showExplanations || false,
+                explanationTime: draftData.quiz.play_settings.explanationTime || 30,
+                pointCalculation: draftData.quiz.play_settings.pointCalculation || 'fixed',
+                streakBonus: draftData.quiz.play_settings.streakBonus || false,
+                showLeaderboard: draftData.quiz.play_settings.showLeaderboard || false,
+                showProgress: draftData.quiz.play_settings.showProgress || false,
+              }
+            };
+            setSettings(draftSettings);
           }
           
           showSuccess('下書きを読み込みました');
@@ -345,19 +364,15 @@ function CreateQuiz() {
       // Save the quiz with the updated metadata (including thumbnail URL)
       const savedQuizId = await temporarySave(metadataWithThumbnail, questions);
       
-      // Save all questions to backend if we're on the questions step
-      if (currentStep === 2 && questionsFormRef.current && savedQuizId) {
-        console.log('💾 Saving all questions to backend with quiz ID:', savedQuizId);
-        try {
-          await questionsFormRef.current.saveAllQuestions(savedQuizId);
-          console.log('✅ All questions saved to backend');
-        } catch (questionsError) {
-          console.error('❌ Failed to save questions:', questionsError);
-          showWarning('メタデータは保存されましたが、一部の質問の保存に失敗しました');
-        }
-      }
-      
-      // Handle thumbnail upload for NEW quizzes (when no currentQuizId exists yet)
+        // Save all questions to backend if we're on the questions step
+        if (currentStep === 2 && questionsFormRef.current && savedQuizId) {
+          try {
+            await questionsFormRef.current.saveAllQuestions(savedQuizId);
+          } catch (questionsError) {
+            console.error('❌ Failed to save questions:', questionsError);
+            showWarning('メタデータは保存されましたが、一部の質問の保存に失敗しました');
+          }
+        }      // Handle thumbnail upload for NEW quizzes (when no currentQuizId exists yet)
       if (savedQuizId && metadata.thumbnail_pending && thumbnailUploadRef.current && !currentQuizId) {
         console.log('🖼️ Uploading thumbnail for new quiz:', savedQuizId);
         try {
@@ -902,15 +917,22 @@ function CreateQuiz() {
                 questions={questions}
                 onPreviewQuiz={handlePreviewQuiz}
                 onReorderQuestions={handleReorderQuestions}
+                questionSetId={currentQuizId}
               />
             )}
 
             {currentStep === 4 && (
-              <div className="step-content">
-                <h2 className="step-title">🎯 確認・保存</h2>
-                <p className="step-description">準備中...</p>
-                {/* TODO: Implement ReviewForm component */}
-              </div>
+              <ReviewForm
+                metadata={metadata}
+                questions={questions}
+                settings={settings}
+                questionSetId={currentQuizId}
+                onPublish={() => {
+                  showSuccess('クイズが正常に公開されました！');
+                  navigate('/dashboard');
+                }}
+                onReorderQuestions={handleReorderQuestions}
+              />
             )}
           </div>
         </main>
@@ -939,13 +961,11 @@ function CreateQuiz() {
                 次へ
               </button>
             ) : (
-              <button 
-                className="nav-button primary save-button"
-                onClick={handleSaveQuiz}
-                disabled={!canProceed() || isLoading}
-              >
-                {isLoading ? '保存中...' : '保存して完了'}
-              </button>
+              <div className="final-step-info">
+                <span className="final-step-text">
+                  内容を確認して公開ボタンをクリックしてください
+                </span>
+              </div>
             )}
           </div>
         </footer>
@@ -956,6 +976,7 @@ function CreateQuiz() {
           onClose={() => setShowReorderModal(false)}
           questions={questions}
           onReorder={handleReorderComplete}
+          questionSetId={currentQuizId}
         />
       </div>
     </div>

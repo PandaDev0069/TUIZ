@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import './questionReorderModal.css';
 
-function QuestionReorderModal({ questions, onReorder, onClose, isOpen }) {
+function QuestionReorderModal({ questions, onReorder, onClose, isOpen, questionSetId }) {
+  const { apiCall } = useAuth();
   const [localQuestions, setLocalQuestions] = useState([]);
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (questions) {
@@ -100,17 +103,69 @@ function QuestionReorderModal({ questions, onReorder, onClose, isOpen }) {
     setLocalQuestions(shuffled);
   };
 
-  const handleSave = () => {
-    console.log('Save button clicked, reordered questions:', localQuestions);
-    if (onReorder) {
-      onReorder(localQuestions);
-    } else {
-      console.error('onReorder function not provided');
+  // Save reordered questions to backend using the same API as QuestionsForm
+  const saveReorderedQuestions = async (reorderedQuestions) => {
+    try {
+      if (!questionSetId) {
+        console.error('No questionSetId provided for saving');
+        return false;
+      }
+
+      console.log('Saving reordered questions to backend...');
+      setIsSaving(true);
+
+      // Ensure all questions have correct order_index before saving
+      const normalizedQuestions = reorderedQuestions.map((question, index) => ({
+        ...question,
+        order_index: index
+      }));
+
+      // Use the same bulk save API as QuestionsForm
+      const response = await apiCall('/questions/bulk', {
+        method: 'PUT',
+        body: JSON.stringify({
+          question_set_id: questionSetId,
+          questions: normalizedQuestions
+        })
+      });
+
+      if (response.success || response.questions) {
+        console.log('✅ Questions reordered successfully');
+        return true;
+      } else {
+        console.error('❌ Failed to save reordered questions:', response.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error saving reordered questions:', error);
+      return false;
+    } finally {
+      setIsSaving(false);
     }
-    if (onClose) {
-      onClose();
+  };
+
+  const handleSave = async () => {
+    console.log('Save button clicked, reordered questions:', localQuestions);
+    
+    // Save to backend first
+    const saveSuccess = await saveReorderedQuestions(localQuestions);
+    
+    if (saveSuccess) {
+      // Update the parent component with the new order
+      if (onReorder) {
+        onReorder(localQuestions);
+      } else {
+        console.error('onReorder function not provided');
+      }
+      
+      if (onClose) {
+        onClose();
+      } else {
+        console.error('onClose function not provided');
+      }
     } else {
-      console.error('onClose function not provided');
+      // Handle save error - could show a toast notification here
+      alert('問題の順序保存に失敗しました。もう一度お試しください。');
     }
   };
 
@@ -221,6 +276,7 @@ function QuestionReorderModal({ questions, onReorder, onClose, isOpen }) {
             className="footer-btn cancel" 
             onClick={handleCancel}
             type="button"
+            disabled={isSaving}
           >
             キャンセル
           </button>
@@ -233,8 +289,9 @@ function QuestionReorderModal({ questions, onReorder, onClose, isOpen }) {
               handleSave();
             }}
             type="button"
+            disabled={isSaving}
           >
-            保存
+            {isSaving ? '保存中...' : '保存'}
           </button>
         </div>
       </div>

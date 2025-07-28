@@ -1,24 +1,153 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { showSuccess, showError } from '../utils/toast';
 import './settingsForm.css';
 
-function SettingsForm({ settings, setSettings, questions, onPreviewQuiz, onReorderQuestions }) {
+function SettingsForm({ settings, setSettings, questions, onPreviewQuiz, onReorderQuestions, questionSetId }) {
+  const { apiCall } = useAuth();
+  const [isSyncing, setIsSyncing] = React.useState(false);
   
-  const updateSetting = (key, value) => {
-    setSettings(prev => ({
-      ...prev,
+  // Load settings from backend when component mounts or questionSetId changes
+  useEffect(() => {
+    const loadSettingsFromBackend = async () => {
+      if (!questionSetId) return;
+
+      // If settings already have game_settings (loaded from draft), don't override them
+      if (settings && settings.game_settings && Object.keys(settings.game_settings).length > 0) {
+        return;
+      }
+
+      try {
+        const response = await apiCall(`/quiz/${questionSetId}`, {
+          method: 'GET'
+        });
+
+        if (response.success && response.data) {
+          const quizData = response.data;
+          
+          // Replace settings with only database fields (don't merge with frontend fields)
+          const loadedSettings = {
+            // Player capacity from play_settings JSON (not a direct column)
+            players_cap: quizData.play_settings?.players_cap || 50,
+            
+            // Settings from play_settings JSON field - only store what's in the database
+            game_settings: {
+              // Game Flow
+              autoAdvance: quizData.play_settings?.autoAdvance || false,
+              hybridMode: quizData.play_settings?.hybridMode || false,
+              
+              // Answer & Explanation
+              showExplanations: quizData.play_settings?.showExplanations || false,
+              explanationTime: quizData.play_settings?.explanationTime || 30,
+              
+              // Scoring & Points
+              pointCalculation: quizData.play_settings?.pointCalculation || 'fixed',
+              streakBonus: quizData.play_settings?.streakBonus || false,
+              
+              // Player Experience
+              showLeaderboard: quizData.play_settings?.showLeaderboard || false,
+              showProgress: quizData.play_settings?.showProgress || false,
+            }
+          };
+
+          // Set settings to only contain database fields (don't merge with frontend-only fields)
+          setSettings(loadedSettings);
+        }
+      } catch (error) {
+        console.error('❌ Failed to load settings:', error);
+        // Use default settings if loading fails
+      }
+    };
+
+    loadSettingsFromBackend();
+  }, [questionSetId, apiCall, setSettings, settings]);
+
+  const syncSettingsToBackend = async (updatedSettings) => {
+    if (!questionSetId) return;
+
+    try {
+      setIsSyncing(true);
+      
+      // Prepare data for question_sets table (direct fields)
+      const directFields = {
+        // No direct fields for game settings - they all go in play_settings JSON
+        // players_cap belongs to games table, not question_sets
+      };
+
+      // Prepare data for play_settings JSON field
+      const playSettings = {
+        // Game Flow
+        autoAdvance: updatedSettings.game_settings?.autoAdvance || false,
+        hybridMode: updatedSettings.game_settings?.hybridMode || false,
+        
+        // Answer & Explanation
+        showExplanations: updatedSettings.game_settings?.showExplanations || false,
+        explanationTime: updatedSettings.game_settings?.explanationTime || 30,
+        
+        // Scoring & Points
+        pointCalculation: updatedSettings.game_settings?.pointCalculation || 'fixed',
+        streakBonus: updatedSettings.game_settings?.streakBonus || false,
+        
+        // Player Experience
+        showLeaderboard: updatedSettings.game_settings?.showLeaderboard || false,
+        showProgress: updatedSettings.game_settings?.showProgress || false,
+        
+        // Player Capacity (stored in JSON since it's not a direct column)
+        players_cap: updatedSettings.players_cap || 50,
+      };
+
+      // Update the question set with play_settings only
+      const updateData = {
+        play_settings: playSettings
+      };
+
+      await apiCall(`/quiz/${questionSetId}`, {
+        method: 'PUT',
+        body: JSON.stringify(updateData)
+      });
+
+      // Optionally show success message for important settings
+      // showSuccess('設定が保存されました');
+    } catch (error) {
+      console.error('❌ Failed to sync settings:', error);
+      showError('設定の保存に失敗しました');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const updateSetting = async (key, value) => {
+    const newSettings = {
+      ...settings,
       [key]: value
-    }));
+    };
+    
+    setSettings(newSettings);
+    
+    // Sync to backend with debouncing
+    clearTimeout(updateSetting.timeoutId);
+    updateSetting.timeoutId = setTimeout(() => {
+      syncSettingsToBackend(newSettings);
+    }, 1000); // 1 second debounce
   };
 
   // Update game_settings for non-database fields
-  const updateGameSetting = (key, value) => {
-    setSettings(prev => ({
-      ...prev,
+  const updateGameSetting = async (key, value) => {
+    const newSettings = {
+      ...settings,
       game_settings: {
-        ...prev.game_settings,
+        ...settings.game_settings,
         [key]: value
       }
-    }));
+    };
+    
+    setSettings(newSettings);
+    
+    // Sync to backend with debouncing
+    clearTimeout(updateGameSetting.timeoutId);
+    updateGameSetting.timeoutId = setTimeout(() => {
+      syncSettingsToBackend(newSettings);
+    }, 1000); // 1 second debounce
   };
 
   return (
@@ -257,7 +386,15 @@ function SettingsForm({ settings, setSettings, questions, onPreviewQuiz, onReord
 
         {/* Summary Section */}
         <div className="settings-summary">
-          <h3 className="summary-title">📊 サマリー</h3>
+          <div className="summary-header">
+            <h3 className="summary-title">📊 サマリー</h3>
+            {isSyncing && (
+              <div className="sync-indicator">
+                <span className="sync-spinner">🔄</span>
+                <span className="sync-text">設定を保存中...</span>
+              </div>
+            )}
+          </div>
           <div className="summary-stats">
             <div className="stat-item">
               <span className="stat-label">問題数</span>
