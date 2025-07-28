@@ -1,8 +1,10 @@
 import { useState, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import QuestionBuilder from './QuestionBuilder';
 import './questionsForm.css';
 
 const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = null }, ref) => {
+  const { apiCall } = useAuth();
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const questionBuilderRefs = useRef([]);
 
@@ -60,25 +62,74 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
   // Save all questions to backend
   const saveAllQuestions = async () => {
     try {
-      // Save each question with its proper array index
-      const savePromises = questions.map(async (question, index) => {
-        // Find the ref for this question
-        const questionRef = questionBuilderRefs.current[index];
-        if (questionRef) {
-          // Update question order_index before saving
-          const updatedQuestion = { ...question, order_index: index };
-          updateQuestion(index, updatedQuestion);
-          
-          // Force save with correct index
-          return questionRef.forceSave();
-        }
-      }).filter(Boolean); // Remove undefined entries
+      if (!questionSetId) {
+        console.error('No question set ID provided for bulk save');
+        return false;
+      }
       
-      await Promise.all(savePromises);
-      console.log('All questions saved successfully');
-      return true;
+      // Ensure all questions have correct order_index before saving (prevents constraint violations)
+      const normalizedQuestions = questions.map((question, index) => ({
+        ...question,
+        order_index: index
+      }));
+      
+      // Collect all question data from refs to ensure we have the latest state
+      const questionsData = await Promise.all(
+        normalizedQuestions.map(async (question, index) => {
+          const questionRef = questionBuilderRefs.current[index];
+          if (questionRef && questionRef.getQuestionData) {
+            // Get current data from the ref
+            const currentData = questionRef.getQuestionData();
+            return {
+              ...currentData,
+              order_index: index // Ensure order is correct
+            };
+          }
+          // Fallback to the question from state
+          return {
+            ...question,
+            order_index: index
+          };
+        })
+      );
+      
+      console.log('Performing bulk save for questions:', questionsData.length);
+      
+      // Use bulk update API
+      const response = await apiCall('/questions/bulk', {
+        method: 'PUT',
+        body: JSON.stringify({
+          question_set_id: questionSetId,
+          questions: questionsData
+        })
+      });
+      
+      if (response.success) {
+        console.log('Bulk save successful:', response);
+        
+        // Update local state with backend IDs
+        const updatedQuestions = normalizedQuestions.map((question, index) => {
+          const savedQuestion = response.questions.find(q => q.order_index === index);
+          if (savedQuestion) {
+            return {
+              ...question,
+              id: savedQuestion.id,
+              backend_id: savedQuestion.id,
+              order_index: savedQuestion.order_index
+            };
+          }
+          return question;
+        });
+        
+        setQuestions(updatedQuestions);
+        return true;
+      } else {
+        console.error('Bulk save failed:', response);
+        return false;
+      }
+      
     } catch (error) {
-      console.error('Failed to save some questions:', error);
+      console.error('Failed to perform bulk save:', error);
       return false;
     }
   };
@@ -170,7 +221,7 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
       const newQuestions = [...questions];
       [newQuestions[index - 1], newQuestions[index]] = [newQuestions[index], newQuestions[index - 1]];
       
-      // Update order_index for all questions
+      // Update order_index for all questions to match array position
       const reindexedQuestions = newQuestions.map((question, newIndex) => ({
         ...question,
         order_index: newIndex
@@ -178,6 +229,11 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
       
       setQuestions(reindexedQuestions);
       setActiveQuestionIndex(index - 1);
+      
+      // Trigger bulk save after reordering to persist the new order
+      setTimeout(() => {
+        saveAllQuestions();
+      }, 100);
     }
   };
 
@@ -187,7 +243,7 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
       const newQuestions = [...questions];
       [newQuestions[index], newQuestions[index + 1]] = [newQuestions[index + 1], newQuestions[index]];
       
-      // Update order_index for all questions
+      // Update order_index for all questions to match array position
       const reindexedQuestions = newQuestions.map((question, newIndex) => ({
         ...question,
         order_index: newIndex
@@ -195,6 +251,11 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
       
       setQuestions(reindexedQuestions);
       setActiveQuestionIndex(index + 1);
+      
+      // Trigger bulk save after reordering to persist the new order
+      setTimeout(() => {
+        saveAllQuestions();
+      }, 100);
     }
   };
 

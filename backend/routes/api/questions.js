@@ -155,7 +155,10 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
     }
     
     console.log('Question created:', question.id, 'for question set:', question_set_id);
-    res.status(201).json(question); // Return question object directly
+    res.status(201).json({
+      success: true,
+      question: question
+    });
   } catch (error) {
     console.error('Error in question creation:', error);
     res.status(500).json({ 
@@ -231,7 +234,10 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
     }
     
     console.log('Question updated:', updatedQuestion.id);
-    res.json(updatedQuestion); // Return question object directly
+    res.json({
+      success: true,
+      question: updatedQuestion
+    });
   } catch (error) {
     console.error('Error in question update:', error);
     res.status(500).json({ 
@@ -348,10 +354,240 @@ router.post('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
     }
     
     console.log(`Bulk created ${insertedQuestions.length} questions for question set:`, question_set_id);
-    res.status(201).json({ questions: insertedQuestions });
+    res.status(201).json({ 
+      success: true,
+      questions: insertedQuestions 
+    });
   } catch (error) {
     console.error('Error in bulk question creation:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
+// Bulk update questions
+router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const { question_set_id, questions } = req.body;
+    
+    if (!question_set_id || !questions || !Array.isArray(questions)) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Question set ID and questions array are required' 
+      });
+    }
+    
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+    
+    // Verify the user owns the question set - RLS will handle this
+    const { data: questionSet, error: verifyError } = await userSupabase
+      .from('question_sets')
+      .select('id')
+      .eq('id', question_set_id)
+      .single();
+    
+    if (verifyError || !questionSet) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Question set not found or unauthorized' 
+      });
+    }
+    
+    console.log(`Starting bulk update for ${questions.length} questions in set:`, question_set_id);
+    
+    // Use database transaction to ensure atomicity
+    const updatedQuestions = [];
+    const createdQuestions = [];
+    const errors = [];
+    
+    // Process each question
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      
+      try {
+        // Determine if this is a new question (has temp ID) or existing
+        const isNewQuestion = !question.backend_id || String(question.backend_id).startsWith('temp_');
+        
+        if (isNewQuestion) {
+          // Create new question
+          const questionData = {
+            question_set_id,
+            question_text: question.text?.trim() || question.question_text?.trim(),
+            question_type: question.question_type || question.type || 'multiple_choice',
+            image_url: question.image_url || question.image || null,
+            time_limit: question.timeLimit || question.time_limit || 10,
+            points: question.points || 100,
+            difficulty: question.difficulty || 'medium',
+            explanation: question.explanation?.trim() || '',
+            explanation_title: question.explanation_title?.trim() || '',
+            explanation_text: question.explanation_text?.trim() || '',
+            explanation_image_url: question.explanation_image_url || null,
+            order_index: i // Use array index as order
+          };
+          
+          console.log('Creating question with data:', questionData);
+          
+          const { data: newQuestion, error: createError } = await userSupabase
+            .from('questions')
+            .insert(questionData)
+            .select()
+            .single();
+          
+          if (createError) {
+            console.error('Error creating question:', createError);
+            errors.push({ index: i, error: createError.message });
+            continue;
+          }
+          
+          console.log('Question created:', newQuestion.id, 'for question set:', question_set_id);
+          createdQuestions.push(newQuestion);
+          
+          // Handle answers for new question
+          if (question.answers && Array.isArray(question.answers)) {
+            for (let j = 0; j < question.answers.length; j++) {
+              const answer = question.answers[j];
+              
+              const answerData = {
+                question_id: newQuestion.id,
+                answer_text: answer.text?.trim() || '',
+                is_correct: answer.isCorrect || false,
+                order_index: j,
+                answer_explanation: answer.answer_explanation?.trim() || '',
+                image_url: answer.image_url || answer.image || null
+              };
+              
+              console.log('Creating answer with data:', answerData);
+              
+              const { data: newAnswer, error: answerError } = await userSupabase
+                .from('answers')
+                .insert(answerData)
+                .select()
+                .single();
+              
+              if (answerError) {
+                console.error('Error creating answer:', answerError);
+                errors.push({ index: i, answerIndex: j, error: answerError.message });
+              } else {
+                console.log('Answer created:', newAnswer.id, 'for question:', newQuestion.id);
+              }
+            }
+          }
+          
+        } else {
+          // Update existing question
+          const questionData = {
+            question_text: question.text?.trim() || question.question_text?.trim(),
+            question_type: question.question_type || question.type || 'multiple_choice',
+            image_url: question.image_url || question.image || null,
+            time_limit: question.timeLimit || question.time_limit || 10,
+            points: question.points || 100,
+            difficulty: question.difficulty || 'medium',
+            explanation: question.explanation?.trim() || '',
+            explanation_title: question.explanation_title?.trim() || '',
+            explanation_text: question.explanation_text?.trim() || '',
+            explanation_image_url: question.explanation_image_url || null,
+            order_index: i // Use array index as order
+          };
+          
+          console.log('Updating question:', question.backend_id, 'with data:', questionData);
+          
+          const { data: updatedQuestion, error: updateError } = await userSupabase
+            .from('questions')
+            .update(questionData)
+            .eq('id', question.backend_id)
+            .select()
+            .single();
+          
+          if (updateError) {
+            console.error('Error updating question:', updateError);
+            errors.push({ index: i, error: updateError.message });
+            continue;
+          }
+          
+          console.log('Question updated:', updatedQuestion.id);
+          updatedQuestions.push(updatedQuestion);
+          
+          // Handle answers for existing question - delete and recreate to avoid order conflicts
+          if (question.answers && Array.isArray(question.answers)) {
+            // Delete existing answers
+            const { error: deleteError } = await userSupabase
+              .from('answers')
+              .delete()
+              .eq('question_id', question.backend_id);
+            
+            if (deleteError) {
+              console.error('Error deleting existing answers:', deleteError);
+              errors.push({ index: i, error: `Failed to delete existing answers: ${deleteError.message}` });
+              continue;
+            }
+            
+            // Create new answers
+            for (let j = 0; j < question.answers.length; j++) {
+              const answer = question.answers[j];
+              
+              const answerData = {
+                question_id: question.backend_id,
+                answer_text: answer.text?.trim() || '',
+                is_correct: answer.isCorrect || false,
+                order_index: j,
+                answer_explanation: answer.answer_explanation?.trim() || '',
+                image_url: answer.image_url || answer.image || null
+              };
+              
+              console.log('Creating answer with data:', answerData);
+              
+              const { data: newAnswer, error: answerError } = await userSupabase
+                .from('answers')
+                .insert(answerData)
+                .select()
+                .single();
+              
+              if (answerError) {
+                console.error('Error creating answer:', answerError);
+                errors.push({ index: i, answerIndex: j, error: answerError.message });
+              } else {
+                console.log('Answer created:', newAnswer.id, 'for question:', question.backend_id);
+              }
+            }
+          }
+        }
+      } catch (questionError) {
+        console.error(`Error processing question ${i}:`, questionError);
+        errors.push({ index: i, error: questionError.message });
+      }
+    }
+    
+    // Return results
+    const allQuestions = [...updatedQuestions, ...createdQuestions];
+    
+    console.log(`Bulk update completed: ${createdQuestions.length} created, ${updatedQuestions.length} updated, ${errors.length} errors`);
+    
+    if (errors.length > 0) {
+      console.error('Bulk update errors:', errors);
+      return res.status(207).json({ // 207 Multi-Status for partial success
+        success: false,
+        questions: allQuestions,
+        errors: errors,
+        message: `Partial success: processed ${allQuestions.length}/${questions.length} questions`
+      });
+    }
+    
+    res.json({ 
+      success: true,
+      questions: allQuestions,
+      created: createdQuestions.length,
+      updated: updatedQuestions.length
+    });
+    
+  } catch (error) {
+    console.error('Error in bulk question update:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
@@ -363,7 +599,10 @@ router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single
     console.log('Uploading question image for question:', id);
     
     if (!req.file) {
-      return res.status(400).json({ error: 'No image file provided' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'No image file provided' 
+      });
     }
     
     // Create user-scoped Supabase client for RLS compliance
@@ -377,7 +616,10 @@ router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single
       .single();
     
     if (questionError || !questionData) {
-      return res.status(403).json({ error: 'Question not found or unauthorized' });
+      return res.status(403).json({ 
+        success: false,
+        error: 'Question not found or unauthorized' 
+      });
     }
     
     // Get user ID from token
@@ -401,7 +643,10 @@ router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single
     
     if (uploadError) {
       console.error('Storage upload error:', uploadError);
-      return res.status(500).json({ error: 'Failed to upload image' });
+      return res.status(500).json({ 
+        success: false,
+        error: 'Failed to upload image' 
+      });
     }
     
     // Get public URL
@@ -423,47 +668,52 @@ router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single
     
     if (updateError) {
       console.error('Error updating question with image URL:', updateError);
-      return res.status(500).json({ error: updateError.message });
+      return res.status(500).json({ 
+        success: false,
+        error: updateError.message 
+      });
     }
     
     console.log('Question image uploaded successfully:', publicUrl);
     
     res.json({
+      success: true,
       question: updatedQuestion,
       image_url: publicUrl
     });
     
   } catch (error) {
     console.error('Error uploading question image:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
 // Delete image for a question
-router.delete('/:id/image', async (req, res) => {
+router.delete('/:id/image', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Get authenticated user and verify ownership
-    const authenticatedUser = await getAuthenticatedUser(req, res);
-    if (!authenticatedUser) return;
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
-    // Get question with image info
-    const { data: questionData, error: questionError } = await db.supabaseAdmin
+    // Get question with image info - RLS will handle ownership verification
+    const { data: questionData, error: questionError } = await userSupabase
       .from('questions')
       .select(`
         id,
-        image_url,
-        question_sets (
-          id,
-          user_id
-        )
+        image_url
       `)
       .eq('id', id)
       .single();
     
-    if (questionError || !questionData || questionData.question_sets.user_id !== authenticatedUser.id) {
-      return res.status(403).json({ error: 'Question not found or unauthorized' });
+    if (questionError || !questionData) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Question not found or unauthorized' 
+      });
     }
     
     // Delete from storage if URL exists
@@ -484,8 +734,8 @@ router.delete('/:id/image', async (req, res) => {
       }
     }
     
-    // Update question to remove image references
-    const { data: updatedQuestion, error: updateError } = await db.supabaseAdmin
+    // Update question to remove image references using user-scoped client
+    const { data: updatedQuestion, error: updateError } = await userSupabase
       .from('questions')
       .update({
         image_url: null
@@ -496,71 +746,99 @@ router.delete('/:id/image', async (req, res) => {
     
     if (updateError) {
       console.error('Error removing question image references:', updateError);
-      return res.status(500).json({ error: updateError.message });
+      return res.status(500).json({ 
+        success: false,
+        error: updateError.message 
+      });
     }
     
-    res.json({ question: updatedQuestion });
+    res.json({ 
+      success: true,
+      question: updatedQuestion 
+    });
     
   } catch (error) {
     console.error('Error deleting question image:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
 // Reorder questions in a question set
-router.put('/set/:id/reorder', async (req, res) => {
+router.put('/set/:id/reorder', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { questionOrder } = req.body; // Array of question IDs in desired order
     
-    // Get authenticated user and verify ownership
-    const authenticatedUser = await getAuthenticatedUser(req, res);
-    if (!authenticatedUser) return;
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
     // Verify user owns the question set
-    const { data: questionSet, error: setError } = await db.supabaseAdmin
+    const { data: questionSet, error: setError } = await userSupabase
       .from('question_sets')
       .select('id, user_id')
       .eq('id', id)
       .single();
     
-    if (setError || !questionSet || questionSet.user_id !== authenticatedUser.id) {
-      return res.status(403).json({ error: 'Question set not found or unauthorized' });
+    if (setError || !questionSet || questionSet.user_id !== req.userId) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Question set not found or unauthorized' 
+      });
     }
     
     // Validate that all provided question IDs belong to this question set
-    const { data: existingQuestions, error: questionsError } = await db.supabaseAdmin
+    const { data: existingQuestions, error: questionsError } = await userSupabase
       .from('questions')
       .select('id')
       .eq('question_set_id', id);
     
     if (questionsError) {
-      return res.status(500).json({ error: questionsError.message });
+      return res.status(500).json({ 
+        success: false,
+        error: questionsError.message 
+      });
     }
     
     const existingIds = existingQuestions.map(q => q.id);
     const allValid = questionOrder.every(qId => existingIds.includes(qId));
     
     if (!allValid || questionOrder.length !== existingQuestions.length) {
-      return res.status(400).json({ error: 'Invalid question order data' });
-    }
-    
-    // Update the order
-    const success = await orderManager.updateQuestionOrder(id, questionOrder);
-    
-    if (success) {
-      res.json({ 
-        success: true, 
-        message: 'Question order updated successfully',
-        questionOrder
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid question order data' 
       });
-    } else {
-      res.status(500).json({ error: 'Failed to update question order' });
     }
+    
+    // Transform the questionOrder array to match the expected format
+    const questionOrders = questionOrder.map((questionId, index) => ({
+      questionId,
+      order: index
+    }));
+
+    // Use the OrderManager to perform the batch reorder
+    const result = await orderManager.reorderQuestions(userSupabase, id, questionOrders);
+    
+    if (!result.success) {
+      return res.status(500).json({ 
+        success: false,
+        error: result.error 
+      });
+    }
+    
+    res.json({ 
+      success: true,
+      data: result.data 
+    });
     
   } catch (error) {
     console.error('Error reordering questions:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 

@@ -1,6 +1,15 @@
 # Issues Log: Quiz App
 
-## Solved Issues
+8. ✅ Order index conflicts causing duplicate constraint violations
+9. ❌ Answer images not uploading - authentication issues in API
+10. ❌ Question images not uploading - authentication issues in API  
+11. Question type not being saved properly - backend receiving incorrect data
+12. Intermediate save not working for answers
+13. Explanation Image is not being deleted when the whole question set gets deleted.
+14. Explanation description not allowing spaces
+15. Fix big and bulky additional options re-oredring up and down buttons
+16. ✅ Bulk saving of questions is not working, needs to save each questions individually - FIXED with bulk update API
+17. ✅ Order index constraint violations when using up/down arrow reordering buttons Issues
 
 ### Example issues
 - [Date] Issue: JWT verification failed  
@@ -25,12 +34,14 @@
 6. ✅ Rapid auto-save conflicts between QuestionBuilder and main auto-save system
 7. ✅ Double image uploads during save operations
 8. ✅ Order index conflicts causing duplicate constraint violations
-9. Answer images not uploading - authentication issues in API
-10. Question images not uploading - authentication issues in API  
+9. ✅ Answer images not uploading - authentication issues in API
+10. ✅ Question images not uploading - authentication issues in API  
 11. Question type not being saved properly - backend receiving incorrect data
 12. Intermediate save not working for answers
 13. Explanation Image is not being deleted when the whole question set gets deleted.
 14. Explanation description not allowing spaces
+15. Fix big and bulky additional options re-oredring up and down buttons
+16. Bulk saving of questions is not working, needs to save each questions individaually
 
 **Root Causes:**
 - Auto-save mechanism using wrong timing (temporarySave vs scheduleAutoSave)
@@ -64,6 +75,10 @@
 - ✅ Fixed API response format - returning question objects directly instead of wrapped responses
 - ✅ Fixed duplicate .eq() clauses in question update queries
 - ✅ Added comprehensive image cleanup for question set deletion (question images, answer images, explanation images)
+- ✅ Updated all API endpoints to use consistent AuthMiddleware pattern
+- ✅ Fixed API response format inconsistencies - all endpoints now return {success: boolean, data/error} format
+- ✅ Fixed frontend question/answer handling to work with new backend response format
+- ✅ Fixed constraint violations in up/down arrow reordering - added proper order normalization and delayed save triggers
 
 **Status:** Major fixes implemented. Backend restarted with all changes. Ready for testing.
 

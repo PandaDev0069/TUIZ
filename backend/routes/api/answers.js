@@ -157,6 +157,7 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
     // Validate required fields
     if (!question_id || !answer_text) {
       return res.status(400).json({ 
+        success: false,
         error: 'Question ID and answer text are required' 
       });
     }
@@ -180,14 +181,23 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
     
     if (error) {
       console.error('Error creating answer:', error);
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
     }
     
     console.log('Answer created:', answer.id, 'for question:', question_id);
-    res.status(201).json(answer);
+    res.status(201).json({
+      success: true,
+      answer: answer
+    });
   } catch (error) {
     console.error('Error in answer creation:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
@@ -214,7 +224,10 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
       .single();
     
     if (answerError || !answerData) {
-      return res.status(403).json({ error: 'Answer not found or unauthorized' });
+      return res.status(403).json({ 
+        success: false,
+        error: 'Answer not found or unauthorized' 
+      });
     }
     
     // Update the answer using user-scoped client
@@ -234,57 +247,73 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
     
     if (error) {
       console.error('Error updating answer:', error);
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
     }
     
     console.log('Answer updated:', updatedAnswer.id);
-    res.json(updatedAnswer);
+    res.json({
+      success: true,
+      answer: updatedAnswer
+    });
   } catch (error) {
     console.error('Error in answer update:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
 // Delete an answer
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Get authenticated user
-    let authenticatedUser;
-    try {
-      authenticatedUser = await getAuthenticatedUser(req.headers.authorization);
-    } catch (authError) {
-      return res.status(401).json({ error: authError.message });
-    }
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
-    // Verify the user owns the answer (through question -> question set)
-    const { data: answerData, error: answerError } = await db.supabaseAdmin
+    // Verify ownership of the answer (through question set) - RLS will handle this automatically
+    const { data: answerData, error: answerError } = await userSupabase
       .from('answers')
-      .select('question_id, questions!inner(question_sets!inner(user_id))')
+      .select('id')
       .eq('id', id)
       .single();
     
-    if (answerError || !answerData || answerData.questions.question_sets.user_id !== authenticatedUser.id) {
-      return res.status(403).json({ error: 'Answer not found or unauthorized' });
+    if (answerError || !answerData) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Answer not found or unauthorized' 
+      });
     }
     
-    // Delete the answer
-    const { error } = await db.supabaseAdmin
+    // Delete the answer using user-scoped client
+    const { error } = await userSupabase
       .from('answers')
       .delete()
       .eq('id', id);
     
     if (error) {
       console.error('Error deleting answer:', error);
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
     }
     
     console.log('Answer deleted:', id);
-    res.json({ message: 'Answer deleted successfully' });
+    res.json({ 
+      success: true,
+      message: 'Answer deleted successfully' 
+    });
   } catch (error) {
     console.error('Error in answer deletion:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 

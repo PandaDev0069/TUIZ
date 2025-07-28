@@ -24,7 +24,11 @@ const QuestionBuilder = forwardRef(({
   useImperativeHandle(ref, () => ({
     forceSave: () => saveQuestionToBackend(),
     hasUnsavedChanges,
-    isSaving
+    isSaving,
+    getQuestionData: () => ({
+      ...question,
+      backend_id: question.backend_id || question.id
+    })
   }));
 
   // Add keyboard shortcuts
@@ -129,10 +133,11 @@ const QuestionBuilder = forwardRef(({
       if (isNewQuestion) {
         // This is a new question, create it
         console.log('Creating new question:', questionData);
-        savedQuestion = await apiCall('/questions', {
+        const response = await apiCall('/questions', {
           method: 'POST',
           body: JSON.stringify(questionData)
         });
+        savedQuestion = response.question || response; // Handle both new and old response formats
         
         // Update the question with the real ID from backend
         updateQuestion({ 
@@ -145,10 +150,11 @@ const QuestionBuilder = forwardRef(({
         // This is an existing question with a real backend ID, update it
         const questionId = question.backend_id;
         console.log('Updating existing question:', questionId, questionData);
-        savedQuestion = await apiCall(`/questions/${questionId}`, {
+        const response = await apiCall(`/questions/${questionId}`, {
           method: 'PUT',
           body: JSON.stringify(questionData)
         });
+        savedQuestion = response.question || response; // Handle both new and old response formats
       }
 
       // Save answers
@@ -201,10 +207,11 @@ const QuestionBuilder = forwardRef(({
           // Try to create new answer
           console.log('Creating new answer:', answerData);
           try {
-            savedAnswer = await apiCall('/answers', {
+            const response = await apiCall('/answers', {
               method: 'POST',
               body: JSON.stringify(answerData)
             });
+            savedAnswer = response.answer || response; // Handle both new and old response formats
             
             // Update answer with backend ID
             const updatedAnswers = [...question.answers];
@@ -223,10 +230,11 @@ const QuestionBuilder = forwardRef(({
                 
                 if (existingAnswer) {
                   // Update existing answer
-                  savedAnswer = await apiCall(`/answers/${existingAnswer.id}`, {
+                  const response = await apiCall(`/answers/${existingAnswer.id}`, {
                     method: 'PUT',
                     body: JSON.stringify(answerData)
                   });
+                  savedAnswer = response.answer || response; // Handle both new and old response formats
                   
                   // Update local state with backend ID
                   const updatedAnswers = [...question.answers];
@@ -247,10 +255,11 @@ const QuestionBuilder = forwardRef(({
         } else {
           // Update existing answer
           console.log('Updating existing answer:', answer.backend_id, answerData);
-          savedAnswer = await apiCall(`/answers/${answer.backend_id}`, {
+          const response = await apiCall(`/answers/${answer.backend_id}`, {
             method: 'PUT',
             body: JSON.stringify(answerData)
           });
+          savedAnswer = response.answer || response; // Handle both new and old response formats
         }
 
         // Upload answer image if exists

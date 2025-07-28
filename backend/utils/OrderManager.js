@@ -36,6 +36,68 @@ class OrderManager {
   }
 
   /**
+   * Batch reorder questions with proper transaction handling
+   * @param {Object} supabaseClient - User-scoped Supabase client
+   * @param {string} questionSetId - The ID of the question set
+   * @param {Array} questionOrders - Array of {questionId, order} objects
+   * @returns {Promise<{success: boolean, error?: string, data?: any}>} - Result object
+   */
+  async reorderQuestions(supabaseClient, questionSetId, questionOrders) {
+    try {
+      // First, temporarily set all order_index to negative values to avoid conflicts
+      const tempUpdates = questionOrders.map((item, index) => 
+        supabaseClient
+          .from('questions')
+          .update({ order_index: -(index + 1) })
+          .eq('id', item.questionId)
+          .eq('question_set_id', questionSetId)
+      );
+
+      const tempResults = await Promise.all(tempUpdates);
+      
+      // Check if any temp updates failed
+      const tempErrors = tempResults.filter(result => result.error);
+      if (tempErrors.length > 0) {
+        return {
+          success: false,
+          error: `Failed to prepare reorder: ${tempErrors[0].error.message}`
+        };
+      }
+
+      // Now set the actual order indices
+      const finalUpdates = questionOrders.map((item) => 
+        supabaseClient
+          .from('questions')
+          .update({ order_index: item.order })
+          .eq('id', item.questionId)
+          .eq('question_set_id', questionSetId)
+      );
+
+      const finalResults = await Promise.all(finalUpdates);
+      
+      // Check if any final updates failed
+      const finalErrors = finalResults.filter(result => result.error);
+      if (finalErrors.length > 0) {
+        return {
+          success: false,
+          error: `Failed to complete reorder: ${finalErrors[0].error.message}`
+        };
+      }
+
+      return {
+        success: true,
+        data: { message: 'Questions reordered successfully' }
+      };
+    } catch (error) {
+      console.error('Error in batch reorder questions:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
    * Update order indices for a set of answers
    * @param {string} questionId - The ID of the question
    * @param {Array} answerOrder - Array of answer IDs in the desired order
