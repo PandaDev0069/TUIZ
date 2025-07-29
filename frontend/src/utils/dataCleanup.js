@@ -12,11 +12,30 @@ export const cleanMetadata = (metadata) => {
   // Remove file objects that can't be JSON serialized
   delete cleaned.thumbnail_file;
   
-  // Ensure required fields have proper defaults
+  // Clean and validate title (required, max 255 chars)
   cleaned.title = cleaned.title?.trim() || "Untitled Quiz";
-  cleaned.description = cleaned.description?.trim() || "";
-  cleaned.category = cleaned.category || "general";
-  cleaned.difficulty_level = cleaned.difficulty_level || "medium";
+  if (cleaned.title.length > 255) {
+    cleaned.title = cleaned.title.substring(0, 255);
+  }
+  
+  // Clean description (optional, can be null)
+  cleaned.description = cleaned.description?.trim() || null;
+  
+  // Clean category (optional, can be null, max 100 chars)
+  if (cleaned.category) {
+    cleaned.category = cleaned.category.trim();
+    if (cleaned.category.length > 100) {
+      cleaned.category = cleaned.category.substring(0, 100);
+    }
+  } else {
+    cleaned.category = null;
+  }
+  
+  // Validate difficulty_level (max 20 chars, enum values)
+  const validDifficulties = ['easy', 'medium', 'hard', 'expert'];
+  if (!cleaned.difficulty_level || !validDifficulties.includes(cleaned.difficulty_level)) {
+    cleaned.difficulty_level = 'medium'; // Default fallback
+  }
   
   // Ensure arrays are properly formatted for database
   if (cleaned.tags && Array.isArray(cleaned.tags)) {
@@ -28,27 +47,16 @@ export const cleanMetadata = (metadata) => {
     cleaned.tags = [];
   }
   
-  // Convert string fields to proper types
+  // Convert estimated_duration to integer or null (must be positive if provided)
   if (cleaned.estimated_duration) {
-    cleaned.estimated_duration = parseInt(cleaned.estimated_duration) || 5;
+    const duration = parseInt(cleaned.estimated_duration);
+    cleaned.estimated_duration = (duration > 0) ? duration : null;
   } else {
-    cleaned.estimated_duration = 5; // Default 5 minutes
+    cleaned.estimated_duration = null;
   }
   
   // Ensure boolean fields are properly set
   cleaned.is_public = Boolean(cleaned.is_public);
-  
-  // Validate enum values
-  const validDifficulties = ['easy', 'medium', 'hard', 'expert'];
-  if (!validDifficulties.includes(cleaned.difficulty_level)) {
-    cleaned.difficulty_level = 'medium'; // Default fallback
-  }
-  
-  // Validate category - ensure it's not empty
-  const validCategories = ['general', 'science', 'history', 'sports', 'entertainment', 'technology', 'other'];
-  if (!cleaned.category || !validCategories.includes(cleaned.category)) {
-    cleaned.category = 'general'; // Safe default
-  }
   
   return cleaned;
 };

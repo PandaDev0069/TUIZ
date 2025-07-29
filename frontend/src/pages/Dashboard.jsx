@@ -51,10 +51,17 @@ function Dashboard() {
       
       // Separate published quizzes from drafts
       const publishedQuizzes = allQuizzes.filter(quiz => quiz.status === 'published');
-      const draftQuizzes = allQuizzes.filter(quiz => quiz.status === 'draft' || quiz.status === 'creating');
+      const regularDrafts = allQuizzes.filter(quiz => 
+        (quiz.status === 'draft' || quiz.status === 'creating') && 
+        !quiz.play_settings?.was_published
+      );
+      const editingPublished = allQuizzes.filter(quiz => 
+        quiz.status === 'draft' && 
+        quiz.play_settings?.was_published
+      );
       
       setMyQuizSets(publishedQuizzes);
-      setDraftQuizzes(draftQuizzes);
+      setDraftQuizzes([...regularDrafts, ...editingPublished]); // Combine both types of drafts
       
       // Update stats
       setStats({
@@ -113,9 +120,31 @@ function Dashboard() {
     });
   };
 
-  const handleEditQuiz = (questionSetId) => {
-    // Navigate to edit quiz (could be implemented later)
-    navigate('/create-quiz', { state: { editMode: true, questionSetId } });
+  const handleEditQuiz = async (questionSetId) => {
+    try {
+      // First, change the status to 'draft' to allow editing
+      await apiCall(`/quiz/${questionSetId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ 
+          status: 'draft',
+          was_published: true // Indicate this was previously published
+        })
+      });
+      
+      showMessage('success', 'クイズが編集モードになりました。');
+      
+      // Navigate to edit quiz page
+      navigate('/create-quiz', { 
+        state: { 
+          editMode: true, 
+          questionSetId,
+          wasPublished: true // Flag to indicate it was previously published
+        } 
+      });
+    } catch (error) {
+      console.error('Error setting quiz to draft mode:', error);
+      showMessage('error', '編集モードへの変更に失敗しました: ' + error.message);
+    }
   };
 
   const handleContinueEditingDraft = (draftId) => {

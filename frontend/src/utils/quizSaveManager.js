@@ -17,21 +17,22 @@ export class QuizSaveManager {
   async createDraftQuiz(metadata) {
     const cleanedMetadata = cleanMetadata(metadata);
     
-    // Ensure all database required fields are provided with proper defaults
+    // Ensure all database required fields are provided with proper defaults and validation
     const draftData = {
-      // Required fields from database schema
+      // Required fields from database schema with validation
       title: cleanedMetadata.title?.trim() || "Untitled Quiz",
-      description: cleanedMetadata.description?.trim() || "",
-      category: cleanedMetadata.category || "general", // Use 'general' as safe default
+      description: cleanedMetadata.description?.trim() || null,
+      category: cleanedMetadata.category || null, // Can be null according to schema
       difficulty_level: cleanedMetadata.difficulty_level || "medium",
       
       // Optional fields with safe defaults
-      is_public: Boolean(cleanedMetadata.is_public), // Always false for drafts
-      estimated_duration: cleanedMetadata.estimated_duration || 5, // Default 5 minutes
+      is_public: Boolean(cleanedMetadata.is_public), // Default false
+      estimated_duration: cleanedMetadata.estimated_duration || null, // Can be null
       total_questions: 0, // Will be updated as questions are added
       times_played: 0,
       average_score: 0.0,
       completion_rate: 0.0,
+      last_played_at: null,
       
       // Status and metadata
       status: 'draft',
@@ -43,6 +44,21 @@ export class QuizSaveManager {
       // Settings
       play_settings: {}
     };
+
+    // Validate title length (max 255 characters)
+    if (draftData.title.length > 255) {
+      throw new Error('タイトルは255文字以内で入力してください');
+    }
+
+    // Validate category length (max 100 characters)
+    if (draftData.category && draftData.category.length > 100) {
+      throw new Error('カテゴリーは100文字以内で入力してください');
+    }
+
+    // Validate estimated_duration (must be positive if provided)
+    if (draftData.estimated_duration && draftData.estimated_duration <= 0) {
+      throw new Error('推定時間は正の数で入力してください');
+    }
 
     try {
       const result = await this.apiCall('/quiz/create', {
@@ -74,16 +90,31 @@ export class QuizSaveManager {
   async updateMetadata(quizId, metadata, preserveThumbnail = true) {
     const cleanedMetadata = cleanMetadata(metadata);
     
-    // Ensure all required fields are included with proper defaults
+    // Ensure all required fields are included with proper defaults and validation
     const updateData = {
       title: cleanedMetadata.title?.trim() || "Untitled Quiz",
-      description: cleanedMetadata.description?.trim() || "",
-      category: cleanedMetadata.category || "general",
+      description: cleanedMetadata.description?.trim() || null,
+      category: cleanedMetadata.category || null,
       difficulty_level: cleanedMetadata.difficulty_level || "medium",
       is_public: Boolean(cleanedMetadata.is_public),
-      estimated_duration: cleanedMetadata.estimated_duration || 5,
+      estimated_duration: cleanedMetadata.estimated_duration || null,
       tags: Array.isArray(cleanedMetadata.tags) ? cleanedMetadata.tags : []
     };
+
+    // Validate title length (max 255 characters)
+    if (updateData.title.length > 255) {
+      throw new Error('タイトルは255文字以内で入力してください');
+    }
+
+    // Validate category length (max 100 characters)
+    if (updateData.category && updateData.category.length > 100) {
+      throw new Error('カテゴリーは100文字以内で入力してください');
+    }
+
+    // Validate estimated_duration (must be positive if provided)
+    if (updateData.estimated_duration && updateData.estimated_duration <= 0) {
+      throw new Error('推定時間は正の数で入力してください');
+    }
 
     // Only include thumbnail_url if it's explicitly provided or if preserveThumbnail is false
     if (cleanedMetadata.thumbnail_url !== undefined || !preserveThumbnail) {

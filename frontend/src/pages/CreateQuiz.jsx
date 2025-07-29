@@ -37,44 +37,48 @@ function CreateQuiz() {
     }
   }, [isAuthenticated, navigate]);
 
-  // Load draft data if editing existing draft (use ref to prevent infinite loops)
+  // Load quiz data if editing existing quiz (drafts or published)
   const draftLoadedRef = useRef(false);
   
   useEffect(() => {
-    const loadDraftData = async () => {
+    const loadQuizData = async () => {
       const state = location.state;
       const questionSetId = state?.questionSetId;
+      const editMode = state?.editMode;
       const draftMode = state?.draftMode;
+      const wasPublished = state?.wasPublished;
       
-      if (draftMode && questionSetId && !draftLoadedRef.current && isAuthenticated) {
+      // Load data if editing any quiz (draft or published)
+      if (editMode && questionSetId && !draftLoadedRef.current && isAuthenticated) {
         try {
           setIsDraftLoading(true);
           draftLoadedRef.current = true; // Prevent re-loading
-          console.log('Loading draft quiz:', questionSetId);
+          console.log('Loading quiz for editing:', questionSetId, { draftMode, wasPublished });
           
-          // Load the draft data
-          const draftData = await loadDraft(questionSetId);
-          console.log('Draft data loaded:', draftData);
+          // Load the quiz data (same API works for both drafts and published)
+          const quizData = await loadDraft(questionSetId);
+          console.log('Quiz data loaded:', quizData);
           
           // Populate metadata
-          if (draftData.quiz) {
+          if (quizData.quiz) {
             setMetadata(prevMetadata => ({
               ...prevMetadata,
-              title: draftData.quiz.title || '',
-              description: draftData.quiz.description || '',
-              category: draftData.quiz.category || '',
-              difficulty_level: draftData.quiz.difficulty_level || '',
-              estimated_duration: draftData.quiz.estimated_duration || '',
-              thumbnail_url: draftData.quiz.thumbnail_url || '',
-              tags: draftData.quiz.tags || [],
-              is_public: draftData.quiz.is_public || false,
-              questionsCount: draftData.quiz.total_questions || 0
+              title: quizData.quiz.title || '',
+              description: quizData.quiz.description || '',
+              category: quizData.quiz.category || '',
+              difficulty_level: quizData.quiz.difficulty_level || '',
+              estimated_duration: quizData.quiz.estimated_duration || '',
+              thumbnail_url: quizData.quiz.thumbnail_url || '',
+              tags: quizData.quiz.tags || [],
+              is_public: quizData.quiz.is_public || false,
+              questionsCount: quizData.quiz.total_questions || 0,
+              wasPublished: wasPublished // Store this info for later
             }));
           }
           
           // Populate questions if they exist
-          if (draftData.questions && draftData.questions.length > 0) {
-            const formattedQuestions = draftData.questions.map((question, index) => ({
+          if (quizData.questions && quizData.questions.length > 0) {
+            const formattedQuestions = quizData.questions.map((question, index) => ({
               id: question.id || Date.now() + index,
               text: question.question_text || '',
               image: question.image_url || '',
@@ -105,33 +109,34 @@ function CreateQuiz() {
             console.log('Questions loaded:', formattedQuestions.length);
           }
 
-          // Populate settings if they exist in the draft
-          if (draftData.quiz && draftData.quiz.play_settings) {
-            const draftSettings = {
-              players_cap: draftData.quiz.play_settings.players_cap || 50,
+          // Populate settings if they exist in the quiz
+          if (quizData.quiz && quizData.quiz.play_settings) {
+            const quizSettings = {
+              players_cap: quizData.quiz.play_settings.players_cap || 50,
               game_settings: {
-                autoAdvance: draftData.quiz.play_settings.autoAdvance || false,
-                hybridMode: draftData.quiz.play_settings.hybridMode || false,
-                showExplanations: draftData.quiz.play_settings.showExplanations || false,
-                explanationTime: draftData.quiz.play_settings.explanationTime || 30,
-                pointCalculation: draftData.quiz.play_settings.pointCalculation || 'fixed',
-                streakBonus: draftData.quiz.play_settings.streakBonus || false,
-                showLeaderboard: draftData.quiz.play_settings.showLeaderboard || false,
-                showProgress: draftData.quiz.play_settings.showProgress || false,
+                autoAdvance: quizData.quiz.play_settings.autoAdvance || false,
+                hybridMode: quizData.quiz.play_settings.hybridMode || false,
+                showExplanations: quizData.quiz.play_settings.showExplanations || false,
+                explanationTime: quizData.quiz.play_settings.explanationTime || 30,
+                pointCalculation: quizData.quiz.play_settings.pointCalculation || 'fixed',
+                streakBonus: quizData.quiz.play_settings.streakBonus || false,
+                showLeaderboard: quizData.quiz.play_settings.showLeaderboard || false,
+                showProgress: quizData.quiz.play_settings.showProgress || false,
               }
             };
-            setSettings(draftSettings);
+            setSettings(quizSettings);
           }
           
-          showSuccess('下書きを読み込みました');
+          const loadMessage = wasPublished ? '公開済みクイズを編集モードで読み込みました' : '下書きを読み込みました';
+          showSuccess(loadMessage);
           
         } catch (error) {
-          console.error('Failed to load draft:', error);
-          showError('下書きの読み込みに失敗しました: ' + error.message);
+          console.error('Failed to load quiz:', error);
+          showError('クイズの読み込みに失敗しました: ' + error.message);
           draftLoadedRef.current = false; // Reset on error to allow retry
         } finally {
           setIsDraftLoading(false);
-          // Allow auto-save after draft loading is complete (with small delay)
+          // Allow auto-save after quiz loading is complete (with small delay)
           setTimeout(() => {
             draftLoadedRef.current = false;
           }, 2000);
@@ -139,7 +144,7 @@ function CreateQuiz() {
       }
     };
 
-    loadDraftData();
+    loadQuizData();
   }, [isAuthenticated]); // Only depend on authentication, use refs to prevent other dependencies
 
   // Quiz creation steps
@@ -267,24 +272,24 @@ function CreateQuiz() {
   const validateQuizData = (metadata, questions, settings) => {
     const errors = [];
     
-    // Validate metadata
+    // Validate metadata according to database schema
     if (!metadata.title?.trim()) {
       errors.push('タイトルは必須です');
     }
     if (metadata.title?.trim().length > 255) {
       errors.push('タイトルは255文字以内で入力してください');
     }
-    if (!metadata.category) {
-      errors.push('カテゴリーを選択してください');
+    if (metadata.category && metadata.category.length > 100) {
+      errors.push('カテゴリーは100文字以内で入力してください');
     }
-    if (!metadata.difficulty_level) {
-      errors.push('難易度レベルを選択してください');
+    if (metadata.difficulty_level && !['easy', 'medium', 'hard', 'expert'].includes(metadata.difficulty_level)) {
+      errors.push('難易度レベルが無効です');
     }
-    if (metadata.description && metadata.description.length > 1000) {
-      errors.push('説明は1000文字以内で入力してください');
+    if (metadata.description && metadata.description.length > 5000) { // Text field can be longer
+      errors.push('説明は5000文字以内で入力してください');
     }
-    if (metadata.estimated_duration && (metadata.estimated_duration < 1 || metadata.estimated_duration > 180)) {
-      errors.push('推定時間は1-180分の範囲で入力してください');
+    if (metadata.estimated_duration && metadata.estimated_duration <= 0) {
+      errors.push('推定時間は正の数で入力してください');
     }
     
     // Validate questions
@@ -811,14 +816,17 @@ function CreateQuiz() {
 
   if (!user) return null;
 
-  // Show loading screen while loading draft data
+  // Show loading screen while loading quiz data
   if (isDraftLoading) {
+    const state = location.state;
+    const wasPublished = state?.wasPublished;
+    
     return (
       <div className="create-quiz-container">
         <div className="create-quiz-content">
           <div className="loading-state">
             <div className="loading-spinner">⌛</div>
-            <h2>下書きを読み込み中...</h2>
+            <h2>{wasPublished ? 'クイズを読み込み中...' : '下書きを読み込み中...'}</h2>
             <p>データを復元しています。しばらくお待ちください。</p>
           </div>
         </div>
@@ -839,7 +847,10 @@ function CreateQuiz() {
               ← ダッシュボードに戻る
             </button>
             <h1 className="page-title">
-              {location.state?.draftMode ? 'クイズ編集（下書き）' : 'クイズ作成'}
+              {location.state?.editMode ? 
+                (location.state?.wasPublished ? 'クイズ編集（公開済み）' : 
+                 location.state?.draftMode ? 'クイズ編集（下書き）' : 'クイズ編集') : 
+                'クイズ作成'}
             </h1>
           </div>
           <div className="header-right">
@@ -927,8 +938,12 @@ function CreateQuiz() {
                 questions={questions}
                 settings={settings}
                 questionSetId={currentQuizId}
+                wasPublished={metadata.wasPublished || false}
                 onPublish={() => {
-                  showSuccess('クイズが正常に公開されました！');
+                  const successMessage = metadata.wasPublished ? 
+                    'クイズの更新が正常に公開されました！' : 
+                    'クイズが正常に公開されました！';
+                  showSuccess(successMessage);
                   navigate('/dashboard');
                 }}
                 onReorderQuestions={handleReorderQuestions}

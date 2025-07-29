@@ -407,37 +407,74 @@ router.post('/create', AuthMiddleware.authenticateToken, async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!title || !category || !difficulty_level) {
+    if (!title || title.trim().length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Title, category, and difficulty level are required'
+        message: 'Title is required'
+      });
+    }
+
+    // Validate title length (max 255 characters as per schema)
+    if (title.trim().length > 255) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title must be 255 characters or less'
+      });
+    }
+
+    // Validate category length (max 100 characters as per schema)
+    if (category && category.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category must be 100 characters or less'
+      });
+    }
+
+    // Validate difficulty_level (max 20 characters and valid values)
+    const validDifficulties = ['easy', 'medium', 'hard', 'expert'];
+    if (difficulty_level && (!validDifficulties.includes(difficulty_level) || difficulty_level.length > 20)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Difficulty level must be one of: easy, medium, hard, expert'
+      });
+    }
+
+    // Validate estimated_duration (must be positive if provided)
+    if (estimated_duration !== undefined && estimated_duration !== null && (typeof estimated_duration !== 'number' || estimated_duration <= 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Estimated duration must be a positive number'
       });
     }
 
     // Create user-scoped Supabase client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
 
+    // Prepare quiz data according to schema constraints
+    const quizData = {
+      user_id: req.user.id, // CRITICAL: Set user_id for RLS policy compliance
+      title: title.trim(), // Required, max 255 chars
+      description: description?.trim() || null, // Optional text
+      category: category || null, // Optional, max 100 chars
+      difficulty_level: difficulty_level || 'medium', // Default 'medium', max 20 chars
+      estimated_duration: estimated_duration || null, // Optional positive integer
+      thumbnail_url: thumbnail_url || null, // Optional text
+      tags: Array.isArray(tags) ? tags : [], // Default empty array
+      is_public: Boolean(is_public), // Default false
+      status: status || 'draft', // Default 'draft'
+      total_questions: 0, // Default 0, will be updated as questions are added
+      times_played: 0, // Default 0
+      average_score: 0.0, // Default 0.0
+      completion_rate: 0.0, // Default 0.0
+      play_settings: {}, // Default empty object
+      last_played_at: null // Default null
+      // Note: id, created_at, updated_at are handled by database defaults
+    };
+
     // Insert quiz set into database using user-scoped client
-    const { data: quizData, error: quizError } = await userSupabase
+    const { data: insertedQuiz, error: quizError } = await userSupabase
       .from('question_sets')
-      .insert([{
-        user_id: req.user.id, // CRITICAL: Set user_id for RLS policy compliance
-        title: title.trim(),
-        description: description?.trim() || null,
-        category: category,
-        difficulty_level: difficulty_level,
-        estimated_duration: estimated_duration || null,
-        thumbnail_url: thumbnail_url || null,
-        tags: tags || [], // This should be a text array
-        is_public: is_public || false,
-        status: status || 'draft', // Use draft status for intermediate saves
-        total_questions: 0, // Will be updated as questions are added
-        times_played: 0,
-        average_score: 0.0,
-        completion_rate: 0.0,
-        play_settings: {}
-        // Note: id, created_at, updated_at, last_played_at are handled by database defaults
-      }])
+      .insert([quizData])
       .select()
       .single();
 
@@ -453,7 +490,7 @@ router.post('/create', AuthMiddleware.authenticateToken, async (req, res) => {
     res.json({
       success: true,
       message: 'Quiz created successfully',
-      quiz: quizData
+      quiz: insertedQuiz
     });
 
   } catch (error) {
@@ -486,6 +523,11 @@ router.get('/my-quizzes', AuthMiddleware.authenticateToken, async (req, res) => 
         is_public,
         status,
         total_questions,
+        times_played,
+        average_score,
+        completion_rate,
+        last_played_at,
+        play_settings,
         created_at,
         updated_at
       `)
@@ -582,6 +624,111 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
     delete updateData.created_at;
     delete updateData.updated_at; // Let database handle timestamps
 
+    // Validate title if provided
+    if (updateData.title !== undefined) {
+      if (!updateData.title || updateData.title.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Title cannot be empty'
+        });
+      }
+      if (updateData.title.trim().length > 255) {
+        return res.status(400).json({
+          success: false,
+          message: 'Title must be 255 characters or less'
+        });
+      }
+      updateData.title = updateData.title.trim();
+    }
+
+    // Validate category if provided
+    if (updateData.category !== undefined && updateData.category !== null && updateData.category.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category must be 100 characters or less'
+      });
+    }
+
+    // Validate difficulty_level if provided
+    if (updateData.difficulty_level !== undefined) {
+      const validDifficulties = ['easy', 'medium', 'hard', 'expert'];
+      if (!validDifficulties.includes(updateData.difficulty_level) || updateData.difficulty_level.length > 20) {
+        return res.status(400).json({
+          success: false,
+          message: 'Difficulty level must be one of: easy, medium, hard, expert'
+        });
+      }
+    }
+
+    // Validate status if provided
+    if (updateData.status !== undefined) {
+      const validStatuses = ['draft', 'published', 'archived'];
+      if (!validStatuses.includes(updateData.status)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid status. Must be: draft, published, or archived'
+        });
+      }
+    }
+
+    // Validate estimated_duration if provided
+    if (updateData.estimated_duration !== undefined && updateData.estimated_duration !== null) {
+      if (typeof updateData.estimated_duration !== 'number' || updateData.estimated_duration <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Estimated duration must be a positive number'
+        });
+      }
+    }
+
+    // Validate total_questions if provided
+    if (updateData.total_questions !== undefined && updateData.total_questions !== null) {
+      if (typeof updateData.total_questions !== 'number' || updateData.total_questions < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Total questions must be a non-negative number'
+        });
+      }
+    }
+
+    // Validate times_played if provided
+    if (updateData.times_played !== undefined && updateData.times_played !== null) {
+      if (typeof updateData.times_played !== 'number' || updateData.times_played < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Times played must be a non-negative number'
+        });
+      }
+    }
+
+    // Validate average_score if provided
+    if (updateData.average_score !== undefined && updateData.average_score !== null) {
+      if (typeof updateData.average_score !== 'number' || updateData.average_score < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Average score must be a non-negative number'
+        });
+      }
+    }
+
+    // Validate completion_rate if provided
+    if (updateData.completion_rate !== undefined && updateData.completion_rate !== null) {
+      if (typeof updateData.completion_rate !== 'number' || updateData.completion_rate < 0 || updateData.completion_rate > 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Completion rate must be a number between 0 and 1'
+        });
+      }
+    }
+
+    // Validate tags if provided
+    if (updateData.tags !== undefined && !Array.isArray(updateData.tags)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tags must be an array'
+      });
+    }
+
     // Create user-scoped client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
 
@@ -610,35 +757,7 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
 
     console.log(`✅ Quiz updated: ${quizId} (${updateData.title || existingQuiz.title})`);
     
-    // Validate update data against database constraints
-    if (updateData.difficulty_level && !['easy', 'medium', 'hard', 'expert'].includes(updateData.difficulty_level)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid difficulty level. Must be: easy, medium, hard, or expert'
-      });
-    }
-
-    if (updateData.status && !['draft', 'published', 'archived'].includes(updateData.status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid status. Must be: draft, published, or archived'
-      });
-    }
-
-    if (updateData.estimated_duration && (typeof updateData.estimated_duration !== 'number' || updateData.estimated_duration <= 0)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Estimated duration must be a positive number'
-      });
-    }
-
-    if (updateData.total_questions && (typeof updateData.total_questions !== 'number' || updateData.total_questions < 0)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Total questions must be a non-negative number'
-      });
-    }
-
+    // Remove the old validation code that was duplicated above
     const { data: quiz, error } = await userSupabase
       .from('question_sets')
       .update(updateData)
@@ -874,7 +993,7 @@ router.delete('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
 router.patch('/:id/status', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const quizId = req.params.id;
-    const { status } = req.body;
+    const { status, was_published } = req.body;
 
     // Validate status - use actual database enum values
     const validStatuses = ['draft', 'published', 'archived'];
@@ -885,11 +1004,41 @@ router.patch('/:id/status', AuthMiddleware.authenticateToken, async (req, res) =
       });
     }
 
-    const { data: updatedQuiz, error } = await AuthMiddleware.createUserScopedClient(req.userToken)
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+
+    // First get the current quiz to preserve existing play_settings
+    const { data: currentQuiz, error: fetchError } = await userSupabase
       .from('question_sets')
-      .update({
-        status: status
-      })
+      .select('play_settings')
+      .eq('id', quizId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching current quiz:', fetchError);
+      return res.status(404).json({
+        success: false,
+        message: 'Quiz not found or access denied'
+      });
+    }
+
+    // Prepare update data
+    const updateData = { status: status };
+    
+    // If marking as draft and was_published is true, merge this info with existing play_settings
+    if (status === 'draft' && was_published) {
+      updateData.play_settings = {
+        ...(currentQuiz.play_settings || {}),
+        was_published: true
+      };
+    } else if (status === 'published') {
+      // When republishing, remove the was_published flag but keep other settings
+      const { was_published: _, ...otherSettings } = currentQuiz.play_settings || {};
+      updateData.play_settings = otherSettings;
+    }
+
+    const { data: updatedQuiz, error } = await userSupabase
+      .from('question_sets')
+      .update(updateData)
       .eq('id', quizId)
       .select()
       .single();
@@ -1021,9 +1170,17 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
       updated_at: new Date().toISOString()
     };
 
-    // Add play_settings if provided
-    if (play_settings) {
-      updateData.play_settings = play_settings;
+    // Merge new play_settings with existing ones, removing was_published flag
+    if (play_settings || currentQuiz.play_settings) {
+      const existingSettings = currentQuiz.play_settings || {};
+      const newSettings = play_settings || {};
+      
+      // Remove was_published flag when republishing and merge settings
+      const { was_published: _, ...cleanExistingSettings } = existingSettings;
+      updateData.play_settings = {
+        ...cleanExistingSettings,
+        ...newSettings
+      };
     }
 
     // Update total_questions to match actual question count

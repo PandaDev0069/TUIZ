@@ -9,7 +9,8 @@ function ReviewForm({
   settings, 
   questionSetId,
   onPublish,
-  onReorderQuestions 
+  onReorderQuestions,
+  wasPublished = false // New prop to indicate if quiz was previously published
 }) {
   const { apiCall } = useAuth();
   const [isPublishing, setIsPublishing] = useState(false);
@@ -105,7 +106,8 @@ function ReviewForm({
       });
 
       console.log('Publish response:', response);
-      showSuccess('クイズが正常に公開されました！');
+      const successMessage = wasPublished ? 'クイズの更新が正常に公開されました！' : 'クイズが正常に公開されました！';
+      showSuccess(successMessage);
       
       if (onPublish) {
         onPublish();
@@ -183,8 +185,19 @@ function ReviewForm({
       <div className="review-step-content">
         <h2 className="review-step-title">🎯 最終確認・公開</h2>
         <p className="review-step-description">
-          作成したクイズの内容を確認して、公開の準備をしましょう。
+          {wasPublished ? 
+            '公開済みクイズの編集内容を確認して、再公開の準備をしましょう。' :
+            '作成したクイズの内容を確認して、公開の準備をしましょう。'
+          }
         </p>
+        {wasPublished && (
+          <div className="review-edit-notice">
+            <span className="review-edit-icon">ℹ️</span>
+            <span className="review-edit-text">
+              このクイズは以前に公開されており、現在編集モードです。再公開すると変更が反映されます。
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Validation Errors */}
@@ -450,7 +463,7 @@ function ReviewForm({
           onClick={handlePublish}
           disabled={isPublishing || validationErrors.length > 0}
         >
-          {isPublishing ? '公開中...' : 'クイズを公開する'}
+          {isPublishing ? '公開中...' : (wasPublished ? 'クイズを再公開する' : 'クイズを公開する')}
         </button>
         
         {validationErrors.length > 0 && (
