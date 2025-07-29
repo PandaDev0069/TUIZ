@@ -542,36 +542,6 @@ const QuestionBuilder = forwardRef(({
     }
   };
 
-  // Move answer up
-  const moveAnswerUp = (index) => {
-    if (index > 0) {
-      const newAnswers = [...question.answers];
-      [newAnswers[index - 1], newAnswers[index]] = [newAnswers[index], newAnswers[index - 1]];
-      // Update order_index for all answers
-      const reindexedAnswers = newAnswers.map((answer, newIndex) => ({ 
-        ...answer, 
-        order_index: newIndex 
-      }));
-      updateQuestion({ ...question, answers: reindexedAnswers });
-      setHasUnsavedChanges(true);
-    }
-  };
-
-  // Move answer down
-  const moveAnswerDown = (index) => {
-    if (index < question.answers.length - 1) {
-      const newAnswers = [...question.answers];
-      [newAnswers[index], newAnswers[index + 1]] = [newAnswers[index + 1], newAnswers[index]];
-      // Update order_index for all answers
-      const reindexedAnswers = newAnswers.map((answer, newIndex) => ({ 
-        ...answer, 
-        order_index: newIndex 
-      }));
-      updateQuestion({ ...question, answers: reindexedAnswers });
-      setHasUnsavedChanges(true);
-    }
-  };
-
   // Handle drag events for answer images
   const handleAnswerDrag = (e, answerId) => {
     e.preventDefault();
@@ -1054,29 +1024,6 @@ const QuestionBuilder = forwardRef(({
                 <div className="answer-header">
                   <span className="answer-label">選択肢 {index + 1}</span>
                   <div className="answer-controls">
-                    {/* Answer reordering buttons */}
-                    {question.answers.length > 2 && getQuestionType() === 'multiple_choice' && (
-                      <div className="answer-reorder-controls">
-                        <button
-                          type="button"
-                          className={`reorder-btn ${index === 0 ? 'disabled' : ''}`}
-                          onClick={() => moveAnswerUp(index)}
-                          disabled={index === 0}
-                          title="選択肢を上に移動"
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          className={`reorder-btn ${index === question.answers.length - 1 ? 'disabled' : ''}`}
-                          onClick={() => moveAnswerDown(index)}
-                          disabled={index === question.answers.length - 1}
-                          title="選択肢を下に移動"
-                        >
-                          ↓
-                        </button>
-                      </div>
-                    )}
                     <label className="correct-checkbox">
                       <input
                         type="checkbox"

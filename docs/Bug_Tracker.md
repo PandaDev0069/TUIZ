@@ -8,10 +8,7 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 ## 🔴 Active Issues
 
 ### High Priority
-11. Question type not being saved properly - backend receiving incorrect data
-12. Intermediate save not working for answers
-14. Explanation description not allowing spaces
-15. Fix big and bulky additional options re-ordering up and down buttons
+- None currently
 
 ### Medium Priority
 - None currently
@@ -23,8 +20,39 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 
 ## ✅ Resolved Issues (Latest First)
 
+### Issue #15: Big and Bulky Answer Reordering Buttons
+**Date:** 2025-07-29 | **Status:** FIXED ✅ | **Severity:** Medium  
+**Component:** Frontend - QuestionBuilder Component
+
+**Problem:**
+The answer reordering up/down buttons in the QuestionBuilder component were described as "big and bulky" and taking up unnecessary space in the UI.
+
+**Solution:**
+- Completely removed the answer reordering buttons and associated functionality
+- Removed `moveAnswerUp` and `moveAnswerDown` functions from QuestionBuilder.jsx
+- Simplified the answer controls layout by removing the reorder-controls div
+- Users can still add/remove answers and edit their content, just not reorder them
+
+**Files Modified:**
+- `frontend/src/components/QuestionBuilder.jsx`: Removed reordering buttons and functions
+
+### Issue #14: Explanation Description Not Allowing Spaces
+**Date:** 2025-07-29 | **Status:** FIXED ✅ | **Severity:** Medium  
+**Component:** Frontend - ExplanationModal Component
+
+**Problem:**
+The explanation title and text inputs were automatically trimming spaces on every onChange event, making it impossible for users to type spaces naturally in their explanations.
+
+**Solution:**
+- Removed automatic `.trim()` calls from onChange handlers for both explanation title and text inputs
+- Changed from `e.target.value.trim() || null` to `e.target.value || null`
+- Users can now type spaces normally, and trimming (if needed) can be handled on save/submit
+
+**Files Modified:**
+- `frontend/src/components/ExplanationModal.jsx`: Updated onChange handlers for explanation_title and explanation_text
+
 ### Issue #23: Images Not Being Deleted from Database and Storage Buckets
-**Date:** 2025-01-28 | **Status:** FIXED ✅ | **Severity:** High  
+**Date:** 2025-07-28 | **Status:** FIXED ✅ | **Severity:** High  
 **Component:** Frontend/Backend API - Image Management
 
 **Problem:**
@@ -90,7 +118,7 @@ if (answer.backend_id && answer.image_url && !answer.image_url.startsWith('blob:
 ---
 
 ### Issue #21: Database Check Constraint Violation with Negative Order Index
-**Date:** 2025-01-28 | **Status:** FIXED ✅ | **Severity:** High  
+**Date:** 2025-07-28 | **Status:** FIXED ✅ | **Severity:** High  
 **Component:** Backend API - Database Constraints
 
 **Problem:**
@@ -125,7 +153,7 @@ for (let i = 0; i < existingDbQuestionIds.length; i++) {
 ---
 
 ### Issue #20: Order Index Constraint Violation in Bulk Question Updates
-**Date:** 2025-01-28 | **Status:** FIXED ✅ | **Severity:** High  
+**Date:** 2025-07-28 | **Status:** FIXED ✅ | **Severity:** High  
 **Component:** Backend API - Bulk Operations
 
 **Problem:**
@@ -149,7 +177,7 @@ Implemented a 3-step process to avoid constraint violations:
 ---
 
 ### Issue #19: Database Schema Column Mapping Error
-**Date:** 2025-01-28 | **Status:** FIXED ✅ | **Severity:** Medium  
+**Date:** 2025-07-28 | **Status:** FIXED ✅ | **Severity:** Medium  
 **Component:** Backend API - Database Schema
 
 **Problem:**
@@ -168,7 +196,7 @@ Code was referencing old 'explanation' column that doesn't exist in current sche
 ---
 
 ### Issue #18: Bulk Save 403 Forbidden Error
-**Date:** 2025-01-28 | **Status:** FIXED ✅ | **Severity:** High  
+**Date:** 2025-07-28 | **Status:** FIXED ✅ | **Severity:** High  
 **Component:** Backend API - Route Handling
 
 **Problem:**
@@ -185,7 +213,7 @@ Reorganized route order in Express router - moved all specific routes (like `/bu
 ---
 
 ### Issue #17: Order Index Constraint Violations (Up/Down Arrows)
-**Date:** 2025-01-28 | **Status:** FIXED ✅ | **Severity:** Medium  
+**Date:** 2025-07-28 | **Status:** FIXED ✅ | **Severity:** Medium  
 **Component:** Frontend - Question Reordering
 
 **Problem:**
@@ -204,7 +232,7 @@ Immediate save attempts after reordering created temporary duplicate order_index
 ---
 
 ### Issue #16: Bulk Saving Not Working
-**Date:** 2025-01-28 | **Status:** FIXED ✅ | **Severity:** High  
+**Date:** 2025-07-28 | **Status:** FIXED ✅ | **Severity:** High  
 **Component:** Backend API - Bulk Operations
 
 **Problem:**
@@ -223,7 +251,7 @@ Missing bulk update API endpoint for handling multiple questions simultaneously.
 ---
 
 ### Issues #8-15: Authentication and API Consistency Fixes
-**Date:** 2025-01-28 | **Status:** FIXED ✅ | **Severity:** Various  
+**Date:** 2025-07-28 | **Status:** FIXED ✅ | **Severity:** Various  
 **Component:** Backend API - Authentication & Response Format
 
 **Problems Resolved:**

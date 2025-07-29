@@ -225,7 +225,7 @@ function ExplanationModal({ isOpen, onClose, question, updateQuestion }) {
                 value={question.explanation_title || ""}
                 onChange={(e) => updateQuestion({ 
                   ...question, 
-                  explanation_title: e.target.value.trim() || null
+                  explanation_title: e.target.value || null
                 })}
                 maxLength={100}
               />
@@ -245,7 +245,7 @@ function ExplanationModal({ isOpen, onClose, question, updateQuestion }) {
                 placeholder="例: パリはフランスの首都で、1789年のフランス革命の舞台としても有名な都市です。セーヌ川沿いに位置し、エッフェル塔やルーブル美術館などの名所があります。詳しい背景や覚え方のコツなどを説明できます。"
                 value={question.explanation_text || question.explanation || ""}
                 onChange={(e) => {
-                  const value = e.target.value.trim() || null;
+                  const value = e.target.value || null;
                   updateQuestion({ 
                     ...question, 
                     explanation_text: value,
