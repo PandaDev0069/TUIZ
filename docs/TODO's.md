@@ -82,3 +82,68 @@
 - May be implement 2FA / email-verification(may be in future)
 - Currently there is no option for password change (needs implementation)
 - update Register page to meet the required metas for the db
+
+
+
+
+# 🧠 Quiz App Development Memo
+
+## 📌 Main Index / Home Page
+- [ ] Create main index/home page.
+- [ ] Home page should have **two options**:
+  - ✅ Login as **Host**
+  - ✅ Join Game as **Guest**
+- [ ] Implement **guest account system**:
+  - Use `players` table with `is_authenticated = false` for guests.
+  - Assign temporary UUID, store minimal info (nickname, join time).
+  - Redirect guest users to **join game** page.
+  - Optional: Auto-delete guests after session ends or X hours.
+
+---
+
+## 🛠️ Host Dashboard
+- [ ] Allow **published question sets** to be editable.
+- [ ] Create a **file system UI** to manage:
+  - Question sets
+  - Questions
+  - Answers
+  - Related images/media
+- [ ] Rework how **game sessions** are created:
+  - Create a session in DB using question sets' JSON.
+  - Provide **additional settings** during game session creation.
+  - Load JSON and allow session-specific overrides without modifying original question set.
+
+---
+
+## 🎮 Game Sessions
+- [ ] Implement **separate routes and UI** for:
+  - Host menu
+  - Player menu
+- [ ] Use Socket.IO rooms to sync host and players in real-time.
+
+---
+
+## 📊 DB Game Scores & Real-Time Updates
+- [ ] Use real-time updates for score tracking.
+- [ ] Push and pull data between questions.
+- [ ] After players answer:
+  - Redirect them to **leaderboard and explanation section**.
+  - Update DB scores immediately.
+- [ ] After explanation, move to next question.
+- [ ] For the final question:
+  - **Don’t show leaderboard immediately**.
+- [ ] Optional suspense feature:
+  - Don’t show full leaderboard between questions.
+  - Only show top players per question.
+  - Add session settings:
+    - Show leaderboard every question
+    - Show only at the end
+    - Show top X players per round
+
+---
+
+## 💡 General Notes
+- ✅ Good separation of **user flow** and **data flow**.
+- ✅ Guest account system helps with 200–300 concurrent users.
+- ✅ Session JSON approach supports reusability and modularity.
+- ✅ Real-time score suspense mechanics enhance gameplay experience.
