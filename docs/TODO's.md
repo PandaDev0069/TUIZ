@@ -73,6 +73,7 @@
     - Needs work
 - ### My Quizes
     - Shows important metas of the most recent 3 question sets
+    - [✅] Allow **published question sets** to be editable.
 - ### Other Quizes
     - Shows popular(more played) quizes from other creators that are made public
 - ### Overall UI
@@ -102,7 +103,6 @@
 ---
 
 ## 🛠️ Host Dashboard
-- [ ] Allow **published question sets** to be editable.
 - [ ] Create a **file system UI** to manage:
   - Question sets
   - Questions
