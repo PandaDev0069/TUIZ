@@ -1176,60 +1176,60 @@ const QuestionBuilder = forwardRef(({
         </div>
 
         {/* Question Preview */}
-        <div className="question-preview">
-          <h3 className="preview-title">プレビュー</h3>
-          <div className="preview-card">
-            <div className="preview-header">
-              <span className="preview-timer">⏱️ {question.timeLimit}秒</span>
-              <span className="preview-points">🏆 {calculatePoints()}点</span>
+        <div className="question-builder-preview">
+          <h3 className="question-builder-preview-title">プレビュー</h3>
+          <div className="question-builder-preview-card">
+            <div className="question-builder-preview-header">
+              <span className="question-builder-preview-timer">⏱️ {question.timeLimit}秒</span>
+              <span className="question-builder-preview-points">🏆 {calculatePoints()}点</span>
             </div>
             
             {question.image && (
-              <div className="preview-question-image">
+              <div className="question-builder-preview-question-image">
                 <img src={question.image} alt="Question" />
               </div>
             )}
             
-            <div className="preview-question">
+            <div className="question-builder-preview-question">
               {question.text || "問題文を入力してください..."}
             </div>
             
-            <div className={`preview-answers ${question.answers.length === 4 ? 'grid-2x2' : 
+            <div className={`question-builder-preview-answers ${question.answers.length === 4 ? 'grid-2x2' : 
                              question.answers.length === 2 && getQuestionType() !== 'true_false' ? 'horizontal' : 'large-buttons'}`}>
               {question.answers.map((answer, index) => (
                 <div 
                   key={answer.id} 
-                  className={`preview-answer-option ${answer.isCorrect ? 'correct' : ''}`}
+                  className={`question-builder-preview-answer-option ${answer.isCorrect ? 'correct' : ''}`}
                 >
                   {getQuestionType() === 'true_false' ? (
-                    <div className="answer-content-wrapper">
-                      <div className="answer-text">
+                    <div className="question-builder-answer-content-wrapper">
+                      <div className="question-builder-answer-text">
                         {answer.text || `選択肢 ${index + 1}`}
                       </div>
                       {answer.image && (
-                        <div className="answer-image-container">
+                        <div className="question-builder-answer-image-container">
                           <img 
                             src={answer.image} 
                             alt={`Answer ${index + 1}`} 
-                            className="answer-image"
+                            className="question-builder-answer-image"
                           />
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="answer-content-wrapper">
-                      <span className="answer-letter">
+                    <div className="question-builder-answer-content-wrapper">
+                      <span className="question-builder-answer-letter">
                         {String.fromCharCode(65 + index)}
                       </span>
-                      <div className="answer-text">
+                      <div className="question-builder-answer-text">
                         {answer.text || `選択肢 ${index + 1}`}
                       </div>
                       {answer.image && (
-                        <div className="answer-image-container">
+                        <div className="question-builder-answer-image-container">
                           <img 
                             src={answer.image} 
                             alt={`Answer ${index + 1}`} 
-                            className="answer-image"
+                            className="question-builder-answer-image"
                           />
                         </div>
                       )}

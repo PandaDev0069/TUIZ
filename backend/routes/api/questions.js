@@ -534,62 +534,147 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
           console.log('Question updated:', updatedQuestion.id);
           updatedQuestions.push(updatedQuestion);
           
-          // Handle answers for existing question - delete and recreate to avoid order conflicts
+          // Handle answers for existing question - smart update instead of delete/recreate
           if (question.answers && Array.isArray(question.answers)) {
-            // Delete existing answers
-            const { error: deleteError } = await userSupabase
+            // First, get existing answers with their details
+            const { data: existingAnswers, error: getAnswersError } = await userSupabase
               .from('answers')
-              .delete()
-              .eq('question_id', questionId);
+              .select('id, answer_text, is_correct, order_index, answer_explanation, image_url')
+              .eq('question_id', questionId)
+              .order('order_index', { ascending: true });
             
-            if (deleteError) {
-              console.error('Error deleting existing answers:', deleteError);
-              errors.push({ index: i, error: `Failed to delete existing answers: ${deleteError.message}` });
+            if (getAnswersError) {
+              console.error('Error fetching existing answers:', getAnswersError);
+              errors.push({ index: i, error: `Failed to fetch existing answers: ${getAnswersError.message}` });
               continue;
             }
             
-            // Create new answers
-            for (let j = 0; j < question.answers.length; j++) {
-              const answer = question.answers[j];
+            console.log(`📋 Found ${existingAnswers?.length || 0} existing answers for question: ${questionId}`);
+            
+            const newAnswers = question.answers;
+            const toUpdate = [];
+            const toCreate = [];
+            const toDelete = [];
+            
+            // Compare existing vs new answers
+            for (let j = 0; j < newAnswers.length; j++) {
+              const newAnswer = newAnswers[j];
+              const existingAnswer = existingAnswers?.[j]; // Match by order index
               
               // Helper function to check if URL is a blob URL that needs to be filtered out
               const isBlobUrl = (url) => {
                 return url && (url.startsWith('blob:') || url.includes('localhost'));
               };
               
-              const originalImageUrl = answer.image_url || answer.image;
-              const filteredImageUrl = (answer.image_url && !isBlobUrl(answer.image_url)) ? answer.image_url : 
-                                     (answer.image && !isBlobUrl(answer.image)) ? answer.image : null;
-              
-              if (originalImageUrl && filteredImageUrl === null) {
-                console.log(`🚫 Filtered out blob URL from answer ${j}:`, originalImageUrl);
-              }
+              const filteredImageUrl = (newAnswer.image_url && !isBlobUrl(newAnswer.image_url)) ? newAnswer.image_url : 
+                                     (newAnswer.image && !isBlobUrl(newAnswer.image)) ? newAnswer.image : null;
               
               const answerData = {
-                question_id: questionId,
-                answer_text: answer.text?.trim() || '',
-                is_correct: answer.isCorrect || false,
+                answer_text: newAnswer.text?.trim() || '',
+                is_correct: newAnswer.isCorrect || false,
                 order_index: j,
-                answer_explanation: answer.answer_explanation?.trim() || '',
-                // Filter out blob URLs - only store actual Supabase storage URLs
+                answer_explanation: newAnswer.answer_explanation?.trim() || '',
                 image_url: filteredImageUrl
               };
               
-              console.log('Creating answer with data:', answerData);
-              
-              const { data: newAnswer, error: answerError } = await userSupabase
+              if (existingAnswer) {
+                // Check if answer needs updating (compare all fields)
+                const needsUpdate = 
+                  existingAnswer.answer_text !== answerData.answer_text ||
+                  existingAnswer.is_correct !== answerData.is_correct ||
+                  existingAnswer.order_index !== answerData.order_index ||
+                  existingAnswer.answer_explanation !== answerData.answer_explanation ||
+                  existingAnswer.image_url !== answerData.image_url;
+                
+                if (needsUpdate) {
+                  toUpdate.push({
+                    id: existingAnswer.id,
+                    data: answerData,
+                    index: j
+                  });
+                  console.log(`🔄 Answer ${j} needs update for question: ${questionId}`);
+                } else {
+                  console.log(`✅ Answer ${j} unchanged for question: ${questionId}`);
+                }
+              } else {
+                // New answer to create
+                toCreate.push({
+                  data: { ...answerData, question_id: questionId },
+                  index: j
+                });
+                console.log(`➕ New answer ${j} to create for question: ${questionId}`);
+              }
+            }
+            
+            // Mark extra existing answers for deletion
+            if (existingAnswers && existingAnswers.length > newAnswers.length) {
+              for (let k = newAnswers.length; k < existingAnswers.length; k++) {
+                toDelete.push(existingAnswers[k].id);
+                console.log(`🗑️ Extra answer ${k} to delete for question: ${questionId}`);
+              }
+            }
+            
+            // Execute updates
+            for (const update of toUpdate) {
+              console.log(`🔄 Updating answer ${update.index} for question: ${questionId}`);
+              const { error: updateError } = await userSupabase
                 .from('answers')
-                .insert(answerData)
+                .update(update.data)
+                .eq('id', update.id);
+              
+              if (updateError) {
+                console.error('❌ Error updating answer:', updateError);
+                errors.push({ index: i, answerIndex: update.index, error: updateError.message });
+              } else {
+                console.log(`✅ Answer ${update.index} updated successfully`);
+              }
+            }
+            
+            // Execute creations
+            for (const creation of toCreate) {
+              console.log(`➕ Creating answer ${creation.index} for question: ${questionId}`);
+              const { data: newAnswer, error: createError } = await userSupabase
+                .from('answers')
+                .insert(creation.data)
                 .select()
                 .single();
               
-              if (answerError) {
-                console.error('Error creating answer:', answerError);
-                errors.push({ index: i, answerIndex: j, error: answerError.message });
+              if (createError) {
+                console.error('❌ Error creating answer:', createError);
+                errors.push({ index: i, answerIndex: creation.index, error: createError.message });
               } else {
-                console.log('Answer created:', newAnswer.id, 'for question:', questionId);
+                console.log(`✅ Answer created: ${newAnswer.id} for question: ${questionId}`);
               }
             }
+            
+            // Execute deletions
+            for (const deleteId of toDelete) {
+              console.log(`🗑️ Deleting extra answer: ${deleteId}`);
+              const { error: deleteError } = await userSupabase
+                .from('answers')
+                .delete()
+                .eq('id', deleteId);
+              
+              if (deleteError) {
+                console.error('❌ Error deleting answer:', deleteError);
+                // Try with admin client as fallback
+                const { error: adminDeleteError } = await db.supabaseAdmin
+                  .from('answers')
+                  .delete()
+                  .eq('id', deleteId);
+                
+                if (adminDeleteError) {
+                  console.error('❌ Admin deletion also failed:', adminDeleteError);
+                  errors.push({ index: i, error: `Failed to delete answer: ${deleteError.message}` });
+                } else {
+                  console.log(`✅ Answer deleted successfully using admin client: ${deleteId}`);
+                }
+              } else {
+                console.log(`✅ Answer deleted successfully: ${deleteId}`);
+              }
+            }
+            
+            console.log(`🎯 Answer operation summary for question ${questionId}: ${toUpdate.length} updated, ${toCreate.length} created, ${toDelete.length} deleted`);
           }
         }
       } catch (questionError) {

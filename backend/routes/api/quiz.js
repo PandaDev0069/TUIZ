@@ -1116,6 +1116,37 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
     }
 
     console.log(`📋 Found quiz: "${currentQuiz.title}" with ${currentQuiz.questions?.length || 0} questions`);
+    console.log(`🔍 Quiz data structure:`, {
+      id: currentQuiz.id,
+      title: currentQuiz.title,
+      questionsArray: currentQuiz.questions,
+      questionsLength: currentQuiz.questions?.length,
+      hasQuestions: !!currentQuiz.questions
+    });
+
+    // Let's also check if questions exist directly in the database
+    const { data: directQuestionsCheck, error: directQuestionsError } = await userSupabase
+      .from('questions')
+      .select('id, question_text, question_set_id')
+      .eq('question_set_id', quizId);
+    
+    console.log(`🔍 Direct questions check for quiz ${quizId}:`, {
+      count: directQuestionsCheck?.length || 0,
+      questions: directQuestionsCheck,
+      error: directQuestionsError?.message
+    });
+
+    // Let's also try with admin client to see if it's an RLS issue
+    const { data: adminQuestionsCheck, error: adminQuestionsError } = await dbManager.supabaseAdmin
+      .from('questions')
+      .select('id, question_text, question_set_id')
+      .eq('question_set_id', quizId);
+    
+    console.log(`🔍 Admin questions check for quiz ${quizId}:`, {
+      count: adminQuestionsCheck?.length || 0,
+      questions: adminQuestionsCheck,
+      error: adminQuestionsError?.message
+    });
 
     // Validate quiz can be published
     const validationErrors = [];
