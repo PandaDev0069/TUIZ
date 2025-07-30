@@ -765,6 +765,81 @@ class DatabaseManager {
   }
 
   // ================================
+  // DATABASE CLEANUP FUNCTIONS
+  // ================================
+
+  async runCleanup(config = null) {
+    try {
+      // Use provided config or load default
+      const cleanupConfig = config || require('./cleanupConfig');
+      const timings = cleanupConfig.getCleanupQueries();
+      
+      console.log('🧹 Starting database cleanup...');
+      
+      // Call the database cleanup function
+      const { data, error } = await this.supabaseAdmin
+        .rpc('cleanup_old_games_and_guests', {
+          finished_retention_minutes: cleanupConfig.games.finishedGameRetention,
+          waiting_timeout_minutes: cleanupConfig.games.waitingGameTimeout,
+          cancelled_timeout_minutes: cleanupConfig.games.cancelledGameTimeout,
+          inactive_guest_timeout_minutes: cleanupConfig.guests.inactiveGuestTimeout,
+          batch_size: cleanupConfig.execution.batchSize
+        });
+
+      if (error) throw error;
+
+      // Log cleanup results
+      if (cleanupConfig.execution.logCleanupActions && data) {
+        data.forEach(result => {
+          console.log(`🧹 ${result.action}: ${result.count} - ${result.details}`);
+        });
+      }
+
+      return { success: true, results: data };
+    } catch (error) {
+      console.error('❌ Database cleanup error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async previewCleanup(config = null) {
+    try {
+      const cleanupConfig = config || require('./cleanupConfig');
+      
+      console.log('👀 Previewing cleanup operations...');
+      
+      const { data, error } = await this.supabaseAdmin
+        .rpc('preview_cleanup', {
+          finished_retention_minutes: cleanupConfig.games.finishedGameRetention,
+          waiting_timeout_minutes: cleanupConfig.games.waitingGameTimeout,
+          cancelled_timeout_minutes: cleanupConfig.games.cancelledGameTimeout,
+          inactive_guest_timeout_minutes: cleanupConfig.guests.inactiveGuestTimeout
+        });
+
+      if (error) throw error;
+
+      return { success: true, preview: data };
+    } catch (error) {
+      console.error('❌ Cleanup preview error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getCleanupStats() {
+    try {
+      const { data, error } = await this.supabaseAdmin
+        .rpc('get_cleanup_stats');
+
+      if (error) throw error;
+
+      return { success: true, stats: data };
+    } catch (error) {
+      console.error('❌ Get cleanup stats error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // ================================
   // UTILITY FUNCTIONS
   // ================================
   

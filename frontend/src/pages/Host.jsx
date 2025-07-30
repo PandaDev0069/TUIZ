@@ -43,16 +43,16 @@ function Host() {
   }
 
   const handleCreateRoom = () => {
-    if (!title || !selectedQuestionSet) {
-      showError('クイズタイトルと問題セットを選択してください。');
+    if (!selectedQuestionSet) {
+      showError('問題セットを選択してください。');
       return;
     }
     
     socket.emit('createGame', { 
-      hostId: 'host_' + Date.now(), // Generate a temporary host ID
+      hostId: `host_${user.id}`, // Use user ID without timestamp
       questionSetId: selectedQuestionSet,
       settings: {
-        title: title,
+        title: title || null, // Send null if no manual title provided
         maxPlayers: 50,
         questionTime: 30
       }
@@ -76,14 +76,15 @@ function Host() {
       <h1>TUIZ情報王</h1>
       <h2>ホスト画面</h2>
       <div className="host-card">
-        <p>クイズのタイトルを入力してください。</p>
+        <p>クイズのタイトルを入力してください（空白の場合は問題セットのタイトルを使用）。</p>
 
         <input
           className="input"
           type="text"
-          placeholder="クイズのタイトル"
+          placeholder="クイズのタイトル（オプション）"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          autocomplete="off"
         />
 
         {loading ? (

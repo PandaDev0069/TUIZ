@@ -6,6 +6,7 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const DatabaseManager = require('./config/database');
 const SupabaseAuthHelper = require('./utils/SupabaseAuthHelper');
+const CleanupScheduler = require('./utils/CleanupScheduler');
 const { validateStorageConfig } = require('./utils/storageConfig');
 
 // Initialize database
@@ -14,12 +15,18 @@ const db = new DatabaseManager();
 // Initialize auth helper
 const authHelper = new SupabaseAuthHelper(db.supabaseAdmin);
 
+// Initialize cleanup scheduler
+const cleanupScheduler = new CleanupScheduler(db);
+
 // Test database connection and validate storage configuration on startup
 (async () => {
   try {
     const isConnected = await db.testConnection();
     if (isConnected) {
       console.log('✅ Database connected successfully');
+      
+      // Start cleanup scheduler after successful database connection
+      cleanupScheduler.start();
     } else {
       console.error('❌ Database connection failed');
     }
@@ -336,6 +343,57 @@ app.post('/api/debug/test-rls', async (req, res) => {
 });
 
 // ================================================================
+// CLEANUP MANAGEMENT ENDPOINTS
+// ================================================================
+
+// Get cleanup status and stats
+app.get('/api/cleanup/status', async (req, res) => {
+  try {
+    const status = cleanupScheduler.getStatus();
+    const stats = await db.getCleanupStats();
+    
+    res.json({
+      scheduler: status,
+      stats: stats.success ? stats.stats : null,
+      error: stats.success ? null : stats.error
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Preview cleanup operations (dry run)
+app.get('/api/cleanup/preview', async (req, res) => {
+  try {
+    const result = await cleanupScheduler.previewCleanup();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Run manual cleanup
+app.post('/api/cleanup/run', async (req, res) => {
+  try {
+    const result = await cleanupScheduler.runManualCleanup();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test warnings manually (for debugging)
+app.post('/api/cleanup/test-warnings', async (req, res) => {
+  try {
+    console.log('🧪 Testing warning system manually...');
+    await cleanupScheduler.checkAndSendWarnings();
+    res.json({ success: true, message: 'Warning check completed' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ================================================================
 // MODULAR API ROUTES
 // ================================================================
 
@@ -400,6 +458,9 @@ const io = new Server(server, {
         credentials: true
     },
 });
+
+// Export function to get Socket.IO instance
+module.exports.getIO = () => io;
 
 // Store active games in memory (you could also use Redis for production)
 const activeGames = new Map();
@@ -486,12 +547,36 @@ io.on('connection', (socket) => {
       Question Set ID: ${questionSetId}
       Settings: ${JSON.stringify(settings)}`);
       
-      // Generate a simple game code for players to join
-      const gameCode = Math.floor(100000 + Math.random() * 900000).toString();
-      
       // Extract actual user ID from hostId (remove the temporary prefix)
       const actualHostId = hostId.includes('host_') ? 
         hostId.split('_')[1] : hostId;
+      
+      // If no manual title provided, fetch from question set
+      let gameTitle = settings?.title;
+      if (!gameTitle) {
+        try {
+          console.log(`📚 Fetching title from question set: ${questionSetId}`);
+          const { data: questionSet, error: qsError } = await db.supabaseAdmin
+            .from('question_sets')
+            .select('title')
+            .eq('id', questionSetId)
+            .single();
+          
+          if (!qsError && questionSet) {
+            gameTitle = questionSet.title;
+            console.log(`✅ Retrieved title from database: ${gameTitle}`);
+          } else {
+            console.warn(`⚠️ Could not fetch question set title: ${qsError?.message || 'Not found'}`);
+            gameTitle = 'クイズゲーム'; // Default fallback title
+          }
+        } catch (titleError) {
+          console.error('❌ Error fetching question set title:', titleError);
+          gameTitle = 'クイズゲーム'; // Default fallback title
+        }
+      }
+      
+      // Generate a simple game code for players to join
+      const gameCode = Math.floor(100000 + Math.random() * 900000).toString();
       
       // Create game in database first
       const gameData = {
@@ -501,7 +586,10 @@ io.on('connection', (socket) => {
         players_cap: settings?.maxPlayers || 50,
         current_players: 0,
         status: 'waiting',
-        game_settings: settings || {},
+        game_settings: { 
+          ...settings, 
+          title: gameTitle // Use resolved title
+        },
         created_at: new Date().toISOString()
       };
       
@@ -524,7 +612,10 @@ io.on('connection', (socket) => {
         status: 'waiting',
         players_cap: settings?.maxPlayers || 50,
         current_players: 0,
-        game_settings: settings || {},
+        game_settings: { 
+          ...settings, 
+          title: gameTitle // Include resolved title
+        },
         created_at: dbGame.created_at,
         dbGame: dbGame // Keep reference to full database object
       };
@@ -948,4 +1039,23 @@ server.listen(PORT, HOST, () => {
     console.log(`🚀 Server is running on ${HOST}:${PORT}`);
     console.log(`📱 Mobile access: Use your computer's local IP address (e.g., 192.168.1.xxx:${PORT})`);
     console.log(`💻 Local access: http://localhost:${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received, shutting down gracefully...');
+  cleanupScheduler.stop();
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('🛑 SIGINT received, shutting down gracefully...');
+  cleanupScheduler.stop();
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
 });

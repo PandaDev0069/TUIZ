@@ -94,14 +94,13 @@ function Dashboard() {
   };
 
   const handleStartQuiz = (questionSetId, title) => {
-    // Start a game with the selected quiz set
-    const gameTitle = `${title} - ${new Date().toLocaleTimeString()}`;
+    // Start a game with the selected quiz set - let server fetch title from DB
     
     socket.emit('createGame', { 
-      hostId: `host_${user.id}_${Date.now()}`,
+      hostId: `host_${user.id}`,
       questionSetId: questionSetId,
       settings: {
-        title: gameTitle,
+        title: null, // Let server fetch title from question set
         maxPlayers: 50,
         questionTime: 30
       }
@@ -110,7 +109,9 @@ function Dashboard() {
     // Listen for game creation success
     socket.once('gameCreated', ({ game, gameCode }) => {
       console.log('Game created successfully:', game);
-      navigate('/host/lobby', { state: { room: gameCode, title: gameTitle, gameId: game.id } });
+      // Use the title from the game object (which includes the resolved title from the server)
+      const resolvedTitle = game.game_settings?.title || 'クイズゲーム';
+      navigate('/host/lobby', { state: { room: gameCode, title: resolvedTitle, gameId: game.id } });
     });
     
     // Listen for errors

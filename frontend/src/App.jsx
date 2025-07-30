@@ -4,6 +4,7 @@ import socket from './socket'
 import { AuthProvider } from './contexts/AuthContext'
 import AuthDebugger from './components/AuthDebugger'
 import ToastContainer from './components/ToastContainer'
+import CleanupWarningHandler from './components/CleanupWarningHandler'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -34,6 +35,7 @@ function App() {
   return (
     <AuthProvider>
       {/* {isDevelopment && <AuthDebugger />} */}
+      <CleanupWarningHandler />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
