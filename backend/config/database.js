@@ -774,8 +774,6 @@ class DatabaseManager {
       const cleanupConfig = config || require('./cleanupConfig');
       const timings = cleanupConfig.getCleanupQueries();
       
-      console.log('🧹 Starting database cleanup...');
-      
       // Call the database cleanup function
       const { data, error } = await this.supabaseAdmin
         .rpc('cleanup_old_games_and_guests', {
@@ -788,13 +786,6 @@ class DatabaseManager {
 
       if (error) throw error;
 
-      // Log cleanup results
-      if (cleanupConfig.execution.logCleanupActions && data) {
-        data.forEach(result => {
-          console.log(`🧹 ${result.action}: ${result.count} - ${result.details}`);
-        });
-      }
-
       return { success: true, results: data };
     } catch (error) {
       console.error('❌ Database cleanup error:', error);
@@ -805,8 +796,6 @@ class DatabaseManager {
   async previewCleanup(config = null) {
     try {
       const cleanupConfig = config || require('./cleanupConfig');
-      
-      console.log('👀 Previewing cleanup operations...');
       
       const { data, error } = await this.supabaseAdmin
         .rpc('preview_cleanup', {

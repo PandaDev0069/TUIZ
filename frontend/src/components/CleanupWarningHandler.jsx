@@ -50,11 +50,7 @@ const CleanupWarningHandler = () => {
       countdownInterval = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
-            // Redirect to home page
-            console.log('🔄 Auto-redirect triggered');
-            navigate('/');
-            setWarning(null);
-            setCountdown(null);
+            // Don't navigate here - just return 0 and let another effect handle navigation
             return 0;
           }
           return prev - 1;
@@ -67,6 +63,19 @@ const CleanupWarningHandler = () => {
         clearInterval(countdownInterval);
       }
     };
+  }, [countdown]);
+
+  // Separate useEffect to handle navigation when countdown reaches 0
+  useEffect(() => {
+    if (countdown === 0) {
+      console.log('🔄 Auto-redirect triggered');
+      // Use setTimeout to ensure navigation happens after state update is complete
+      setTimeout(() => {
+        navigate('/');
+        setWarning(null);
+        setCountdown(null);
+      }, 0);
+    }
   }, [countdown, navigate]);
 
   const handleDismiss = () => {
