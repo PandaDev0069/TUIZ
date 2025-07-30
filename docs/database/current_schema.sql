@@ -144,6 +144,7 @@ CREATE TABLE public.users (
   updated_at timestamp with time zone DEFAULT now(),
   last_active timestamp with time zone DEFAULT now(),
   role USER-DEFINED NOT NULL DEFAULT 'user'::user_role,
+  game_player_uuid uuid UNIQUE,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );

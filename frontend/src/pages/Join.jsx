@@ -1,13 +1,22 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from '../contexts/AuthContext';
 import socket from '../socket';
 import './join.css';
 
 function Join() {
+  const { user, isAuthenticated } = useAuth();
   const [name, setName] = useState("");
   const [room, setRoom] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  // Auto-fill name for authenticated users
+  useEffect(() => {
+    if (isAuthenticated && user?.name) {
+      setName(user.name);
+    }
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     console.log('Socket connected:', socket.connected);
@@ -32,12 +41,21 @@ function Join() {
     console.log('Attempting to join game:', room, 'with name:', name);
     
     // Set up listener before emitting
-    socket.once('gameJoined', ({ game, player }) => {
-      console.log('Join successful! Game:', game, 'Player:', player);
-      navigate('/waiting', { state: { name, room, initialPlayers: [player] } });
+    socket.once('joinedGame', ({ gameCode, playerCount, gameStatus, player }) => {
+      console.log('Join successful! Game:', gameCode, 'Player:', player);
+      navigate('/waiting', { state: { name, room: gameCode, initialPlayers: [player] } });
     });
     
-    socket.emit('joinGame', { playerName: name, gameCode: room });
+    // Send user authentication info if available
+    const joinData = {
+      playerName: name,
+      gameCode: room,
+      isAuthenticated: isAuthenticated,
+      userId: isAuthenticated ? user?.id : null
+    };
+    
+    console.log('Join data:', joinData);
+    socket.emit('joinGame', joinData);
   };
 
   const handleKeyPress = (e) => {

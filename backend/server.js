@@ -347,6 +347,7 @@ const debugRoutes = require('./routes/api/debug');
 const gamesRoutes = require('./routes/api/games');
 const quizRoutes = require('./routes/api/quiz');
 const uploadRoutes = require('./routes/upload');
+const playerManagementRoutes = require('./routes/api/playerManagement');
 
 // Mount API routes
 app.use('/api/question-sets', questionSetsRoutes);
@@ -356,6 +357,7 @@ app.use('/api/debug', debugRoutes);
 app.use('/api/games', gamesRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/player', playerManagementRoutes(db));
 
 // Global error handler - must be after all routes
 app.use((error, req, res, next) => {
@@ -481,26 +483,55 @@ io.on('connection', (socket) => {
     try {
       console.log(`🎮 Create Game Request:
       Host ID: ${hostId}
+      Question Set ID: ${questionSetId}
       Settings: ${JSON.stringify(settings)}`);
       
-      // Generate a simple game code for now
+      // Generate a simple game code for players to join
       const gameCode = Math.floor(100000 + Math.random() * 900000).toString();
       
-      // Create a simple game object without database dependency for now
-      const game = {
-        id: gameCode,
+      // Extract actual user ID from hostId (remove the temporary prefix)
+      const actualHostId = hostId.includes('host_') ? 
+        hostId.split('_')[1] : hostId;
+      
+      // Create game in database first
+      const gameData = {
+        host_id: actualHostId,
+        question_set_id: questionSetId,
         game_code: gameCode,
-        host_id: hostId,
-        status: 'waiting',
         players_cap: settings?.maxPlayers || 50,
         current_players: 0,
+        status: 'waiting',
         game_settings: settings || {},
         created_at: new Date().toISOString()
       };
       
-      console.log(`✅ Game created: ${gameCode}`);
+      console.log(`🔄 Creating game in database...`);
+      const dbResult = await db.createGame(gameData);
       
-      // Initialize an active game object
+      if (!dbResult.success) {
+        throw new Error(`Database game creation failed: ${dbResult.error}`);
+      }
+      
+      const dbGame = dbResult.game;
+      console.log(`✅ Game created in database with UUID: ${dbGame.id}`);
+      
+      // Create a memory game object with database reference
+      const game = {
+        id: dbGame.id, // Use database UUID as primary ID
+        game_code: gameCode,
+        host_id: actualHostId,
+        question_set_id: questionSetId,
+        status: 'waiting',
+        players_cap: settings?.maxPlayers || 50,
+        current_players: 0,
+        game_settings: settings || {},
+        created_at: dbGame.created_at,
+        dbGame: dbGame // Keep reference to full database object
+      };
+      
+      console.log(`✅ Game created: ${gameCode} (UUID: ${dbGame.id})`);
+      
+      // Initialize an active game object with database reference
       activeGames.set(gameCode, {
         ...game,
         players: new Map(), // Using Map for better performance
@@ -523,17 +554,18 @@ io.on('connection', (socket) => {
       });
       
     } catch (error) {
-      console.error('Error creating game:', error);
+      console.error('❌ Error creating game:', error);
       socket.emit('error', { message: 'Failed to create game', error: error.message });
     }
   });
 
   // Join an existing game
-  socket.on('joinGame', async ({ playerName, gameCode, userId = null }) => {
+  socket.on('joinGame', async ({ playerName, gameCode, isAuthenticated = false, userId = null }) => {
     try {
       console.log(`👤 Join Game Request:
       Player: ${playerName}
       Game Code: ${gameCode}
+      Is Authenticated: ${isAuthenticated}
       User ID: ${userId}`);
       
       // Find the active game
@@ -555,18 +587,75 @@ io.on('connection', (socket) => {
         return;
       }
       
-      // Create player object
+      // Create player object for memory storage
       const player = {
         id: socket.id,
         name: playerName,
         userId: userId,
+        isAuthenticated: isAuthenticated,
         score: 0,
         streak: 0,
         isConnected: true,
         joinedAt: new Date().toISOString()
       };
       
-      // Add player to game
+      // Add player to database if game exists in database
+      let dbGamePlayer = null;
+      let playerUUID = null;
+      
+      if (activeGame.id && db) {
+        try {
+          // Use the database UUID directly (no need to look up again)
+          const gameUUID = activeGame.id;
+          console.log(`🔄 Adding player to database game ${gameUUID}...`);
+          
+          const playerData = {
+            name: playerName,
+            user_id: isAuthenticated ? userId : null,
+            is_host: isAuthenticated && userId === activeGame.host_id // Check if this user is the host
+          };
+          
+          if (playerData.is_host) {
+            console.log(`👑 Host ${playerName} is joining their own game`);
+          }
+          
+          const result = await db.addPlayerToGame(gameUUID, playerData);
+          
+          if (result.success) {
+            dbGamePlayer = result.gamePlayer;
+            playerUUID = dbGamePlayer.player_id;
+            
+            console.log(`✅ Player ${playerName} added to database:
+            - Game ID: ${gameUUID}
+            - Player UUID: ${playerUUID}
+            - Type: ${dbGamePlayer.is_guest ? 'Guest' : 'User'}
+            - Is Host: ${dbGamePlayer.is_host ? 'Yes' : 'No'}
+            - Returning Player: ${result.isReturningPlayer}
+            - New Player: ${result.isNewPlayer}`);
+            
+            // Update player object with database info
+            player.dbId = dbGamePlayer.id;
+            player.playerId = playerUUID;
+            player.isGuest = dbGamePlayer.is_guest;
+            player.isHost = dbGamePlayer.is_host; // Add host status
+            player.isReturningPlayer = result.isReturningPlayer;
+            player.previousScore = result.isReturningPlayer ? dbGamePlayer.current_score : 0;
+            player.previousRank = result.isReturningPlayer ? dbGamePlayer.current_rank : 0;
+            
+            // If returning player, restore their previous score
+            if (result.isReturningPlayer) {
+              player.score = dbGamePlayer.current_score || 0;
+              console.log(`♻️ Restored returning player score: ${player.score}`);
+            }
+          } else {
+            console.warn(`⚠️ Failed to add player to database: ${result.error}`);
+          }
+        } catch (dbError) {
+          console.error('❌ Database error while adding player:', dbError);
+        }
+      }
+      
+      // Add player to game (memory)
       activeGame.players.set(socket.id, player);
       activeGame.current_players = activeGame.players.size;
       
@@ -574,15 +663,26 @@ io.on('connection', (socket) => {
       socket.join(gameCode);
       socket.gameCode = gameCode;
       socket.playerName = playerName;
+      socket.playerUUID = playerUUID;
       
-      console.log(`✅ Player ${playerName} joined game ${gameCode}`);
+      const statusMsg = dbGamePlayer ? 
+        (player.isReturningPlayer ? 'Rejoined' : 'Joined') : 
+        'Joined (Memory Only)';
+      
+      console.log(`✅ Player ${playerName} ${statusMsg.toLowerCase()} game ${gameCode} 
+      - Socket ID: ${socket.id}
+      - Player UUID: ${playerUUID || 'None'}
+      - Score: ${player.score}`);
       
       // Notify all players in the game about the new player
       io.to(gameCode).emit('playerJoined', {
         player: {
           id: player.id,
           name: player.name,
-          score: player.score
+          score: player.score,
+          isAuthenticated: player.isAuthenticated,
+          isHost: player.isHost || false, // Include host status
+          isReturningPlayer: player.isReturningPlayer || false
         },
         totalPlayers: activeGame.players.size
       });
@@ -592,7 +692,12 @@ io.on('connection', (socket) => {
         gameCode,
         playerCount: activeGame.players.size,
         gameStatus: activeGame.status,
-        player
+        player: {
+          ...player,
+          dbRecord: dbGamePlayer ? true : false,
+          playerUUID: playerUUID,
+          isHost: player.isHost || false // Include host status
+        }
       });
       
     } catch (error) {

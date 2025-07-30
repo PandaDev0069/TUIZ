@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const roomManager = require('../../utils/RoomManager');
 const { getAuthenticatedUser } = require('../../helpers/authHelper');
+const DatabaseManager = require('../../config/database');
+
+// Initialize database
+const db = new DatabaseManager();
 
 // Room manager is already initialized as a singleton
 
@@ -164,6 +168,27 @@ router.get('/:gameId/stats', async (req, res) => {
     
     res.json({ stats });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get player statistics for authenticated users
+router.get('/player/stats', async (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await db.getPlayerStats(user.id);
+    
+    if (result.success) {
+      res.json({ success: true, stats: result.stats });
+    } else {
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error) {
+    console.error('Error getting player stats:', error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -273,6 +273,12 @@ function Dashboard() {
                 <p>オリジナルクイズを作成して管理</p>
               </div>
 
+              <div className="action-card" onClick={() => navigate('/join')}>
+                <div className="action-icon">🎮</div>
+                <h3>ゲームに参加</h3>
+                <p>ルームコードでゲームに参加する</p>
+              </div>
+
               <div className="action-card" onClick={handleQuickStart}>
                 <div className="action-icon">🚀</div>
                 <h3>クイックスタート</h3>

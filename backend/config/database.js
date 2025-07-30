@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const crypto = require('crypto');
 const { randomUUID } = require('crypto');
 
 // Supabase configuration
@@ -394,7 +395,8 @@ class DatabaseManager {
   
   async createGame(gameData) {
     try {
-      const { data, error } = await this.supabase
+      // Use service role for backend game creation
+      const { data, error } = await this.supabaseAdmin
         .from('games')
         .insert(gameData)
         .select()
@@ -411,22 +413,10 @@ class DatabaseManager {
 
   async getGameByCode(gameCode) {
     try {
-      const { data, error } = await this.supabase
+      // Use service role for backend operations
+      const { data, error } = await this.supabaseAdmin
         .from('games')
-        .select(`
-          *,
-          question_sets:question_sets(
-            *,
-            questions:questions(
-              *,
-              answers:answers(*)
-            )
-          ),
-          game_players:game_players(
-            *,
-            players:players(*)
-          )
-        `)
+        .select('*')
         .eq('game_code', gameCode)
         .single();
 
@@ -459,63 +449,250 @@ class DatabaseManager {
     }
   }
 
-  async addPlayerToGame(gameId, playerData) {
+
+
+  // ================================
+  // PLAYER MANAGEMENT
+  // ================================
+
+  async getOrCreatePlayerUUID(userId, playerName) {
     try {
-      // First create or get player
-      let playerId;
-      
-      if (playerData.user_id) {
-        // Authenticated user
-        const { data: existingPlayer } = await this.supabase
-          .from('players')
-          .select('id')
-          .eq('user_id', playerData.user_id)
-          .single();
+      // First check if user already has a game_player_uuid
+      const { data: user, error: userError } = await this.supabaseAdmin
+        .from('users')
+        .select('game_player_uuid, name')
+        .eq('id', userId)
+        .single();
 
-        if (existingPlayer) {
-          playerId = existingPlayer.id;
-        } else {
-          const { data: newPlayer, error: playerError } = await this.supabase
-            .from('players')
-            .insert(playerData)
-            .select('id')
-            .single();
+      if (userError) throw userError;
 
-          if (playerError) throw playerError;
-          playerId = newPlayer.id;
-        }
-      } else {
-        // Guest player
-        const { data: newPlayer, error: playerError } = await this.supabase
-          .from('players')
-          .insert(playerData)
-          .select('id')
-          .single();
-
-        if (playerError) throw playerError;
-        playerId = newPlayer.id;
+      // If user already has a game_player_uuid, return it
+      if (user.game_player_uuid) {
+        console.log(`✅ Found existing game_player_uuid for user ${userId}: ${user.game_player_uuid}`);
+        return {
+          success: true,
+          playerId: user.game_player_uuid,
+          isNewPlayer: false,
+          playerName: user.name || playerName
+        };
       }
 
-      // Add player to game
+      // Generate new game_player_uuid for this user
+      const newPlayerUUID = crypto.randomUUID();
+
+      // Update user with new game_player_uuid
+      const { error: updateError } = await this.supabaseAdmin
+        .from('users')
+        .update({ 
+          game_player_uuid: newPlayerUUID,
+          name: playerName || user.name // Update name if provided
+        })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.error('❌ Error updating user with game_player_uuid:', updateError);
+        throw updateError;
+      }
+
+      console.log(`✅ Created new game_player_uuid for user ${userId}: ${newPlayerUUID}`);
+      return {
+        success: true,
+        playerId: newPlayerUUID,
+        isNewPlayer: true,
+        playerName: playerName || user.name
+      };
+
+    } catch (error) {
+      console.error('❌ Get or create player UUID error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async createGuestPlayerUUID() {
+    try {
+      const guestPlayerUUID = crypto.randomUUID();
+      console.log(`✅ Created guest player UUID: ${guestPlayerUUID}`);
+      
+      return {
+        success: true,
+        playerId: guestPlayerUUID,
+        isNewPlayer: true,
+        isGuest: true
+      };
+    } catch (error) {
+      console.error('❌ Create guest player UUID error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getPlayerStats(userId) {
+    try {
+      // First get the user's game_player_uuid
+      const { data: user, error: userError } = await this.supabase
+        .from('users')
+        .select('game_player_uuid')
+        .eq('id', userId)
+        .single();
+
+      if (userError) throw userError;
+
+      if (!user.game_player_uuid) {
+        // User hasn't played any games yet
+        return {
+          success: true,
+          stats: {
+            totalGames: 0,
+            totalScore: 0,
+            avgScore: 0,
+            recentGames: []
+          }
+        };
+      }
+
+      // Get game participation data using game_player_uuid
       const { data, error } = await this.supabase
         .from('game_players')
-        .insert({
-          game_id: gameId,
-          player_id: playerId,
-          player_name: playerData.name
-        })
         .select(`
-          *,
-          players:players(*)
+          id,
+          game_id,
+          current_score,
+          current_rank,
+          joined_at,
+          games:games(
+            id,
+            status,
+            created_at,
+            ended_at,
+            question_sets:question_sets(title)
+          )
         `)
+        .eq('player_id', user.game_player_uuid)
+        .eq('is_user', true)
+        .order('joined_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Calculate stats
+      const totalGames = data.length;
+      const totalScore = data.reduce((sum, game) => sum + (game.current_score || 0), 0);
+      const avgScore = totalGames > 0 ? Math.round(totalScore / totalGames) : 0;
+      const recentGames = data.slice(0, 5);
+
+      return {
+        success: true,
+        stats: {
+          totalGames,
+          totalScore,
+          avgScore,
+          recentGames,
+          gamePlayerUUID: user.game_player_uuid
+        }
+      };
+    } catch (error) {
+      console.error('❌ Get player stats error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async addPlayerToGame(gameId, playerData) {
+    try {
+      let playerId;
+      let playerName;
+      let isGuest;
+      let isNewPlayer;
+
+      if (playerData.user_id) {
+        // Authenticated user - get or create their persistent game_player_uuid
+        const playerResult = await this.getOrCreatePlayerUUID(playerData.user_id, playerData.name);
+        
+        if (!playerResult.success) {
+          throw new Error(`Failed to get player UUID: ${playerResult.error}`);
+        }
+
+        playerId = playerResult.playerId;
+        playerName = playerResult.playerName;
+        isGuest = false;
+        isNewPlayer = playerResult.isNewPlayer;
+
+        console.log(`🎮 Authenticated user joining game - Player UUID: ${playerId}, New: ${isNewPlayer}`);
+      } else {
+        // Guest user - create temporary UUID
+        const guestResult = await this.createGuestPlayerUUID();
+        
+        if (!guestResult.success) {
+          throw new Error(`Failed to create guest UUID: ${guestResult.error}`);
+        }
+
+        playerId = guestResult.playerId;
+        playerName = playerData.name;
+        isGuest = true;
+        isNewPlayer = true;
+
+        console.log(`👤 Guest user joining game - Temp UUID: ${playerId}`);
+      }
+
+      // Check if player is already in this game
+      const { data: existingPlayer } = await this.supabaseAdmin
+        .from('game_players')
+        .select('id, current_score, current_rank, is_active')
+        .eq('game_id', gameId)
+        .eq('player_id', playerId)
+        .single();
+
+      if (existingPlayer) {
+        console.log(`♻️ Player ${playerId} already exists in game ${gameId}, reactivating`);
+        
+        // Reactivate existing player
+        const { data: reactivatedPlayer, error: reactivateError } = await this.supabaseAdmin
+          .from('game_players')
+          .update({ 
+            is_active: true,
+            player_name: playerName, // Update name in case it changed
+            is_host: playerData.is_host || false // Update host status if provided
+          })
+          .eq('id', existingPlayer.id)
+          .select('*')
+          .single();
+
+        if (reactivateError) throw reactivateError;
+
+        return { 
+          success: true, 
+          gamePlayer: reactivatedPlayer,
+          isReturningPlayer: true
+        };
+      }
+
+      // Create new game_players record
+      const gamePlayerData = {
+        game_id: gameId,
+        player_id: playerId,
+        player_name: playerName,
+        is_guest: isGuest,
+        is_user: !isGuest,
+        is_host: playerData.is_host || false, // Set host flag if provided
+        joined_at: new Date().toISOString(),
+        is_active: true
+      };
+
+      const { data, error } = await this.supabaseAdmin
+        .from('game_players')
+        .insert(gamePlayerData)
+        .select('*')
         .single();
 
       if (error) throw error;
 
-      // Update game player count
-      await this.supabase.rpc('increment_game_players', { game_id: gameId });
+      console.log(`✅ Added player to game - Game: ${gameId}, Player: ${playerId}, Type: ${isGuest ? 'Guest' : 'User'}`);
+
+      // The trigger will handle updating game player count automatically
       
-      return { success: true, gamePlayer: data };
+      return { 
+        success: true, 
+        gamePlayer: data,
+        isReturningPlayer: false,
+        isNewPlayer: isNewPlayer
+      };
     } catch (error) {
       console.error('❌ Add player to game error:', error);
       return { success: false, error: error.message };
