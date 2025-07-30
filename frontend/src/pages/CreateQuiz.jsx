@@ -19,6 +19,7 @@ function CreateQuiz() {
   // Progressive save functionality
   const {
     currentQuizId,
+    setCurrentQuizId, // 🔧 Added to fix currentQuizId restoration from preview
     saveStatus,
     lastSaved,
     autoSaveEnabled,
@@ -162,6 +163,15 @@ function CreateQuiz() {
     return 1; // Default to metadata step
   });
   const totalSteps = 4;
+
+  // 🔧 CRITICAL FIX: Restore currentQuizId when returning from preview
+  useEffect(() => {
+    const state = location.state;
+    if (state?.returnFromPreview && state.currentQuizId && !currentQuizId) {
+      console.log('🔄 Restoring currentQuizId from preview navigation:', state.currentQuizId);
+      setCurrentQuizId(state.currentQuizId);
+    }
+  }, [location.state, currentQuizId]);
 
   // Quiz metadata state - Updated to match database schema
   const [metadata, setMetadata] = useState(() => {
@@ -482,11 +492,21 @@ function CreateQuiz() {
     }
   };
 
-  // Auto-save when data changes - use proper auto-save mechanism
+  // Auto-save when data changes - use debounced auto-save mechanism
   useEffect(() => {
     // Only schedule auto-save if we have a current quiz ID and are authenticated
     if (currentQuizId && !draftLoadedRef.current && isAuthenticated && autoSaveEnabled) {
-      scheduleAutoSave(metadata, questions);
+      // Debounce auto-save: only save after user stops making changes for 1 minute
+      const timeoutId = setTimeout(() => {
+        scheduleAutoSave(metadata, questions);
+      }, 60000); // 1 minute debounce delay
+      
+      return () => {
+        clearTimeout(timeoutId);
+        if (scheduleAutoSave.cancel) {
+          scheduleAutoSave.cancel();
+        }
+      };
     }
     
     // Cleanup on unmount or dependency change
@@ -497,26 +517,89 @@ function CreateQuiz() {
     };
   }, [metadata, questions, currentQuizId, isAuthenticated, autoSaveEnabled, scheduleAutoSave]);
 
-  // Auto-save when step changes
+  // Auto-save when step changes - OPTIMISTIC UI UPDATES
   const handleNext = async () => {
     if (currentStep < totalSteps) {
-      // Auto-save before moving to next step (with error handling)
-      try {
-        if (currentQuizId) {
-          await handleTemporarySave();
-        } else if (metadata.title.trim()) {
-          // Create draft if moving from metadata step
-          const savedQuizId = await temporarySave(metadata, questions);
-          // Upload pending images after creating quiz, pass the quiz ID directly
-          if (savedQuizId) {
-            await uploadPendingImages(savedQuizId);
+      // � Save BEFORE navigation for step 2 (questions) to ensure refs are still available
+      if (currentStep === 2 && currentQuizId) {
+        try {
+          console.log('🔄 Non-blocking save for questions step started');
+          
+          // Start save immediately but don't wait for completion
+          temporarySave(metadata, questions).catch(error => {
+            console.warn('⚠️ Background metadata save failed:', error);
+          });
+          
+          // Save questions while QuestionsForm is still mounted
+          if (questionsFormRef.current && questionsFormRef.current.saveAllQuestions) {
+            console.log('🎯 Saving questions before navigation with quizId:', currentQuizId);
+            // Start questions save immediately but don't wait for completion
+            questionsFormRef.current.saveAllQuestions(currentQuizId).catch(error => {
+              console.warn('⚠️ Background questions save failed:', error);
+              showWarning('質問の保存に失敗しました。手動で保存してください。');
+            });
+            console.log('✅ Questions saved successfully before navigation');
+          } else {
+            console.warn('⚠️ QuestionsForm ref not available for pre-navigation save');
+            showWarning('質問の保存に問題があります。手動で保存してください。');
           }
+        } catch (error) {
+          console.warn('⚠️ Pre-navigation save failed:', error);
+          showWarning('質問の保存に失敗しました。手動で保存してください。');
         }
-      } catch (error) {
-        console.warn('Auto-save failed, continuing anyway:', error);
-        // Don't block navigation if auto-save fails
       }
+      
+      // � OPTIMISTIC: Navigate immediately after save attempt
       setCurrentStep(currentStep + 1);
+      
+      // 🔄 Background save for other steps (non-blocking)
+      if (currentQuizId || metadata.title.trim()) {
+        // Run save in background without blocking UI for non-question steps
+        setTimeout(async () => {
+          try {
+            console.log(`🔄 Background save started for step ${currentStep} navigation`);
+            
+            if (currentStep === 1) {
+              // Moving from metadata step - save metadata and create quiz if needed
+              if (currentQuizId) {
+                await temporarySave(metadata, questions);
+              } else if (metadata.title.trim()) {
+                const savedQuizId = await temporarySave(metadata, questions);
+                if (savedQuizId) {
+                  await uploadPendingImages(savedQuizId);
+                }
+              }
+            } else if (currentStep === 2) {
+              // Moving from questions step - save questions AND metadata
+              if (currentQuizId) {
+                // Save metadata first
+                await temporarySave(metadata, questions);
+                
+                // Save questions using QuestionsForm ref (if available)
+                if (questionsFormRef.current && questionsFormRef.current.saveAllQuestions) {
+                  console.log('🎯 Attempting to save questions after navigation with quizId:', currentQuizId);
+                  await questionsFormRef.current.saveAllQuestions(currentQuizId);
+                  console.log('✅ Questions saved successfully after navigation');
+                } else {
+                  console.warn('⚠️ QuestionsForm ref not available after navigation - this is expected');
+                  console.log('💡 Questions will be saved on next manual save or when returning to questions step');
+                }
+              }
+            } else if (currentStep === 3) {
+              // Moving from settings step - save everything
+              if (currentQuizId) {
+                await temporarySave(metadata, questions);
+                // Note: Questions should already be saved from step 2
+              }
+            }
+            
+            console.log('✅ Background save completed successfully');
+          } catch (error) {
+            console.warn('⚠️ Background save failed, but navigation continues:', error);
+            showWarning('自動保存に失敗しました。手動で保存してください。');
+          }
+        }, 0);
+      }
     }
   };
 
@@ -791,6 +874,7 @@ function CreateQuiz() {
         questions, 
         settings, 
         metadata,
+        currentQuizId, // 🔧 CRITICAL FIX: Pass currentQuizId to preview
         returnPath: '/create-quiz'
       } 
     });

@@ -265,6 +265,7 @@ export const useQuizCreation = () => {
   return {
     // State
     currentQuizId,
+    setCurrentQuizId, // 🔧 Export setCurrentQuizId for external control
     saveStatus,
     lastSaved,
     autoSaveEnabled,

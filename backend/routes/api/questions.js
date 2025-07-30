@@ -407,7 +407,7 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
         const backendId = question.backend_id || question.id;
         const isNewQuestion = !backendId || !isValidUUID(backendId) || String(backendId).startsWith('temp_');
         
-        console.log(`Processing question ${i}: ID=${backendId}, isNew=${isNewQuestion}`);
+        console.log(`Processing question ${i}: ID=${backendId}, isNew=${isNewQuestion}, targetQuestionSet=${question_set_id}`);
         
         if (isNewQuestion) {
           // Create new question
@@ -497,6 +497,32 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
           // Update existing question
           const questionId = question.backend_id || question.id;
           
+          // CRITICAL: Verify the question belongs to the target question set
+          const { data: existingQuestion, error: verifyError } = await userSupabase
+            .from('questions')
+            .select('id, question_set_id')
+            .eq('id', questionId)
+            .single();
+          
+          if (verifyError || !existingQuestion) {
+            console.error(`❌ Question ${questionId} not found or unauthorized`);
+            errors.push({ index: i, error: `Question ${questionId} not found or unauthorized` });
+            continue;
+          }
+          
+          // Check if question belongs to the target question set
+          if (existingQuestion.question_set_id !== question_set_id) {
+            console.error(`❌ CRITICAL: Question ${questionId} belongs to question set ${existingQuestion.question_set_id}, not ${question_set_id}`);
+            console.error(`🚨 This prevents cross-question-set updates and data corruption`);
+            errors.push({ 
+              index: i, 
+              error: `Question ${questionId} belongs to a different question set. Cannot update across question sets.` 
+            });
+            continue;
+          }
+          
+          console.log(`✅ Question ${questionId} ownership verified for question set ${question_set_id}`);
+          
           const questionData = {
             question_text: question.text?.trim() || question.question_text?.trim(),
             question_type: question.question_type || question.type || 'multiple_choice',
@@ -536,10 +562,10 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
           
           // Handle answers for existing question - smart update instead of delete/recreate
           if (question.answers && Array.isArray(question.answers)) {
-            // First, get existing answers with their details
+            // First, get existing answers with their details and verify they belong to this question
             const { data: existingAnswers, error: getAnswersError } = await userSupabase
               .from('answers')
-              .select('id, answer_text, is_correct, order_index, answer_explanation, image_url')
+              .select('id, answer_text, is_correct, order_index, answer_explanation, image_url, question_id')
               .eq('question_id', questionId)
               .order('order_index', { ascending: true });
             
@@ -547,6 +573,16 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
               console.error('Error fetching existing answers:', getAnswersError);
               errors.push({ index: i, error: `Failed to fetch existing answers: ${getAnswersError.message}` });
               continue;
+            }
+            
+            // Verify all existing answers belong to the correct question (additional safety check)
+            if (existingAnswers) {
+              const orphanedAnswers = existingAnswers.filter(ans => ans.question_id !== questionId);
+              if (orphanedAnswers.length > 0) {
+                console.error(`❌ Found ${orphanedAnswers.length} orphaned answers not belonging to question ${questionId}`);
+                errors.push({ index: i, error: `Data integrity issue: orphaned answers detected` });
+                continue;
+              }
             }
             
             console.log(`📋 Found ${existingAnswers?.length || 0} existing answers for question: ${questionId}`);

@@ -16,7 +16,7 @@ function QuizPreview() {
   const { user } = useAuth();
 
   // Check if we have quiz data
-  const { questions = [], settings = {}, metadata = {} } = state || {};
+  const { questions = [], settings = {}, metadata = {}, currentQuizId = null } = state || {};
 
   useEffect(() => {
     if (!questions.length) {
@@ -402,6 +402,7 @@ function QuizPreview() {
                   questions, 
                   settings, 
                   metadata, 
+                  currentQuizId, // 🔧 CRITICAL FIX: Preserve currentQuizId
                   returnFromPreview: true 
                 } 
               })}
