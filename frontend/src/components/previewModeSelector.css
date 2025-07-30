@@ -1,0 +1,244 @@
+/* Preview Mode Selector Styles */
+.preview-mode-selector {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin: 1rem 2rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.preview-mode-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.preview-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 200px;
+}
+
+.preview-control-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.8;
+  margin-bottom: 0.25rem;
+}
+
+/* Mode Buttons */
+.preview-mode-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.preview-mode-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.preview-mode-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.preview-mode-button.active {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+}
+
+/* Question Selector */
+.preview-question-selector {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  min-width: 200px;
+  cursor: pointer;
+}
+
+.preview-question-selector option {
+  background: #333;
+  color: white;
+}
+
+/* Toggle Controls */
+.preview-toggle-controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.preview-toggle-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.preview-toggle-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.preview-toggle-button.active {
+  background: rgba(76, 175, 80, 0.3);
+  border-color: rgba(76, 175, 80, 0.5);
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
+}
+
+/* Start Preview Button */
+.preview-start-preview-button {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  border: none;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  white-space: nowrap;
+}
+
+.preview-start-preview-button:hover {
+  background: linear-gradient(135deg, #45a049, #4CAF50);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+/* Preview Info */
+.preview-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
+.info-label {
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.info-value {
+  font-weight: 500;
+  color: #4CAF50;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .mode-controls {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .control-group {
+    min-width: 100%;
+  }
+  
+  .mode-buttons,
+  .toggle-controls {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .preview-mode-selector {
+    margin: 0.5rem 1rem;
+    padding: 1rem;
+  }
+  
+  .mode-buttons,
+  .toggle-controls {
+    flex-direction: column;
+  }
+  
+  .mode-button,
+  .toggle-button {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .question-selector {
+    width: 100%;
+  }
+  
+  .preview-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .info-item {
+    justify-content: space-between;
+  }
+}
+
+/* Mobile View Specific */
+.quiz-preview-container.mobile-view .preview-mode-selector {
+  margin: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+}
+
+.quiz-preview-container.mobile-view .mode-button,
+.quiz-preview-container.mobile-view .toggle-button {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+.quiz-preview-container.mobile-view .start-preview-button {
+  padding: 0.6rem 1.2rem;
+  font-size: 0.9rem;
+}
+
+/* Animation effects */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+.start-preview-button:hover {
+  animation: pulse 2s infinite;
+}

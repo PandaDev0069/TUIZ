@@ -9,6 +9,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import CreateQuiz from './pages/CreateQuiz'
+import QuizPreview from './pages/QuizPreview'
 import Join from './pages/Join'
 import WaitingRoom from './pages/WaitingRoom'
 import Host from './pages/Host'
@@ -39,6 +40,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/create-quiz" element={<CreateQuiz />} />
+        <Route path="/preview" element={<QuizPreview />} />
         <Route path="/host" element={<Host/>} />
         <Route path="/host/lobby" element={<HostLobby />} />
         <Route path="/join" element={<Join />} />

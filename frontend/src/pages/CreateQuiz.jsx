@@ -148,23 +148,44 @@ function CreateQuiz() {
   }, [isAuthenticated]); // Only depend on authentication, use refs to prevent other dependencies
 
   // Quiz creation steps
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(() => {
+    // If returning from preview, determine the appropriate step based on data completeness
+    const state = location.state;
+    if (state?.returnFromPreview) {
+      // Set step based on what data exists
+      if (state.questions?.length > 0 && state.metadata?.title) {
+        return 3; // Settings step - where users typically want to return to
+      } else if (state.metadata?.title) {
+        return 2; // Questions step
+      }
+    }
+    return 1; // Default to metadata step
+  });
   const totalSteps = 4;
 
   // Quiz metadata state - Updated to match database schema
-  const [metadata, setMetadata] = useState({
-    title: "",
-    description: "",
-    category: "",
-    difficulty_level: "",
-    estimated_duration: "",
-    estimated_duration_manual: false,
-    thumbnail_url: "",
-    thumbnail_file: null,
-    tags: [],
-    tagsString: "",
-    is_public: false,
-    questionsCount: 0
+  const [metadata, setMetadata] = useState(() => {
+    const state = location.state;
+    if (state?.returnFromPreview && state.metadata) {
+      return {
+        ...state.metadata,
+        tagsString: Array.isArray(state.metadata.tags) ? state.metadata.tags.join(', ') : ""
+      };
+    }
+    return {
+      title: "",
+      description: "",
+      category: "",
+      difficulty_level: "",
+      estimated_duration: "",
+      estimated_duration_manual: false,
+      thumbnail_url: "",
+      thumbnail_file: null,
+      tags: [],
+      tagsString: "",
+      is_public: false,
+      questionsCount: 0
+    };
   });
 
   // Image upload functions (refs to hold the upload functions from components)
@@ -172,80 +193,92 @@ function CreateQuiz() {
   const questionsFormRef = useRef(null);
 
   // Quiz questions state
-  const [questions, setQuestions] = useState([
-    {
-      id: Date.now(),
-      text: "",
-      image: "",
-      imageFile: null,
-      question_type: "multiple_choice",
-      timeLimit: 30,
-      points: 100,
-      difficulty: "medium",
-      explanation: "", // Backward compatibility
-      explanation_title: "",
-      explanation_text: "",
-      explanation_image: "", // For uploaded image preview
-      explanation_imageFile: null, // For uploaded image file
-      explanation_image_url: "", // For image URL from backend
-      order_index: 0,
-      answers: [
-        { 
-          id: Date.now() + 1, 
-          text: "", 
-          isCorrect: false, 
-          image: "", 
-          imageFile: null,
-          order_index: 0,
-          answer_explanation: ""
-        },
-        { 
-          id: Date.now() + 2, 
-          text: "", 
-          isCorrect: false, 
-          image: "", 
-          imageFile: null,
-          order_index: 1,
-          answer_explanation: ""
-        },
-      ],
-    },
-  ]);
+  const [questions, setQuestions] = useState(() => {
+    const state = location.state;
+    if (state?.returnFromPreview && state.questions?.length > 0) {
+      return state.questions;
+    }
+    return [
+      {
+        id: Date.now(),
+        text: "",
+        image: "",
+        imageFile: null,
+        question_type: "multiple_choice",
+        timeLimit: 30,
+        points: 100,
+        difficulty: "medium",
+        explanation: "", // Backward compatibility
+        explanation_title: "",
+        explanation_text: "",
+        explanation_image: "", // For uploaded image preview
+        explanation_imageFile: null, // For uploaded image file
+        explanation_image_url: "", // For image URL from backend
+        order_index: 0,
+        answers: [
+          { 
+            id: Date.now() + 1, 
+            text: "", 
+            isCorrect: false, 
+            image: "", 
+            imageFile: null,
+            order_index: 0,
+            answer_explanation: ""
+          },
+          { 
+            id: Date.now() + 2, 
+            text: "", 
+            isCorrect: false, 
+            image: "", 
+            imageFile: null,
+            order_index: 1,
+            answer_explanation: ""
+          },
+        ],
+      },
+    ];
+  });
 
   // Quiz settings state
-  const [settings, setSettings] = useState({
-    // Timing & Flow
-    timeLimit: 30,
-    breakDuration: 3,
-    autoAdvance: true,
-    
-    // Question & Answer Ordering
-    questionOrder: "original", // "original", "random-all", "random-per-player", "custom"
-    customQuestionOrder: [],
-    answerOrder: "original", // "original", "randomize", "lock-first", "lock-last"
-    
-    // Gameplay Behavior
-    showCorrectAnswer: true,
-    showExplanations: true,
-    allowAnswerChange: true,
-    allowLateSubmissions: false,
-    
-    // Scoring & Points
-    pointCalculation: "fixed", // "fixed", "time-bonus"
-    streakBonus: false,
-    wrongAnswerPenalty: false,
-    
-    // Player Experience
-    showLeaderboard: true,
-    showProgress: true,
-    allowReplay: false,
-    spectatorMode: true,
-    
-    // Advanced Options
-    maxPlayers: 50,
-    autoStart: false,
-    kickInactive: false,
-    inactiveTimeout: 30
+  const [settings, setSettings] = useState(() => {
+    const state = location.state;
+    if (state?.returnFromPreview && state.settings) {
+      return state.settings;
+    }
+    return {
+      // Timing & Flow
+      timeLimit: 30,
+      breakDuration: 3,
+      autoAdvance: true,
+      
+      // Question & Answer Ordering
+      questionOrder: "original", // "original", "random-all", "random-per-player", "custom"
+      customQuestionOrder: [],
+      answerOrder: "original", // "original", "randomize", "lock-first", "lock-last"
+      
+      // Gameplay Behavior
+      showCorrectAnswer: true,
+      showExplanations: true,
+      allowAnswerChange: true,
+      allowLateSubmissions: false,
+      
+      // Scoring & Points
+      pointCalculation: "fixed", // "fixed", "time-bonus"
+      streakBonus: false,
+      wrongAnswerPenalty: false,
+      
+      // Player Experience
+      showLeaderboard: true,
+      showProgress: true,
+      allowReplay: false,
+      spectatorMode: true,
+      
+      // Advanced Options
+      maxPlayers: 50,
+      autoStart: false,
+      kickInactive: false,
+      inactiveTimeout: 30
+    };
   });
 
   // Modal states for advanced features
@@ -752,9 +785,15 @@ function CreateQuiz() {
   };
 
   const handlePreviewQuiz = () => {
-    // TODO: Implement preview modal functionality
-    console.log('Preview quiz clicked - functionality not yet implemented');
-    // setShowPreviewModal(true);
+    // Navigate to the preview page with quiz data
+    navigate('/preview', { 
+      state: { 
+        questions, 
+        settings, 
+        metadata,
+        returnPath: '/create-quiz'
+      } 
+    });
   };
 
   // Helper function to ensure proper order indices for questions
