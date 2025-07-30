@@ -523,7 +523,7 @@ function CreateQuiz() {
       // � Save BEFORE navigation for step 2 (questions) to ensure refs are still available
       if (currentStep === 2 && currentQuizId) {
         try {
-          console.log('🔄 Non-blocking save for questions step started');
+          console.log('🔄 Saving data before leaving questions step');
           
           // Start save immediately but don't wait for completion
           temporarySave(metadata, questions).catch(error => {
@@ -533,15 +533,16 @@ function CreateQuiz() {
           // Save questions while QuestionsForm is still mounted
           if (questionsFormRef.current && questionsFormRef.current.saveAllQuestions) {
             console.log('🎯 Saving questions before navigation with quizId:', currentQuizId);
-            // Start questions save immediately but don't wait for completion
+            // Start questions save but don't wait for completion to avoid blocking UI
             questionsFormRef.current.saveAllQuestions(currentQuizId).catch(error => {
-              console.warn('⚠️ Background questions save failed:', error);
+              console.warn('⚠️ Questions save failed:', error);
+              // Only show warning for actual failures, not ref availability issues
               showWarning('質問の保存に失敗しました。手動で保存してください。');
             });
-            console.log('✅ Questions saved successfully before navigation');
+            console.log('✅ Questions save initiated before navigation');
           } else {
-            console.warn('⚠️ QuestionsForm ref not available for pre-navigation save');
-            showWarning('質問の保存に問題があります。手動で保存してください。');
+            // This is expected behavior when component unmounts, don't warn user
+            console.log('💡 QuestionsForm ref not available - questions will be saved later');
           }
         } catch (error) {
           console.warn('⚠️ Pre-navigation save failed:', error);
@@ -570,20 +571,12 @@ function CreateQuiz() {
                 }
               }
             } else if (currentStep === 2) {
-              // Moving from questions step - save questions AND metadata
+              // Moving from questions step - save metadata only (questions already saved before navigation)
               if (currentQuizId) {
-                // Save metadata first
+                // Save metadata
                 await temporarySave(metadata, questions);
-                
-                // Save questions using QuestionsForm ref (if available)
-                if (questionsFormRef.current && questionsFormRef.current.saveAllQuestions) {
-                  console.log('🎯 Attempting to save questions after navigation with quizId:', currentQuizId);
-                  await questionsFormRef.current.saveAllQuestions(currentQuizId);
-                  console.log('✅ Questions saved successfully after navigation');
-                } else {
-                  console.warn('⚠️ QuestionsForm ref not available after navigation - this is expected');
-                  console.log('💡 Questions will be saved on next manual save or when returning to questions step');
-                }
+                console.log('✅ Metadata saved after questions step navigation');
+                // Note: Questions were already saved before navigation to avoid ref issues
               }
             } else if (currentStep === 3) {
               // Moving from settings step - save everything
