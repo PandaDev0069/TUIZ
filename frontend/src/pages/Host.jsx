@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from '../contexts/AuthContext';
 import { showError } from '../utils/toast';
 import socket from '../socket';
 import './host.css';
 
 function Host() {
+  const { user } = useAuth();
   const [title, setTitle] = useState('')
   const [questionSets, setQuestionSets] = useState([])
   const [selectedQuestionSet, setSelectedQuestionSet] = useState('')
@@ -61,7 +63,14 @@ function Host() {
     // Listen for game creation success
     socket.once('gameCreated', ({ game, gameCode }) => {
       console.log('Game created successfully:', game);
-      navigate('/host/lobby', { state: { room: gameCode, title, gameId: game.id } })
+      navigate('/host/lobby', { 
+        state: { 
+          room: gameCode, 
+          title, 
+          gameId: game.id,
+          questionSetId: selectedQuestionSet 
+        } 
+      })
     })
     
     // Listen for errors

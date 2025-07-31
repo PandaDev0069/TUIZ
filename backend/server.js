@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const DatabaseManager = require('./config/database');
 const SupabaseAuthHelper = require('./utils/SupabaseAuthHelper');
 const CleanupScheduler = require('./utils/CleanupScheduler');
+const roomManager = require('./utils/RoomManager');
 const { validateStorageConfig } = require('./utils/storageConfig');
 
 // Initialize database
@@ -578,22 +579,33 @@ io.on('connection', (socket) => {
           gameTitle = 'クイズゲーム'; // Default fallback title
         }
       }
+
+      // Prepare game settings with title
+      const gameSettings = { 
+        ...settings, 
+        title: gameTitle
+      };
       
-      // Generate a simple game code for players to join
-      const gameCode = Math.floor(100000 + Math.random() * 900000).toString();
+      // Use RoomManager to create the room
+      const gameCode = roomManager.createRoom(
+        `Host_${actualHostId}`,
+        questionSetId,
+        gameSettings
+      );
       
-      // Create game in database first
+      if (!gameCode) {
+        throw new Error('Failed to create game room');
+      }
+
+      // Create game in database as well for persistence
       const gameData = {
         host_id: actualHostId,
         question_set_id: questionSetId,
         game_code: gameCode,
-        players_cap: settings?.maxPlayers || 50,
+        players_cap: gameSettings?.maxPlayers || 50,
         current_players: 0,
         status: 'waiting',
-        game_settings: { 
-          ...settings, 
-          title: gameTitle // Use resolved title
-        },
+        game_settings: gameSettings,
         created_at: new Date().toISOString()
       };
       
@@ -614,22 +626,19 @@ io.on('connection', (socket) => {
         host_id: actualHostId,
         question_set_id: questionSetId,
         status: 'waiting',
-        players_cap: settings?.maxPlayers || 50,
+        players_cap: gameSettings?.maxPlayers || 50,
         current_players: 0,
-        game_settings: { 
-          ...settings, 
-          title: gameTitle // Include resolved title
-        },
+        game_settings: gameSettings,
         created_at: dbGame.created_at,
         dbGame: dbGame // Keep reference to full database object
       };
       
       console.log(`✅ Game created: ${gameCode} (UUID: ${dbGame.id})`);
       
-      // Initialize an active game object with database reference
+      // Store in activeGames for backwards compatibility
       activeGames.set(gameCode, {
         ...game,
-        players: new Map(), // Using Map for better performance
+        players: new Map(),
         host: hostId,
         questions: [],
         currentQuestionIndex: 0,

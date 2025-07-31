@@ -111,7 +111,7 @@ function Dashboard() {
       console.log('Game created successfully:', game);
       // Use the title from the game object (which includes the resolved title from the server)
       const resolvedTitle = game.game_settings?.title || 'クイズゲーム';
-      navigate('/host/lobby', { state: { room: gameCode, title: resolvedTitle, gameId: game.id } });
+      navigate('/host/lobby', { state: { room: gameCode, title: resolvedTitle, gameId: game.id, questionSetId: questionSetId } });
     });
     
     // Listen for errors

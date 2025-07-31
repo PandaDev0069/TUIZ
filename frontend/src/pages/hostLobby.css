@@ -58,9 +58,21 @@
   border-bottom: 2px solid rgba(255, 255, 255, 0.1);
 }
 
+.terminal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.terminal-header-right {
+  display: flex;
+  align-items: center;
+}
+
 .terminal-header h3 {
   font-size: 1.4rem;
   opacity: 0.9;
+  margin: 0;
 }
 
 .player-count {
@@ -111,11 +123,70 @@
   color: white;
   font-size: 1.2rem;
   padding: 1.2rem;
-  width: 100%;
+  flex: 1;
 }
 
 .start-button:hover {
   background: #059669;
+}
+
+.settings-button {
+  background: #6366F1;
+  color: white;
+  font-size: 1rem;
+  padding: 1rem;
+  flex: 0 0 auto;
+  min-width: 150px;
+}
+
+.settings-button:hover {
+  background: #4F46E5;
+}
+
+.settings-button-header {
+  background: #6366F1;
+  color: white;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.settings-button-header:hover {
+  background: #4F46E5;
+  transform: translateY(-1px);
+}
+
+.settings-button-header:disabled {
+  background: #6B7280;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+.lobby-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+  flex-direction: column;
+}
+
+@media (min-width: 480px) {
+  .lobby-actions {
+    flex-direction: row;
+    align-items: center;
+  }
+  
+  .start-button {
+    order: 1;
+  }
+  
+  .settings-button {
+    order: 2;
+  }
 }
 
 /* Custom scrollbar for terminal window */

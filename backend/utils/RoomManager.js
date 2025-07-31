@@ -40,6 +40,97 @@ class RoomManager {
     }
   }
 
+  // Create a new game room with settings
+  createRoom(hostName, questionSetId, gameSettings = {}) {
+    // Generate unique room code
+    const roomCode = this.generateRoomCode();
+    
+    // Initialize room with game settings
+    this.rooms.set(roomCode, {
+      gameId: roomCode,
+      hostName: hostName,
+      questionSetId: questionSetId,
+      gameSettings: gameSettings,
+      status: 'waiting',
+      createdAt: new Date().toISOString(),
+      players: new Map(),
+      scores: new Map(),
+      questionScores: new Map(),
+      currentResponses: [],
+      currentQuestionIndex: 0,
+      questions: null, // Will be loaded when game starts
+      questionStartTime: null,
+      streaks: new Map(),
+      previousRanks: new Map()
+    });
+
+    // Add host as a player
+    const hostId = `host_${Date.now()}`;
+    this.rooms.get(roomCode).players.set(hostId, { 
+      id: hostId, 
+      name: 'HOST', 
+      isHost: true 
+    });
+
+    console.log(`🎮 Created game room: ${roomCode} by ${hostName}`);
+    console.log(`📋 Settings:`, gameSettings);
+    
+    return roomCode;
+  }
+
+  // Generate a unique 6-digit room code
+  generateRoomCode() {
+    let roomCode;
+    do {
+      roomCode = Math.floor(100000 + Math.random() * 900000).toString();
+    } while (this.rooms.has(roomCode));
+    return roomCode;
+  }
+
+  // Get room by ID
+  getRoom(roomCode) {
+    return this.rooms.get(roomCode) || null;
+  }
+
+  // Get all rooms (for debugging/admin)
+  getAllRooms() {
+    const roomsData = {};
+    this.rooms.forEach((room, code) => {
+      roomsData[code] = {
+        gameId: room.gameId,
+        hostName: room.hostName,
+        status: room.status,
+        playerCount: room.players.size,
+        questionSetId: room.questionSetId,
+        settings: room.gameSettings,
+        createdAt: room.createdAt
+      };
+    });
+    return roomsData;
+  }
+
+  // Update game settings (only during lobby phase)
+  updateGameSettings(roomCode, newSettings) {
+    const room = this.rooms.get(roomCode);
+    if (!room) {
+      return { success: false, error: 'Room not found' };
+    }
+
+    if (room.status !== 'waiting') {
+      return { success: false, error: 'Settings can only be changed during lobby phase' };
+    }
+
+    // Merge new settings with existing ones
+    room.gameSettings = {
+      ...room.gameSettings,
+      ...newSettings
+    };
+
+    console.log(`⚙️ Updated settings for room ${roomCode}:`, newSettings);
+    
+    return { success: true, settings: room.gameSettings };
+  }
+
   joinRoom(roomCode, playerId, name) {
     if (!this.rooms.has(roomCode)) {
       // Initialize room with all required data structures

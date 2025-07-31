@@ -1,0 +1,433 @@
+const express = require('express');
+const router = express.Router();
+const DatabaseManager = require('../../config/database');
+const AuthMiddleware = require('../../middleware/auth');
+const roomManager = require('../../utils/RoomManager');
+
+// Initialize database
+const db = new DatabaseManager();
+
+// Default simplified game settings based on the schema
+const DEFAULT_SETTINGS = {
+  // PLAYER MANAGEMENT
+  maxPlayers: 50,
+  
+  // GAME FLOW
+  autoAdvance: true,
+  showExplanations: true,
+  explanationTime: 30,
+  showLeaderboard: true,
+  
+  // SCORING
+  pointCalculation: 'fixed',
+  streakBonus: false,
+  
+  // DISPLAY OPTIONS
+  showProgress: true,
+  showCorrectAnswer: true,
+  
+  // ADVANCED
+  spectatorMode: true,
+  allowAnswerChange: false
+};
+
+// GET /api/game-settings/:questionSetId
+// Get settings for a question set (used when creating games)
+router.get('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const { questionSetId } = req.params;
+    console.log('GET /api/game-settings/:questionSetId called with:', questionSetId);
+
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+
+    // Get question set with play_settings
+    const { data: questionSet, error } = await userSupabase
+      .from('question_sets')
+      .select('id, title, play_settings')
+      .eq('id', questionSetId)
+      .single();
+
+    if (error || !questionSet) {
+      console.error('Question set not found or access denied:', error);
+      return res.status(404).json({
+        success: false,
+        error: 'Question set not found or access denied'
+      });
+    }
+
+    console.log('Question set found:', questionSet.title, 'with settings:', questionSet.play_settings);
+
+    // Parse and clean settings from play_settings JSON
+    const rawSettings = questionSet.play_settings || {};
+    
+    // Extract only the simplified settings we support
+    const cleanSettings = {
+      maxPlayers: rawSettings.maxPlayers || rawSettings.players_cap || DEFAULT_SETTINGS.maxPlayers,
+      autoAdvance: rawSettings.autoAdvance !== undefined ? rawSettings.autoAdvance : DEFAULT_SETTINGS.autoAdvance,
+      showExplanations: rawSettings.showExplanations !== undefined ? rawSettings.showExplanations : DEFAULT_SETTINGS.showExplanations,
+      explanationTime: rawSettings.explanationTime || DEFAULT_SETTINGS.explanationTime,
+      showLeaderboard: rawSettings.showLeaderboard !== undefined ? rawSettings.showLeaderboard : DEFAULT_SETTINGS.showLeaderboard,
+      pointCalculation: rawSettings.pointCalculation || DEFAULT_SETTINGS.pointCalculation,
+      streakBonus: rawSettings.streakBonus !== undefined ? rawSettings.streakBonus : DEFAULT_SETTINGS.streakBonus,
+      showProgress: rawSettings.showProgress !== undefined ? rawSettings.showProgress : DEFAULT_SETTINGS.showProgress,
+      showCorrectAnswer: rawSettings.showCorrectAnswer !== undefined ? rawSettings.showCorrectAnswer : DEFAULT_SETTINGS.showCorrectAnswer,
+      spectatorMode: rawSettings.spectatorMode !== undefined ? rawSettings.spectatorMode : DEFAULT_SETTINGS.spectatorMode,
+      allowAnswerChange: rawSettings.allowAnswerChange !== undefined ? rawSettings.allowAnswerChange : DEFAULT_SETTINGS.allowAnswerChange
+    };
+
+    res.json({
+      success: true,
+      questionSetId: questionSet.id,
+      questionSetTitle: questionSet.title,
+      settings: cleanSettings,
+      defaults: DEFAULT_SETTINGS
+    });
+
+  } catch (error) {
+    console.error('Error fetching game settings:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// PUT /api/game-settings/:questionSetId
+// Update settings for a question set
+router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const { questionSetId } = req.params;
+    const { settings } = req.body;
+
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Settings object is required'
+      });
+    }
+
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+
+    // Verify ownership of question set
+    const { data: questionSet, error: verifyError } = await userSupabase
+      .from('question_sets')
+      .select('id, play_settings')
+      .eq('id', questionSetId)
+      .single();
+
+    if (verifyError || !questionSet) {
+      return res.status(404).json({
+        success: false,
+        error: 'Question set not found or access denied'
+      });
+    }
+
+    // Validate and clean incoming settings
+    const validatedSettings = {};
+    
+    // Validate each setting
+    if (settings.maxPlayers !== undefined) {
+      const maxPlayers = parseInt(settings.maxPlayers);
+      if (maxPlayers >= 2 && maxPlayers <= 300) {
+        validatedSettings.maxPlayers = maxPlayers;
+      }
+    }
+
+    if (settings.autoAdvance !== undefined) {
+      validatedSettings.autoAdvance = Boolean(settings.autoAdvance);
+    }
+
+    if (settings.showExplanations !== undefined) {
+      validatedSettings.showExplanations = Boolean(settings.showExplanations);
+    }
+
+    if (settings.explanationTime !== undefined) {
+      const explanationTime = parseInt(settings.explanationTime);
+      if (explanationTime >= 10 && explanationTime <= 120) {
+        validatedSettings.explanationTime = explanationTime;
+      }
+    }
+
+    if (settings.showLeaderboard !== undefined) {
+      validatedSettings.showLeaderboard = Boolean(settings.showLeaderboard);
+    }
+
+    if (settings.pointCalculation !== undefined) {
+      if (['fixed', 'time-bonus'].includes(settings.pointCalculation)) {
+        validatedSettings.pointCalculation = settings.pointCalculation;
+      }
+    }
+
+    if (settings.streakBonus !== undefined) {
+      validatedSettings.streakBonus = Boolean(settings.streakBonus);
+    }
+
+    if (settings.showProgress !== undefined) {
+      validatedSettings.showProgress = Boolean(settings.showProgress);
+    }
+
+    if (settings.showCorrectAnswer !== undefined) {
+      validatedSettings.showCorrectAnswer = Boolean(settings.showCorrectAnswer);
+    }
+
+    if (settings.spectatorMode !== undefined) {
+      validatedSettings.spectatorMode = Boolean(settings.spectatorMode);
+    }
+
+    if (settings.allowAnswerChange !== undefined) {
+      validatedSettings.allowAnswerChange = Boolean(settings.allowAnswerChange);
+    }
+
+    // Merge with existing play_settings
+    const currentSettings = questionSet.play_settings || {};
+    const updatedPlaySettings = {
+      ...currentSettings,
+      ...validatedSettings
+    };
+
+    // Update question set
+    const { data: updatedQuestionSet, error: updateError } = await userSupabase
+      .from('question_sets')
+      .update({
+        play_settings: updatedPlaySettings,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', questionSetId)
+      .select('id, title, play_settings')
+      .single();
+
+    if (updateError) {
+      console.error('Error updating question set settings:', updateError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update settings'
+      });
+    }
+
+    console.log(`Settings updated for question set ${questionSetId}:`, validatedSettings);
+
+    res.json({
+      success: true,
+      questionSetId: updatedQuestionSet.id,
+      settings: validatedSettings,
+      message: 'Settings updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Error updating game settings:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// PUT /api/game-settings/:questionSetId/reset
+// Reset settings to defaults
+router.put('/:questionSetId/reset', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const { questionSetId } = req.params;
+
+    // Create user-scoped Supabase client for RLS compliance
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+
+    // Verify ownership of question set
+    const { data: questionSet, error: verifyError } = await userSupabase
+      .from('question_sets')
+      .select('id, play_settings')
+      .eq('id', questionSetId)
+      .single();
+
+    if (verifyError || !questionSet) {
+      return res.status(404).json({
+        success: false,
+        error: 'Question set not found or access denied'
+      });
+    }
+
+    // Reset play_settings to defaults
+    const { data: updatedQuestionSet, error: updateError } = await userSupabase
+      .from('question_sets')
+      .update({
+        play_settings: DEFAULT_SETTINGS,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', questionSetId)
+      .select('id, title, play_settings')
+      .single();
+
+    if (updateError) {
+      console.error('Error resetting question set settings:', updateError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to reset settings'
+      });
+    }
+
+    console.log(`Settings reset to defaults for question set ${questionSetId}`);
+
+    res.json({
+      success: true,
+      questionSetId: updatedQuestionSet.id,
+      settings: DEFAULT_SETTINGS,
+      message: 'Settings reset to defaults successfully'
+    });
+
+  } catch (error) {
+    console.error('Error resetting game settings:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// GET /api/game-settings/game/:gameId
+// Get settings for an active game (from room manager)
+router.get('/game/:gameId', async (req, res) => {
+  try {
+    const { gameId } = req.params;
+
+    // Get game room data
+    const room = roomManager.getRoom(gameId);
+    
+    if (!room) {
+      return res.status(404).json({
+        success: false,
+        error: 'Game not found'
+      });
+    }
+
+    // Return current game settings
+    res.json({
+      success: true,
+      gameId: gameId,
+      settings: room.gameSettings || DEFAULT_SETTINGS,
+      status: room.status
+    });
+
+  } catch (error) {
+    console.error('Error fetching active game settings:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// PUT /api/game-settings/game/:gameId
+// Update settings for an active game (only during lobby phase)
+router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const { gameId } = req.params;
+    const { settings } = req.body;
+
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Settings object is required'
+      });
+    }
+
+    // Get game room data
+    const room = roomManager.getRoom(gameId);
+    
+    if (!room) {
+      return res.status(404).json({
+        success: false,
+        error: 'Game not found'
+      });
+    }
+
+    // Only allow settings changes during lobby phase
+    if (room.status !== 'waiting') {
+      return res.status(400).json({
+        success: false,
+        error: 'Settings can only be changed during lobby phase'
+      });
+    }
+
+    // Validate and update settings in room manager
+    const validatedSettings = {};
+    
+    // Apply same validation as question set settings
+    if (settings.maxPlayers !== undefined) {
+      const maxPlayers = parseInt(settings.maxPlayers);
+      if (maxPlayers >= 2 && maxPlayers <= 300) {
+        validatedSettings.maxPlayers = maxPlayers;
+      }
+    }
+
+    // Add other validations similar to question set endpoint...
+    Object.keys(DEFAULT_SETTINGS).forEach(key => {
+      if (settings[key] !== undefined) {
+        validatedSettings[key] = settings[key];
+      }
+    });
+
+    // Update room settings
+    room.gameSettings = {
+      ...room.gameSettings,
+      ...validatedSettings
+    };
+
+    console.log(`Active game settings updated for ${gameId}:`, validatedSettings);
+
+    res.json({
+      success: true,
+      gameId: gameId,
+      settings: validatedSettings,
+      message: 'Game settings updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Error updating active game settings:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Update settings using the room manager (alternative approach)
+router.put('/room/:roomCode', async (req, res) => {
+  try {
+    const { roomCode } = req.params;
+    const { settings } = req.body;
+
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Settings object is required'
+      });
+    }
+
+    // Use room manager to update settings
+    const result = roomManager.updateGameSettings(roomCode, settings);
+    
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+
+    res.json({
+      success: true,
+      roomCode: roomCode,
+      settings: result.settings,
+      message: 'Room settings updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Error updating room settings:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+module.exports = router;

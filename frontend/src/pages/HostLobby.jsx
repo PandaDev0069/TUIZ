@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import socket from '../socket'
+import GameSettingsPanel from '../components/GameSettingsPanel'
 import './hostLobby.css'
 
 function HostLobby() {
   const { state } = useLocation()
   const navigate = useNavigate()
-  const { room, title } = state || {}
+  const { room, title, gameId, questionSetId } = state || {}
   const [players, setPlayers] = useState([])
+  const [showSettings, setShowSettings] = useState(false)
+
+  // Debug logging
+  console.log('HostLobby state:', state);
+  console.log('HostLobby questionSetId:', questionSetId);
 
   useEffect(() => {
     if (!room || !title) {
@@ -36,6 +42,19 @@ function HostLobby() {
     navigate('/quiz/control', { state: { room, title } });
   }
 
+  const handleOpenSettings = () => {
+    if (!questionSetId) {
+      console.error('No questionSetId available for settings');
+      alert('設定を開けません: 問題セットIDが見つかりません');
+      return;
+    }
+    setShowSettings(true);
+  }
+
+  const handleCloseSettings = () => {
+    setShowSettings(false);
+  }
+
   return (
     <div className="page-container">
       <div className="lobby-layout">
@@ -51,8 +70,19 @@ function HostLobby() {
         {/* Terminal-style player list card */}
         <div className="host-lobby-card terminal-card">
           <div className="terminal-header">
-            <h3>接続中のプレイヤー</h3>
-            <span className="player-count">{players.length}人参加中</span>
+            <div className="terminal-header-left">
+              <h3>接続中のプレイヤー</h3>
+              <span className="player-count">{players.length}人参加中</span>
+            </div>
+            <div className="terminal-header-right">
+              <button 
+                className="button settings-button-header" 
+                onClick={handleOpenSettings}
+                title="ゲーム設定"
+              >
+                ⚙️ 設定
+              </button>
+            </div>
           </div>
           <div className="terminal-window">
             <div className="terminal-content">
@@ -65,11 +95,21 @@ function HostLobby() {
               ))}
             </div>
           </div>
-          <button className="button start-button" onClick={handleStart}>
-            クイズを開始する
-          </button>
+          <div className="lobby-actions">
+            <button className="button start-button" onClick={handleStart}>
+              クイズを開始する
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Settings Panel */}
+      {showSettings && questionSetId && (
+        <GameSettingsPanel 
+          questionSetId={questionSetId}
+          onClose={handleCloseSettings}
+        />
+      )}
     </div>
   )
 }
