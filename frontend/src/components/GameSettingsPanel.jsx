@@ -205,8 +205,8 @@ const SettingsCategory = ({ category, settings, onChange, disabled }) => {
   );
 };
 
-const GameSettingsPanel = ({ questionSetId, onClose }) => {
-  const { settings, loading, saving, error, updateSettings, resetToDefaults } = useGameSettings(questionSetId);
+const GameSettingsPanel = ({ questionSetId, gameId, onClose }) => {
+  const { settings, loading, saving, error, updateSettings, resetToDefaults } = useGameSettings(questionSetId, gameId);
   const [localSettings, setLocalSettings] = useState({});
   const [hasChanges, setHasChanges] = useState(false);
 

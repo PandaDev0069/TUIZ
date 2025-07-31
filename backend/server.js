@@ -556,35 +556,41 @@ io.on('connection', (socket) => {
       const actualHostId = hostId.includes('host_') ? 
         hostId.split('_')[1] : hostId;
       
-      // If no manual title provided, fetch from question set
+      // If no manual title provided, fetch from question set along with play_settings
       let gameTitle = settings?.title;
-      if (!gameTitle) {
+      let questionSetSettings = {};
+      
+      if (!gameTitle || !settings?.fromQuestionSet) {
         try {
-          console.log(`📚 Fetching title from question set: ${questionSetId}`);
+          console.log(`📚 Fetching title and settings from question set: ${questionSetId}`);
           const { data: questionSet, error: qsError } = await db.supabaseAdmin
             .from('question_sets')
-            .select('title')
+            .select('title, play_settings')
             .eq('id', questionSetId)
             .single();
           
           if (!qsError && questionSet) {
-            gameTitle = questionSet.title;
-            console.log(`✅ Retrieved title from database: ${gameTitle}`);
+            gameTitle = gameTitle || questionSet.title;
+            questionSetSettings = questionSet.play_settings || {};
+            console.log(`✅ Retrieved from database - Title: ${gameTitle}, Settings:`, questionSetSettings);
           } else {
-            console.warn(`⚠️ Could not fetch question set title: ${qsError?.message || 'Not found'}`);
-            gameTitle = 'クイズゲーム'; // Default fallback title
+            console.warn(`⚠️ Could not fetch question set: ${qsError?.message || 'Not found'}`);
+            gameTitle = gameTitle || 'クイズゲーム'; // Default fallback title
           }
-        } catch (titleError) {
-          console.error('❌ Error fetching question set title:', titleError);
-          gameTitle = 'クイズゲーム'; // Default fallback title
+        } catch (fetchError) {
+          console.error('❌ Error fetching question set:', fetchError);
+          gameTitle = gameTitle || 'クイズゲーム'; // Default fallback title
         }
       }
 
-      // Prepare game settings with title
+      // Merge question set settings with any manual overrides, prioritizing manual settings
       const gameSettings = { 
-        ...settings, 
-        title: gameTitle
+        ...questionSetSettings,  // Settings from question set (base)
+        ...settings,             // Manual settings (override)
+        title: gameTitle         // Always use resolved title
       };
+      
+      console.log(`🎮 Final game settings:`, gameSettings);
       
       // Use RoomManager to create the room
       const gameCode = roomManager.createRoom(
@@ -618,6 +624,19 @@ io.on('connection', (socket) => {
       
       const dbGame = dbResult.game;
       console.log(`✅ Game created in database with UUID: ${dbGame.id}`);
+      
+      // Update the room in RoomManager with the database UUID
+      const room = roomManager.getRoom(gameCode);
+      if (room) {
+        console.log(`🔍 Before update - Room ${gameCode} gameId: ${room.gameId}`);
+        room.gameId = dbGame.id; // Update to use database UUID
+        room.gameUUID = dbGame.id; // Keep explicit reference
+        room.roomCode = gameCode; // Keep room code reference
+        console.log(`🔄 Updated room ${gameCode} with database gameId: ${dbGame.id}`);
+        console.log(`🔍 After update - Room ${gameCode} gameId: ${room.gameId}`);
+      } else {
+        console.error(`❌ Could not find room ${gameCode} in RoomManager to update gameId`);
+      }
       
       // Create a memory game object with database reference
       const game = {

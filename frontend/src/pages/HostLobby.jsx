@@ -107,6 +107,7 @@ function HostLobby() {
       {showSettings && questionSetId && (
         <GameSettingsPanel 
           questionSetId={questionSetId}
+          gameId={gameId}
           onClose={handleCloseSettings}
         />
       )}

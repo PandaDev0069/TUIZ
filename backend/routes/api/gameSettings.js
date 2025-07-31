@@ -98,7 +98,7 @@ router.get('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
 router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { questionSetId } = req.params;
-    const { settings } = req.body;
+    const { settings, gameId } = req.body; // Add gameId for active game sync
 
     if (!settings || typeof settings !== 'object') {
       return res.status(400).json({
@@ -204,6 +204,73 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
         success: false,
         error: 'Failed to update settings'
       });
+    }
+
+    // SYNC: If gameId is provided, also update the active game settings
+    if (gameId) {
+      try {
+        // Find the room by database gameId (UUID)
+        let room = null;
+        let roomCode = null;
+        
+        console.log(`🔍 Searching for gameId ${gameId} in RoomManager...`);
+        console.log(`🏠 Total rooms in RoomManager: ${roomManager.rooms.size}`);
+        
+        // Search through all rooms directly from the RoomManager
+        for (const [code, roomData] of roomManager.rooms.entries()) {
+          console.log(`🔍 Checking room ${code}: gameId=${roomData.gameId}`);
+          if (roomData.gameId === gameId) {
+            roomCode = code;
+            room = roomData;
+            console.log(`✅ Found matching room: ${code}`);
+            break;
+          }
+        }
+
+        if (room && roomCode) {
+          // Merge with current room settings
+          const mergedRoomSettings = {
+            ...room.gameSettings,
+            ...validatedSettings
+          };
+          room.gameSettings = mergedRoomSettings;
+          console.log(`🔄 Updated active game settings for room ${roomCode} (gameId: ${gameId})`);
+          
+          // Update settings in games table with complete merged settings
+          const { error: gameUpdateError } = await db.supabaseAdmin
+            .from('games')
+            .update({
+              game_settings: mergedRoomSettings,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', gameId);
+
+          if (gameUpdateError) {
+            console.warn('⚠️ Failed to update game table settings:', gameUpdateError);
+          } else {
+            console.log(`✅ Synced complete settings to games table for game ${gameId}`);
+            console.log('Complete synced settings:', mergedRoomSettings);
+          }
+        } else {
+          console.warn(`⚠️ Room not found for gameId ${gameId} in RoomManager`);
+          // Update database directly since room not found in memory
+          const { error: gameUpdateError } = await db.supabaseAdmin
+            .from('games')
+            .update({
+              game_settings: {
+                ...updatedPlaySettings
+              },
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', gameId);
+
+          if (!gameUpdateError) {
+            console.log(`✅ Updated games table directly for game ${gameId}`);
+          }
+        }
+      } catch (syncError) {
+        console.warn('⚠️ Failed to sync active game settings:', syncError);
+      }
     }
 
     console.log(`Settings updated for question set ${questionSetId}:`, validatedSettings);

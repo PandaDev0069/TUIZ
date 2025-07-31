@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-export const useGameSettings = (questionSetId) => {
+export const useGameSettings = (questionSetId, gameId = null) => {
   const { apiCall } = useAuth();
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -47,9 +47,19 @@ export const useGameSettings = (questionSetId) => {
       setSaving(true);
       setError(null);
 
+      // Include gameId for sync if available
+      const requestBody = { 
+        settings: newSettings 
+      };
+      
+      if (gameId) {
+        requestBody.gameId = gameId;
+        console.log('🔄 Updating settings with game sync for gameId:', gameId);
+      }
+
       const response = await apiCall(`/game-settings/${questionSetId}`, {
         method: 'PUT',
-        body: JSON.stringify({ settings: newSettings })
+        body: JSON.stringify(requestBody)
       });
 
       if (response.success && response.settings) {
