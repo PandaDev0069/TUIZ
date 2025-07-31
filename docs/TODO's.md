@@ -90,11 +90,11 @@
 # 🧠 Quiz App Development Memo
 
 ## 📌 Main Index / Home Page
-- [ ] Create main index/home page.
-- [ ] Home page should have **two options**:
+- [✅] Create main index/home page.
+- [✅] Home page should have **two options**:
   - ✅ Login as **Host**
   - ✅ Join Game as **Guest**
-- [ ] Implement **guest account system**:
+- [✅] Implement **guest account system**:
   - Use `game_players` table as unified player storage for both guests and authenticated users.
   - Validate if player is logged in via JWT token authentication.
   - For non-authenticated users: assign temporary UUID, set `is_guest = true`, store minimal info (nickname, join time).
@@ -121,6 +121,13 @@
 - [ ] Implement **separate routes and UI** for:
   - Host menu
   - Player menu
+- [ ] Implement auto creation of score table stat when a game session is created.
+  - When a host starts a game session, games , game_player , game_stats table must created.
+    - currently , only games, game_players are implemented. game_stats to be implemented.
+- [ ] Properly load all the settings from questions sets and give a settings menu in host/lobby to be able to change the settings on the go.
+- [ ] Implement the settings in the game.
+  - Most of logic and ui needs to be created from scratch to maintain scalability and use new api routes for scoring updates and socket connections.
+  - use realtime db for scoreboards
 - [ ] Use Socket.IO rooms to sync host and players in real-time.
 
 ---
