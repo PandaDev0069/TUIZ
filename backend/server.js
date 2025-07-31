@@ -406,6 +406,8 @@ const gamesRoutes = require('./routes/api/games');
 const quizRoutes = require('./routes/api/quiz');
 const uploadRoutes = require('./routes/upload');
 const playerManagementRoutes = require('./routes/api/playerManagement');
+const gameResultsRoutes = require('./routes/api/gameResults');
+const gameSettingsRoutes = require('./routes/api/gameSettings');
 
 // Mount API routes
 app.use('/api/question-sets', questionSetsRoutes);
@@ -416,6 +418,8 @@ app.use('/api/games', gamesRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/player', playerManagementRoutes(db));
+app.use('/api/game-results', gameResultsRoutes);
+app.use('/api/game-settings', gameSettingsRoutes);
 
 // Global error handler - must be after all routes
 app.use((error, req, res, next) => {

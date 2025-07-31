@@ -429,6 +429,33 @@ class DatabaseManager {
     }
   }
 
+  async getGameById(gameId) {
+    try {
+      // Use service role for backend operations
+      const { data, error } = await this.supabaseAdmin
+        .from('games')
+        .select(`
+          *,
+          question_sets!inner(
+            title,
+            description,
+            total_questions,
+            category,
+            difficulty_level
+          )
+        `)
+        .eq('id', gameId)
+        .single();
+
+      if (error) throw error;
+      
+      return { success: true, game: data };
+    } catch (error) {
+      console.error('❌ Get game by ID error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   async updateGameStatus(gameId, status, additionalData = {}) {
     try {
       const updateData = { status, ...additionalData };
@@ -445,6 +472,71 @@ class DatabaseManager {
       return { success: true, game: data };
     } catch (error) {
       console.error('❌ Update game status error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async updateGameSettings(gameId, gameSettings) {
+    try {
+      if (!this.supabaseAdmin) {
+        throw new Error('Service role required for updating game settings');
+      }
+
+      const { data, error } = await this.supabaseAdmin
+        .from('games')
+        .update({ game_settings: gameSettings })
+        .eq('id', gameId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      return { success: true, game: data };
+    } catch (error) {
+      console.error('❌ Update game settings error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getGameWithSettings(gameId) {
+    try {
+      const { data, error } = await this.supabaseAdmin
+        .from('games')
+        .select(`
+          *,
+          question_sets!inner(
+            title,
+            description,
+            total_questions,
+            play_settings
+          )
+        `)
+        .eq('id', gameId)
+        .single();
+
+      if (error) throw error;
+      
+      // Merge question set defaults with game overrides
+      const questionSetSettings = data.question_sets.play_settings || {};
+      const gameOverrides = data.game_settings || {};
+      
+      // Simple merge - game settings override question set defaults
+      const mergedSettings = {
+        ...questionSetSettings,
+        ...gameOverrides
+      };
+      
+      return { 
+        success: true, 
+        game: data,
+        settings: {
+          defaults: questionSetSettings,
+          current: mergedSettings,
+          overrides: gameOverrides
+        }
+      };
+    } catch (error) {
+      console.error('❌ Get game with settings error:', error);
       return { success: false, error: error.message };
     }
   }
@@ -722,7 +814,7 @@ class DatabaseManager {
         .from('game_results')
         .select(`
           *,
-          players:players(name)
+          game_players!inner(player_name)
         `)
         .eq('game_id', gameId)
         .order('final_rank');
@@ -732,6 +824,200 @@ class DatabaseManager {
       return { success: true, results: data };
     } catch (error) {
       console.error('❌ Get game results error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // ================================
+  // GAME RESULTS MANAGEMENT
+  // ================================
+
+  async createGameResults(gameId) {
+    try {
+      if (!this.supabaseAdmin) {
+        throw new Error('Service role required for creating game results');
+      }
+
+      const { data, error } = await this.supabaseAdmin
+        .rpc('create_game_results_manual', { game_id_param: gameId });
+
+      if (error) throw error;
+
+      return { success: true, results: data };
+    } catch (error) {
+      console.error('❌ Create game results error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async finishGameAndCreateResults(gameId, additionalData = {}) {
+    try {
+      if (!this.supabaseAdmin) {
+        throw new Error('Service role required for finishing games');
+      }
+
+      // First, update the game status to finished
+      const updateData = { 
+        status: 'finished', 
+        ended_at: new Date().toISOString(),
+        ...additionalData 
+      };
+      
+      const { data: game, error: gameError } = await this.supabaseAdmin
+        .from('games')
+        .update(updateData)
+        .eq('id', gameId)
+        .select()
+        .single();
+
+      if (gameError) throw gameError;
+
+      // The trigger should automatically create game results, but let's verify
+      // Wait a moment for the trigger to execute
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Check if game results were created
+      const { data: results, error: resultsError } = await this.supabaseAdmin
+        .from('game_results')
+        .select('*')
+        .eq('game_id', gameId);
+
+      if (resultsError) {
+        console.error('❌ Error checking game results:', resultsError);
+        // If results weren't created automatically, try manual creation
+        const manualResult = await this.createGameResults(gameId);
+        if (!manualResult.success) {
+          throw new Error('Failed to create game results: ' + manualResult.error);
+        }
+      }
+
+      return { 
+        success: true, 
+        game,
+        resultsCount: results ? results.length : 0
+      };
+    } catch (error) {
+      console.error('❌ Finish game and create results error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getPlayerGameHistory(playerId, limit = 10) {
+    try {
+      const { data, error } = await this.supabase
+        .from('game_results')
+        .select(`
+          *,
+          games!inner(
+            id,
+            game_code,
+            created_at,
+            ended_at,
+            question_sets!inner(title)
+          )
+        `)
+        .eq('player_id', playerId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      
+      return { success: true, history: data };
+    } catch (error) {
+      console.error('❌ Get player game history error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getGameLeaderboard(gameId) {
+    try {
+      const { data, error } = await this.supabase
+        .from('game_results')
+        .select(`
+          *,
+          game_players!inner(player_name, is_guest)
+        `)
+        .eq('game_id', gameId)
+        .order('final_rank', { ascending: true });
+
+      if (error) throw error;
+      
+      return { success: true, leaderboard: data };
+    } catch (error) {
+      console.error('❌ Get game leaderboard error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getUserStats(userId) {
+    try {
+      // Get user's game_player_uuid
+      const { data: user, error: userError } = await this.supabase
+        .from('users')
+        .select('game_player_uuid')
+        .eq('id', userId)
+        .single();
+
+      if (userError) throw userError;
+
+      if (!user.game_player_uuid) {
+        return {
+          success: true,
+          stats: {
+            totalGames: 0,
+            totalScore: 0,
+            averageScore: 0,
+            averageRank: 0,
+            bestRank: null,
+            totalCorrect: 0,
+            averageAccuracy: 0,
+            recentGames: []
+          }
+        };
+      }
+
+      // Get comprehensive stats
+      const { data: results, error: resultsError } = await this.supabase
+        .from('game_results')
+        .select(`
+          *,
+          games!inner(
+            game_code,
+            created_at,
+            question_sets!inner(title)
+          )
+        `)
+        .eq('player_id', user.game_player_uuid)
+        .order('created_at', { ascending: false });
+
+      if (resultsError) throw resultsError;
+
+      // Calculate comprehensive stats
+      const totalGames = results.length;
+      const totalScore = results.reduce((sum, r) => sum + r.final_score, 0);
+      const totalCorrect = results.reduce((sum, r) => sum + r.total_correct, 0);
+      const totalQuestions = results.reduce((sum, r) => sum + r.total_questions, 0);
+      
+      const averageScore = totalGames > 0 ? Math.round(totalScore / totalGames) : 0;
+      const averageRank = totalGames > 0 ? Math.round(results.reduce((sum, r) => sum + r.final_rank, 0) / totalGames) : 0;
+      const bestRank = totalGames > 0 ? Math.min(...results.map(r => r.final_rank)) : null;
+      const averageAccuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+
+      return {
+        success: true,
+        stats: {
+          totalGames,
+          totalScore,
+          averageScore,
+          averageRank,
+          bestRank,
+          totalCorrect,
+          averageAccuracy,
+          recentGames: results.slice(0, 5)
+        }
+      };
+    } catch (error) {
+      console.error('❌ Get user stats error:', error);
       return { success: false, error: error.message };
     }
   }

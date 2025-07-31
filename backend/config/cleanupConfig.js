@@ -6,16 +6,16 @@ const cleanupConfig = {
   // Game cleanup timings
   games: {
     // Finished games: Keep for stats/replay before deletion
-    finishedGameRetention: 5, // minutes (production: 24-48 hours)
-    
+    finishedGameRetention: 24 * 60, // minutes (production: 24-48 hours)
+
     // Waiting games: Delete if no activity (abandoned games)
-    waitingGameTimeout: 2, // minutes (production: 2 hours)
-    
+    waitingGameTimeout: 2 * 60, // minutes (production: 2 hours)
+
     // Cancelled games: Quick cleanup
-    cancelledGameTimeout: 1, // minutes (production: 1 hour)
-    
+    cancelledGameTimeout: 1 * 60, // minutes (production: 1 hour)
+
     // Active games: Safety timeout for stuck games
-    activeGameTimeout: 30, // minutes (production: 6 hours)
+    activeGameTimeout: 6 * 60, // minutes (production: 6 hours)
   },
 
   // Guest player cleanup timings
