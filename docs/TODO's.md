@@ -124,8 +124,8 @@
 - [✅] Implement auto creation of score table stat when a game session is created.
   - When a host starts a game session, games , game_player , game_results table must created.
     - currently , only games, game_players are implemented. game_results now implemented with auto-creation triggers and manual functions.
-- [ ] Properly load all the settings from questions sets and give a settings menu in host/lobby to be able to change the settings on the go.
-- [ ] Implement the settings in the game.
+- [✅] Properly load all the settings from questions sets and give a settings menu in host/lobby to be able to change the settings on the go.
+- [✅] Implement the settings in the game.
   - Most of logic and ui needs to be created from scratch to maintain scalability and use new api routes for scoring updates and socket connections.
   - use realtime db for scoreboards
 - [ ] Use Socket.IO rooms to sync host and players in real-time.
