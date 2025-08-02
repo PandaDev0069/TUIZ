@@ -95,12 +95,12 @@
   - ✅ Login as **Host**
   - ✅ Join Game as **Guest**
 - [✅] Implement **guest account system**:
-  - Use `game_players` table as unified player storage for both guests and authenticated users.
-  - Validate if player is logged in via JWT token authentication.
-  - For non-authenticated users: assign temporary UUID, set `is_guest = true`, store minimal info (nickname, join time).
-  - For authenticated users: use real `user.id`, set `is_user = true`.
-  - Redirect guest users to **join game** page.
-  - Optional: Auto-delete guest records after session ends or X hours.
+  - ✅Use `game_players` table as unified player storage for both guests and authenticated users.
+  - ✅Validate if player is logged in via JWT token authentication.
+  - ✅For non-authenticated users: assign temporary UUID, set `is_guest = true`, store minimal info (nickname, join time).
+  - ✅For authenticated users: use real `user.id`, set `is_user = true`.
+  - ✅Redirect guest users to **join game** page.
+  - ✅Optional: Auto-delete guest records after session ends or X hours.
 
 ---
 
