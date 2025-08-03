@@ -173,9 +173,7 @@ A Kahoot-style quiz app supporting **200-300 concurrent players** with real-time
 3. Follow the established code structure and patterns
 4. Test changes with multiple users to ensure real-time functionality
 
-## 📝 License
 
-MIT License - see LICENSE file for details.
 
 ## 🤝 Contributing
 
