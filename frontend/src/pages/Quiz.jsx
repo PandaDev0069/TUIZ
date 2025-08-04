@@ -243,10 +243,10 @@ function Quiz() {
     <div className="page-container">
       <div className="quiz-page">
         <div className="quiz-header">
-          <div className="player-stats">
-            <div className="current-score">スコア: {score}</div>
-            {streak > 1 && <div className="streak-badge">🔥 {streak}連続!</div>}
-            {questionScore > 0 && <div className="last-points">+{questionScore}</div>}
+          <div className="quiz-player-stats">
+            <div className="quiz-current-score">スコア: {score}</div>
+            {streak > 1 && <div className="quiz-streak-badge">🔥 {streak}連続!</div>}
+            {questionScore > 0 && <div className="quiz-last-points">+{questionScore}</div>}
           </div>
         </div>
         
@@ -262,7 +262,7 @@ function Quiz() {
         />
         
         {feedback && (
-          <p className={`feedback ${feedback.startsWith('正解') ? 'correct' : 'wrong'}`}>
+          <p className={`quiz-feedback ${feedback.startsWith('正解') ? 'correct' : 'wrong'}`}>
             {feedback}
           </p>
         )}

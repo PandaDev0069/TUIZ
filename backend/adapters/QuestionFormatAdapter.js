@@ -155,16 +155,17 @@ class QuestionFormatAdapter {
    * @returns {number} - Time limit in seconds
    */
   calculateTimeLimit(dbQuestion, gameSettings, questionType) {
-    // Priority: Game settings > Database question setting > Game config default
+    // Priority: Database question setting > Game settings > Game config default
     
-    if (gameSettings.questionTime && !gameSettings.useQuestionSpecificTiming) {
-      // Use global game setting
-      return gameSettings.questionTime;
-    }
-
+    // First check if question has its own time_limit
     if (dbQuestion.time_limit) {
       // Use question-specific timing from database
       return dbQuestion.time_limit;
+    }
+
+    // Fall back to global game setting if available
+    if (gameSettings.questionTime) {
+      return gameSettings.questionTime;
     }
 
     // Fall back to game config defaults by type

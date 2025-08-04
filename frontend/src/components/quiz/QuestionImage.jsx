@@ -57,20 +57,20 @@ const QuestionImage = ({
   }
 
   return (
-    <div className={`question-image-container ${className} ${imageState}`}>
+    <div className={`quiz-question-image-container ${className} ${imageState}`}>
       {imageState === 'loading' && placeholder && (
-        <div className="image-placeholder">
-          <div className="loading-spinner"></div>
-          <span className="loading-text">画像を読み込み中...</span>
+        <div className="quiz-image-placeholder">
+          <div className="quiz-loading-spinner"></div>
+          <span className="quiz-loading-text">画像を読み込み中...</span>
         </div>
       )}
       
       {imageState === 'error' && (
-        <div className="image-error">
-          <div className="error-icon">🖼️</div>
-          <span className="error-text">画像を読み込めませんでした</span>
+        <div className="quiz-image-error">
+          <div className="quiz-error-icon">🖼️</div>
+          <span className="quiz-error-text">画像を読み込めませんでした</span>
           <button 
-            className="retry-button" 
+            className="quiz-retry-button" 
             onClick={handleRetry}
             aria-label="画像の再読み込み"
           >
@@ -83,7 +83,7 @@ const QuestionImage = ({
         <img
           src={actualSrc}
           alt={alt}
-          className={`question-image ${imageState === 'loaded' ? 'loaded' : 'loading'}`}
+          className={`quiz-question-image ${imageState === 'loaded' ? 'loaded' : 'loading'}`}
           onLoad={handleLoad}
           onError={handleError}
           loading={lazy ? "lazy" : "eager"}

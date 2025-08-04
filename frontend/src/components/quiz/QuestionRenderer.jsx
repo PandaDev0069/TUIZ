@@ -44,16 +44,16 @@ const QuestionRenderer = ({
   };
 
   return (
-    <div className="question-renderer">
+    <div className="quiz-question-renderer">
       {showProgress && question.showProgress && (
-        <div className="question-progress">
-          <div className="progress-info">
-            <span className="question-number">
+        <div className="quiz-question-progress">
+          <div className="quiz-progress-info">
+            <span className="quiz-question-number">
               質問 {question.questionNumber || '?'} / {question.totalQuestions || '?'}
             </span>
-            <div className="progress-bar">
+            <div className="quiz-progress-bar">
               <div 
-                className="progress-fill" 
+                className="quiz-progress-fill" 
                 style={{
                   width: `${question.questionNumber && question.totalQuestions ? 
                     (question.questionNumber / question.totalQuestions) * 100 : 0}%`
@@ -65,14 +65,14 @@ const QuestionRenderer = ({
       )}
 
       {showTimer && (
-        <div className={`question-timer ${timer <= 0 ? 'time-up' : ''} ${timer <= 5 ? 'urgent' : ''}`}>
-          <div className="timer-circle">
-            <div className="timer-text">
+        <div className={`quiz-question-timer ${timer <= 0 ? 'time-up' : ''} ${timer <= 5 ? 'urgent' : ''}`}>
+          <div className="quiz-timer-circle">
+            <div className="quiz-timer-text">
               {timer <= 0 ? '時間切れ!' : timer}
             </div>
-            <svg className="timer-ring" viewBox="0 0 100 100">
+            <svg className="quiz-timer-ring" viewBox="0 0 100 100">
               <circle
-                className="timer-ring-background"
+                className="quiz-timer-ring-background"
                 cx="50"
                 cy="50"
                 r="45"
@@ -81,7 +81,7 @@ const QuestionRenderer = ({
                 strokeWidth="4"
               />
               <circle
-                className="timer-ring-progress"
+                className="quiz-timer-ring-progress"
                 cx="50"
                 cy="50"
                 r="45"
@@ -101,8 +101,8 @@ const QuestionRenderer = ({
         </div>
       )}
 
-      <div className="question-type-indicator">
-        <span className={`type-badge ${question.type}`}>
+      <div className="quiz-question-type-indicator">
+        <span className={`quiz-type-badge ${question.type}`}>
           {question.type === 'true_false' ? '○×' : 
            question.type === 'multiple_choice_4' ? '4択' : 
            question.type === 'multiple_choice_3' ? '3択' : 
@@ -111,7 +111,7 @@ const QuestionRenderer = ({
         </span>
       </div>
 
-      <div className="question-content-wrapper">
+      <div className="quiz-question-content-wrapper">
         {getQuestionTypeComponent()}
       </div>
     </div>

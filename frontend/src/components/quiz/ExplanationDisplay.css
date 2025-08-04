@@ -1,5 +1,5 @@
 /* Explanation Display Styles */
-.explanation-overlay {
+.quiz-explanation-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -15,7 +15,7 @@
   animation: fadeIn 0.3s ease;
 }
 
-.explanation-overlay.closing {
+.quiz-explanation-overlay.closing {
   animation: fadeOut 0.3s ease;
 }
 
@@ -41,7 +41,7 @@
   }
 }
 
-.explanation-container {
+.quiz-explanation-container {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 20px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
@@ -54,7 +54,7 @@
 }
 
 /* Timer Section */
-.explanation-timer {
+.quiz-explanation-timer {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -63,7 +63,7 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.timer-bar {
+.quiz-timer-bar {
   flex: 1;
   height: 6px;
   background: rgba(255, 255, 255, 0.2);
@@ -72,7 +72,7 @@
   position: relative;
 }
 
-.timer-progress {
+.quiz-timer-progress {
   height: 100%;
   background: linear-gradient(90deg, #10b981, #34d399);
   border-radius: 3px;
@@ -80,7 +80,7 @@
   position: relative;
 }
 
-.timer-progress::after {
+.quiz-timer-progress::after {
   content: '';
   position: absolute;
   top: 0;
@@ -91,7 +91,7 @@
   animation: shimmer 2s infinite;
 }
 
-.timer-text {
+.quiz-timer-text {
   font-weight: 600;
   font-size: 0.9rem;
   color: #fff;
@@ -100,11 +100,11 @@
 }
 
 /* Content Section */
-.explanation-content {
+.quiz-explanation-content {
   padding: 2rem 1.5rem;
 }
 
-.explanation-title {
+.quiz-explanation-title {
   margin: 0 0 1.5rem 0;
   font-size: 1.8rem;
   font-weight: 700;
@@ -113,19 +113,19 @@
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.explanation-body {
+.quiz-explanation-body {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.explanation-image-container {
+.quiz-explanation-image-container {
   display: flex;
   justify-content: center;
   margin-bottom: 1rem;
 }
 
-.explanation-image {
+.quiz-explanation-image {
   max-width: 100%;
   max-height: 300px;
   border-radius: 12px;
@@ -135,23 +135,23 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.explanation-text {
+.quiz-explanation-text {
   color: #f8fafc;
   line-height: 1.6;
   font-size: 1.1rem;
 }
 
-.explanation-text p {
+.quiz-explanation-text p {
   margin: 0 0 1rem 0;
   text-align: left;
 }
 
-.explanation-text p:last-child {
+.quiz-explanation-text p:last-child {
   margin-bottom: 0;
 }
 
 /* Close Button */
-.explanation-close-btn {
+.quiz-explanation-close-btn {
   position: absolute;
   top: 1rem;
   right: 1rem;
@@ -170,89 +170,89 @@
   backdrop-filter: blur(10px);
 }
 
-.explanation-close-btn:hover {
+.quiz-explanation-close-btn:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: scale(1.1);
 }
 
-.explanation-close-btn:active {
+.quiz-explanation-close-btn:active {
   transform: scale(0.95);
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .explanation-container {
+  .quiz-explanation-container {
     margin: 0.5rem;
     border-radius: 16px;
     max-height: 95vh;
   }
 
-  .explanation-content {
+  .quiz-explanation-content {
     padding: 1.5rem 1rem;
   }
 
-  .explanation-title {
+  .quiz-explanation-title {
     font-size: 1.5rem;
     margin-bottom: 1rem;
   }
 
-  .explanation-text {
+  .quiz-explanation-text {
     font-size: 1rem;
   }
 
-  .explanation-image {
+  .quiz-explanation-image {
     max-height: 200px;
   }
 
-  .explanation-timer {
+  .quiz-explanation-timer {
     padding: 0.75rem 1rem;
   }
 
-  .timer-text {
+  .quiz-timer-text {
     font-size: 0.8rem;
   }
 }
 
 @media (max-width: 480px) {
-  .explanation-overlay {
+  .quiz-explanation-overlay {
     padding: 0.5rem;
   }
 
-  .explanation-container {
+  .quiz-explanation-container {
     border-radius: 12px;
   }
 
-  .explanation-content {
+  .quiz-explanation-content {
     padding: 1rem 0.75rem;
   }
 
-  .explanation-title {
+  .quiz-explanation-title {
     font-size: 1.3rem;
   }
 
-  .explanation-text {
+  .quiz-explanation-text {
     font-size: 0.95rem;
     line-height: 1.5;
   }
 
-  .explanation-timer {
+  .quiz-explanation-timer {
     flex-direction: column;
     gap: 0.5rem;
     align-items: stretch;
   }
 
-  .timer-text {
+  .quiz-timer-text {
     text-align: center;
   }
 }
 
 /* Animation for timer urgency */
 @media (prefers-reduced-motion: no-preference) {
-  .timer-progress {
+  .quiz-timer-progress {
     transition: width 0.1s linear;
   }
   
-  .explanation-container {
+  .quiz-explanation-container {
     animation: slideUp 0.4s ease;
   }
 }
@@ -270,15 +270,15 @@
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {
-  .explanation-container {
+  .quiz-explanation-container {
     border: 2px solid #fff;
   }
   
-  .explanation-timer {
+  .quiz-explanation-timer {
     border-bottom: 2px solid #fff;
   }
   
-  .timer-progress {
+  .quiz-timer-progress {
     background: #fff;
   }
 }

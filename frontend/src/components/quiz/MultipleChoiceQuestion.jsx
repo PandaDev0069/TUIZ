@@ -24,20 +24,20 @@ const MultipleChoiceQuestion = ({
   };
 
   return (
-    <div className="multiple-choice-question">
-      <div className="question-header">
+    <div className="quiz-multiple-choice-question">
+      <div className="quiz-question-header">
         <QuestionImage 
           src={question._dbData?.image_url}
           alt={`質問 ${question.questionNumber || ''} の画像`}
-          className="main-question-image"
+          className="quiz-main-question-image"
           placeholder={true}
           lazy={false}
         />
         
-        <h2 className="question-text">{question.question}</h2>
+        <h2 className="quiz-question-text">{question.question}</h2>
       </div>
       
-      <div className={`options-container ${getLayoutClass()}`}>
+      <div className={`quiz-options-container ${getLayoutClass()}`}>
         {question.options.map((opt, i) => {
           const optionImageUrl = question._dbData?.answers?.[i]?.image_url;
           
@@ -53,7 +53,7 @@ const MultipleChoiceQuestion = ({
               showCorrectAnswer={answerResult && question.showCorrectAnswer}
               imageUrl={optionImageUrl}
               onClick={onAnswer}
-              className="multiple-choice-option"
+              className="quiz-multiple-choice-option"
               showIndex={true}
             />
           );
@@ -61,12 +61,12 @@ const MultipleChoiceQuestion = ({
       </div>
       
       {selected !== null && !answerResult && (
-        <div className="answer-submitted">
-          <div className="submitted-indicator">
-            <div className="checkmark">✓</div>
+        <div className="quiz-answer-submitted">
+          <div className="quiz-submitted-indicator">
+            <div className="quiz-checkmark">✓</div>
             <span>回答送信済み</span>
           </div>
-          <p className="waiting-message">他のプレイヤーの回答を待っています...</p>
+          <p className="quiz-waiting-message">他のプレイヤーの回答を待っています...</p>
         </div>
       )}
     </div>

@@ -42,34 +42,34 @@ const ExplanationDisplay = ({
   const progressPercent = autoClose ? (timeLeft / duration) * 100 : 100;
 
   return (
-    <div className={`explanation-overlay ${isClosing ? 'closing' : ''}`}>
-      <div className="explanation-container">
+    <div className={`quiz-explanation-overlay ${isClosing ? 'closing' : ''}`}>
+      <div className="quiz-explanation-container">
         {showTimer && autoClose && (
-          <div className="explanation-timer">
-            <div className="timer-bar">
+          <div className="quiz-explanation-timer">
+            <div className="quiz-timer-bar">
               <div 
-                className="timer-progress" 
+                className="quiz-timer-progress" 
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <span className="timer-text">
+            <span className="quiz-timer-text">
               {Math.ceil(timeLeft / 1000)}s
             </span>
           </div>
         )}
 
-        <div className="explanation-content">
+        <div className="quiz-explanation-content">
           {explanation.title && (
-            <h3 className="explanation-title">{explanation.title}</h3>
+            <h3 className="quiz-explanation-title">{explanation.title}</h3>
           )}
 
-          <div className="explanation-body">
+          <div className="quiz-explanation-body">
             {explanation.image_url && (
-              <div className="explanation-image-container">
+              <div className="quiz-explanation-image-container">
                 <img 
                   src={explanation.image_url} 
                   alt={explanation.title || "Explanation image"}
-                  className="explanation-image"
+                  className="quiz-explanation-image"
                   onError={(e) => {
                     e.target.style.display = 'none';
                   }}
@@ -78,7 +78,7 @@ const ExplanationDisplay = ({
             )}
 
             {explanation.text && (
-              <div className="explanation-text">
+              <div className="quiz-explanation-text">
                 {explanation.text.split('\n').map((paragraph, index) => (
                   <p key={index}>{paragraph}</p>
                 ))}
@@ -89,7 +89,7 @@ const ExplanationDisplay = ({
 
         {!autoClose && (
           <button 
-            className="explanation-close-btn"
+            className="quiz-explanation-close-btn"
             onClick={handleManualClose}
             aria-label="Close explanation"
           >

@@ -17,20 +17,20 @@ const TrueFalseQuestion = ({
   const falseOption = question.options[1];
 
   return (
-    <div className="true-false-question">
-      <div className="question-header">
+    <div className="quiz-true-false-question">
+      <div className="quiz-question-header">
         <QuestionImage 
           src={question._dbData?.image_url}
           alt={`質問 ${question.questionNumber || ''} の画像`}
-          className="main-question-image"
+          className="quiz-main-question-image"
           placeholder={true}
           lazy={false}
         />
         
-        <h2 className="question-text">{question.question}</h2>
+        <h2 className="quiz-question-text">{question.question}</h2>
       </div>
       
-      <div className="true-false-container">
+      <div className="quiz-true-false-container">
         <AnswerOption
           option={trueOption || "正しい (○)"}
           index={0}
@@ -41,11 +41,11 @@ const TrueFalseQuestion = ({
           showCorrectAnswer={answerResult && question.showCorrectAnswer}
           imageUrl={question._dbData?.answers?.[0]?.image_url}
           onClick={onAnswer}
-          className="true-false-option true-option"
+          className="quiz-true-false-option quiz-true-option"
           variant="true"
         />
         
-        <div className="vs-divider">
+        <div className="quiz-vs-divider">
           <span>VS</span>
         </div>
         
@@ -59,18 +59,18 @@ const TrueFalseQuestion = ({
           showCorrectAnswer={answerResult && question.showCorrectAnswer}
           imageUrl={question._dbData?.answers?.[1]?.image_url}
           onClick={onAnswer}
-          className="true-false-option false-option"
+          className="quiz-true-false-option quiz-false-option"
           variant="false"
         />
       </div>
       
       {selected !== null && !answerResult && (
-        <div className="answer-submitted">
-          <div className="submitted-indicator">
-            <div className="checkmark">✓</div>
+        <div className="quiz-answer-submitted">
+          <div className="quiz-submitted-indicator">
+            <div className="quiz-checkmark">✓</div>
             <span>回答送信済み</span>
           </div>
-          <p className="waiting-message">他のプレイヤーの回答を待っています...</p>
+          <p className="quiz-waiting-message">他のプレイヤーの回答を待っています...</p>
         </div>
       )}
     </div>

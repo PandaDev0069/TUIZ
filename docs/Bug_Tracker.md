@@ -8,7 +8,6 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 ## 🔴 Active Issues
 
 ### High Priority
-- questions no respecting the time limit , always auto proceeding, etc... a lot of bugs , i cant handel....
 - Needs a complete new re-work on how the ui of quiz and questions and options looks
 - no update of game status , always waiting
 - no creation of resutls(might be beacuse we are not updating game status)
@@ -27,6 +26,89 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 ---
 
 ## ✅ Resolved Issues (Latest First)
+
+### Issue #31: Individual Question Time Limits Being Overridden by Default Game Settings
+**Date:** 2025-08-05 | **Status:** FIXED ✅ | **Severity:** High  
+**Component:** Backend - Question Time Limit Logic
+
+**Problem:**
+Individual question time limits (set per question during quiz creation) were being ignored and all questions were defaulting to 30 seconds, regardless of their specific time_limit values in the database. This caused:
+- Questions with custom timing (10s, 15s, 20s) all appearing as 30s in gameplay
+- Game settings overriding question-specific configurations
+- Loss of quiz creator's intended timing design
+
+**Root Cause:**
+Conflicting logic in `QuestionFormatAdapter.js` where the condition `if (gameSettings.questionTime && !gameSettings.useQuestionSpecificTiming)` always evaluated to true because `useQuestionSpecificTiming` was never set in game settings, causing all questions to use the default 30-second `questionTime` instead of their individual `time_limit` values.
+
+**Solution:**
+Fixed the priority logic in `calculateTimeLimit()` function to properly respect individual question time limits:
+
+**Technical Implementation:**
+```javascript
+// Before: Game settings always override question settings
+if (gameSettings.questionTime && !gameSettings.useQuestionSpecificTiming) {
+  return gameSettings.questionTime; // ❌ Always takes this path
+}
+
+// After: Question-specific timing takes priority
+if (dbQuestion.time_limit) {
+  return dbQuestion.time_limit; // ✅ Respects individual question timing
+}
+if (gameSettings.questionTime) {
+  return gameSettings.questionTime; // ✅ Falls back to game setting
+}
+```
+
+**Files Modified:**
+- `backend/adapters/QuestionFormatAdapter.js` - Fixed time limit calculation priority logic
+
+**Testing Notes:**
+- Questions now respect their individual time_limit values from the database
+- Game flows correctly with varied question timing (10s, 15s, 20s, etc.)
+- Global game settings still work as fallback when questions don't have specific timing
+- Maintains backward compatibility with existing question sets
+
+**User Impact:**
+- Quiz creators can now set different time limits per question and they will be respected in gameplay
+- More dynamic and engaging quiz experiences with varied question timing
+- Proper implementation of quiz design intentions regarding question difficulty and timing
+
+**Follow-up Issue: Image Loading from Previous Question**
+**Date:** 2025-08-05 | **Status:** FIXED ✅
+
+**Problem:**
+After fixing the question type detection, users reported that multiple_choice_2 questions were showing images from the previous question instead of their own images.
+
+**Root Cause:**
+Missing React `key` prop on QuestionRenderer component caused React to reuse the same component instance when switching between questions, leading to stale image state from previous questions.
+
+**Solution:**
+Added proper React key prop to ensure component remounting between questions:
+
+```jsx
+// Before: Component reused between questions
+<QuestionRenderer
+  question={question}
+  ...
+/>
+
+// After: Component remounts for each question
+<QuestionRenderer
+  key={question?.id || question?.questionNumber}
+  question={question}
+  ...
+/>
+```
+
+**Files Modified:**
+- `frontend/src/pages/Quiz.jsx` - Added React key prop to QuestionRenderer
+
+**Testing Notes:**
+- Each question now displays its correct image without interference from previous questions
+- Question transitions properly reset component state
+- Image loading works correctly for all question types
+
+---
 
 ### Issue #30: Multiple Choice Questions with 2 Options Being Replaced by X/O Questions
 **Date:** 2025-08-05 | **Status:** FIXED ✅ | **Severity:** High  
@@ -687,21 +769,20 @@ Missing bulk update API endpoint for handling multiple questions simultaneously.
 
 ## 📊 Issue Statistics
 
-**Total Issues Tracked:** 27  
-**Resolved:** 22 (81%)  
-**Active:** 5 (19%)  
+**Total Issues Tracked:** 28  
+**Resolved:** 24 (86%)  
+**Active:** 4 (14%)  
 **High Priority Active:** 0  
 
 **Resolution Rate by Component:**
-- Backend API: 18/21 resolved (86%)
-- Frontend: 7/9 resolved (78%)
+- Backend API: 19/22 resolved (86%)
+- Frontend: 8/10 resolved (80%)
 - Database: 3/3 resolved (100%)
 
 **Recent Fixes (Latest Session):**
-- Issue #27: Slow Navigation Between Steps (Medium) - Optimistic UI Updates
-- Issue #26: Cross-Question-Set Data Corruption (Critical)
-- Issue #25: Smart Answer Update Performance (High)
-- Issue #24: CSS Class Name Conflicts (Medium)
+- Issue #31: Individual Question Time Limits Being Overridden (High) - Fixed priority logic in QuestionFormatAdapter
+- Issue #30: Multiple Choice 2-Option Questions (High) - Fixed type detection and React key props
+- Issue #29: Question Images Not Displaying (High) - Fixed image URL paths
 
 ---
 

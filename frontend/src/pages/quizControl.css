@@ -57,29 +57,29 @@
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.options-list {
+.quiz-options-list {
   list-style: none;
   display: grid;
   gap: 1rem;
 }
 
 /* Default grid layout for 4-option questions */
-.options-list.grid-2x2 {
+.quiz-options-list.grid-2x2 {
   grid-template-columns: repeat(2, 1fr);
 }
 
 /* Horizontal layout for 2-option questions */
-.options-list.horizontal {
+.quiz-options-list.horizontal {
   grid-template-columns: repeat(2, 1fr);
 }
 
 /* Large buttons layout for true/false */
-.options-list.large-buttons {
+.quiz-options-list.large-buttons {
   grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
 }
 
-.options-list.large-buttons .option-item {
+.quiz-options-list.large-buttons .quiz-option-item {
   padding: 2rem 1.5rem;
   font-size: 1.8rem;
   font-weight: bold;
@@ -92,14 +92,14 @@
   position: relative;
 }
 
-.options-list.large-buttons .option-item:first-child {
+.quiz-options-list.large-buttons .quiz-option-item:first-child {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
   border-color: rgba(16, 185, 129, 0.4);
   color: #10B981;
   text-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
 }
 
-.options-list.large-buttons .option-item:last-child {
+.quiz-options-list.large-buttons .quiz-option-item:last-child {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
   border-color: rgba(239, 68, 68, 0.4);
   color: #EF4444;
@@ -118,7 +118,7 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.option-item {
+.quiz-option-item {
   background: rgba(255, 255, 255, 0.1);
   padding: 1.5rem;
   border-radius: 12px;
@@ -190,7 +190,7 @@
     grid-template-columns: 1fr;
   }
   
-  .options-list {
+  .quiz-options-list {
     grid-template-columns: 1fr;
   }
 }

@@ -59,7 +59,7 @@ const AnswerOption = ({
   };
 
   const optionClasses = [
-    'answer-option',
+    'quiz-answer-option',
     className,
     questionType,
     isSelected && 'selected',
@@ -86,21 +86,21 @@ const AnswerOption = ({
       aria-pressed={isSelected}
       aria-disabled={isDisabled}
     >
-      <div className="option-content">
+      <div className="quiz-option-content">
         {/* Image section */}
         {imageUrl && (
-          <div className="option-image-container">
+          <div className="quiz-option-image-container">
             {!imageError ? (
               <>
                 {!imageLoaded && (
-                  <div className="option-image-placeholder">
-                    <div className="mini-spinner"></div>
+                  <div className="quiz-option-image-placeholder">
+                    <div className="quiz-mini-spinner"></div>
                   </div>
                 )}
                 <img
                   src={imageUrl}
                   alt={`選択肢 ${index + 1} の画像`}
-                  className={`option-image ${imageLoaded ? 'loaded' : 'loading'}`}
+                  className={`quiz-option-image ${imageLoaded ? 'loaded' : 'loading'}`}
                   onLoad={handleImageLoad}
                   onError={handleImageError}
                   loading="lazy"
@@ -108,31 +108,31 @@ const AnswerOption = ({
                 />
               </>
             ) : (
-              <div className="option-image-error">
-                <span className="error-icon">🖼️</span>
+              <div className="quiz-option-image-error">
+                <span className="quiz-error-icon">🖼️</span>
               </div>
             )}
           </div>
         )}
 
         {/* Text section */}
-        <div className="option-text-container">
-          <span className="option-text">{getOptionText()}</span>
+        <div className="quiz-option-text-container">
+          <span className="quiz-option-text">{getOptionText()}</span>
           
           {/* Option indicators */}
-          <div className="option-indicators">
+          <div className="quiz-option-indicators">
             {isSelected && (
-              <span className="selected-indicator" aria-hidden="true">
+              <span className="quiz-selected-indicator" aria-hidden="true">
                 ✓
               </span>
             )}
             {showCorrectAnswer && isCorrect && (
-              <span className="correct-indicator" aria-hidden="true">
+              <span className="quiz-correct-indicator" aria-hidden="true">
                 ✅
               </span>
             )}
             {showCorrectAnswer && isSelected && !isCorrect && (
-              <span className="wrong-indicator" aria-hidden="true">
+              <span className="quiz-wrong-indicator" aria-hidden="true">
                 ❌
               </span>
             )}
@@ -141,7 +141,7 @@ const AnswerOption = ({
       </div>
 
       {/* Selection highlight border */}
-      <div className="option-border" aria-hidden="true"></div>
+      <div className="quiz-option-border" aria-hidden="true"></div>
     </li>
   );
 };

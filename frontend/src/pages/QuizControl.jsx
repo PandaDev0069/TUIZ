@@ -263,9 +263,9 @@ function QuizControl() {
           
           <div className="question-content">
             <h3>{currentQuestion.question}</h3>
-            <ul className={`options-list ${getLayoutClass(currentQuestion.type)}`}>
+            <ul className={`quiz-options-list ${getLayoutClass(currentQuestion.type)}`}>
               {currentQuestion.options.map((option, i) => (
-                <li key={i} className="option-item">
+                <li key={i} className="quiz-option-item">
                   {currentQuestion.type === 'true_false' ? '' : option}
                 </li>
               ))}

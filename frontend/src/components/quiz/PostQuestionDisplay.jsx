@@ -32,8 +32,8 @@ const PostQuestionDisplay = ({
   };
 
   const renderSplitView = () => (
-    <div className="post-question-split">
-      <div className="split-explanation">
+    <div className="quiz-post-question-split">
+      <div className="quiz-split-explanation">
         <ExplanationDisplay
           explanation={explanation}
           isVisible={explanationVisible}
@@ -43,8 +43,8 @@ const PostQuestionDisplay = ({
           autoClose={true}
         />
       </div>
-      <div className="split-leaderboard">
-        <div className="leaderboard-wrapper">
+      <div className="quiz-split-leaderboard">
+        <div className="quiz-leaderboard-wrapper">
           <IntermediateScoreboard 
             leaderboard={leaderboard}
             gameSettings={gameSettings}
@@ -67,7 +67,7 @@ const PostQuestionDisplay = ({
   );
 
   const renderLeaderboardOnly = () => (
-    <div className="post-question-leaderboard-only">
+    <div className="quiz-post-question-leaderboard-only">
       <IntermediateScoreboard 
         leaderboard={leaderboard}
         gameSettings={gameSettings}

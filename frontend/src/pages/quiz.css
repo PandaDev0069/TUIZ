@@ -4,7 +4,7 @@
   padding: 2rem;
 }
 
-.player-stats {
+.quiz-player-stats {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -15,13 +15,13 @@
   backdrop-filter: blur(8px);
 }
 
-.current-score {
+.quiz-current-score {
   font-size: 1.2rem;
   font-weight: bold;
   color: #10B981;
 }
 
-.streak-badge {
+.quiz-streak-badge {
   background: linear-gradient(45deg, #FF6B6B, #FF8E53);
   color: white;
   padding: 0.5rem 1rem;
@@ -30,7 +30,7 @@
   animation: pulse 2s infinite;
 }
 
-.last-points {
+.quiz-last-points {
   font-size: 1.1rem;
   font-weight: bold;
   color: #FFD700;
@@ -57,22 +57,22 @@
 }
 
 /* Grid layout for 4-option questions */
-.options-list.grid-2x2 {
+.quiz-options-list.grid-2x2 {
   grid-template-columns: repeat(2, 1fr);
 }
 
 /* Horizontal layout for 2-option questions */
-.options-list.horizontal {
+.quiz-options-list.horizontal {
   grid-template-columns: repeat(2, 1fr);
 }
 
 /* Large buttons layout for true/false */
-.options-list.large-buttons {
+.quiz-options-list.large-buttons {
   grid-template-columns: repeat(2, 1fr);
   gap: 2rem;
 }
 
-.options-list.large-buttons .option-item {
+.quiz-options-list.large-buttons .quiz-option-item {
   padding: 3rem 2rem;
   font-weight: bold;
   border: 3px solid rgba(255, 255, 255, 0.3);
@@ -86,7 +86,7 @@
 }
 
 /* Create large O symbol with CSS - Better design */
-.options-list.large-buttons .option-item:first-child::before {
+.quiz-options-list.large-buttons .quiz-option-item:first-child::before {
   content: '';
   width: 90px;
   height: 90px;
@@ -101,7 +101,7 @@
 }
 
 /* Add a label under the O */
-.options-list.large-buttons .option-item:first-child::after {
+.quiz-options-list.large-buttons .quiz-option-item:first-child::after {
   content: '正解';
   font-size: 16px;
   font-weight: 600;
@@ -112,14 +112,14 @@
   text-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
 }
 
-.options-list.large-buttons .option-item:first-child {
+.quiz-options-list.large-buttons .quiz-option-item:first-child {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
   border-color: rgba(16, 185, 129, 0.4);
   color: #10B981;
 }
 
 /* Create large X symbol with CSS - Better design */
-.options-list.large-buttons .option-item:last-child::before {
+.quiz-options-list.large-buttons .quiz-option-item:last-child::before {
   content: '✕';
   font-size: 90px;
   font-weight: 900;
@@ -133,7 +133,7 @@
 }
 
 /* Add a label under the X */
-.options-list.large-buttons .option-item:last-child::after {
+.quiz-options-list.large-buttons .quiz-option-item:last-child::after {
   content: '不正解';
   font-size: 16px;
   font-weight: 600;
@@ -144,26 +144,26 @@
   text-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
 }
 
-.options-list.large-buttons .option-item:last-child {
+.quiz-options-list.large-buttons .quiz-option-item:last-child {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
   border-color: rgba(239, 68, 68, 0.4);
   color: #EF4444;
 }
 
-.options-list.large-buttons .option-item:hover {
+.quiz-options-list.large-buttons .quiz-option-item:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
   border-color: rgba(255, 255, 255, 0.6);
 }
 
-.options-list.large-buttons .option-item:hover:first-child {
+.quiz-options-list.large-buttons .quiz-option-item:hover:first-child {
   box-shadow: 
     0 12px 40px rgba(16, 185, 129, 0.25),
     0 4px 20px rgba(16, 185, 129, 0.4);
   border-color: rgba(16, 185, 129, 0.7);
 }
 
-.options-list.large-buttons .option-item:hover:first-child::before {
+.quiz-options-list.large-buttons .quiz-option-item:hover:first-child::before {
   border-color: #059669;
   box-shadow: 
     0 6px 25px rgba(16, 185, 129, 0.5),
@@ -171,19 +171,19 @@
   transform: scale(1.05);
 }
 
-.options-list.large-buttons .option-item:hover:first-child::after {
+.quiz-options-list.large-buttons .quiz-option-item:hover:first-child::after {
   color: #059669;
   transform: translateY(-2px);
 }
 
-.options-list.large-buttons .option-item:hover:last-child {
+.quiz-options-list.large-buttons .quiz-option-item:hover:last-child {
   box-shadow: 
     0 12px 40px rgba(239, 68, 68, 0.25),
     0 4px 20px rgba(239, 68, 68, 0.4);
   border-color: rgba(239, 68, 68, 0.7);
 }
 
-.options-list.large-buttons .option-item:hover:last-child::before {
+.quiz-options-list.large-buttons .quiz-option-item:hover:last-child::before {
   color: #DC2626;
   text-shadow: 
     0 6px 25px rgba(239, 68, 68, 0.5),
@@ -191,13 +191,13 @@
   transform: scale(1.05);
 }
 
-.options-list.large-buttons .option-item:hover:last-child::after {
+.quiz-options-list.large-buttons .quiz-option-item:hover:last-child::after {
   color: #DC2626;
   transform: translateY(-2px);
 }
 
 /* Question type indicator */
-.question-type {
+.quiz-question-type {
   display: inline-block;
   background: rgba(255, 255, 255, 0.15);
   padding: 0.3rem 0.8rem;
@@ -207,7 +207,7 @@
   opacity: 0.8;
 }
 
-.option-item {
+.quiz-option-item {
   background: rgba(255, 255, 255, 0.1);
   padding: 1.5rem;
   border-radius: 12px;
@@ -216,51 +216,51 @@
   backdrop-filter: blur(8px);
 }
 
-.option-item:hover {
+.quiz-option-item:hover {
   transform: translateY(-2px);
   background: rgba(255, 255, 255, 0.15);
 }
 
-.option-item.selected {
+.quiz-option-item.selected {
   background: rgba(255, 255, 255, 0.3);
   transform: scale(0.98);
 }
 
-.option-item.disabled {
+.quiz-option-item.disabled {
   cursor: not-allowed;
   opacity: 0.4;
   transform: scale(0.95);
   background: rgba(255, 255, 255, 0.05);
 }
 
-.option-item.disabled:hover {
+.quiz-option-item.disabled:hover {
   transform: scale(0.95);
   background: rgba(255, 255, 255, 0.05);
 }
 
-.feedback {
+.quiz-feedback {
   font-size: 1.5rem;
   font-weight: bold;
   margin-top: 2rem;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.feedback.correct {
+.quiz-feedback.correct {
   color: #10B981;
 }
 
-.feedback.wrong {
+.quiz-feedback.wrong {
   color: #EF4444;
 }
 
-.timer {
+.quiz-timer {
   font-size: 2rem;
   font-weight: bold;
   margin-bottom: 1rem;
   animation: pulse 1s infinite;
 }
 
-.timer.time-up {
+.quiz-timer.time-up {
   color: #EF4444;
   animation: urgent-pulse 0.5s infinite;
 }
@@ -278,45 +278,45 @@
 }
 
 @media (max-width: 640px) {
-  .options-list.grid-2x2 {
+  .quiz-options-list.grid-2x2 {
     grid-template-columns: 1fr;
   }
   
-  .options-list.horizontal {
+  .quiz-options-list.horizontal {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
   
-  .options-list.large-buttons {
+  .quiz-options-list.large-buttons {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
   
-  .options-list.large-buttons .option-item {
+  .quiz-options-list.large-buttons .quiz-option-item {
     padding: 2.5rem 1.5rem;
     min-height: 120px; /* Adjust for mobile */
   }
   
   /* Smaller O symbol for mobile */
-  .options-list.large-buttons .option-item:first-child::before {
+  .quiz-options-list.large-buttons .quiz-option-item:first-child::before {
     width: 70px;
     height: 70px;
     border-width: 6px;
   }
   
   /* Smaller X symbol for mobile */
-  .options-list.large-buttons .option-item:last-child::before {
+  .quiz-options-list.large-buttons .quiz-option-item:last-child::before {
     font-size: 70px;
   }
   
   /* Smaller labels for mobile */
-  .options-list.large-buttons .option-item:first-child::after,
-  .options-list.large-buttons .option-item:last-child::after {
+  .quiz-options-list.large-buttons .quiz-option-item:first-child::after,
+  .quiz-options-list.large-buttons .quiz-option-item:last-child::after {
     font-size: 14px;
     margin-top: 8px;
   }
   
-  .question-type {
+  .quiz-question-type {
     font-size: 0.75rem;
     padding: 0.25rem 0.6rem;
   }
@@ -335,7 +335,7 @@
     padding: 1rem;
   }
   
-  .player-stats {
+  .quiz-player-stats {
     padding: 0.8rem;
     margin-bottom: 0.8rem;
   }
@@ -345,11 +345,11 @@
     margin-bottom: 1rem;
   }
   
-  .options-list {
+  .quiz-options-list {
     gap: 0.8rem;
   }
   
-  .option-item {
+  .quiz-option-item {
     padding: 1rem;
     font-size: 0.9rem;
   }
