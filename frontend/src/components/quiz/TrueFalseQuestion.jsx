@@ -20,7 +20,7 @@ const TrueFalseQuestion = ({
     <div className="true-false-question">
       <div className="question-header">
         <QuestionImage 
-          src={question.image_url}
+          src={question._dbData?.image_url}
           alt={`質問 ${question.questionNumber || ''} の画像`}
           className="main-question-image"
           placeholder={true}

@@ -8,8 +8,13 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 ## 🔴 Active Issues
 
 ### High Priority
-- None currently
+- multiple choice questions with 2 options are not loaded properly(is being replaced by X/O question in options)
+- questions no respecting the time limit , always auto proceeding, etc... a lot of bugs , i cant handel....
+- Needs a complete new re-work on how the ui of quiz and questions and options looks
+- no update of game status , always waiting
+- no creation of resutls(might be beacuse we are not updating game status)
 
+- create a separate,new and updated host menu/ control panel.
 ### Medium Priority
 - Issue #22: Answer Image Upload Implementation Strategy (Partially Fixed)
 
@@ -23,6 +28,77 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 ---
 
 ## ✅ Resolved Issues (Latest First)
+
+### Issue #29: No Image of Question in the Quiz
+**Date:** 2025-08-05 | **Status:** FIXED ✅ | **Severity:** High  
+**Component:** Frontend - Quiz Image Display
+
+**Problem:**
+Question images were not displaying in the quiz interface despite:
+- Complete image support system being implemented (QuestionImage.jsx, AnswerOption.jsx)
+- Image URLs being properly stored in database
+- Image preloading system working correctly
+- Quiz components expecting to display images
+
+**Root Cause:**
+Incorrect image URL path in quiz components. The `QuestionFormatAdapter.js` correctly preserved the question image URL in the `_dbData.image_url` field, but the quiz components (`MultipleChoiceQuestion.jsx` and `TrueFalseQuestion.jsx`) were trying to access `question.image_url` instead of `question._dbData.image_url`.
+
+**Solution:**
+Updated both quiz components to access the correct image URL path:
+
+**Technical Implementation:**
+```jsx
+// Before: Incorrect path
+<QuestionImage 
+  src={question.image_url}  // ❌ Undefined
+  ...
+/>
+
+// After: Correct path
+<QuestionImage 
+  src={question._dbData?.image_url}  // ✅ Correct
+  ...
+/>
+```
+
+**Files Modified:**
+- `frontend/src/components/quiz/MultipleChoiceQuestion.jsx` - Fixed question image URL path
+- `frontend/src/components/quiz/TrueFalseQuestion.jsx` - Fixed question image URL path
+
+**Testing Notes:**
+- Question images should now display correctly in both multiple choice and true/false questions
+- Answer images already working correctly (they were accessing the right path)
+- Image preloading system remains functional
+- Existing image support components (QuestionImage.jsx, AnswerOption.jsx) continue to work as designed
+
+**User Impact:**
+- Question images now display properly in quiz interface
+- Complete visual quiz experience with both question and answer images
+- Better engagement and clarity for image-based questions
+- Consistent with the implemented image support system from the roadmap
+
+**Follow-up Issue: Question Text Layout Problem**
+**Date:** 2025-08-05 | **Status:** FIXED ✅
+
+**Problem:**
+After fixing the image display issue, the question text was disappearing because images and text were being laid out horizontally, causing the text to be pushed off-screen.
+
+**Root Cause:**
+CSS layout issue where the `.question-header` container didn't have explicit flexbox properties to ensure vertical stacking of image and text elements.
+
+**Solution:**
+Added explicit flexbox layout properties to ensure proper vertical alignment:
+
+**Files Modified:**
+- `frontend/src/components/quiz/TrueFalseQuestion.css` - Added `display: flex; flex-direction: column` to `.question-header` and `display: block; width: 100%` to `.question-text`
+- `frontend/src/components/quiz/MultipleChoiceQuestion.css` - Applied same layout fixes
+
+**Testing Notes:**
+- Question text now displays properly below the image
+- Both images and text are visible in the quiz interface
+- Layout works correctly on both true/false and multiple choice questions
+
+---
 
 ### Issue #28: Questions Not Saving During Optimistic Navigation
 **Date:** 2025-07-31 | **Status:** FIXED ✅ | **Severity:** High  
