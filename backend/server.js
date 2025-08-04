@@ -8,10 +8,19 @@ const DatabaseManager = require('./config/database');
 const SupabaseAuthHelper = require('./utils/SupabaseAuthHelper');
 const CleanupScheduler = require('./utils/CleanupScheduler');
 const roomManager = require('./utils/RoomManager');
+const QuestionService = require('./services/QuestionService');
+const QuestionFormatAdapter = require('./adapters/QuestionFormatAdapter');
+const GameSettingsService = require('./services/GameSettingsService');
 const { validateStorageConfig } = require('./utils/storageConfig');
 
 // Initialize database
 const db = new DatabaseManager();
+
+// Initialize question service
+const questionService = new QuestionService();
+
+// Initialize question format adapter
+const questionAdapter = new QuestionFormatAdapter();
 
 // Initialize auth helper
 const authHelper = new SupabaseAuthHelper(db.supabaseAdmin);
@@ -470,6 +479,113 @@ module.exports.getIO = () => io;
 // Store active games in memory (you could also use Redis for production)
 const activeGames = new Map();
 
+// Helper function to check if question phase is complete and handle transitions
+const checkForQuestionCompletion = (gameCode) => {
+  const activeGame = activeGames.get(gameCode);
+  if (!activeGame || activeGame.status !== 'active') return;
+  
+  const gameFlowConfig = activeGame.gameFlowConfig || {};
+  const currentQuestion = activeGame.questions[activeGame.currentQuestionIndex];
+  if (!currentQuestion) return;
+  
+  // Check if all players have answered
+  const allPlayersAnswered = activeGame.currentAnswers.length >= activeGame.players.size;
+  
+  // If all players answered or auto-advance is disabled and we're waiting for manual advance
+  if (allPlayersAnswered) {
+    console.log(`📝 All players answered question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
+    
+    // Check if we should show explanation
+    if (GameSettingsService.shouldShowExplanation(currentQuestion, gameFlowConfig)) {
+      showQuestionExplanation(gameCode);
+    } else {
+      // No explanation, move to next question after brief delay
+      setTimeout(() => {
+        proceedToNextQuestion(gameCode);
+      }, 2000); // 2 second delay to show final answers
+    }
+  }
+};
+
+// Helper function to show explanation for current question
+const showQuestionExplanation = (gameCode) => {
+  const activeGame = activeGames.get(gameCode);
+  if (!activeGame) return;
+  
+  const currentQuestion = activeGame.questions[activeGame.currentQuestionIndex];
+  const gameFlowConfig = activeGame.gameFlowConfig || {};
+  
+  console.log(`💡 Showing explanation for question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
+  
+  // Prepare explanation data
+  const explanationData = {
+    questionId: currentQuestion.id,
+    questionNumber: activeGame.currentQuestionIndex + 1,
+    correctAnswer: currentQuestion.correctIndex,
+    correctOption: currentQuestion.options[currentQuestion.correctIndex],
+    
+    // Explanation content from database
+    explanation: {
+      title: currentQuestion._dbData?.explanation_title || currentQuestion.explanation_title,
+      text: currentQuestion._dbData?.explanation_text || currentQuestion.explanation_text,
+      image_url: currentQuestion._dbData?.explanation_image_url || currentQuestion.explanation_image_url
+    },
+    
+    // Answer statistics
+    answerStats: calculateAnswerStatistics(activeGame.currentAnswers, currentQuestion),
+    
+    // Timing
+    explanationTime: currentQuestion.explanationTime || gameFlowConfig.explanationTime || 30000,
+    autoAdvance: gameFlowConfig.autoAdvance !== false
+  };
+  
+  // Send explanation to all players
+  io.to(gameCode).emit('showExplanation', explanationData);
+  
+  // Auto-advance to next question after explanation time
+  if (gameFlowConfig.autoAdvance !== false) {
+    setTimeout(() => {
+      proceedToNextQuestion(gameCode);
+    }, explanationData.explanationTime);
+  }
+};
+
+// Helper function to calculate answer statistics
+const calculateAnswerStatistics = (answers, question) => {
+  const stats = {
+    totalAnswers: answers.length,
+    correctCount: 0,
+    optionCounts: question.options.map(() => 0),
+    correctPercentage: 0
+  };
+  
+  answers.forEach(answer => {
+    if (answer.isCorrect) stats.correctCount++;
+    if (answer.selectedOption >= 0 && answer.selectedOption < stats.optionCounts.length) {
+      stats.optionCounts[answer.selectedOption]++;
+    }
+  });
+  
+  stats.correctPercentage = stats.totalAnswers > 0 ? 
+    Math.round((stats.correctCount / stats.totalAnswers) * 100) : 0;
+  
+  return stats;
+};
+
+// Helper function to proceed to next question
+const proceedToNextQuestion = (gameCode) => {
+  const activeGame = activeGames.get(gameCode);
+  if (!activeGame) return;
+  
+  console.log(`➡️ Proceeding to next question in game ${gameCode}`);
+  
+  // Move to next question
+  activeGame.currentQuestionIndex++;
+  
+  // Send next question or end game
+  sendNextQuestion(gameCode);
+};
+
 // Helper function to send next question
 const sendNextQuestion = (gameCode) => {
   const activeGame = activeGames.get(gameCode);
@@ -494,19 +610,34 @@ const sendNextQuestion = (gameCode) => {
     }
   }
 
-  // Send question to all players and host
+  // Send question to all players and host with game settings applied
+  const gameFlowConfig = activeGame.gameFlowConfig || {};
+  
   io.to(gameCode).emit('question', {
     id: question.id,
     question: question.question,
     options: question.options,
     type: question.type,
-    timeLimit: question.timeLimit,
-    correctIndex: question.correctIndex, // Only needed for host
+    timeLimit: question.timeLimit, // This now comes from GameSettingsService
     questionNumber: questionIndex + 1,
-    totalQuestions: activeGame.questions.length
+    totalQuestions: activeGame.questions.length,
+    
+    // Enhanced settings from GameSettingsService
+    showProgress: question.showProgress !== undefined ? question.showProgress : true,
+    allowAnswerChange: question.allowAnswerChange !== undefined ? question.allowAnswerChange : false,
+    showCorrectAnswer: question.showCorrectAnswer !== undefined ? question.showCorrectAnswer : true,
+    
+    // Game flow configuration
+    autoAdvance: gameFlowConfig.autoAdvance !== undefined ? gameFlowConfig.autoAdvance : true,
+    showExplanation: question.showExplanation !== undefined ? question.showExplanation : false,
+    explanationTime: question.explanationTime || gameFlowConfig.explanationTime || 30000,
+    
+    // Image support (preserved from transformation)
+    image_url: question.image_url,
+    _dbData: question._dbData // Contains explanation data
   });
 
-  console.log(`📋 Sent question ${questionIndex + 1} to game ${gameCode}: ${question.question.substring(0, 50)}...`);
+  console.log(`📋 Sent question ${questionIndex + 1} to game ${gameCode} (${Math.round(question.timeLimit/1000)}s): ${question.question.substring(0, 50)}...`);
 };
 
 // Helper function to end game
@@ -852,29 +983,92 @@ io.on('connection', (socket) => {
         return;
       }
       
-      // For now, create sample questions
-      const sampleQuestions = [
-        {
-          id: 1,
-          question: "日本の首都はどこですか？",
-          options: ["東京", "大阪", "京都", "名古屋"],
-          correctIndex: 0,
-          type: "multiple_choice",
-          timeLimit: 30
-        },
-        {
-          id: 2,
-          question: "富士山の高さは約何メートルですか？",
-          options: ["3,776m", "3,500m", "4,000m", "3,200m"],
-          correctIndex: 0,
-          type: "multiple_choice",
-          timeLimit: 30
-        }
-      ];
+      // Load questions from database using QuestionService
+      console.log(`📚 Loading questions from database for question set: ${activeGame.question_set_id}`);
       
-      // Update game state
+      const questionResult = await questionService.getQuestionSetForGame(activeGame.question_set_id);
+      
+      if (!questionResult.success || questionResult.questions.length === 0) {
+        console.error(`❌ Failed to load questions: ${questionResult.error}`);
+        socket.emit('error', { 
+          message: 'Failed to load questions for this game',
+          details: questionResult.error 
+        });
+        return;
+      }
+      
+      const dbQuestions = questionResult.questions;
+      console.log(`📝 Successfully loaded ${dbQuestions.length} questions from database`);
+      
+      // Transform questions using QuestionFormatAdapter
+      console.log(`🔄 Transforming questions with game settings...`);
+      const transformResult = questionAdapter.transformMultipleQuestions(dbQuestions, activeGame.game_settings);
+      
+      if (!transformResult.success || transformResult.questions.length === 0) {
+        console.error(`❌ Failed to transform questions: ${transformResult.error}`);
+        socket.emit('error', { 
+          message: 'Failed to process questions for this game',
+          details: transformResult.error 
+        });
+        return;
+      }
+      
+      const questions = transformResult.questions;
+      
+      console.log(`� Transformed ${questions.length} questions to game format`);
+      
+      // Log question types for debugging
+      const questionTypes = questions.map(q => q.type);
+            console.log(`✅ Successfully transformed ${questions.length} questions to game format`);
+      
+      // Log transformation summary
+      if (transformResult.errors.length > 0) {
+        console.warn(`⚠️ ${transformResult.errors.length} questions had transformation errors:`, 
+          transformResult.errors.map(e => `Q${e.index}: ${e.error}`).join(', '));
+      }
+      
+      // Log question types for debugging
+      const typeSummary = questionAdapter.getQuestionTypeSummary(questions);
+      console.log(`📋 Question types: ${Object.entries(typeSummary.types).map(([type, count]) => `${type}(${count})`).join(', ')}`);
+      
+      // Validate we have valid questions
+      if (questions.length === 0) {
+        console.error('❌ No valid questions after transformation');
+        socket.emit('error', { 
+          message: 'No valid questions available for this game',
+          details: 'All questions failed validation during transformation' 
+        });
+        return;
+      }
+      
+      // Apply game settings to questions using GameSettingsService
+      console.log(`🎯 Applying game settings to gameplay...`);
+      const settingsResult = GameSettingsService.applySettingsToGame(activeGame.game_settings, questions);
+      
+      if (!settingsResult.success) {
+        console.error(`❌ Failed to apply game settings: ${settingsResult.error}`);
+        console.warn(`⚠️ Falling back to questions without enhanced settings`);
+      }
+      
+      const finalQuestions = settingsResult.questions;
+      const gameFlowConfig = settingsResult.gameFlowConfig;
+      
+      console.log(`🎮 Game flow configured:`, GameSettingsService.getSettingsSummary(settingsResult.gameSettings || activeGame.game_settings));
+      
+      // Final validation
+      if (finalQuestions.length === 0) {
+        console.error('❌ No valid questions after settings application');
+        socket.emit('error', { 
+          message: 'No valid questions available for this game',
+          details: 'All questions failed validation during settings application' 
+        });
+        return;
+      }
+      
+      // Update game state with enhanced questions and flow config
       activeGame.status = 'active';
-      activeGame.questions = sampleQuestions;
+      activeGame.questions = finalQuestions;
+      activeGame.gameFlowConfig = gameFlowConfig;
       activeGame.currentQuestionIndex = 0;
       activeGame.started_at = new Date().toISOString();
       
@@ -883,7 +1077,7 @@ io.on('connection', (socket) => {
       // Notify all players that the game has started
       io.to(gameCode).emit('gameStarted', {
         message: 'Game has started!',
-        totalQuestions: sampleQuestions.length,
+        totalQuestions: questions.length,
         playerCount: activeGame.players.size
       });
       
@@ -964,12 +1158,38 @@ io.on('connection', (socket) => {
       // Validate the answer
       const isCorrect = selectedOption === currentQuestion.correctIndex;
       
-      // Calculate points (base 1000, reduced by time taken, bonus for streak)
+      // Calculate points using game settings
+      const gameFlowConfig = activeGame.gameFlowConfig || {};
+      const pointCalculation = gameFlowConfig.pointCalculation || 'fixed';
+      
       let points = 0;
       if (isCorrect) {
-        const timeBonus = Math.max(0, 1000 - (timeTaken * 10)); // Reduce by 10 points per second
-        const streakBonus = player.streak * 100; // 100 points per streak
-        points = Math.round(timeBonus + streakBonus);
+        // Base points from question or game settings
+        const basePoints = currentQuestion.points || gameFlowConfig.basePoints || 1000;
+        
+        switch (pointCalculation) {
+          case 'time-bonus':
+            // Time bonus: full points if answered quickly
+            const timeBonus = Math.max(0, basePoints - (timeTaken * 10));
+            points = Math.round(timeBonus);
+            break;
+          
+          case 'streak-bonus':
+            // Streak bonus: extra points for consecutive correct answers
+            const streakMultiplier = gameFlowConfig.streakBonus ? (1 + (player.streak * 0.1)) : 1;
+            points = Math.round(basePoints * streakMultiplier);
+            break;
+          
+          case 'fixed':
+          default:
+            points = basePoints;
+            break;
+        }
+        
+        // Additional streak bonus if enabled
+        if (gameFlowConfig.streakBonus && player.streak > 0) {
+          points += player.streak * 100;
+        }
         
         // Update player streak
         player.streak++;
@@ -1022,9 +1242,57 @@ io.on('connection', (socket) => {
         totalPlayers: activeGame.players.size
       });
       
+      // Check if all players have answered or auto-advance conditions are met
+      checkForQuestionCompletion(gameCode);
+      
     } catch (error) {
       console.error('Error handling answer:', error);
       socket.emit('error', { message: 'Failed to process answer', error: error.message });
+    }
+  });
+
+  // Handle question preloading for waiting room
+  socket.on('preloadQuestions', async ({ gameCode }) => {
+    try {
+      console.log(`⏳ Preload request for game: ${gameCode}`);
+      
+      const activeGame = activeGames.get(gameCode);
+      if (!activeGame) {
+        socket.emit('error', { message: 'Game not found for preloading' });
+        return;
+      }
+      
+      // Get question set ID from active game
+      const questionSetId = activeGame.question_set_id;
+      if (!questionSetId) {
+        socket.emit('error', { message: 'No question set found for this game' });
+        return;
+      }
+      
+      console.log(`📚 Preloading questions for question set: ${questionSetId}`);
+      
+      // Use QuestionService to get preload data
+      const preloadResult = await questionService.preloadQuestionsForWaiting(questionSetId);
+      
+      if (!preloadResult.success) {
+        console.error(`❌ Failed to preload questions: ${preloadResult.error}`);
+        socket.emit('preloadError', { message: preloadResult.error });
+        return;
+      }
+      
+      console.log(`✅ Sending preload data: ${preloadResult.questions.length} questions, ${preloadResult.imageUrls.length} images`);
+      
+      // Send preload data to the client
+      socket.emit('questionPreload', {
+        questions: preloadResult.questions,
+        imageUrls: preloadResult.imageUrls,
+        totalQuestions: preloadResult.totalQuestions,
+        progress: 100 // For now, send all at once
+      });
+      
+    } catch (error) {
+      console.error('❌ Error handling preload request:', error);
+      socket.emit('preloadError', { message: 'Failed to preload questions' });
     }
   });
 

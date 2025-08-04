@@ -1,0 +1,371 @@
+/**
+ * AnswerOption.css
+ * 
+ * Styles for the AnswerOption component with support for text + image layouts,
+ * interactive states, and responsive design.
+ */
+
+.answer-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 60px;
+  margin-bottom: 0.75rem;
+  padding: 0;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  list-style: none;
+}
+
+.answer-option:hover:not(.disabled) {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.answer-option:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.answer-option:active:not(.disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 123, 255, 0.3);
+}
+
+/* Option content layout */
+.option-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+/* Image container */
+.option-image-container {
+  flex-shrink: 0;
+  width: 80px;
+  height: 60px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.option-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e9ecef;
+}
+
+.mini-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e9ecef;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.option-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.3s ease;
+}
+
+.option-image.loading {
+  opacity: 0;
+}
+
+.option-image.loaded {
+  opacity: 1;
+}
+
+.option-image-error {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff5f5;
+  color: #e53e3e;
+  font-size: 1.5rem;
+}
+
+/* Text container */
+.option-text-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+}
+
+.option-text {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #212529;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+/* Option indicators */
+.option-indicators {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 1rem;
+}
+
+.selected-indicator,
+.correct-indicator,
+.wrong-indicator {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.selected-indicator {
+  color: #007bff;
+}
+
+.correct-indicator {
+  color: #28a745;
+}
+
+.wrong-indicator {
+  color: #dc3545;
+}
+
+/* Selection border */
+.option-border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 3px solid transparent;
+  border-radius: 8px;
+  pointer-events: none;
+  transition: border-color 0.2s ease;
+}
+
+/* State-specific styles */
+.answer-option.selected {
+  background: #e7f3ff;
+  border-color: #007bff;
+}
+
+.answer-option.selected .option-border {
+  border-color: #007bff;
+}
+
+.answer-option.correct-answer {
+  background: #d4edda;
+  border-color: #28a745;
+}
+
+.answer-option.correct-answer .option-border {
+  border-color: #28a745;
+}
+
+.answer-option.wrong-answer {
+  background: #f8d7da;
+  border-color: #dc3545;
+}
+
+.answer-option.wrong-answer .option-border {
+  border-color: #dc3545;
+}
+
+.answer-option.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.answer-option.disabled:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: #e9ecef;
+}
+
+/* Question type specific styles */
+.answer-option.true_false {
+  min-height: 80px;
+}
+
+.answer-option.true_false .option-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+  flex: none;
+  width: 100%;
+}
+
+.answer-option.true_false .option-text-container {
+  justify-content: center;
+}
+
+/* Image layout adjustments */
+.answer-option.has-image {
+  min-height: 80px;
+}
+
+.answer-option.has-image .option-content {
+  padding: 0.75rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .answer-option {
+    min-height: 50px;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+  }
+  
+  .option-content {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+  
+  .option-image-container {
+    width: 60px;
+    height: 45px;
+  }
+  
+  .option-text {
+    font-size: 0.9rem;
+  }
+  
+  .answer-option.true_false {
+    min-height: 60px;
+  }
+  
+  .answer-option.true_false .option-text {
+    font-size: 1rem;
+  }
+  
+  .answer-option.has-image {
+    min-height: 60px;
+  }
+}
+
+@media (max-width: 480px) {
+  .answer-option {
+    border-radius: 4px;
+    min-height: 45px;
+  }
+  
+  .option-content {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+  
+  .option-image-container {
+    width: 50px;
+    height: 40px;
+  }
+  
+  .option-text {
+    font-size: 0.85rem;
+  }
+  
+  .option-indicators {
+    margin-left: 0.5rem;
+  }
+  
+  .selected-indicator,
+  .correct-indicator,
+  .wrong-indicator {
+    font-size: 1rem;
+  }
+  
+  .answer-option.true_false .option-text {
+    font-size: 0.95rem;
+  }
+}
+
+/* Grid layouts for multiple choice */
+.options-list.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.options-list.grid-4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .options-list.grid-4 {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+  }
+}
+
+/* Horizontal layout for true/false */
+.options-list.horizontal {
+  display: flex;
+  gap: 1rem;
+}
+
+.options-list.horizontal .answer-option {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+@media (max-width: 480px) {
+  .options-list.horizontal {
+    flex-direction: column;
+  }
+  
+  .options-list.horizontal .answer-option {
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .answer-option,
+  .option-image,
+  .mini-spinner {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .answer-option {
+    border-width: 3px;
+  }
+  
+  .answer-option.selected {
+    background: #000;
+    color: #fff;
+  }
+  
+  .answer-option.correct-answer {
+    background: #008000;
+    color: #fff;
+  }
+  
+  .answer-option.wrong-answer {
+    background: #ff0000;
+    color: #fff;
+  }
+}

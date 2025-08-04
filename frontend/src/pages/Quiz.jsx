@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import socket from "../socket";
 import IntermediateScoreboard from "../components/IntermediateScoreboard";
+import QuestionRenderer from "../components/quiz/QuestionRenderer";
+import PostQuestionDisplay from "../components/quiz/PostQuestionDisplay";
 import "./quiz.css";
 
 function Quiz() {
@@ -18,6 +20,12 @@ function Quiz() {
   const [questionScore, setQuestionScore] = useState(0);
   const [showIntermediateScores, setShowIntermediateScores] = useState(false);
   const [intermediateData, setIntermediateData] = useState(null);
+  
+  // New state for explanation system
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [explanationData, setExplanationData] = useState(null);
+  const [explanationTimer, setExplanationTimer] = useState(0);
+  const [answerResult, setAnswerResult] = useState(null);
 
   useEffect(() => {
     if (!name || !room) {
@@ -27,25 +35,49 @@ function Quiz() {
 
     // Receive question from server
     socket.on('question', (q) => {
+      console.log('📋 Received question:', q);
       setQuestion(q);
       setSelected(null);
       setFeedback("");
-      setTimer(10); // Reset timer for new question
+      setShowExplanation(false);
+      setExplanationData(null);
+      setAnswerResult(null);
+      
+      // Use dynamic timer from question or default to 10
+      const questionTimer = q.timeLimit ? Math.round(q.timeLimit / 1000) : 10;
+      setTimer(questionTimer);
+      
       setQuestionScore(0);
       setShowIntermediateScores(false);
     });
 
-    // Handle answer result
-    socket.on('answer_result', (result) => {
-      setScore(result.score);
+    // Handle answer result from server
+    socket.on('answerResult', (result) => {
+      console.log('✅ Answer result:', result);
+      setAnswerResult(result);
+      setScore(result.newScore);
       setStreak(result.streak);
-      setQuestionScore(result.questionScore);
+      setQuestionScore(result.points);
       
-      if (result.correct) {
-        setFeedback(`正解！ +${result.questionScore}点 ${result.streak > 1 ? `🔥 ${result.streak}連続!` : ''}`);
+      if (result.isCorrect) {
+        setFeedback(`正解！ +${result.points}点 ${result.streak > 1 ? `🔥 ${result.streak}連続!` : ''}`);
       } else {
         setFeedback("不正解...");
       }
+    });
+
+    // Handle explanation display
+    socket.on('showExplanation', (data) => {
+      console.log('💡 Showing explanation:', data);
+      setExplanationData(data);
+      setShowExplanation(true);
+      
+      // Set explanation timer
+      const explainTimer = Math.round(data.explanationTime / 1000) || 30;
+      setExplanationTimer(explainTimer);
+      
+      // Hide question interface during explanation
+      setQuestion(null);
     });
 
     // Handle intermediate scoreboard
@@ -61,15 +93,16 @@ function Quiz() {
 
     return () => {
       socket.off('question');
-      socket.off('answer_result');
+      socket.off('answerResult');
+      socket.off('showExplanation');
       socket.off('show_intermediate_scores');
       socket.off('game_over');
     };
   }, [name, room, navigate]);
 
-  // Timer effect
+  // Timer effect for questions
   useEffect(() => {
-    if (!question || selected !== null || timer <= 0) return;
+    if (!question || selected !== null || timer <= 0 || showExplanation) return;
 
     const interval = setInterval(() => {
       setTimer(prev => {
@@ -83,17 +116,38 @@ function Quiz() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [question, selected, timer]);
+  }, [question, selected, timer, showExplanation]);
+
+  // Timer effect for explanations
+  useEffect(() => {
+    if (!showExplanation || explanationTimer <= 0) return;
+
+    const interval = setInterval(() => {
+      setExplanationTimer(prev => {
+        if (prev <= 1) {
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [showExplanation, explanationTimer]);
 
   const handleAnswer = (index) => {
     if (selected !== null) return; // Prevent multiple selections
     if (timer <= 0) return; // Prevent answers after time is up
+    if (showExplanation) return; // Prevent answers during explanation
+    
     setSelected(index);
     
-    socket.emit("submit_answer", { 
-      room, 
-      name, 
-      answer: index 
+    const timeTaken = question ? Math.round((question.timeLimit / 1000) - timer) : 0;
+    
+    socket.emit("answer", { 
+      gameCode: room, 
+      questionId: question.id,
+      selectedOption: index,
+      timeTaken: timeTaken
     });
   };
 
@@ -110,20 +164,6 @@ function Quiz() {
 
   const handleIntermediateComplete = () => {
     setShowIntermediateScores(false);
-  };
-
-  // Get layout class based on question type
-  const getLayoutClass = (questionType) => {
-    switch (questionType) {
-      case 'multiple_choice_4':
-        return 'grid-2x2';
-      case 'multiple_choice_2':
-        return 'horizontal';
-      case 'true_false':
-        return 'large-buttons';
-      default:
-        return 'grid-2x2';
-    }
   };
 
   // Get question type display name
@@ -151,6 +191,45 @@ function Quiz() {
     );
   }
 
+  // Show explanation with leaderboard if available
+  if (showExplanation && explanationData) {
+    const explanation = {
+      title: explanationData.explanation?.title,
+      text: explanationData.explanation?.text,
+      image_url: explanationData.explanation?.image_url
+    };
+
+    const leaderboard = explanationData.answerStats ? {
+      correctAnswer: explanationData.correctAnswer,
+      correctOption: explanationData.correctOption,
+      answerStats: explanationData.answerStats,
+      currentPlayer: {
+        score: score,
+        streak: streak,
+        questionScore: questionScore,
+        isCorrect: answerResult?.isCorrect
+      }
+    } : null;
+
+    const handleExplanationComplete = () => {
+      setShowExplanation(false);
+      setExplanationData(null);
+      setExplanationTimer(0);
+    };
+
+    return (
+      <PostQuestionDisplay
+        explanation={explanation}
+        leaderboard={leaderboard}
+        showExplanation={!!explanation.title || !!explanation.text || !!explanation.image_url}
+        showLeaderboard={!!leaderboard}
+        explanationDuration={explanationTimer * 1000}
+        onComplete={handleExplanationComplete}
+        gameSettings={{}}
+      />
+    );
+  }
+
   if (!question) return (
     <div className="page-container">
       <div className="card">
@@ -163,30 +242,24 @@ function Quiz() {
   return (
     <div className="page-container">
       <div className="quiz-page">
-        <div className="player-stats">
-          <div className="current-score">スコア: {score}</div>
-          {streak > 1 && <div className="streak-badge">🔥 {streak}連続!</div>}
-          {questionScore > 0 && <div className="last-points">+{questionScore}</div>}
+        <div className="quiz-header">
+          <div className="player-stats">
+            <div className="current-score">スコア: {score}</div>
+            {streak > 1 && <div className="streak-badge">🔥 {streak}連続!</div>}
+            {questionScore > 0 && <div className="last-points">+{questionScore}</div>}
+          </div>
         </div>
         
-        <div className={`timer ${timer <= 0 ? 'time-up' : ''}`}>
-          {timer <= 0 ? '時間切れ!' : timer}
-        </div>
+        <QuestionRenderer
+          question={question}
+          selected={selected}
+          answerResult={answerResult}
+          timer={timer}
+          onAnswer={handleAnswer}
+          showProgress={true}
+          showTimer={true}
+        />
         
-        <h2>{question.question}</h2>
-        <ul className={`options-list ${getLayoutClass(question.type)}`}>
-          {question.options.map((opt, i) => (
-            <li
-              key={i}
-              onClick={() => handleAnswer(i)}
-              className={`option-item ${selected === i ? 'selected' : ''} ${
-                selected !== null || timer <= 0 ? 'disabled' : ''
-              }`}
-            >
-              {question.type === 'true_false' ? '' : opt}
-            </li>
-          ))}
-        </ul>
         {feedback && (
           <p className={`feedback ${feedback.startsWith('正解') ? 'correct' : 'wrong'}`}>
             {feedback}

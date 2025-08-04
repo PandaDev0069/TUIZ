@@ -1,0 +1,334 @@
+/* True/False Question Styles */
+.true-false-question {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* Question Header */
+.question-header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.main-question-image {
+  max-width: 100%;
+  max-height: 300px;
+  margin-bottom: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.question-text {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.4;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  padding: 0 1rem;
+}
+
+/* True/False Container */
+.true-false-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  width: 100%;
+  margin: 2rem 0;
+}
+
+.true-false-option {
+  flex: 1;
+  max-width: 350px;
+  min-height: 150px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+/* Special styling for true/false options */
+.true-option {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
+  border: 2px solid rgba(34, 197, 94, 0.3);
+}
+
+.true-option:hover:not(.disabled) {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(34, 197, 94, 0.2));
+  border-color: rgba(34, 197, 94, 0.5);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(34, 197, 94, 0.2);
+}
+
+.false-option {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+  border: 2px solid rgba(239, 68, 68, 0.3);
+}
+
+.false-option:hover:not(.disabled) {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(239, 68, 68, 0.2));
+  border-color: rgba(239, 68, 68, 0.5);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(239, 68, 68, 0.2);
+}
+
+/* Selected states */
+.true-option.selected {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(34, 197, 94, 0.3));
+  border-color: #22c55e;
+  transform: scale(1.02);
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.4);
+}
+
+.false-option.selected {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(239, 68, 68, 0.3));
+  border-color: #ef4444;
+  transform: scale(1.02);
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.4);
+}
+
+/* VS Divider */
+.vs-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Answer Submitted Status */
+.answer-submitted {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  animation: fadeInSuccess 0.5s ease;
+  margin-top: 1rem;
+}
+
+@keyframes fadeInSuccess {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.submitted-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.checkmark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: #10b981;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  font-weight: bold;
+  animation: bounceIn 0.6s ease;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.submitted-indicator span {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #10b981;
+}
+
+.waiting-message {
+  color: #a7f3d0;
+  font-size: 0.95rem;
+  margin: 0;
+  opacity: 0.9;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .true-false-question {
+    gap: 1.5rem;
+  }
+  
+  .question-text {
+    font-size: 1.5rem;
+    padding: 0 0.5rem;
+  }
+  
+  .main-question-image {
+    max-height: 200px;
+    margin-bottom: 1rem;
+  }
+  
+  .true-false-container {
+    flex-direction: column;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+  }
+  
+  .true-false-option {
+    max-width: none;
+    width: 100%;
+    min-height: 120px;
+  }
+  
+  .vs-divider {
+    width: 50px;
+    height: 50px;
+    font-size: 1rem;
+    order: 1;
+  }
+  
+  .true-option {
+    order: 0;
+  }
+  
+  .false-option {
+    order: 2;
+  }
+  
+  .answer-submitted {
+    padding: 1rem;
+  }
+  
+  .submitted-indicator span {
+    font-size: 1rem;
+  }
+  
+  .waiting-message {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .question-text {
+    font-size: 1.3rem;
+  }
+  
+  .main-question-image {
+    max-height: 150px;
+  }
+  
+  .true-false-container {
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  
+  .true-false-option {
+    min-height: 100px;
+  }
+  
+  .vs-divider {
+    width: 40px;
+    height: 40px;
+    font-size: 0.9rem;
+  }
+  
+  .checkmark {
+    width: 25px;
+    height: 25px;
+    font-size: 1rem;
+  }
+  
+  .submitted-indicator span {
+    font-size: 0.9rem;
+  }
+  
+  .waiting-message {
+    font-size: 0.8rem;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .question-text {
+    text-shadow: none;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 1rem;
+    border-radius: 8px;
+  }
+  
+  .true-option,
+  .false-option {
+    border-width: 3px;
+  }
+  
+  .vs-divider {
+    border-width: 4px;
+    border-color: #fff;
+  }
+  
+  .answer-submitted {
+    border: 2px solid #10b981;
+    background: rgba(16, 185, 129, 0.2);
+  }
+}
+
+/* Animation preferences */
+@media (prefers-reduced-motion: reduce) {
+  .vs-divider {
+    animation: none;
+  }
+  
+  .answer-submitted,
+  .checkmark {
+    animation: none;
+  }
+  
+  .true-false-option {
+    transition: none;
+  }
+  
+  .true-false-option:hover:not(.disabled) {
+    transform: none;
+  }
+  
+  .true-option.selected,
+  .false-option.selected {
+    transform: none;
+  }
+}

@@ -63,6 +63,35 @@ const gameConfig = {
       optionCount: 2,
       layout: 'large-buttons'
     }
+  },
+
+  // Default game settings
+  defaults: {
+    // Player Management
+    maxPlayers: 50,
+    
+    // Game Flow
+    autoAdvance: true,
+    showExplanations: true,
+    explanationTime: 10, // seconds
+    showLeaderboard: true,
+    
+    // Timing
+    useCustomTiming: false,
+    questionTime: 30, // seconds
+    
+    // Scoring
+    pointCalculation: 'time-bonus', // 'fixed', 'time-bonus', 'streak-bonus'
+    streakBonus: true,
+    basePoints: 1000,
+    
+    // Display Options
+    showProgress: true,
+    showCorrectAnswer: true,
+    allowAnswerChange: false,
+    
+    // Advanced Features
+    spectatorMode: false
   }
 };
 

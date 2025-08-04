@@ -1,0 +1,256 @@
+/* Multiple Choice Question Styles */
+.multiple-choice-question {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+}
+
+/* Question Header */
+.question-header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.main-question-image {
+  max-width: 100%;
+  max-height: 300px;
+  margin-bottom: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.question-text {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.4;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  padding: 0 1rem;
+}
+
+/* Options Container Layouts */
+.options-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Grid Layouts (for image options) */
+.options-container.grid-2x2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.options-container.grid-horizontal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+/* List Layouts (for text-only options) */
+.options-container.list-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.options-container.list-horizontal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+/* Option styling within layouts */
+.grid-2x2 .multiple-choice-option,
+.grid-horizontal .multiple-choice-option {
+  aspect-ratio: 16/9;
+  min-height: 120px;
+}
+
+.list-vertical .multiple-choice-option {
+  min-height: 60px;
+}
+
+.list-horizontal .multiple-choice-option {
+  min-height: 80px;
+}
+
+/* Answer Submitted Status */
+.answer-submitted {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  animation: fadeInSuccess 0.5s ease;
+}
+
+@keyframes fadeInSuccess {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.submitted-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.checkmark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: #10b981;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  font-weight: bold;
+  animation: bounceIn 0.6s ease;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.submitted-indicator span {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #10b981;
+}
+
+.waiting-message {
+  color: #a7f3d0;
+  font-size: 0.95rem;
+  margin: 0;
+  opacity: 0.9;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .multiple-choice-question {
+    gap: 1.5rem;
+  }
+  
+  .question-text {
+    font-size: 1.5rem;
+    padding: 0 0.5rem;
+  }
+  
+  .main-question-image {
+    max-height: 200px;
+    margin-bottom: 1rem;
+  }
+  
+  .options-container.grid-2x2,
+  .options-container.grid-horizontal,
+  .options-container.list-horizontal {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .grid-2x2 .multiple-choice-option,
+  .grid-horizontal .multiple-choice-option {
+    aspect-ratio: auto;
+    min-height: 100px;
+  }
+  
+  .list-horizontal .multiple-choice-option {
+    min-height: 70px;
+  }
+  
+  .answer-submitted {
+    padding: 1rem;
+  }
+  
+  .submitted-indicator span {
+    font-size: 1rem;
+  }
+  
+  .waiting-message {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .question-text {
+    font-size: 1.3rem;
+  }
+  
+  .main-question-image {
+    max-height: 150px;
+  }
+  
+  .options-container {
+    gap: 0.75rem;
+  }
+  
+  .grid-2x2 .multiple-choice-option,
+  .grid-horizontal .multiple-choice-option,
+  .list-horizontal .multiple-choice-option {
+    min-height: 80px;
+  }
+  
+  .list-vertical .multiple-choice-option {
+    min-height: 50px;
+  }
+  
+  .checkmark {
+    width: 25px;
+    height: 25px;
+    font-size: 1rem;
+  }
+  
+  .submitted-indicator span {
+    font-size: 0.9rem;
+  }
+  
+  .waiting-message {
+    font-size: 0.8rem;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .question-text {
+    text-shadow: none;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 1rem;
+    border-radius: 8px;
+  }
+  
+  .answer-submitted {
+    border: 2px solid #10b981;
+    background: rgba(16, 185, 129, 0.2);
+  }
+}
+
+/* Animation preferences */
+@media (prefers-reduced-motion: reduce) {
+  .answer-submitted,
+  .checkmark {
+    animation: none;
+  }
+}

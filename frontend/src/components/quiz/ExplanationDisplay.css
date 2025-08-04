@@ -1,0 +1,284 @@
+/* Explanation Display Styles */
+.explanation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.explanation-overlay.closing {
+  animation: fadeOut 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+.explanation-container {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Timer Section */
+.explanation-timer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.timer-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.timer-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+  position: relative;
+}
+
+.timer-progress::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+.timer-text {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #fff;
+  min-width: 30px;
+  text-align: center;
+}
+
+/* Content Section */
+.explanation-content {
+  padding: 2rem 1.5rem;
+}
+
+.explanation-title {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.explanation-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.explanation-image-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.explanation-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.explanation-text {
+  color: #f8fafc;
+  line-height: 1.6;
+  font-size: 1.1rem;
+}
+
+.explanation-text p {
+  margin: 0 0 1rem 0;
+  text-align: left;
+}
+
+.explanation-text p:last-child {
+  margin-bottom: 0;
+}
+
+/* Close Button */
+.explanation-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.explanation-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.explanation-close-btn:active {
+  transform: scale(0.95);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .explanation-container {
+    margin: 0.5rem;
+    border-radius: 16px;
+    max-height: 95vh;
+  }
+
+  .explanation-content {
+    padding: 1.5rem 1rem;
+  }
+
+  .explanation-title {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .explanation-text {
+    font-size: 1rem;
+  }
+
+  .explanation-image {
+    max-height: 200px;
+  }
+
+  .explanation-timer {
+    padding: 0.75rem 1rem;
+  }
+
+  .timer-text {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .explanation-overlay {
+    padding: 0.5rem;
+  }
+
+  .explanation-container {
+    border-radius: 12px;
+  }
+
+  .explanation-content {
+    padding: 1rem 0.75rem;
+  }
+
+  .explanation-title {
+    font-size: 1.3rem;
+  }
+
+  .explanation-text {
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .explanation-timer {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  .timer-text {
+    text-align: center;
+  }
+}
+
+/* Animation for timer urgency */
+@media (prefers-reduced-motion: no-preference) {
+  .timer-progress {
+    transition: width 0.1s linear;
+  }
+  
+  .explanation-container {
+    animation: slideUp 0.4s ease;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .explanation-container {
+    border: 2px solid #fff;
+  }
+  
+  .explanation-timer {
+    border-bottom: 2px solid #fff;
+  }
+  
+  .timer-progress {
+    background: #fff;
+  }
+}
