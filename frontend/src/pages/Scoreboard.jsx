@@ -45,7 +45,7 @@ function Scoreboard() {
 
   const handleRestart = () => {
     if (isHost) {
-      navigate('/host');
+      navigate('/dashboard');
     } else {
       navigate('/join');
     }
@@ -176,7 +176,7 @@ function Scoreboard() {
         )}
 
         <button className="restart-button" onClick={handleRestart}>
-          {isHost ? '🎮 新しいクイズを作成' : '🚀 別のクイズに参加'}
+          {isHost ? '📊 ダッシュボードに戻る' : '🚀 別のクイズに参加'}
         </button>
       </div>
     </div>
