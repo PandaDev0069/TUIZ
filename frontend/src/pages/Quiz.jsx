@@ -251,6 +251,7 @@ function Quiz() {
         </div>
         
         <QuestionRenderer
+          key={question?.id || question?.questionNumber}
           question={question}
           selected={selected}
           answerResult={answerResult}

@@ -40,9 +40,7 @@ const AnswerOption = ({
   };
 
   const getOptionText = () => {
-    if (questionType === 'true_false') {
-      return index === 0 ? '正解' : '不正解';
-    }
+    // Always use the provided option text, regardless of question type
     return option;
   };
 

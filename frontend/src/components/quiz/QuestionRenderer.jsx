@@ -27,6 +27,8 @@ const QuestionRenderer = ({
           />
         );
       case 'multiple_choice_4':
+      case 'multiple_choice_3':
+      case 'multiple_choice_2':
       case 'multiple_choice':
       default:
         return (
@@ -103,6 +105,8 @@ const QuestionRenderer = ({
         <span className={`type-badge ${question.type}`}>
           {question.type === 'true_false' ? '○×' : 
            question.type === 'multiple_choice_4' ? '4択' : 
+           question.type === 'multiple_choice_3' ? '3択' : 
+           question.type === 'multiple_choice_2' ? '2択' : 
            question.type === 'multiple_choice' ? '選択' : '質問'}
         </span>
       </div>

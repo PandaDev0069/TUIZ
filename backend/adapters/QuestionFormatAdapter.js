@@ -123,8 +123,8 @@ class QuestionFormatAdapter {
    * @returns {string} - Game question type
    */
   mapQuestionType(dbType, answerCount) {
-    // Handle true/false specifically
-    if (dbType === 'true_false' || answerCount === 2) {
+    // Handle true/false specifically - ONLY if database type is true_false
+    if (dbType === 'true_false') {
       return 'true_false';
     }
 

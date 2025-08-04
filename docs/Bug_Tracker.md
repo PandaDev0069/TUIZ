@@ -8,7 +8,6 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 ## 🔴 Active Issues
 
 ### High Priority
-- multiple choice questions with 2 options are not loaded properly(is being replaced by X/O question in options)
 - questions no respecting the time limit , always auto proceeding, etc... a lot of bugs , i cant handel....
 - Needs a complete new re-work on how the ui of quiz and questions and options looks
 - no update of game status , always waiting
@@ -28,6 +27,53 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 ---
 
 ## ✅ Resolved Issues (Latest First)
+
+### Issue #30: Multiple Choice Questions with 2 Options Being Replaced by X/O Questions
+**Date:** 2025-08-05 | **Status:** FIXED ✅ | **Severity:** High  
+**Component:** Backend/Frontend - Question Type Detection
+
+**Problem:**
+Multiple choice questions with 2 options were being incorrectly identified as true/false (X/O) questions, causing them to display with hardcoded "正解/不正解" options instead of the actual question options.
+
+**Root Cause:**
+1. **Backend Issue**: In `QuestionFormatAdapter.js`, the logic `if (dbType === 'true_false' || answerCount === 2)` was treating ANY question with 2 answers as a true/false question
+2. **Frontend Issue**: The `AnswerOption` component was hardcoding text for true/false questions instead of using the actual option text
+3. **Renderer Issue**: `QuestionRenderer` wasn't handling `multiple_choice_2` questions properly
+
+**Solution:**
+1. **Fixed Backend Logic**: Changed condition to only treat questions as true/false when `dbType === 'true_false'`, not when `answerCount === 2`
+2. **Updated Answer Display**: Modified `AnswerOption` component to always use the provided option text
+3. **Enhanced Renderer**: Added support for `multiple_choice_2` and `multiple_choice_3` in QuestionRenderer
+
+**Technical Implementation:**
+```javascript
+// Before: Incorrect logic treating all 2-option questions as true/false
+if (dbType === 'true_false' || answerCount === 2) {
+  return 'true_false';
+}
+
+// After: Only database true_false questions are treated as true/false
+if (dbType === 'true_false') {
+  return 'true_false';
+}
+```
+
+**Files Modified:**
+- `backend/adapters/QuestionFormatAdapter.js` - Fixed question type mapping logic
+- `frontend/src/components/quiz/QuestionRenderer.jsx` - Added support for multiple_choice_2 and multiple_choice_3
+- `frontend/src/components/quiz/AnswerOption.jsx` - Removed hardcoded text for true/false questions
+
+**Testing Notes:**
+- Multiple choice questions with 2 options now display correctly with their actual option text
+- True/false questions still work properly with their own component
+- Question type detection now respects the database question_type field
+
+**User Impact:**
+- Multiple choice questions with 2 options now display correctly
+- Question options show the actual text entered by quiz creators
+- Proper distinction between true/false and 2-option multiple choice questions
+
+---
 
 ### Issue #29: No Image of Question in the Quiz
 **Date:** 2025-08-05 | **Status:** FIXED ✅ | **Severity:** High  
