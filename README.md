@@ -20,6 +20,9 @@ A Kahoot-style quiz app supporting **200-300 concurrent players** with real-time
 │       • Real-time Socket.IO communication
 │       • Quiz creation with image upload support
 │       • Live scoreboard and intermediate rankings
+│       • Interactive game settings panel with real-time updates
+│       • Host lobby with terminal-style player display
+│       • Debounced auto-save for seamless UX
 │
 ├── /backend/           ← Node.js + Express + Socket.IO (deployed on Render)
 │   ├── /config/        ← Database and game configuration
@@ -28,11 +31,13 @@ A Kahoot-style quiz app supporting **200-300 concurrent players** with real-time
 │   ├── /utils/         ← Backend utilities (RoomManager, OrderManager)
 │   └── Features:
 │       • Real-time game room management
-│       • Socket.IO for live player interactions
+│       • Socket.IO for live player interactions  
 │       • Supabase integration for data persistence
-│       • JWT-based authentication
+│       • JWT-based authentication with RLS policies
 │       • File upload handling (quiz thumbnails, question images)
 │       • Game session management and scoring
+│       • Advanced settings synchronization system
+│       • Room-based player management with UUID tracking
 │
 ├── /docs/              ← Project Documentation
 │   ├── /database/      ← Database schema and documentation
@@ -43,9 +48,11 @@ A Kahoot-style quiz app supporting **200-300 concurrent players** with real-time
 └── Database: Supabase (PostgreSQL + Auth, hosted in cloud)
     └── Features:
         • Stores quizzes, questions, answers, and user data
-        • Game sessions and player management
-        • Authentication and user profiles
+        • Game sessions and player management with UUID tracking
+        • Authentication and user profiles with RLS policies
         • Real-time subscriptions support
+        • Settings synchronization between question sets and active games
+        • Automatic cleanup scheduling and data management
 ```
 
 ## 🚀 Quick Start
@@ -102,7 +109,7 @@ A Kahoot-style quiz app supporting **200-300 concurrent players** with real-time
 ## 🎮 Current Features
 
 ### ✅ Implemented Features
-- **User Authentication**: Login/Register with JWT tokens
+- **User Authentication**: Login/Register with JWT tokens and Supabase integration
 - **Quiz Creation System**: 
   - Metadata forms with thumbnail upload
   - Question builder with image support
@@ -111,24 +118,39 @@ A Kahoot-style quiz app supporting **200-300 concurrent players** with real-time
   - Auto-save functionality
 - **Dashboard**: User quiz management and creation portal
 - **Real-time Game Rooms**: Socket.IO powered multiplayer sessions
-- **Host Controls**: Game management and player monitoring
+- **Host Controls**: 
+  - Game management and player monitoring
+  - Live settings panel with real-time updates
+  - Host lobby with player terminal display
+- **Game Settings System**:
+  - Comprehensive settings management (11 core settings)
+  - Real-time sync between question sets and active games
+  - Auto-save with debouncing for smooth UX
+  - Settings categories: Game Flow, Scoring, Display Options, Advanced
 - **Player Experience**: Join games with codes, real-time participation
 - **Scoring System**: Live leaderboards and intermediate rankings
 - **File Upload**: Support for quiz thumbnails and question images
+- **Database Integration**: Complete Supabase setup with RLS policies
 
 ### 🚧 In Development
-- Final confirmation page for quiz creation
-- Enhanced host game controls
-- Player waiting room improvements
-- Survey system for post-quiz feedback
-- Advanced statistics and analytics
+- Enhanced host game controls during gameplay
+- Player waiting room improvements and animations
+- Question loading from database integration
+- Advanced game flow controls (question timing, explanations display)
+- Real-time player status and connection management
 
 ### 📋 Planned Features
+- Survey system for post-quiz feedback
+- Advanced statistics and analytics dashboard
+- Final confirmation page for quiz creation
 - 2FA/Email verification
 - Password change functionality
-- Public quiz sharing
-- Enhanced UI/UX polish
+- Public quiz sharing and marketplace
+- Enhanced UI/UX polish and mobile optimization
 - Performance optimizations for 300+ concurrent users
+- Game result persistence and historical data
+- Advanced question types (true/false, fill-in-the-blank)
+- Spectator mode implementation
 
 ## 🛠️ Tech Stack
 
