@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import LoadingSkeleton from '../LoadingSkeleton';
 import './QuestionImage.css';
 
 const QuestionImage = ({ 
@@ -60,8 +61,7 @@ const QuestionImage = ({
     <div className={`quiz-question-image-container ${className} ${imageState}`}>
       {imageState === 'loading' && placeholder && (
         <div className="quiz-image-placeholder">
-          <div className="quiz-loading-spinner"></div>
-          <span className="quiz-loading-text">画像を読み込み中...</span>
+          <LoadingSkeleton type="image" count={1} />
         </div>
       )}
       

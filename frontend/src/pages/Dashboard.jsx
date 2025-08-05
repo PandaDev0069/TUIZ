@@ -5,6 +5,7 @@ import { showError } from '../utils/toast';
 import socket from '../socket';
 import ProfileSettingsModal from '../components/ProfileSettingsModal';
 import ConfirmationModal from '../components/ConfirmationModal';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 import { useConfirmation } from '../hooks/useConfirmation';
 import './dashboard.css';
 
@@ -366,8 +367,7 @@ function Dashboard() {
 
             {loading ? (
               <div className="loading-state">
-                <div className="loading-spinner">⌛</div>
-                <p>クイズセットを読み込み中...</p>
+                <LoadingSkeleton type="text" count={3} />
               </div>
             ) : myQuizSets.length === 0 ? (
               <div className="empty-state">

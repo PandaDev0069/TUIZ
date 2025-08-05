@@ -4,6 +4,7 @@ import socket from "../socket";
 import IntermediateScoreboard from "../components/IntermediateScoreboard";
 import QuestionRenderer from "../components/quiz/QuestionRenderer";
 import PostQuestionDisplay from "../components/quiz/PostQuestionDisplay";
+import LoadingSkeleton from "../components/LoadingSkeleton";
 import "./quiz.css";
 
 function Quiz() {
@@ -233,8 +234,7 @@ function Quiz() {
   if (!question) return (
     <div className="page-container">
       <div className="card">
-        <h2>次の質問を待っています...</h2>
-        <div className="loading">⌛</div>
+        <LoadingSkeleton type="question" count={1} />
       </div>
     </div>
   );

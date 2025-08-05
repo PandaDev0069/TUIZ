@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGameSettings } from '../hooks/useGameSettings';
 import { showSuccess, showError } from '../utils/toast';
+import LoadingSkeleton from './LoadingSkeleton';
 import './gameSettingsPanel.css';
 
 const settingsConfig = {
@@ -252,8 +253,7 @@ const GameSettingsPanel = ({ questionSetId, gameId, onClose }) => {
       <div className="settings-panel-overlay">
         <div className="settings-panel">
           <div className="settings-loading">
-            <div className="loading-spinner"></div>
-            <p>設定を読み込み中...</p>
+            <LoadingSkeleton type="text" count={4} />
           </div>
         </div>
       </div>

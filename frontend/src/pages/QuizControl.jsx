@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import socket from '../socket';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 import './quizControl.css';
 
 function QuizControl() {
@@ -164,8 +165,7 @@ function QuizControl() {
     return (
       <div className="page-container">
         <div className="card">
-          <h2>クイズを準備中...</h2>
-          <div className="loading">⌛</div>
+          <LoadingSkeleton type="question" count={1} />
         </div>
       </div>
     );

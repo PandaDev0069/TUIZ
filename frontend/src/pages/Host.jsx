@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
 import { showError } from '../utils/toast';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 import socket from '../socket';
 import './host.css';
 
@@ -97,7 +98,7 @@ function Host() {
         />
 
         {loading ? (
-          <p>問題セットを読み込み中...</p>
+          <LoadingSkeleton type="text" count={2} />
         ) : (
           <div className="question-set-selector">
             <label htmlFor="questionSet">問題セットを選択:</label>
