@@ -109,7 +109,7 @@
   overflow: hidden;
 }
 
-.section-header {
+.settings-section .section-header {
   padding: 1.5rem 2rem;
   background: rgba(255, 255, 255, 0.08);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);

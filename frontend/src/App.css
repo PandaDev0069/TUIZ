@@ -120,12 +120,6 @@ body {
   transform: translateY(0);
 }
 
-.error {
-  color: #fecaca;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-}
-
 /* Responsive design */
 @media (max-width: 480px) {
   .card {

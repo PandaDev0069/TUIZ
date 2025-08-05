@@ -439,14 +439,14 @@
   margin-bottom: 3rem;
 }
 
-.section-header {
+.my-quiz-sets .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
 }
 
-.section-header h2 {
+.my-quiz-sets .section-header h2 {
   margin: 0;
   font-size: 1.8rem;
   font-weight: 600;
@@ -763,14 +763,14 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.section-header {
+.draft-quizzes .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
 }
 
-.section-header h2 {
+.draft-quizzes .section-header h2 {
   color: #ffffff;
   font-size: 1.5rem;
   font-weight: 600;
