@@ -367,15 +367,35 @@ app.post('/api/debug/test-rls', async (req, res) => {
 app.get('/api/cleanup/status', async (req, res) => {
   try {
     const status = cleanupScheduler.getStatus();
-    const stats = await db.getCleanupStats();
+    let stats = null;
+    let error = null;
+    
+    // Try to get cleanup stats, but handle gracefully if function doesn't exist
+    try {
+      const statsResult = await db.getCleanupStats();
+      if (statsResult.success) {
+        stats = statsResult.stats;
+      } else {
+        error = statsResult.error;
+        console.warn('⚠️ Cleanup stats function not available:', statsResult.error);
+      }
+    } catch (statsError) {
+      error = 'Cleanup stats function not available in database';
+      console.warn('⚠️ Cleanup stats error:', statsError.message);
+    }
     
     res.json({
       scheduler: status,
-      stats: stats.success ? stats.stats : null,
-      error: stats.success ? null : stats.error
+      stats: stats,
+      error: error,
+      message: error ? 'Some cleanup features may not be available until database functions are deployed' : null
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Cleanup status endpoint error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      scheduler: cleanupScheduler ? cleanupScheduler.getStatus() : null
+    });
   }
 });
 

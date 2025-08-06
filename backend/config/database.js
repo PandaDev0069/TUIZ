@@ -1117,10 +1117,25 @@ class DatabaseManager {
 
   async getCleanupStats() {
     try {
+      // Check if we have admin client
+      if (!this.supabaseAdmin) {
+        throw new Error('Service role key not available for cleanup stats');
+      }
+      
       const { data, error } = await this.supabaseAdmin
         .rpc('get_cleanup_stats');
 
-      if (error) throw error;
+      if (error) {
+        // Check if it's a function not found error
+        if (error.code === '42883' || error.message?.includes('function') || error.message?.includes('does not exist')) {
+          console.warn('⚠️ get_cleanup_stats function not found in database. Please deploy cleanup_functions.sql');
+          return { 
+            success: false, 
+            error: 'Database cleanup functions not deployed. Please run cleanup_functions.sql in your Supabase dashboard.' 
+          };
+        }
+        throw error;
+      }
 
       return { success: true, stats: data };
     } catch (error) {
