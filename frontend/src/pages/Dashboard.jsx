@@ -234,10 +234,10 @@ function Dashboard() {
                 <img 
                   src={user.avatar_url} 
                   alt="プロフィール画像" 
-                  className="user-avatar"
+                  className="dashboard__user-avatar"
                 />
               ) : (
-                <span className="user-avatar-placeholder">👤</span>
+                <span className="dashboard__user-avatar-placeholder">👤</span>
               )}
               {user.name}
             </button>
