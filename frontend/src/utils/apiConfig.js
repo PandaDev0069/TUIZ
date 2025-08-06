@@ -14,19 +14,19 @@ const getApiBaseUrl = () => {
     return `http://${hostname}:3001`;
   }
   
-  // First priority: environment variable (only for localhost)
+  // First priority: Production environment variable for production builds
+  if (import.meta.env.PROD && import.meta.env.VITE_BACKEND_URL_PROD) {
+    return import.meta.env.VITE_BACKEND_URL_PROD;
+  }
+  
+  // Second priority: environment variable (only for localhost)
   if (import.meta.env.VITE_API_BASE_URL && (hostname === 'localhost' || hostname === '127.0.0.1')) {
     return import.meta.env.VITE_API_BASE_URL;
   }
 
-  // Second priority: check if we're in development
+  // Third priority: check if we're in development
   if (import.meta.env.DEV) {
     return 'http://localhost:3001';
-  }
-
-  // Third priority: production - use same origin with /api prefix
-  if (import.meta.env.PROD) {
-    return `${window.location.protocol}//${window.location.host}`;
   }
 
   // Fallback: determine based on hostname
@@ -34,7 +34,7 @@ const getApiBaseUrl = () => {
     return 'http://localhost:3001';
   }
 
-  // Production fallback
+  // Production fallback: use same origin with /api prefix
   return `${window.location.protocol}//${window.location.host}`;
 };
 
@@ -49,20 +49,23 @@ const getSocketUrl = () => {
     return `http://${hostname}:3001`;
   }
   
-  // First priority: environment variable (only for localhost)
+  // First priority: Production environment variable for production builds
+  if (import.meta.env.PROD && import.meta.env.VITE_SOCKET_URL_PROD) {
+    return import.meta.env.VITE_SOCKET_URL_PROD;
+  }
+  
+  // Second priority: environment variable (for localhost and development)
   if (import.meta.env.VITE_SOCKET_URL && (hostname === 'localhost' || hostname === '127.0.0.1')) {
     return import.meta.env.VITE_SOCKET_URL;
   }
 
-  // Use same logic as API base URL
-  const apiBase = getApiBaseUrl();
-  
-  // For development, socket server is usually on the same port as API
+  // Third priority: Development fallback
   if (import.meta.env.DEV) {
-    return apiBase;
+    return 'http://localhost:3001';
   }
 
-  // For production, socket server might be on different path or same origin
+  // Fallback: Use same origin (shouldn't happen with proper env vars)
+  const apiBase = getApiBaseUrl();
   return apiBase;
 };
 
