@@ -15,21 +15,34 @@ const UnifiedPostQuestion = ({
 
   // Determine what to show
   const hasExplanation = explanation && (explanation.title || explanation.text || explanation.image_url);
-  const hasLeaderboardData = leaderboard && (leaderboard.standings || leaderboard.answerStats || leaderboard.currentPlayer);
+  const hasLeaderboardData = leaderboard && (
+    (leaderboard.standings && leaderboard.standings.length > 0) || 
+    leaderboard.answerStats || 
+    leaderboard.currentPlayer
+  );
   const isIntermediate = gameSettings.isIntermediate || leaderboard?.isIntermediate;
   const isLastQuestion = leaderboard?.isGameOver || leaderboard?.isLastQuestion;
 
-  // Debug logging
-  console.log('🔍 UnifiedPostQuestion render state:', {
-    hasExplanation,
-    hasLeaderboardData,
-    hasStandings: !!leaderboard?.standings,
-    standingsCount: leaderboard?.standings?.length || 0,
-    hasAnswerStats: !!leaderboard?.answerStats,
-    hasCurrentPlayer: !!leaderboard?.currentPlayer,
-    isIntermediate,
-    showLeaderboard
-  });
+  // Debug logging - only log when data changes to avoid spam
+  const [lastLoggedData, setLastLoggedData] = useState(null);
+  
+  useEffect(() => {
+    const currentData = {
+      hasExplanation,
+      hasLeaderboardData,
+      isIntermediate,
+      showLeaderboard,
+      standingsCount: leaderboard?.standings?.length || 0,
+      hasCurrentPlayer: !!leaderboard?.currentPlayer,
+      renderMode: isIntermediate || (!hasExplanation && hasLeaderboardData) ? 'leaderboard-only' : hasExplanation ? 'explanation+leaderboard' : 'unknown'
+    };
+    
+    const dataHash = JSON.stringify(currentData);
+    if (dataHash !== lastLoggedData) {
+      console.log('🔍 UnifiedPostQuestion state change:', currentData);
+      setLastLoggedData(dataHash);
+    }
+  }, [hasExplanation, hasLeaderboardData, isIntermediate, showLeaderboard, leaderboard?.standings?.length, leaderboard?.currentPlayer, lastLoggedData]);
 
   // Auto-advance logic
   useManagedInterval(
@@ -51,25 +64,22 @@ const UnifiedPostQuestion = ({
 
   // Initialize based on what's available
   useEffect(() => {
-    if (isIntermediate) {
-      // For intermediate scoreboards, show leaderboard immediately with shorter duration
-      setTimeLeft(5000); // 5 seconds for intermediate
+    if (isIntermediate || (!hasExplanation && hasLeaderboardData)) {
+      // For intermediate scoreboards or leaderboard-only (no explanation), show for 5 seconds
+      setTimeLeft(5000); // 5 seconds for intermediate/leaderboard-only
       setShowLeaderboard(true);
     } else if (hasExplanation) {
       setTimeLeft(explanationDuration);
       // Always show leaderboard with explanations if we have leaderboard data
       setShowLeaderboard(hasLeaderboardData);
-    } else if (hasLeaderboardData) {
-      setTimeLeft(5000); // 5 seconds for leaderboard only
-      setShowLeaderboard(true);
     } else {
       // Nothing to show, complete immediately
       onComplete?.();
     }
   }, [hasExplanation, hasLeaderboardData, explanationDuration, onComplete, isIntermediate, isLastQuestion]);
 
-  const progressPercent = isIntermediate ? 
-    (timeLeft / 5000) * 100 : // For intermediate, always use 5 second duration
+  const progressPercent = (isIntermediate || (!hasExplanation && hasLeaderboardData)) ? 
+    (timeLeft / 5000) * 100 : // For intermediate or leaderboard-only, use 5 second duration
     (timeLeft / explanationDuration) * 100;
 
   // Don't render if nothing to show
@@ -86,7 +96,7 @@ const UnifiedPostQuestion = ({
   }
 
   return (
-    <div className={`upq-overlay ${isClosing ? 'upq-closing' : ''} ${isIntermediate ? 'upq-intermediate' : ''}`}>
+    <div className={`upq-overlay ${isClosing ? 'upq-closing' : ''} ${isIntermediate || (!hasExplanation && hasLeaderboardData) ? 'upq-intermediate' : ''}`}>
       <div className={`upq-container ${!hasExplanation && hasLeaderboardData ? 'upq-leaderboard-only' : ''}`}>
         <div className="upq-background-pattern"></div>
         
@@ -165,13 +175,13 @@ const UnifiedPostQuestion = ({
             </div>
           )}
 
-          {/* Leaderboard Section - Show when leaderboard data is available */}
-          {hasLeaderboardData && (
+          {/* Leaderboard Section - Show when we have leaderboard data OR when it's intermediate mode */}
+          {(hasLeaderboardData || isIntermediate) && (
             <div className="upq-leaderboard-section">
               <div className="upq-section-header">
                 <div className="upq-section-icon">🏆</div>
                 <h2 className="upq-section-title">
-                  {isIntermediate ? '現在のリーダーボード' : 'ランキング'}
+                  {isIntermediate || (!hasExplanation && hasLeaderboardData) ? '現在のリーダーボード' : 'ランキング'}
                 </h2>
               </div>
 
@@ -246,18 +256,6 @@ const UnifiedPostQuestion = ({
                 )}
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Next indicator */}
-        <div className="upq-next-indicator">
-          {hasExplanation && !showLeaderboard && (
-            <span className="upq-next-text">まもなくランキング表示</span>
-          )}
-          {(showLeaderboard || !hasExplanation) && (
-            <span className="upq-next-text">
-              {isIntermediate ? 'ホストが次の質問を開始するまでお待ちください...' : '次の問題へ'}
-            </span>
           )}
         </div>
       </div>

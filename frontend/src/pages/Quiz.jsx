@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useManagedInterval } from "../utils/timerManager";
 import socket from "../socket";
 import QuestionRenderer from "../components/quiz/QuestionRenderer";
-import UnifiedPostQuestion from "../components/quiz/UnifiedPostQuestion";
+import PostQuestionDisplay from "../components/quiz/PostQuestionDisplay/PostQuestionDisplay";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import "./quiz.css";
 
@@ -19,8 +19,6 @@ function Quiz() {
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [questionScore, setQuestionScore] = useState(0);
-  const [showIntermediateScores, setShowIntermediateScores] = useState(false);
-  const [intermediateData, setIntermediateData] = useState(null);
   
   // New state for explanation system
   const [showExplanation, setShowExplanation] = useState(false);
@@ -51,7 +49,6 @@ function Quiz() {
       setTimer(questionTimer);
       
       setQuestionScore(0);
-      setShowIntermediateScores(false);
       
       // Auto-scroll to quiz content on mobile when new question arrives
       if (window.innerWidth <= 768) {
@@ -116,49 +113,66 @@ function Quiz() {
     // Handle intermediate scoreboard - for questions without explanations
     socket.on('showLeaderboard', (data) => {
       console.log('🏆 Received intermediate leaderboard data:', data);
-      console.log('Current question state:', { question, showIntermediateScores, showExplanation });
+      console.log('Current player state:', { score, streak, questionScore, answerResult, feedback });
       
       // Store the latest standings for use in explanations
       setLatestStandings(data.standings);
       
-      // Transform the data to match UnifiedPostQuestion expectations for intermediate display
+      // Create unified leaderboard data - same structure as explanation mode
       const leaderboardData = {
-        standings: data.standings.map((player, index) => ({
-          ...player,
-          id: player.name, // Component expects id field
-        })),
+        // No explanation data for intermediate
+        // Answer stats and correct answer (if available)
+        correctAnswer: data.correctAnswer,
+        correctOption: data.correctOption,
+        answerStats: data.answerStats,
+        
+        // Current player data using server standings
         currentPlayer: (() => {
           const currentPlayerData = data.standings.find(p => p.name === name);
           if (currentPlayerData) {
             return { 
               ...currentPlayerData, 
               id: currentPlayerData.name,
-              score: score, // Use local score state for accuracy
-              questionScore: questionScore, // Recent question score
-              isCorrect: feedback?.startsWith('正解'), // Determine from feedback
-              streak: streak
+              name: currentPlayerData.name,
+              score: currentPlayerData.score,
+              streak: currentPlayerData.streak,
+              rank: currentPlayerData.rank,
+              questionScore: questionScore || 0,
+              isCorrect: answerResult?.isCorrect ?? (feedback?.includes('正解') || false)
             };
           }
           return { 
             id: name,
             name, 
-            score, 
+            score: score, 
             rank: data.standings.length + 1,
-            questionScore: questionScore,
-            isCorrect: feedback?.startsWith('正解'),
+            questionScore: questionScore || 0,
+            isCorrect: answerResult?.isCorrect ?? (feedback?.includes('正解') || false),
             streak: streak
           };
         })(),
+        
+        // Always include standings
+        standings: data.standings.map((player, index) => ({
+          ...player,
+          id: player.name,
+          rank: index + 1
+        })),
         totalPlayers: data.standings.length,
         questionNumber: data.questionNumber,
         totalQuestions: data.totalQuestions,
-        isIntermediate: true // Flag to indicate this is intermediate, not post-question
+        isIntermediate: true
       };
       
-      console.log('Transformed intermediate leaderboard data:', leaderboardData);
-      setIntermediateData(leaderboardData);
-      setShowIntermediateScores(true);
-      console.log('Set showIntermediateScores to true');
+      console.log('Unified intermediate leaderboard data:', leaderboardData);
+      
+      // Use the same explanation system but with no explanation content
+      setExplanationData({ 
+        explanation: null, // No explanation content
+        ...leaderboardData 
+      });
+      setShowExplanation(true);
+      setExplanationTimer(5); // 5 seconds for intermediate
     });
 
     // Handle game over
@@ -244,92 +258,67 @@ function Quiz() {
     };
   }, []);
 
-  const handleIntermediateComplete = () => {
-    setShowIntermediateScores(false);
+  const handleExplanationComplete = () => {
+    setShowExplanation(false);
+    setExplanationData(null);
+    setExplanationTimer(0);
   };
 
-  // Get question type display name
-  const getQuestionTypeName = (questionType) => {
-    switch (questionType) {
-      case 'multiple_choice_4':
-        return '4択問題';
-      case 'multiple_choice_2':
-        return '2択問題';
-      case 'true_false':
-        return '○×問題';
-      default:
-        return '問題';
-    }
-  };
-
-  if (showIntermediateScores && intermediateData) {
-    // Show intermediate leaderboard for questions without explanations
-    console.log('🏆 Rendering intermediate leaderboard:', intermediateData);
-    return (
-      <UnifiedPostQuestion 
-        explanation={null}
-        leaderboard={intermediateData}
-        explanationDuration={5000}
-        onComplete={handleIntermediateComplete}
-        gameSettings={{ isIntermediate: true }}
-      />
-    );
-  }
-
-  // Show explanation with leaderboard if available
+  // Unified explanation/leaderboard display
   if (showExplanation && explanationData) {
-    const explanation = {
-      title: explanationData.explanation?.title,
-      text: explanationData.explanation?.text,
-      image_url: explanationData.explanation?.image_url
-    };
-
-    // Create comprehensive leaderboard data combining explanation data with latest standings
-    const leaderboard = {
-      // Answer stats and correct answer from explanation
-      correctAnswer: explanationData.correctAnswer,
-      correctOption: explanationData.correctOption,
-      answerStats: explanationData.answerStats,
+    // Create unified displayData structure for PostQuestionDisplay
+    const displayData = {
+      // Explanation data (null if none exists)
+      explanation: explanationData.explanation ? {
+        title: explanationData.explanation.title,
+        text: explanationData.explanation.text,
+        image_url: explanationData.explanation.image_url
+      } : null,
       
-      // Current player data
-      currentPlayer: {
-        score: score,
-        streak: streak,
-        questionScore: questionScore,
-        isCorrect: answerResult?.isCorrect
+      // Leaderboard data (always present)
+      leaderboard: {
+        // Answer stats and correct answer
+        correctAnswer: explanationData.correctAnswer,
+        correctOption: explanationData.correctOption,
+        answerStats: explanationData.answerStats,
+        
+        // Current player data
+        currentPlayer: explanationData.currentPlayer || {
+          name: name,
+          score: score,
+          streak: streak,
+          questionScore: questionScore,
+          isCorrect: answerResult?.isCorrect ?? (feedback?.includes('正解') || false)
+        },
+        
+        // Standings data
+        standings: explanationData.standings || (latestStandings && latestStandings.map((player, index) => ({
+          ...player,
+          id: player.name,
+          rank: index + 1
+        }))),
+        totalPlayers: explanationData.totalPlayers || latestStandings?.length || 0,
+        isIntermediate: explanationData.isIntermediate || false
       },
       
-      // Include standings if available from latest leaderboard data
-      ...(latestStandings && {
-        standings: latestStandings.map((player, index) => ({
-          ...player,
-          id: player.name, // Component expects id field
-        })),
-        totalPlayers: latestStandings.length
-      })
+      // Duration for timer
+      duration: explanationTimer * 1000
     };
 
-    console.log('🔍 Explanation leaderboard data:', {
-      hasExplanation: !!explanation,
-      hasAnswerStats: !!explanationData.answerStats,
-      hasStandings: !!latestStandings,
-      standingsCount: latestStandings?.length || 0,
-      leaderboard
+    console.log('🔍 PostQuestionDisplay data:', {
+      hasExplanation: !!displayData.explanation,
+      hasAnswerStats: !!displayData.leaderboard.answerStats,
+      hasStandings: !!(displayData.leaderboard.standings && displayData.leaderboard.standings.length > 0),
+      standingsCount: displayData.leaderboard.standings?.length || 0,
+      currentPlayer: displayData.leaderboard.currentPlayer,
+      isIntermediate: displayData.leaderboard.isIntermediate,
+      duration: displayData.duration
     });
 
-    const handleExplanationComplete = () => {
-      setShowExplanation(false);
-      setExplanationData(null);
-      setExplanationTimer(0);
-    };
-
     return (
-      <UnifiedPostQuestion
-        explanation={explanation}
-        leaderboard={leaderboard}
-        explanationDuration={explanationTimer * 1000}
+      <PostQuestionDisplay
+        displayData={displayData}
         onComplete={handleExplanationComplete}
-        gameSettings={{}}
       />
     );
   }
