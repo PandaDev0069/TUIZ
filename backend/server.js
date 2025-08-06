@@ -625,6 +625,9 @@ const showIntermediateLeaderboard = (gameCode) => {
       rank: index + 1
     }));
   
+  // Get current question for answer data
+  const currentQuestion = activeGame.questions[activeGame.currentQuestionIndex];
+  
   // Prepare leaderboard data
   const leaderboardData = {
     questionNumber: activeGame.currentQuestionIndex + 1,
@@ -632,7 +635,12 @@ const showIntermediateLeaderboard = (gameCode) => {
     standings: leaderboard,
     isGameOver: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length,
     displayTime: 5000, // 5 seconds
-    autoAdvance: gameSettings.autoAdvance !== false
+    autoAdvance: gameSettings.autoAdvance !== false,
+    
+    // Add answer stats and correct answer for consistency with explanation events
+    correctAnswer: currentQuestion.correctIndex,
+    correctOption: getCorrectAnswerText(currentQuestion),
+    answerStats: calculateAnswerStatistics(activeGame.currentAnswers, currentQuestion)
   };
   
   // Send leaderboard to all players immediately
