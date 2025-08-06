@@ -522,19 +522,33 @@
     display: grid;
     grid-template-columns: 1.2fr 0.8fr;
     gap: 30px;
-    padding: 60px 30px 30px; /* Add top padding to avoid timer overlap */
+    padding: 80px 30px 30px; /* Increased top padding to avoid timer overlap */
+  }
+
+  /* Leaderboard-only layout (when no explanation is present) */
+  .upq-container.upq-leaderboard-only .upq-content {
+    grid-template-columns: 1fr; /* Single column for leaderboard only */
+    justify-content: center;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .upq-container.upq-leaderboard-only {
+    max-width: 700px; /* Slightly smaller for leaderboard-only */
   }
 
   .upq-timer-header {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(102, 126, 234, 0.1);
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%); /* Center the timer horizontally */
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(102, 126, 234, 0.2);
     border-radius: 50px;
-    padding: 8px;
+    padding: 10px 16px;
     z-index: 20; /* Ensure timer stays above content */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
   .upq-explanation-section {
@@ -549,5 +563,82 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+}
+
+/* Additional large screen optimization for preview dual layout */
+@media (min-width: 1200px) {
+  .upq-container {
+    max-width: 700px; /* Reduce max width in wider contexts */
+  }
+  
+  .upq-timer-header {
+    top: 20px;
+    padding: 12px 20px;
+  }
+  
+  .upq-content {
+    padding: 90px 25px 25px; /* Further adjust padding for wider screens */
+  }
+}
+
+/* Special handling for preview dual layout contexts */
+.preview-dual-view-layout .upq-container {
+  max-width: 100%; /* Use full available width in dual layout */
+}
+
+.preview-dual-view-layout .upq-timer-header {
+  position: relative; /* Use relative positioning in constrained dual layout */
+  top: auto;
+  left: auto;
+  transform: none;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.preview-dual-view-layout .upq-content {
+  padding: 20px; /* Reduce padding in constrained layout */
+}
+
+/* Enhanced leaderboard-only styling */
+.upq-container.upq-leaderboard-only .upq-leaderboard-section {
+  margin-top: 0;
+}
+
+.upq-container.upq-leaderboard-only .upq-answer-stats-compact {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.upq-container.upq-leaderboard-only .upq-correct-option-compact {
+  font-size: 18px;
+  font-weight: 700;
+  color: #48bb78;
+}
+
+.upq-container.upq-leaderboard-only .upq-percentage-compact {
+  font-size: 16px;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.upq-container.upq-leaderboard-only .upq-top-players {
+  margin-top: 0;
+}
+
+/* Ultra-wide screen optimizations */
+@media (min-width: 1440px) {
+  .upq-timer-header {
+    top: 25px;
+    padding: 14px 24px;
+  }
+  
+  .upq-content {
+    padding: 100px 35px 35px;
   }
 }

@@ -117,20 +117,20 @@ const SettingControl = ({ setting, value, onChange, disabled }) => {
   switch (setting.type) {
     case 'toggle':
       return (
-        <label className="setting-toggle">
+        <label className="gamesettings__setting-toggle">
           <input
             type="checkbox"
             checked={Boolean(value)}
             onChange={(e) => handleChange(e.target.checked)}
             disabled={disabled}
           />
-          <span className="toggle-slider"></span>
+          <span className="gamesettings__toggle-slider"></span>
         </label>
       );
 
     case 'slider':
       return (
-        <div className="setting-slider-container">
+        <div className="gamesettings__setting-slider-container">
           <input
             type="range"
             min={setting.min}
@@ -139,9 +139,9 @@ const SettingControl = ({ setting, value, onChange, disabled }) => {
             value={value || setting.min}
             onChange={(e) => handleChange(parseInt(e.target.value))}
             disabled={disabled}
-            className="setting-slider"
+            className="gamesettings__setting-slider"
           />
-          <span className="slider-value">
+          <span className="gamesettings__slider-value">
             {value || setting.min}{setting.unit}
           </span>
         </div>
@@ -153,7 +153,7 @@ const SettingControl = ({ setting, value, onChange, disabled }) => {
           value={value || setting.options[0].value}
           onChange={(e) => handleChange(e.target.value)}
           disabled={disabled}
-          className="setting-select"
+          className="gamesettings__setting-select"
         >
           {setting.options.map(option => (
             <option key={option.value} value={option.value}>
@@ -170,13 +170,13 @@ const SettingControl = ({ setting, value, onChange, disabled }) => {
 
 const SettingsCategory = ({ category, settings, onChange, disabled }) => {
   return (
-    <div className="settings-category">
-      <div className="category-header">
-        <span className="category-icon">{category.icon}</span>
-        <h4 className="category-title">{category.title}</h4>
+    <div className="gamesettings__category">
+      <div className="gamesettings__category-header">
+        <span className="gamesettings__category-icon">{category.icon}</span>
+        <h4 className="gamesettings__category-title">{category.title}</h4>
       </div>
       
-      <div className="category-settings">
+      <div className="gamesettings__category-settings">
         {category.settings.map(setting => {
           // Check if setting should be shown based on dependencies
           if (setting.dependsOn && !settings[setting.dependsOn]) {
@@ -184,14 +184,14 @@ const SettingsCategory = ({ category, settings, onChange, disabled }) => {
           }
 
           return (
-            <div key={setting.key} className="setting-item">
-              <div className="setting-info">
-                <label className="setting-label">{setting.label}</label>
+            <div key={setting.key} className="gamesettings__setting-item">
+              <div className="gamesettings__setting-info">
+                <label className="gamesettings__setting-label">{setting.label}</label>
                 {setting.description && (
-                  <span className="setting-description">{setting.description}</span>
+                  <span className="gamesettings__setting-description">{setting.description}</span>
                 )}
               </div>
-              <div className="setting-control">
+              <div className="gamesettings__setting-control">
                 <SettingControl
                   setting={setting}
                   value={settings[setting.key]}
@@ -252,9 +252,9 @@ const GameSettingsPanel = ({ questionSetId, gameId, onClose }) => {
 
   if (loading) {
     return (
-      <div className="settings-panel-overlay">
-        <div className="settings-panel">
-          <div className="settings-loading">
+      <div className="gamesettings__panel-overlay">
+        <div className="gamesettings__panel">
+          <div className="gamesettings__loading">
             <LoadingSkeleton type="text" count={4} />
           </div>
         </div>
@@ -264,12 +264,12 @@ const GameSettingsPanel = ({ questionSetId, gameId, onClose }) => {
 
   if (error) {
     return (
-      <div className="settings-panel-overlay">
-        <div className="settings-panel">
-          <div className="settings-error">
+      <div className="gamesettings__panel-overlay">
+        <div className="gamesettings__panel">
+          <div className="gamesettings__error">
             <h3>❌ エラー</h3>
             <p>{error}</p>
-            <button onClick={onClose} className="settings-button">閉じる</button>
+            <button onClick={onClose} className="gamesettings__button">閉じる</button>
           </div>
         </div>
       </div>
@@ -277,32 +277,36 @@ const GameSettingsPanel = ({ questionSetId, gameId, onClose }) => {
   }
 
   return (
-    <div className="settings-panel-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="settings-panel">
-        <div className="settings-header">
-          <div className="settings-title">
+    <div className="gamesettings__panel-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="gamesettings__panel">
+        <div className="gamesettings__header">
+          <div className="gamesettings__title">
             <h3>⚙️ ゲーム設定</h3>
-            {hasChanges && <span className="changes-indicator">未保存の変更</span>}
-            {saving && <span className="saving-indicator">保存中...</span>}
+            <div className="gamesettings__title-indicators">
+              {hasChanges && <span className="gamesettings__changes-indicator">未保存の変更</span>}
+              {saving && <span className="gamesettings__saving-indicator">保存中...</span>}
+            </div>
           </div>
-          <div className="settings-actions">
+          <div className="gamesettings__actions">
             <button 
               onClick={handleReset} 
               disabled={saving}
-              className="settings-button reset-button"
+              className="gamesettings__button gamesettings__reset-button"
+              title="設定をデフォルトに戻す"
             >
               リセット
             </button>
             <button 
               onClick={onClose}
-              className="settings-button close-button"
+              className="gamesettings__button gamesettings__close-button"
+              title="設定パネルを閉じる"
             >
               ✕
             </button>
           </div>
         </div>
 
-        <div className="settings-content">
+        <div className="gamesettings__content">
           {Object.entries(settingsConfig).map(([categoryKey, category]) => (
             <SettingsCategory
               key={categoryKey}
@@ -314,8 +318,8 @@ const GameSettingsPanel = ({ questionSetId, gameId, onClose }) => {
           ))}
         </div>
 
-        <div className="settings-footer">
-          <div className="settings-summary">
+        <div className="gamesettings__footer">
+          <div className="gamesettings__summary">
             <p>
               最大 <strong>{localSettings.maxPlayers || 50}人</strong>まで参加可能 • 
               自動進行: <strong>{localSettings.autoAdvance ? 'ON' : 'OFF'}</strong> • 

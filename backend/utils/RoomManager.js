@@ -87,9 +87,24 @@ class RoomManager {
   removeRoom(roomCode) {
     const removed = this.rooms.delete(roomCode);
     if (removed) {
-      console.log(`�️ Removed room: ${roomCode}`);
+      console.log(`🗑️ Removed room: ${roomCode}`);
     }
     return removed;
+  }
+
+  // Find room by database gameId (UUID)
+  findRoomByGameId(gameId) {
+    for (const [code, roomData] of this.rooms.entries()) {
+      if (roomData.gameId === gameId) {
+        return { roomCode: code, room: roomData };
+      }
+    }
+    return null;
+  }
+
+  // Get all rooms map for direct access
+  getAllRoomsMap() {
+    return this.rooms;
   }
 }
 

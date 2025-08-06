@@ -3,9 +3,32 @@ const router = express.Router();
 const DatabaseManager = require('../../config/database');
 const AuthMiddleware = require('../../middleware/auth');
 const roomManager = require('../../utils/RoomManager');
+const activeGameUpdater = require('../../utils/ActiveGameUpdater');
 
 // Initialize database
 const db = new DatabaseManager();
+
+// Helper function to update activeGame players_cap
+function updateActiveGamePlayersCap(gameCode, maxPlayers) {
+  console.log(`🔄 Updating players_cap for game ${gameCode}: ${maxPlayers}`);
+  
+  // Store the update in room manager for backup
+  const room = roomManager.getRoom(gameCode);
+  if (room) {
+    room._pendingPlayersCap = maxPlayers;
+    console.log(`✅ Set _pendingPlayersCap = ${maxPlayers} for room ${gameCode}`);
+  } else {
+    console.log(`❌ Room ${gameCode} not found in roomManager`);
+  }
+  
+  // Try to update activeGame directly
+  const success = activeGameUpdater.updatePlayersCap(gameCode, maxPlayers);
+  if (success) {
+    console.log(`✅ Successfully updated activeGame players_cap for ${gameCode}`);
+  } else {
+    console.log(`⚠️ Could not update activeGame directly, will rely on pending update`);
+  }
+}
 
 // Default simplified game settings based on the schema
 const DEFAULT_SETTINGS = {
@@ -214,24 +237,15 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
     if (gameId) {
       try {
         // Find the room by database gameId (UUID)
-        let room = null;
-        let roomCode = null;
-        
         console.log(`🔍 Searching for gameId ${gameId} in RoomManager...`);
-        console.log(`🏠 Total rooms in RoomManager: ${roomManager.rooms.size}`);
+        console.log(`🏠 Total rooms in RoomManager: ${roomManager.getAllRoomsMap().size}`);
         
-        // Search through all rooms directly from the RoomManager
-        for (const [code, roomData] of roomManager.rooms.entries()) {
-          console.log(`🔍 Checking room ${code}: gameId=${roomData.gameId}`);
-          if (roomData.gameId === gameId) {
-            roomCode = code;
-            room = roomData;
-            console.log(`✅ Found matching room: ${code}`);
-            break;
-          }
-        }
-
-        if (room && roomCode) {
+        const roomResult = roomManager.findRoomByGameId(gameId);
+        
+        if (roomResult) {
+          const { roomCode, room } = roomResult;
+          console.log(`✅ Found matching room: ${roomCode}`);
+          
           // Merge with current room settings
           const mergedRoomSettings = {
             ...room.gameSettings,
@@ -239,6 +253,11 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
           };
           room.gameSettings = mergedRoomSettings;
           console.log(`🔄 Updated active game settings for room ${roomCode} (gameId: ${gameId})`);
+          
+          // If maxPlayers was updated, schedule update for activeGame
+          if (validatedSettings.maxPlayers !== undefined) {
+            updateActiveGamePlayersCap(roomCode, validatedSettings.maxPlayers);
+          }
           
           // Update settings in games table with complete merged settings
           const { error: gameUpdateError } = await db.supabaseAdmin

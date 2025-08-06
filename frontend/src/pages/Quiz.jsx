@@ -27,6 +27,7 @@ function Quiz() {
   const [explanationData, setExplanationData] = useState(null);
   const [explanationTimer, setExplanationTimer] = useState(0);
   const [answerResult, setAnswerResult] = useState(null);
+  const [latestStandings, setLatestStandings] = useState(null); // Store latest leaderboard standings
 
   useEffect(() => {
     if (!name || !room) {
@@ -43,6 +44,7 @@ function Quiz() {
       setShowExplanation(false);
       setExplanationData(null);
       setAnswerResult(null);
+      setLatestStandings(null); // Reset standings for new question
       
       // Use dynamic timer from question or default to 10
       const questionTimer = q.timeLimit ? Math.round(q.timeLimit / 1000) : 10;
@@ -111,12 +113,13 @@ function Quiz() {
       }
     });
 
-    // Handle intermediate scoreboard - DISABLED (conflicts with explanation system)
-    // The explanation system in UnifiedPostQuestion already handles leaderboard display
-    /*
+    // Handle intermediate scoreboard - for questions without explanations
     socket.on('showLeaderboard', (data) => {
       console.log('🏆 Received intermediate leaderboard data:', data);
       console.log('Current question state:', { question, showIntermediateScores, showExplanation });
+      
+      // Store the latest standings for use in explanations
+      setLatestStandings(data.standings);
       
       // Transform the data to match UnifiedPostQuestion expectations for intermediate display
       const leaderboardData = {
@@ -157,7 +160,6 @@ function Quiz() {
       setShowIntermediateScores(true);
       console.log('Set showIntermediateScores to true');
     });
-    */
 
     // Handle game over
     socket.on('game_over', ({ scoreboard }) => {
@@ -168,7 +170,7 @@ function Quiz() {
       socket.off('question');
       socket.off('answerResult');
       socket.off('showExplanation');
-      // socket.off('showLeaderboard'); // Commented out - not used anymore
+      socket.off('showLeaderboard');
       socket.off('game_over');
     };
   }, [name, room, navigate]);
@@ -261,11 +263,17 @@ function Quiz() {
   };
 
   if (showIntermediateScores && intermediateData) {
-    // Intermediate leaderboard is now handled by the explanation system
-    // This code path should not be used anymore
-    console.log('⚠️ Intermediate leaderboard triggered - this should be handled by explanation system');
-    setShowIntermediateScores(false);
-    return null;
+    // Show intermediate leaderboard for questions without explanations
+    console.log('🏆 Rendering intermediate leaderboard:', intermediateData);
+    return (
+      <UnifiedPostQuestion 
+        explanation={null}
+        leaderboard={intermediateData}
+        explanationDuration={5000}
+        onComplete={handleIntermediateComplete}
+        gameSettings={{ isIntermediate: true }}
+      />
+    );
   }
 
   // Show explanation with leaderboard if available
@@ -276,17 +284,38 @@ function Quiz() {
       image_url: explanationData.explanation?.image_url
     };
 
-    const leaderboard = explanationData.answerStats ? {
+    // Create comprehensive leaderboard data combining explanation data with latest standings
+    const leaderboard = {
+      // Answer stats and correct answer from explanation
       correctAnswer: explanationData.correctAnswer,
       correctOption: explanationData.correctOption,
       answerStats: explanationData.answerStats,
+      
+      // Current player data
       currentPlayer: {
         score: score,
         streak: streak,
         questionScore: questionScore,
         isCorrect: answerResult?.isCorrect
-      }
-    } : null;
+      },
+      
+      // Include standings if available from latest leaderboard data
+      ...(latestStandings && {
+        standings: latestStandings.map((player, index) => ({
+          ...player,
+          id: player.name, // Component expects id field
+        })),
+        totalPlayers: latestStandings.length
+      })
+    };
+
+    console.log('🔍 Explanation leaderboard data:', {
+      hasExplanation: !!explanation,
+      hasAnswerStats: !!explanationData.answerStats,
+      hasStandings: !!latestStandings,
+      standingsCount: latestStandings?.length || 0,
+      leaderboard
+    });
 
     const handleExplanationComplete = () => {
       setShowExplanation(false);
@@ -323,6 +352,7 @@ function Quiz() {
             {questionScore > 0 && <div className="quiz-last-points">+{questionScore}</div>}
           </div>
         </div>
+
         
         <QuestionRenderer
           key={question?.id || question?.questionNumber}
@@ -334,12 +364,6 @@ function Quiz() {
           showProgress={true}
           showTimer={true}
         />
-        
-        {feedback && (
-          <p className={`quiz-feedback ${feedback.startsWith('正解') ? 'correct' : 'wrong'}`}>
-            {feedback}
-          </p>
-        )}
       </div>
     </div>
   );

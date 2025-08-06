@@ -9,7 +9,6 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 
 ### High Priority
 - Needs a complete new re-work on how the ui of quiz and questions and options looks
-- no update of game status , always waiting
 - no creation of resutls(might be beacuse we are not updating game status)
 - create a separate,new and updated host menu/ control panel.
 ### Medium Priority
@@ -25,6 +24,74 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 ---
 
 ## ✅ Resolved Issues (Latest First)
+
+### Issue #33: Timer Overlap with Next Button on Large Screens + Leaderboard-Only Layout + Intermediate Leaderboard Fix
+**Date:** 2025-08-06 | **Status:** FIXED ✅ | **Severity:** Medium  
+**Component:** Frontend - CSS Responsive Design & Quiz Flow Logic
+
+**Problem:**
+1. Timer in explanation screen (UnifiedPostQuestion component) was overlapping with "次の質問へ" (next question) button on large desktop screens
+2. When explanation data is not present (empty title, text, and image), the component should show leaderboard-only layout instead of explanation + leaderboard layout
+3. Intermediate leaderboard was not showing for questions without explanations (server sends `showLeaderboard` event but frontend was ignoring it)
+4. **Leaderboard not showing with explanations**: When explanations are present, only current player results are shown but not the full rankings/leaderboard
+
+**Root Cause:**
+1. Timer positioned absolutely in top-right corner without considering constrained layout contexts
+2. No proper handling for leaderboard-only scenarios when explanation data is missing
+3. Layout always assumed both explanation and leaderboard sections would be present
+4. Intermediate leaderboard socket handler was disabled in Quiz.jsx due to "conflicts with explanation system"
+5. **Data flow issue**: `showExplanation` event only contains explanation + answer stats but no leaderboard standings data
+6. **Complex conditional logic**: UnifiedPostQuestion component had overly complex conditions preventing leaderboard display with explanations
+
+**Root Cause:**
+1. Timer positioned absolutely in top-right corner without considering constrained layout contexts
+2. No proper handling for leaderboard-only scenarios when explanation data is missing
+3. Layout always assumed both explanation and leaderboard sections would be present
+4. Intermediate leaderboard socket handler was disabled in Quiz.jsx due to "conflicts with explanation system"
+
+**Solution:**
+**CSS Responsive Design Improvements:**
+- Changed timer positioning from top-right to centered top for better layout compatibility
+- Increased top padding from 60px to 80px on large screens (1024px+)
+- Added special handling for `.preview-dual-view-layout` contexts with relative positioning
+- Enhanced visual styling with better backdrop blur and shadows
+- Added ultra-wide screen optimizations (1440px+)
+
+**Leaderboard-Only Layout Enhancement:**
+- Added `upq-leaderboard-only` CSS class when no explanation data is present
+- Single-column grid layout for leaderboard-only scenarios (instead of 1.2fr 0.8fr split)
+- Enhanced styling for answer stats in leaderboard-only mode
+- Better visual presentation with improved colors and spacing
+- Smaller container width (700px) for focused leaderboard display
+
+**Intermediate Leaderboard Restoration:**
+- Re-enabled `showLeaderboard` socket handler in Quiz.jsx for questions without explanations
+- Restored intermediate scoreboard rendering logic using UnifiedPostQuestion component
+- Added proper socket cleanup for showLeaderboard event
+- Fixed data transformation to match UnifiedPostQuestion expectations
+
+**Comprehensive Leaderboard Data Flow Fix:**
+- Added `latestStandings` state to store leaderboard standings data from `showLeaderboard` events
+- Modified explanation leaderboard data creation to merge explanation data with latest standings
+- Simplified UnifiedPostQuestion display logic to always show leaderboard when data is available
+- Removed complex conditional logic that was preventing leaderboard display with explanations
+- Added comprehensive debugging to track data flow and component state
+
+**Files Modified:**
+- `frontend/src/components/quiz/UnifiedPostQuestion.css`: Enhanced large screen media queries and added leaderboard-only layout
+- `frontend/src/components/quiz/UnifiedPostQuestion.jsx`: Added CSS class logic for leaderboard-only mode
+- `frontend/src/pages/Quiz.jsx`: Re-enabled intermediate leaderboard functionality and restored rendering logic
+
+**Testing:**
+- ✅ Timer no longer overlaps with interface elements on desktop
+- ✅ Proper spacing maintained across different screen sizes
+- ✅ Special layout handling for preview dual-view mode
+- ✅ Leaderboard-only layout when explanation data is missing (empty title/text/image)
+- ✅ Enhanced visual presentation for answer stats in leaderboard-only mode
+- ✅ Intermediate leaderboard displays for questions without explanations
+- ✅ **Full leaderboard with rankings now shows alongside explanations**
+- ✅ **Comprehensive data flow ensures both explanation + leaderboard + current player results display together**
+- ✅ Responsive design maintains functionality on all screen sizes
 
 ### Issue #32: Player Count Synchronization for New Players + Explanation Screen Logic Improvements
 **Date:** 2025-08-06 | **Status:** FIXED ✅ | **Severity:** High  

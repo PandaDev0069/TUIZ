@@ -19,6 +19,18 @@ const UnifiedPostQuestion = ({
   const isIntermediate = gameSettings.isIntermediate || leaderboard?.isIntermediate;
   const isLastQuestion = leaderboard?.isGameOver || leaderboard?.isLastQuestion;
 
+  // Debug logging
+  console.log('🔍 UnifiedPostQuestion render state:', {
+    hasExplanation,
+    hasLeaderboardData,
+    hasStandings: !!leaderboard?.standings,
+    standingsCount: leaderboard?.standings?.length || 0,
+    hasAnswerStats: !!leaderboard?.answerStats,
+    hasCurrentPlayer: !!leaderboard?.currentPlayer,
+    isIntermediate,
+    showLeaderboard
+  });
+
   // Auto-advance logic
   useManagedInterval(
     () => {
@@ -45,8 +57,8 @@ const UnifiedPostQuestion = ({
       setShowLeaderboard(true);
     } else if (hasExplanation) {
       setTimeLeft(explanationDuration);
-      // Show leaderboard immediately for non-last questions, never for last question
-      setShowLeaderboard(!isLastQuestion && hasLeaderboardData);
+      // Always show leaderboard with explanations if we have leaderboard data
+      setShowLeaderboard(hasLeaderboardData);
     } else if (hasLeaderboardData) {
       setTimeLeft(5000); // 5 seconds for leaderboard only
       setShowLeaderboard(true);
@@ -75,7 +87,7 @@ const UnifiedPostQuestion = ({
 
   return (
     <div className={`upq-overlay ${isClosing ? 'upq-closing' : ''} ${isIntermediate ? 'upq-intermediate' : ''}`}>
-      <div className="upq-container">
+      <div className={`upq-container ${!hasExplanation && hasLeaderboardData ? 'upq-leaderboard-only' : ''}`}>
         <div className="upq-background-pattern"></div>
         
         {/* Timer Header */}
@@ -153,8 +165,8 @@ const UnifiedPostQuestion = ({
             </div>
           )}
 
-          {/* Leaderboard Section - Show throughout explanation except for last question */}
-          {(hasLeaderboardData || isIntermediate) && ((showLeaderboard || !hasExplanation) || isIntermediate) && (
+          {/* Leaderboard Section - Show when leaderboard data is available */}
+          {hasLeaderboardData && (
             <div className="upq-leaderboard-section">
               <div className="upq-section-header">
                 <div className="upq-section-icon">🏆</div>

@@ -12,6 +12,7 @@ const QuestionService = require('./services/QuestionService');
 const QuestionFormatAdapter = require('./adapters/QuestionFormatAdapter');
 const GameSettingsService = require('./services/GameSettingsService');
 const { validateStorageConfig } = require('./utils/storageConfig');
+const activeGameUpdater = require('./utils/ActiveGameUpdater');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -488,6 +489,9 @@ module.exports.getIO = () => io;
 
 // Store active games in memory (you could also use Redis for production)
 const activeGames = new Map();
+
+// Initialize the active game updater with the activeGames reference
+activeGameUpdater.setActiveGamesRef(activeGames);
 
 // Helper function to check if question phase is complete and handle transitions
 const checkForQuestionCompletion = (gameCode) => {
@@ -1014,8 +1018,20 @@ io.on('connection', (socket) => {
         return;
       }
       
+      // Check for pending players_cap update from room manager
+      const room = roomManager.getRoom(gameCode);
+      if (room && room._pendingPlayersCap !== undefined) {
+        console.log(`🔄 Applying pending players_cap update: ${activeGame.players_cap} → ${room._pendingPlayersCap}`);
+        activeGame.players_cap = room._pendingPlayersCap;
+        delete room._pendingPlayersCap; // Clear the pending update
+      }
+      
+      // Debug logging for game capacity check
+      console.log(`🔍 Game capacity check - Current players: ${activeGame.players.size}, Players cap: ${activeGame.players_cap}, Room pending cap: ${room?._pendingPlayersCap}`);
+      
       // Check if game is full
       if (activeGame.players.size >= (activeGame.players_cap || 50)) {
+        console.log(`❌ Game ${gameCode} is full: ${activeGame.players.size}/${activeGame.players_cap}`);
         socket.emit('error', { message: 'Game is full' });
         return;
       }
