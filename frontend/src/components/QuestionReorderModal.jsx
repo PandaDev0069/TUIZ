@@ -177,7 +177,7 @@ function QuestionReorderModal({ questions, onReorder, onClose, isOpen, questionS
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && handleCancel()}>
+    <div className="question-reorder-modal-overlay" onClick={(e) => e.target === e.currentTarget && handleCancel()}>
       <div className="reorder-modal" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="modal-header">

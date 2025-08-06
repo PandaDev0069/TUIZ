@@ -213,7 +213,7 @@ const ProfileSettingsModal = ({ isOpen, onClose }) => {
 
   return (
     <>
-      <div className="modal-overlay" onClick={onClose}>
+      <div className="profile-settings-modal-overlay" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>プロフィール設定</h2>

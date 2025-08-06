@@ -34,7 +34,6 @@ function App() {
 
   return (
     <AuthProvider>
-      {/* {isDevelopment && <AuthDebugger />} */}
       <CleanupWarningHandler />
       <Routes>
         <Route path="/" element={<Home />} />

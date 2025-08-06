@@ -216,17 +216,17 @@ function Dashboard() {
   if (!user) return null;
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-content">
+    <div className="dashboard">
+      <div className="dashboard__content">
         {/* Header */}
-        <header className="dashboard-header">
-          <div className="header-left">
-            <h1 className="dashboard-title">TUIZ情報王</h1>
-            <p className="welcome-message">おかえりなさい、{user.name}さん！</p>
+        <header className="dashboard__header">
+          <div className="dashboard__header-left">
+            <h1 className="dashboard__title">TUIZ情報王</h1>
+            <p className="dashboard__welcome-message">おかえりなさい、{user.name}さん！</p>
           </div>
-          <div className="header-right">
+          <div className="dashboard__header-right">
             <button 
-              className="profile-button"
+              className="dashboard__profile-button"
               onClick={() => setShowProfileModal(true)}
               title="プロフィール設定"
             >

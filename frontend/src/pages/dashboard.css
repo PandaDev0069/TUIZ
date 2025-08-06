@@ -1,5 +1,7 @@
-/* Dashboard Page Styles */
-.dashboard-container {
+/* Dashboard Page Styles - BEM Methodology */
+
+/* Block: dashboard */
+.dashboard {
   min-height: 100vh;
   width: 100vw;
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
@@ -8,16 +10,16 @@
 }
 
 /* Dashboard specific scrollbar styles */
-.dashboard-container::-webkit-scrollbar {
+.dashboard::-webkit-scrollbar {
   width: 10px;
 }
 
-.dashboard-container::-webkit-scrollbar-track {
+.dashboard::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 10px;
 }
 
-.dashboard-container::-webkit-scrollbar-thumb {
+.dashboard::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 10px;
   border: 2px solid transparent;
@@ -25,20 +27,21 @@
   transition: all 0.3s ease;
 }
 
-.dashboard-container::-webkit-scrollbar-thumb:hover {
+.dashboard::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.4);
   background-clip: content-box;
 }
 
-.dashboard-content {
+/* Element: dashboard__content */
+.dashboard__content {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0;
   min-height: 100vh;
 }
 
-/* Header Styles */
-.dashboard-header {
+/* Element: dashboard__header */
+.dashboard__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -48,13 +51,15 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.header-left {
+/* Element: dashboard__header-left */
+.dashboard__header-left {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.dashboard-title {
+/* Element: dashboard__title */
+.dashboard__title {
   font-size: 2rem;
   font-weight: 600;
   margin: 0;
@@ -64,19 +69,22 @@
   -webkit-text-fill-color: transparent;
 }
 
-.welcome-message {
+/* Element: dashboard__welcome-message */
+.dashboard__welcome-message {
   font-size: 1.1rem;
   color: rgba(255, 255, 255, 0.8);
   margin: 0;
 }
 
-.header-right {
+/* Element: dashboard__header-right */
+.dashboard__header-right {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.profile-button {
+/* Element: dashboard__profile-button */
+.dashboard__profile-button {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
@@ -92,13 +100,15 @@
   backdrop-filter: blur(10px);
 }
 
-.profile-button:hover {
+/* Modifier: dashboard__profile-button--hover */
+.dashboard__profile-button:hover {
   background: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
 }
 
-.user-avatar {
+/* Element: dashboard__user-avatar */
+.dashboard__user-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -106,7 +116,8 @@
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
-.user-avatar-placeholder {
+/* Element: dashboard__user-avatar-placeholder */
+.dashboard__user-avatar-placeholder {
   width: 32px;
   height: 32px;
   border-radius: 50%;
