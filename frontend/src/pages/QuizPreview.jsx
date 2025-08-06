@@ -6,7 +6,7 @@ import PreviewPlayerView from '../components/PreviewPlayerView';
 import PreviewHostControls from '../components/PreviewHostControls';
 import PreviewModeSelector from '../components/PreviewModeSelector';
 import PreviewExplanationDisplay from '../components/PreviewExplanationDisplay';
-import UnifiedPostQuestion from '../components/quiz/UnifiedPostQuestion';
+import PostQuestionDisplay from '../components/quiz/PostQuestionDisplay/PostQuestionDisplay';
 import { showSuccess, showError } from '../utils/toast';
 import './quizPreview.css';
 
@@ -453,19 +453,26 @@ function QuizPreview() {
         )}
 
         {showResults && settings.game_settings?.showLeaderboard && (
-          <UnifiedPostQuestion
-            leaderboard={{
-              standings: getLeaderboardData(),
-              currentPlayer: getCurrentPlayerData(),
-              totalPlayers: mockPlayers.length,
-              isIntermediate: true
+          <PostQuestionDisplay
+            displayData={{
+              explanation: null, // Preview mode intermediate leaderboard - no explanation
+              leaderboard: {
+                standings: getLeaderboardData(),
+                currentPlayer: getCurrentPlayerData(),
+                totalPlayers: mockPlayers.length,
+                isIntermediate: true,
+                correctAnswer: currentQuestion?.correct_answer_index,
+                correctOption: currentQuestion?.options?.[currentQuestion?.correct_answer_index],
+                answerStats: {
+                  correctPercentage: Math.floor(Math.random() * 100) // Mock data for preview
+                }
+              },
+              duration: 5000
             }}
-            explanationDuration={5000}
             onComplete={() => {
               setShowResults(false);
               handleNextQuestion();
             }}
-            gameSettings={{ isIntermediate: true }}
           />
         )}
       </div>

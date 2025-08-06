@@ -7,7 +7,7 @@
  * - Reusable component classes
  * - Clear visual hierarchy
  * 
- * Target: ~100 lines (vs 644 lines in UnifiedPostQuestion.css)
+ * Clean implementation: ~300 lines vs old complex system
  */
 
 /* ===== MAIN CONTAINER ===== */

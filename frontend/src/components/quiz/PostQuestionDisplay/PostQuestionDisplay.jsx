@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useManagedInterval } from '../../../utils/timerManager';
 import WithExplanationLayout from './WithExplanationLayout';
 import LeaderboardOnlyLayout from './LeaderboardOnlyLayout';
+import PostQuestionDisplayErrorBoundary from './PostQuestionDisplayErrorBoundary';
 import './PostQuestionDisplay.css';
 
 /**
@@ -42,20 +43,24 @@ const PostQuestionDisplay = ({ displayData, onComplete }) => {
   const progressPercent = (timeLeft / displayData.duration) * 100;
 
   // Binary rendering decision - no complex conditionals
-  return displayData.explanation ? (
-    <WithExplanationLayout 
-      displayData={displayData}
-      timeLeft={timeLeft}
-      progressPercent={progressPercent}
-      isClosing={isClosing}
-    />
-  ) : (
-    <LeaderboardOnlyLayout 
-      displayData={displayData}
-      timeLeft={timeLeft}
-      progressPercent={progressPercent}
-      isClosing={isClosing}
-    />
+  return (
+    <PostQuestionDisplayErrorBoundary onComplete={onComplete}>
+      {displayData.explanation ? (
+        <WithExplanationLayout 
+          displayData={displayData}
+          timeLeft={timeLeft}
+          progressPercent={progressPercent}
+          isClosing={isClosing}
+        />
+      ) : (
+        <LeaderboardOnlyLayout 
+          displayData={displayData}
+          timeLeft={timeLeft}
+          progressPercent={progressPercent}
+          isClosing={isClosing}
+        />
+      )}
+    </PostQuestionDisplayErrorBoundary>
   );
 };
 
