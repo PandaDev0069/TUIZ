@@ -32,10 +32,10 @@ const getApiBaseUrl = () => {
     return import.meta.env.VITE_BACKEND_URL_PROD;
   }
   
-  // Second priority: environment variable (only for localhost)
-  if (import.meta.env.VITE_API_BASE_URL && isLocalhost) {
+  // Second priority: environment variable (for localhost and development)
+  if (import.meta.env.VITE_API_BASE_URL && (isLocalhost || import.meta.env.DEV)) {
     if (import.meta.env.DEV) {
-      console.log('🏠 Using localhost API base URL');
+      console.log('🏠 Using configured API base URL');
     }
     return import.meta.env.VITE_API_BASE_URL;
   }
@@ -80,7 +80,7 @@ const getSocketUrl = () => {
   }
   
   // Second priority: environment variable (for localhost and development)
-  if (import.meta.env.VITE_SOCKET_URL && isLocalhost) {
+  if (import.meta.env.VITE_SOCKET_URL && (isLocalhost || import.meta.env.DEV)) {
     return import.meta.env.VITE_SOCKET_URL;
   }
 
