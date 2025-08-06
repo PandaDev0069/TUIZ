@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useManagedInterval } from "../utils/timerManager";
 import socket from "../socket";
-import IntermediateScoreboard from "../components/IntermediateScoreboard";
 import QuestionRenderer from "../components/quiz/QuestionRenderer";
 import UnifiedPostQuestion from "../components/quiz/UnifiedPostQuestion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
@@ -113,9 +112,48 @@ function Quiz() {
     });
 
     // Handle intermediate scoreboard
-    socket.on('show_intermediate_scores', (data) => {
-      setIntermediateData(data);
+    socket.on('showLeaderboard', (data) => {
+      console.log('🏆 Received intermediate leaderboard data:', data);
+      console.log('Current question state:', { question, showIntermediateScores, showExplanation });
+      
+      // Transform the data to match UnifiedPostQuestion expectations for intermediate display
+      const leaderboardData = {
+        standings: data.standings.map((player, index) => ({
+          ...player,
+          id: player.name, // Component expects id field
+        })),
+        currentPlayer: (() => {
+          const currentPlayerData = data.standings.find(p => p.name === name);
+          if (currentPlayerData) {
+            return { 
+              ...currentPlayerData, 
+              id: currentPlayerData.name,
+              score: score, // Use local score state for accuracy
+              questionScore: questionScore, // Recent question score
+              isCorrect: feedback?.startsWith('正解'), // Determine from feedback
+              streak: streak
+            };
+          }
+          return { 
+            id: name,
+            name, 
+            score, 
+            rank: data.standings.length + 1,
+            questionScore: questionScore,
+            isCorrect: feedback?.startsWith('正解'),
+            streak: streak
+          };
+        })(),
+        totalPlayers: data.standings.length,
+        questionNumber: data.questionNumber,
+        totalQuestions: data.totalQuestions,
+        isIntermediate: true // Flag to indicate this is intermediate, not post-question
+      };
+      
+      console.log('Transformed intermediate leaderboard data:', leaderboardData);
+      setIntermediateData(leaderboardData);
       setShowIntermediateScores(true);
+      console.log('Set showIntermediateScores to true');
     });
 
     // Handle game over
@@ -127,7 +165,7 @@ function Quiz() {
       socket.off('question');
       socket.off('answerResult');
       socket.off('showExplanation');
-      socket.off('show_intermediate_scores');
+      socket.off('showLeaderboard');
       socket.off('game_over');
     };
   }, [name, room, navigate]);
@@ -214,11 +252,11 @@ function Quiz() {
 
   if (showIntermediateScores && intermediateData) {
     return (
-      <IntermediateScoreboard 
-        top5={intermediateData.top5}
-        currentPlayer={intermediateData.currentPlayer}
-        totalPlayers={intermediateData.totalPlayers}
+      <UnifiedPostQuestion 
+        leaderboard={intermediateData}
+        explanationDuration={5000} // 5 seconds for intermediate display
         onComplete={handleIntermediateComplete}
+        gameSettings={{ isIntermediate: true }}
       />
     );
   }

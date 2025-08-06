@@ -15,7 +15,8 @@ const UnifiedPostQuestion = ({
 
   // Determine what to show
   const hasExplanation = explanation && (explanation.title || explanation.text || explanation.image_url);
-  const hasLeaderboardData = leaderboard && (leaderboard.answerStats || leaderboard.currentPlayer);
+  const hasLeaderboardData = leaderboard && (leaderboard.standings || leaderboard.answerStats || leaderboard.currentPlayer);
+  const isIntermediate = gameSettings.isIntermediate || leaderboard?.isIntermediate;
 
   // Auto-advance logic
   useManagedInterval(
@@ -42,7 +43,11 @@ const UnifiedPostQuestion = ({
 
   // Initialize based on what's available
   useEffect(() => {
-    if (hasExplanation) {
+    if (isIntermediate) {
+      // For intermediate scoreboards, show leaderboard immediately with shorter duration
+      setTimeLeft(5000); // 5 seconds for intermediate
+      setShowLeaderboard(true);
+    } else if (hasExplanation) {
       setTimeLeft(explanationDuration);
       setShowLeaderboard(false);
     } else if (hasLeaderboardData) {
@@ -52,9 +57,11 @@ const UnifiedPostQuestion = ({
       // Nothing to show, complete immediately
       onComplete?.();
     }
-  }, [hasExplanation, hasLeaderboardData, explanationDuration, onComplete]);
+  }, [hasExplanation, hasLeaderboardData, explanationDuration, onComplete, isIntermediate]);
 
-  const progressPercent = (timeLeft / explanationDuration) * 100;
+  const progressPercent = isIntermediate ? 
+    (timeLeft / 5000) * 100 : // For intermediate, always use 5 second duration
+    (timeLeft / explanationDuration) * 100;
 
   // Don't render if nothing to show
   if (!hasExplanation && !hasLeaderboardData) {
@@ -65,7 +72,7 @@ const UnifiedPostQuestion = ({
   }
 
   return (
-    <div className={`upq-overlay ${isClosing ? 'upq-closing' : ''}`}>
+    <div className={`upq-overlay ${isClosing ? 'upq-closing' : ''} ${isIntermediate ? 'upq-intermediate' : ''}`}>
       <div className="upq-container">
         <div className="upq-background-pattern"></div>
         
@@ -149,7 +156,9 @@ const UnifiedPostQuestion = ({
             <div className="upq-leaderboard-section">
               <div className="upq-section-header">
                 <div className="upq-section-icon">🏆</div>
-                <h2 className="upq-section-title">ランキング</h2>
+                <h2 className="upq-section-title">
+                  {isIntermediate ? '現在のリーダーボード' : 'ランキング'}
+                </h2>
               </div>
 
               <div className="upq-leaderboard-content">
@@ -228,7 +237,9 @@ const UnifiedPostQuestion = ({
             <span className="upq-next-text">まもなくランキング表示</span>
           )}
           {(showLeaderboard || !hasExplanation) && (
-            <span className="upq-next-text">次の問題へ</span>
+            <span className="upq-next-text">
+              {isIntermediate ? 'ホストが次の質問を開始するまでお待ちください...' : '次の問題へ'}
+            </span>
           )}
         </div>
       </div>
