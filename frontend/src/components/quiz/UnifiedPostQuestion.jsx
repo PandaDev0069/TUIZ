@@ -64,11 +64,16 @@ const UnifiedPostQuestion = ({
     (timeLeft / explanationDuration) * 100;
 
   // Don't render if nothing to show
-  if (!hasExplanation && !hasLeaderboardData) {
+  if (!hasExplanation && !hasLeaderboardData && !isIntermediate) {
     useEffect(() => {
       onComplete?.();
     }, [onComplete]);
     return null;
+  }
+
+  // For intermediate mode, always show something even if leaderboard data is missing
+  if (isIntermediate && !hasLeaderboardData) {
+    console.log('⚠️ Intermediate mode but no leaderboard data');
   }
 
   return (
@@ -151,8 +156,8 @@ const UnifiedPostQuestion = ({
             </div>
           )}
 
-          {/* Leaderboard Section - Show when time is up or no explanation */}
-          {hasLeaderboardData && (showLeaderboard || !hasExplanation) && (
+          {/* Leaderboard Section - Show when time is up or no explanation OR when intermediate */}
+          {(hasLeaderboardData || isIntermediate) && ((showLeaderboard || !hasExplanation) || isIntermediate) && (
             <div className="upq-leaderboard-section">
               <div className="upq-section-header">
                 <div className="upq-section-icon">🏆</div>
@@ -174,7 +179,7 @@ const UnifiedPostQuestion = ({
                 )}
 
                 {/* Top 5 Players */}
-                {leaderboard?.standings && (
+                {leaderboard?.standings && leaderboard.standings.length > 0 ? (
                   <div className="upq-top-players">
                     <h3 className="upq-subsection-title">トップ5</h3>
                     <div className="upq-top-players-list">
@@ -191,6 +196,10 @@ const UnifiedPostQuestion = ({
                         </div>
                       ))}
                     </div>
+                  </div>
+                ) : isIntermediate && (
+                  <div className="upq-no-data">
+                    <p>リーダーボードデータを読み込み中...</p>
                   </div>
                 )}
 

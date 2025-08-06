@@ -27,36 +27,71 @@ function WaitingRoom() {
       return
     }
 
+    console.log('🎮 WaitingRoom: Setting up socket listeners for', { name, room });
+    console.log('🎮 WaitingRoom: Initial players:', initialPlayers);
+
     // Set initial players if provided
     if (initialPlayers.length > 0) {
       setPlayers(initialPlayers)
     }
 
-    // Listen for new players joining
-    socket.on('player_joined', ({ players: updatedPlayers }) => {
-      setPlayers(updatedPlayers)
-      console.log('Waiting room - players joined:', updatedPlayers)
+    // Listen for successful join response
+    socket.on('joinedGame', ({ gameCode, playerCount, gameStatus, player }) => {
+      console.log('🎮 WaitingRoom: joinedGame event received:', { gameCode, playerCount, gameStatus, player });
+      // Request current player list
+      socket.emit('getPlayerList', { gameCode });
     })
 
-    // Listen for players leaving
-    socket.on('player_left', ({ players: updatedPlayers }) => {
-      setPlayers(updatedPlayers)
-      console.log('Waiting room - players updated:', updatedPlayers)
+    // Listen for player list response
+    socket.on('playerList', ({ players }) => {
+      console.log('🎮 WaitingRoom: playerList event received:', players);
+      setPlayers(players);
+    })
+
+    // Listen for new players joining
+    socket.on('playerJoined', ({ player, totalPlayers }) => {
+      console.log('🎮 WaitingRoom: playerJoined event received:', { player, totalPlayers });
+      // Add the new player to the list
+      setPlayers(prev => {
+        const updated = [...prev];
+        // Check if player already exists
+        const existingIndex = updated.findIndex(p => p.id === player.id);
+        if (existingIndex >= 0) {
+          updated[existingIndex] = player;
+        } else {
+          updated.push(player);
+        }
+        console.log('🎮 WaitingRoom: Updated players after join:', updated);
+        return updated;
+      });
+    })
+
+    // Listen for players disconnecting
+    socket.on('playerDisconnected', ({ playerId, playerName, remainingPlayers }) => {
+      console.log('🎮 WaitingRoom: playerDisconnected event received:', { playerId, playerName, remainingPlayers });
+      setPlayers(prev => {
+        const updated = prev.filter(p => p.id !== playerId);
+        console.log('🎮 WaitingRoom: Updated players after disconnect:', updated);
+        return updated;
+      });
     })
 
     // Listen for game start
     socket.on('gameStarted', (data) => {
-      console.log('Game started!', data)
+      console.log('🎮 WaitingRoom: Game started!', data)
       navigate('/quiz', { state: { name, room } })
     })
 
     // Cleanup listeners
     return () => {
-      socket.off('player_joined')
-      socket.off('player_left')
+      console.log('🎮 WaitingRoom: Cleaning up socket listeners');
+      socket.off('joinedGame')
+      socket.off('playerList')
+      socket.off('playerJoined')
+      socket.off('playerDisconnected')
       socket.off('gameStarted')
     }
-  }, [name, room, navigate])
+  }, [name, room, navigate, initialPlayers])
 
   return (
     <div className="page-container">
@@ -146,11 +181,21 @@ function WaitingRoom() {
         )}
         
         {/* Players List */}
-        {players.length > 0 && (
-          <div className="players-list">
-            <p>参加者: {players.filter(p => p.name !== 'HOST').length}人</p>
+        <div className="players-list">
+          <p>参加者: {players.filter(p => p.name !== 'HOST').length}人</p>
+          {/* Debug info */}
+          <div style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
+            <details>
+              <summary>デバッグ情報 (クリックして表示)</summary>
+              <div style={{ marginTop: '5px' }}>
+                <div>総プレイヤー数: {players.length}</div>
+                <div>プレイヤーリスト: {JSON.stringify(players.map(p => p.name), null, 2)}</div>
+                <div>ルーム: {room}</div>
+                <div>プレイヤー名: {name}</div>
+              </div>
+            </details>
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

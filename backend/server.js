@@ -591,14 +591,11 @@ const showQuestionExplanation = (gameCode) => {
   // Send explanation with leaderboard to all players immediately
   io.to(gameCode).emit('showExplanation', explanationData);
   
-  // After explanation, show leaderboard or proceed to next question
+  // After explanation, proceed to next question (leaderboard already shown during explanation)
   setTimeout(async () => {
-    if (gameSettings.showLeaderboard) {
-      console.log(`🏆 Showing leaderboard after explanation for question ${activeGame.currentQuestionIndex + 1}`);
-      showIntermediateLeaderboard(gameCode);
-    } else {
-      await proceedToNextQuestion(gameCode);
-    }
+    // Don't show additional leaderboard after explanation since it's already shown during explanation
+    console.log(`⏭️ Proceeding to next question after explanation for question ${activeGame.currentQuestionIndex + 1}`);
+    await proceedToNextQuestion(gameCode);
   }, explanationData.explanationTime);
 };
 
@@ -1127,6 +1124,37 @@ io.on('connection', (socket) => {
     } catch (error) {
       console.error('Error joining game:', error);
       socket.emit('error', { message: 'Failed to join game', error: error.message });
+    }
+  });
+
+  // Get current player list for a game
+  socket.on('getPlayerList', ({ gameCode }) => {
+    try {
+      console.log(`📋 Get Player List Request for: ${gameCode}`);
+      
+      const activeGame = activeGames.get(gameCode);
+      
+      if (!activeGame) {
+        socket.emit('error', { message: 'Game not found' });
+        return;
+      }
+      
+      // Convert players map to array with relevant info
+      const players = Array.from(activeGame.players.values()).map(player => ({
+        id: player.id,
+        name: player.name,
+        score: player.score,
+        isAuthenticated: player.isAuthenticated,
+        isHost: player.isHost || false,
+        isConnected: player.isConnected
+      })).filter(player => player.isConnected); // Only send connected players
+      
+      console.log(`📋 Sending player list: ${players.length} players`);
+      socket.emit('playerList', { players });
+      
+    } catch (error) {
+      console.error('Error getting player list:', error);
+      socket.emit('error', { message: 'Failed to get player list', error: error.message });
     }
   });
 

@@ -111,7 +111,9 @@ function Quiz() {
       }
     });
 
-    // Handle intermediate scoreboard
+    // Handle intermediate scoreboard - DISABLED (conflicts with explanation system)
+    // The explanation system in UnifiedPostQuestion already handles leaderboard display
+    /*
     socket.on('showLeaderboard', (data) => {
       console.log('🏆 Received intermediate leaderboard data:', data);
       console.log('Current question state:', { question, showIntermediateScores, showExplanation });
@@ -155,6 +157,7 @@ function Quiz() {
       setShowIntermediateScores(true);
       console.log('Set showIntermediateScores to true');
     });
+    */
 
     // Handle game over
     socket.on('game_over', ({ scoreboard }) => {
@@ -165,7 +168,7 @@ function Quiz() {
       socket.off('question');
       socket.off('answerResult');
       socket.off('showExplanation');
-      socket.off('showLeaderboard');
+      // socket.off('showLeaderboard'); // Commented out - not used anymore
       socket.off('game_over');
     };
   }, [name, room, navigate]);
@@ -251,14 +254,11 @@ function Quiz() {
   };
 
   if (showIntermediateScores && intermediateData) {
-    return (
-      <UnifiedPostQuestion 
-        leaderboard={intermediateData}
-        explanationDuration={5000} // 5 seconds for intermediate display
-        onComplete={handleIntermediateComplete}
-        gameSettings={{ isIntermediate: true }}
-      />
-    );
+    // Intermediate leaderboard is now handled by the explanation system
+    // This code path should not be used anymore
+    console.log('⚠️ Intermediate leaderboard triggered - this should be handled by explanation system');
+    setShowIntermediateScores(false);
+    return null;
   }
 
   // Show explanation with leaderboard if available
