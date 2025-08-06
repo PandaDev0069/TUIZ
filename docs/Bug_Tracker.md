@@ -11,7 +11,6 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 - Needs a complete new re-work on how the ui of quiz and questions and options looks
 - no update of game status , always waiting
 - no creation of resutls(might be beacuse we are not updating game status)
-
 - create a separate,new and updated host menu/ control panel.
 ### Medium Priority
 - Issue #22: Answer Image Upload Implementation Strategy (Partially Fixed)
@@ -26,6 +25,83 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 ---
 
 ## ✅ Resolved Issues (Latest First)
+
+### Issue #32: Player Count Synchronization for New Players + Explanation Screen Logic Improvements
+**Date:** 2025-08-06 | **Status:** FIXED ✅ | **Severity:** High  
+**Component:** Frontend/Backend - Real-time Multiplayer & Quiz Flow
+
+**Problem:**
+Multiple issues with quiz flow and player synchronization:
+1. **Player Count Issue**: New players joining a game didn't see updated player count immediately
+2. **Correct Answer Display**: Correct answers were shown during quiz instead of only in explanation screen  
+3. **Explanation Timing**: Players were redirected to explanation before question time was up
+4. **Leaderboard Timing**: Leaderboard only showed for last 3 seconds instead of whole explanation time
+
+**Root Cause:**
+1. **Join Component Issue**: When players joined, only their own player data was passed to WaitingRoom instead of server's authoritative player count
+2. **Quiz Logic**: `showCorrectAnswer` was enabled during quiz gameplay
+3. **Timer Logic**: Frontend timer allowed early explanation display
+4. **Explanation Logic**: Leaderboard was only shown in last 5 seconds regardless of question type
+
+**Solution:**
+**Player Count Synchronization:**
+- Enhanced Join component to pass `serverPlayerCount` alongside `initialPlayers`
+- WaitingRoom now detects count mismatches and immediately requests complete player list
+- Removed extensive debug logging while maintaining core functionality
+
+**Explanation Screen Logic:**
+- **Correct Answer Display**: Set `showCorrectAnswer={false}` in MultipleChoiceQuestion and TrueFalseQuestion components
+- **Explanation Timing**: Modified quiz timer to not redirect until question time is fully up
+- **Leaderboard Display**: Show leaderboard throughout explanation time except for last question
+- **Backend Enhancement**: Added `isLastQuestion` flag and correct answer text to explanation data
+
+**Technical Implementation:**
+```javascript
+// Join.jsx - Pass server count to WaitingRoom
+navigate('/waiting', { 
+  state: { 
+    name, 
+    room: gameCode, 
+    initialPlayers: [player],
+    serverPlayerCount: playerCount // Server's authoritative count
+  } 
+});
+
+// WaitingRoom.jsx - Detect mismatches and sync
+if (serverPlayerCount && serverPlayerCount > initialPlayers.length) {
+  socket.emit('getPlayerList', { gameCode: room });
+}
+
+// MultipleChoiceQuestion.jsx & TrueFalseQuestion.jsx
+showCorrectAnswer={false} // Never show during quiz
+
+// UnifiedPostQuestion.jsx - Show leaderboard whole time except last question
+setShowLeaderboard(!isLastQuestion && hasLeaderboardData);
+```
+
+**Files Modified:**
+- `frontend/src/pages/Join.jsx` - Enhanced server count passing
+- `frontend/src/pages/WaitingRoom.jsx` - Added count synchronization and removed debug logs
+- `frontend/src/pages/Quiz.jsx` - Fixed timer logic for explanation timing
+- `frontend/src/components/quiz/MultipleChoiceQuestion.jsx` - Disabled correct answer display
+- `frontend/src/components/quiz/TrueFalseQuestion.jsx` - Disabled correct answer display  
+- `frontend/src/components/quiz/UnifiedPostQuestion.jsx` - Fixed leaderboard timing logic
+- `backend/server.js` - Added `isLastQuestion` flag and removed debug logs
+
+**Testing Notes:**
+- New players see correct player count immediately upon joining
+- Correct answers only appear in explanation screen, not during quiz
+- Explanation screen only appears after question time is fully up
+- Leaderboard displays throughout explanation time for non-final questions
+- Clean logging without excessive debug output
+
+**User Impact:**
+- Seamless multiplayer experience with accurate player counts
+- Clear quiz flow where correct answers are revealed only in explanations
+- Proper timing ensures players get full question time before explanations
+- Better leaderboard experience showing rankings throughout explanation phase
+
+---
 
 ### Issue #31: Individual Question Time Limits Being Overridden by Default Game Settings
 **Date:** 2025-08-05 | **Status:** FIXED ✅ | **Severity:** High  
@@ -769,20 +845,20 @@ Missing bulk update API endpoint for handling multiple questions simultaneously.
 
 ## 📊 Issue Statistics
 
-**Total Issues Tracked:** 28  
-**Resolved:** 24 (86%)  
+**Total Issues Tracked:** 29  
+**Resolved:** 25 (86%)  
 **Active:** 4 (14%)  
 **High Priority Active:** 0  
 
 **Resolution Rate by Component:**
 - Backend API: 19/22 resolved (86%)
-- Frontend: 8/10 resolved (80%)
+- Frontend: 9/11 resolved (82%)
 - Database: 3/3 resolved (100%)
 
 **Recent Fixes (Latest Session):**
+- Issue #32: Player Count Synchronization + Explanation Screen Logic (High) - Fixed multiplayer sync and quiz flow
 - Issue #31: Individual Question Time Limits Being Overridden (High) - Fixed priority logic in QuestionFormatAdapter
 - Issue #30: Multiple Choice 2-Option Questions (High) - Fixed type detection and React key props
-- Issue #29: Question Images Not Displaying (High) - Fixed image URL paths
 
 ---
 

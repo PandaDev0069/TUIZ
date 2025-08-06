@@ -176,12 +176,19 @@ function Quiz() {
   // Timer effect for questions - using managed interval
   useManagedInterval(
     () => {
-      if (!question || selected !== null || timer <= 0 || showExplanation) return;
+      if (!question || timer <= 0 || showExplanation) return;
       
       setTimer(prev => {
         if (prev <= 1) {
-          // Time's up, auto-submit null answer
-          handleAnswer(null);
+          // Time's up, auto-submit null answer if not already answered
+          if (selected === null) {
+            handleAnswer(null);
+          }
+          // Check if explanation should be shown when time is up
+          if (question._dbData?.explanation_title || question._dbData?.explanation_text || question._dbData?.explanation_image_url) {
+            // Wait for server explanation event - do not redirect immediately
+            return 0;
+          }
           return 0;
         }
         return prev - 1;

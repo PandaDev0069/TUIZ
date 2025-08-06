@@ -57,7 +57,7 @@ const TrueFalseQuestion = ({
           isSelected={selected === 0}
           isCorrect={answerResult && answerResult.correctAnswer === 0}
           isDisabled={selected !== null || timer <= 0}
-          showCorrectAnswer={answerResult && question.showCorrectAnswer}
+          showCorrectAnswer={false} // Never show correct answer during quiz
           imageUrl={question._dbData?.answers?.[0]?.image_url}
           onClick={onAnswer}
           className="quiz-true-false-option quiz-true-option"
@@ -74,7 +74,7 @@ const TrueFalseQuestion = ({
           isSelected={selected === 1}
           isCorrect={answerResult && answerResult.correctAnswer === 1}
           isDisabled={selected !== null || timer <= 0}
-          showCorrectAnswer={answerResult && question.showCorrectAnswer}
+          showCorrectAnswer={false} // Never show correct answer during quiz
           imageUrl={question._dbData?.answers?.[1]?.image_url}
           onClick={onAnswer}
           className="quiz-true-false-option quiz-false-option"

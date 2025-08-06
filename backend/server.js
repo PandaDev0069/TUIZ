@@ -573,14 +573,14 @@ const showQuestionExplanation = (gameCode) => {
       image_url: currentQuestion._dbData?.explanation_image_url || currentQuestion.explanation_image_url
     },
     
-    // Answer statistics
-    answerStats: calculateAnswerStatistics(activeGame.currentAnswers, currentQuestion),
-    
     // Leaderboard data (include immediately with explanation)
     leaderboard: {
       standings: leaderboard,
       totalQuestions: activeGame.questions.length,
-      isGameOver: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length
+      isGameOver: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length,
+      isLastQuestion: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length,
+      correctOption: getCorrectAnswerText(currentQuestion),
+      answerStats: calculateAnswerStatistics(activeGame.currentAnswers, currentQuestion)
     },
     
     // Timing - use explanationTime from settings (converted to ms)
@@ -642,6 +642,18 @@ const showIntermediateLeaderboard = (gameCode) => {
   } else {
     console.log(`⏸️ Manual advance mode - waiting for host to continue`);
   }
+};
+
+// Helper function to get correct answer text
+const getCorrectAnswerText = (question) => {
+  if (!question.options || !question.correct_answer_index) return null;
+  
+  const correctIndex = question.correct_answer_index;
+  if (correctIndex >= 0 && correctIndex < question.options.length) {
+    return question.options[correctIndex];
+  }
+  
+  return null;
 };
 
 // Helper function to calculate answer statistics
@@ -1108,8 +1120,6 @@ io.on('connection', (socket) => {
             isHost: player.isHost || false // Include host status
           }
         });
-        
-        console.log(`✅ joinedGame event sent to new player ${playerName} with playerCount: ${activeGame.players.size}`);
       } catch (emitError) {
         console.error(`❌ Error sending joinedGame event to ${playerName}:`, emitError);
       }
@@ -1125,14 +1135,6 @@ io.on('connection', (socket) => {
           isHost: p.isHost || false,
           isConnected: p.isConnected
         })).filter(p => p.isConnected);
-
-        console.log(`🔔 Emitting playerJoined event for player ${player.name} in game ${gameCode} (after ${allPlayers.length} total players)`);
-        console.log(`📊 Player data:`, {
-          id: player.id,
-          name: player.name,
-          totalPlayers: activeGame.players.size,
-          allPlayersCount: allPlayers.length
-        });
         
         io.to(gameCode).emit('playerJoined', {
           player: {
@@ -1146,8 +1148,6 @@ io.on('connection', (socket) => {
           totalPlayers: activeGame.players.size,
           allPlayers: allPlayers // Include complete player list
         });
-        
-        console.log(`✅ playerJoined event emitted to room ${gameCode} with ${allPlayers.length} total players`);
       }, 50); // Small delay to ensure frontend is ready
       
     } catch (error) {
@@ -1159,12 +1159,9 @@ io.on('connection', (socket) => {
   // Get current player list for a game
   socket.on('getPlayerList', ({ gameCode }) => {
     try {
-      console.log(`📋 Get Player List Request for: ${gameCode} from socket: ${socket.id}`);
-      
       const activeGame = activeGames.get(gameCode);
       
       if (!activeGame) {
-        console.log(`❌ Game ${gameCode} not found for player list request`);
         socket.emit('error', { message: 'Game not found' });
         return;
       }
@@ -1179,8 +1176,6 @@ io.on('connection', (socket) => {
         isConnected: player.isConnected
       })).filter(player => player.isConnected); // Only send connected players
       
-      console.log(`📋 Sending player list for game ${gameCode}: ${players.length} players`);
-      console.log(`📋 Player names: ${players.map(p => p.name).join(', ')}`);
       socket.emit('playerList', { players });
       
     } catch (error) {

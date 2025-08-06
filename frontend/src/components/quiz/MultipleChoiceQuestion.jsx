@@ -60,7 +60,7 @@ const MultipleChoiceQuestion = ({
               isSelected={selected === i}
               isCorrect={answerResult && answerResult.correctAnswer === i}
               isDisabled={selected !== null || timer <= 0}
-              showCorrectAnswer={answerResult && question.showCorrectAnswer}
+              showCorrectAnswer={false} // Never show correct answer during quiz
               imageUrl={optionImageUrl}
               onClick={onAnswer}
               className="quiz-multiple-choice-option"

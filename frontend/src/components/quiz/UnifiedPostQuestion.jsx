@@ -17,6 +17,7 @@ const UnifiedPostQuestion = ({
   const hasExplanation = explanation && (explanation.title || explanation.text || explanation.image_url);
   const hasLeaderboardData = leaderboard && (leaderboard.standings || leaderboard.answerStats || leaderboard.currentPlayer);
   const isIntermediate = gameSettings.isIntermediate || leaderboard?.isIntermediate;
+  const isLastQuestion = leaderboard?.isGameOver || leaderboard?.isLastQuestion;
 
   // Auto-advance logic
   useManagedInterval(
@@ -29,16 +30,11 @@ const UnifiedPostQuestion = ({
           return 0;
         }
         
-        // Show leaderboard in the last 5 seconds if we have explanation
-        if (hasExplanation && prev <= 5000 && !showLeaderboard) {
-          setShowLeaderboard(true);
-        }
-        
         return prev - 100;
       });
     },
     100,
-    [showLeaderboard, hasExplanation, onComplete]
+    [onComplete]
   );
 
   // Initialize based on what's available
@@ -49,7 +45,8 @@ const UnifiedPostQuestion = ({
       setShowLeaderboard(true);
     } else if (hasExplanation) {
       setTimeLeft(explanationDuration);
-      setShowLeaderboard(false);
+      // Show leaderboard immediately for non-last questions, never for last question
+      setShowLeaderboard(!isLastQuestion && hasLeaderboardData);
     } else if (hasLeaderboardData) {
       setTimeLeft(5000); // 5 seconds for leaderboard only
       setShowLeaderboard(true);
@@ -57,7 +54,7 @@ const UnifiedPostQuestion = ({
       // Nothing to show, complete immediately
       onComplete?.();
     }
-  }, [hasExplanation, hasLeaderboardData, explanationDuration, onComplete, isIntermediate]);
+  }, [hasExplanation, hasLeaderboardData, explanationDuration, onComplete, isIntermediate, isLastQuestion]);
 
   const progressPercent = isIntermediate ? 
     (timeLeft / 5000) * 100 : // For intermediate, always use 5 second duration
@@ -156,7 +153,7 @@ const UnifiedPostQuestion = ({
             </div>
           )}
 
-          {/* Leaderboard Section - Show when time is up or no explanation OR when intermediate */}
+          {/* Leaderboard Section - Show throughout explanation except for last question */}
           {(hasLeaderboardData || isIntermediate) && ((showLeaderboard || !hasExplanation) || isIntermediate) && (
             <div className="upq-leaderboard-section">
               <div className="upq-section-header">

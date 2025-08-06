@@ -27,10 +27,6 @@ function WaitingRoom() {
       return
     }
 
-    console.log('🎮 WaitingRoom: Setting up socket listeners for', { name, room });
-    console.log('🎮 WaitingRoom: Initial players:', initialPlayers);
-    console.log('🎮 WaitingRoom: Server player count:', serverPlayerCount);
-
     // Set initial players if provided
     if (initialPlayers.length > 0) {
       setPlayers(initialPlayers)
@@ -38,8 +34,6 @@ function WaitingRoom() {
       // If we have a server player count that's higher than initial players,
       // request the complete player list immediately
       if (serverPlayerCount && serverPlayerCount > initialPlayers.length) {
-        console.log('🎮 WaitingRoom: Server count higher than initial - requesting complete list');
-        console.log(`🎮 WaitingRoom: Initial: ${initialPlayers.length}, Server: ${serverPlayerCount}`);
         setTimeout(() => {
           socket.emit('getPlayerList', { gameCode: room });
         }, 100);
@@ -48,16 +42,8 @@ function WaitingRoom() {
 
     // Listen for successful join response
     socket.on('joinedGame', ({ gameCode, playerCount, gameStatus, player }) => {
-      console.log('🎮 WaitingRoom: joinedGame event received:', { gameCode, playerCount, gameStatus, player });
-      
-      // Immediately update player count for the new player joining
-      console.log('🎮 WaitingRoom: New player joined - immediately updating player count to:', playerCount);
-      
-      // CRITICAL FIX: Immediately set the player count based on server response
-      // Create a minimal list that reflects the correct count from the server
+      // Add the current player to the players list if not already present
       setPlayers(prev => {
-        console.log('🎮 WaitingRoom: Current players before update:', prev.length, 'Server says:', playerCount);
-        
         // Always trust the server's playerCount
         const currentPlayerData = {
           id: player.id,
@@ -76,53 +62,31 @@ function WaitingRoom() {
           const updatedPlayers = prev.map(p => 
             (p.id === player.id || p.name === player.name) ? currentPlayerData : p
           );
-          console.log('🎮 WaitingRoom: Updated existing player. Count:', updatedPlayers.length);
           return updatedPlayers;
         } else {
           // Add new player
           const updatedPlayers = [...prev, currentPlayerData];
-          console.log('🎮 WaitingRoom: Added new player. Count from', prev.length, 'to', updatedPlayers.length);
-          
-          // If we still don't match the server count, log the discrepancy
-          if (updatedPlayers.length !== playerCount) {
-            console.warn('🎮 WaitingRoom: Count mismatch! Frontend:', updatedPlayers.length, 'Server:', playerCount);
-            // For now, trust our update but request sync
-          }
-          
           return updatedPlayers;
         }
       });
       
       // Request complete player list for synchronization
-      console.log('🎮 WaitingRoom: Requesting complete player list for final synchronization');
       try {
         socket.emit('getPlayerList', { gameCode });
       } catch (error) {
-        console.error('🎮 WaitingRoom: Error requesting player list:', error);
+        console.error('Error requesting player list:', error);
       }
     })
 
     // Listen for player list response
     socket.on('playerList', ({ players }) => {
-      console.log('🎮 WaitingRoom: playerList event received:', players);
-      console.log('🎮 WaitingRoom: Setting authoritative player list with', players.length, 'players');
-      // Replace the entire player list with the authoritative list from server
       setPlayers(players);
     })
 
     // Listen for new players joining
     socket.on('playerJoined', ({ player, totalPlayers, allPlayers }) => {
-      console.log('🎮 WaitingRoom: playerJoined event received:', { player, totalPlayers, allPlayers });
-      
       if (allPlayers && allPlayers.length > 0) {
-        // Use the complete player list from the server for consistency
-        console.log('🎮 WaitingRoom: Updating with complete player list from server:', allPlayers);
         setPlayers(allPlayers);
-        
-        // Special case: If the joining player is the current user, ensure immediate UI update
-        if (player.name === name) {
-          console.log('🎮 WaitingRoom: Current user joined - ensuring immediate count update to:', allPlayers.length);
-        }
       } else {
         // Fallback: Add the new player to the existing list
         setPlayers(prev => {
@@ -134,7 +98,6 @@ function WaitingRoom() {
           } else {
             updated.push(player);
           }
-          console.log('🎮 WaitingRoom: Updated players after join (fallback):', updated);
           return updated;
         });
       }
@@ -142,17 +105,12 @@ function WaitingRoom() {
 
     // Listen for players disconnecting
     socket.on('playerDisconnected', ({ playerId, playerName, remainingPlayers, allPlayers }) => {
-      console.log('🎮 WaitingRoom: playerDisconnected event received:', { playerId, playerName, remainingPlayers, allPlayers });
-      
       if (allPlayers && allPlayers.length >= 0) {
-        // Use the complete updated player list from the server
-        console.log('🎮 WaitingRoom: Updating with complete player list after disconnect:', allPlayers);
         setPlayers(allPlayers);
       } else {
         // Fallback: Remove the disconnected player from existing list
         setPlayers(prev => {
           const updated = prev.filter(p => p.id !== playerId);
-          console.log('🎮 WaitingRoom: Updated players after disconnect (fallback):', updated);
           return updated;
         });
       }
@@ -160,7 +118,6 @@ function WaitingRoom() {
 
     // Listen for game start
     socket.on('gameStarted', (data) => {
-      console.log('🎮 WaitingRoom: Game started!', data)
       navigate('/quiz', { state: { name, room } })
     })
 
@@ -265,18 +222,6 @@ function WaitingRoom() {
         {/* Players List */}
         <div className="players-list">
           <p>参加者: {players.filter(p => p.name !== 'HOST').length}人</p>
-          {/* Debug info */}
-          <div style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
-            <details>
-              <summary>デバッグ情報 (クリックして表示)</summary>
-              <div style={{ marginTop: '5px' }}>
-                <div>総プレイヤー数: {players.length}</div>
-                <div>プレイヤーリスト: {JSON.stringify(players.map(p => p.name), null, 2)}</div>
-                <div>ルーム: {room}</div>
-                <div>プレイヤー名: {name}</div>
-              </div>
-            </details>
-          </div>
         </div>
       </div>
     </div>
