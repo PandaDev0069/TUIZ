@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useManagedTimeout } from '../utils/timerManager';
 import socket from '../socket';
 import './scoreboard.css';
 
@@ -16,31 +17,44 @@ function Scoreboard() {
     // Detect if we're on mobile for performance optimization
     const isMobile = window.innerWidth <= 768;
     
+    // Collect all timeouts for cleanup
+    const timeouts = [];
+    
     // Staggered podium animation - 3rd, 2nd, then 1st (Kahoot style)
     const podiumElements = document.querySelectorAll('.podium-place');
     podiumElements.forEach((element, index) => {
       const order = [2, 0, 1]; // 3rd, 1st, 2nd for dramatic effect
       const delay = order[index] * (isMobile ? 600 : 800); // Faster on mobile
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         element.classList.add('show');
       }, delay + (isMobile ? 800 : 1000)); // Start sooner on mobile
+      timeouts.push(timeout);
     });
 
     // Show confetti for celebration (less confetti on mobile)
-    setTimeout(() => setShowConfetti(true), isMobile ? 2500 : 3000);
+    const showConfettiTimeout = setTimeout(() => setShowConfetti(true), isMobile ? 2500 : 3000);
+    timeouts.push(showConfettiTimeout);
     
     // Hide confetti after duration
-    setTimeout(() => setShowConfetti(false), isMobile ? 6000 : 7000);
+    const hideConfettiTimeout = setTimeout(() => setShowConfetti(false), isMobile ? 6000 : 7000);
+    timeouts.push(hideConfettiTimeout);
 
     // Animate leaderboard rows
-    setTimeout(() => {
+    const leaderboardTimeout = setTimeout(() => {
       const scoreRows = document.querySelectorAll('.score-row');
       scoreRows.forEach((row, index) => {
-        setTimeout(() => {
+        const rowTimeout = setTimeout(() => {
           row.classList.add('show');
         }, index * (isMobile ? 100 : 150)); // Faster stagger on mobile
+        timeouts.push(rowTimeout);
       });
     }, isMobile ? 3200 : 4000); // Start sooner on mobile
+    timeouts.push(leaderboardTimeout);
+
+    // Cleanup all timeouts on unmount
+    return () => {
+      timeouts.forEach(timeout => clearTimeout(timeout));
+    };
   }, []);
 
   const handleRestart = () => {

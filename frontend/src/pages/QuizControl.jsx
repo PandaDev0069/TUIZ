@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTimerManager } from '../utils/timerManager';
 import socket from '../socket';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './quizControl.css';
@@ -15,9 +16,12 @@ function QuizControl() {
   const [canAdvance, setCanAdvance] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [analyticsData, setAnalyticsData] = useState(null);
-  const [questionTimer, setQuestionTimer] = useState(null);
   const [hostTimer, setHostTimer] = useState(0);
-  const [timerInterval, setTimerInterval] = useState(null);
+  
+  // Use managed timer manager
+  const timerManager = useTimerManager();
+  let questionTimerId = null;
+  let timerIntervalId = null;
 
   useEffect(() => {
     if (!room || !title) {
@@ -37,31 +41,28 @@ function QuizControl() {
       setHostTimer(timeLimitSeconds);
       
       // Clear existing timers
-      if (questionTimer) {
-        clearTimeout(questionTimer);
+      if (questionTimerId) {
+        timerManager.clearTimeout(questionTimerId);
       }
-      if (timerInterval) {
-        clearInterval(timerInterval);
+      if (timerIntervalId) {
+        timerManager.clearInterval(timerIntervalId);
       }
       
       // Visual countdown timer
-      const interval = setInterval(() => {
+      timerIntervalId = timerManager.setInterval(() => {
         setHostTimer(prev => {
           if (prev <= 1) {
-            clearInterval(interval);
+            timerManager.clearInterval(timerIntervalId);
             return 0;
           }
           return prev - 1;
         });
-      }, 1000);
-      setTimerInterval(interval);
+      }, 1000, 'hostCountdown');
       
       // Auto-enable advancement timer
-      const timer = setTimeout(() => {
+      questionTimerId = timerManager.setTimeout(() => {
         setCanAdvance(true);
-      }, timeLimit);
-      
-      setQuestionTimer(timer);
+      }, timeLimit, 'questionTimeout');
     });
 
     // Listen for player answers
@@ -87,13 +88,8 @@ function QuizControl() {
       socket.off('game_over');
       socket.off('show_host_analytics');
       
-      // Clean up timers
-      if (questionTimer) {
-        clearTimeout(questionTimer);
-      }
-      if (timerInterval) {
-        clearInterval(timerInterval);
-      }
+      // Clean up timers - handled automatically by timerManager
+      // No need for manual cleanup
     };
   }, [room, title, navigate]);
 
@@ -102,14 +98,14 @@ function QuizControl() {
     setResponses([]);
     setCanAdvance(false);
     
-    // Clear existing timers
-    if (questionTimer) {
-      clearTimeout(questionTimer);
-      setQuestionTimer(null);
+    // Clear existing timers using timerManager
+    if (questionTimerId) {
+      timerManager.clearTimeout(questionTimerId);
+      questionTimerId = null;
     }
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      setTimerInterval(null);
+    if (timerIntervalId) {
+      timerManager.clearInterval(timerIntervalId);
+      timerIntervalId = null;
     }
     setHostTimer(0);
   };
@@ -121,14 +117,14 @@ function QuizControl() {
     setResponses([]);
     setCanAdvance(false);
     
-    // Clear existing timers
-    if (questionTimer) {
-      clearTimeout(questionTimer);
-      setQuestionTimer(null);
+    // Clear existing timers using timerManager
+    if (questionTimerId) {
+      timerManager.clearTimeout(questionTimerId);
+      questionTimerId = null;
     }
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      setTimerInterval(null);
+    if (timerIntervalId) {
+      timerManager.clearInterval(timerIntervalId);
+      timerIntervalId = null;
     }
     setHostTimer(0);
   };

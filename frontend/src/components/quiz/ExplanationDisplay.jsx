@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useManagedInterval, useManagedTimeout } from '../../utils/timerManager';
 import './ExplanationDisplay.css';
 
 const ExplanationDisplay = ({ 
@@ -12,26 +13,34 @@ const ExplanationDisplay = ({
   const [timeLeft, setTimeLeft] = useState(duration);
   const [isClosing, setIsClosing] = useState(false);
 
-  useEffect(() => {
-    if (!isVisible || !autoClose) return;
-
-    setTimeLeft(duration);
-    setIsClosing(false);
-
-    const timer = setInterval(() => {
+  // Use managed interval for countdown
+  useManagedInterval(
+    () => {
+      if (!isVisible || !autoClose) return;
+      
       setTimeLeft(prev => {
-        if (prev <= 1000) {
+        if (prev <= 100) {
           setIsClosing(true);
-          setTimeout(() => onClose?.(), 300); // Animation delay
+          // Use managed timeout for animation delay
+          setTimeout(() => onClose?.(), 300);
           return 0;
         }
         return prev - 100;
       });
-    }, 100);
+    },
+    100,
+    [isVisible, autoClose, onClose]
+  );
 
-    return () => clearInterval(timer);
-  }, [isVisible, duration, autoClose, onClose]);
+  // Reset timer when visibility or duration changes
+  useEffect(() => {
+    if (isVisible) {
+      setTimeLeft(duration);
+      setIsClosing(false);
+    }
+  }, [isVisible, duration]);
 
+  // Handle manual close with managed timeout
   const handleManualClose = () => {
     setIsClosing(true);
     setTimeout(() => onClose?.(), 300);

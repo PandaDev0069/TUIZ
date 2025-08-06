@@ -3,11 +3,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { useConfirmation } from '../hooks/useConfirmation';
 import ConfirmationModal from './ConfirmationModal';
 import { apiConfig } from '../utils/apiConfig';
+import { useManagedTimeout } from '../utils/timerManager';
 import './profileSettingsModal.css';
 
 const ProfileSettingsModal = ({ isOpen, onClose }) => {
   const { user, apiCall, refreshUser } = useAuth();
   const { showConfirmation, confirmationProps } = useConfirmation();
+  const managedTimeout = useManagedTimeout();
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
@@ -35,7 +37,7 @@ const ProfileSettingsModal = ({ isOpen, onClose }) => {
   // Helper function to show messages
   const showMessage = (type, text) => {
     setMessage({ type, text });
-    setTimeout(() => {
+    managedTimeout.setTimeout(() => {
       setMessage({ type: '', text: '' });
     }, 5000); // Clear message after 5 seconds
   };

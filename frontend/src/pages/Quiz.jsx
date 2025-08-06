@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useManagedInterval } from "../utils/timerManager";
 import socket from "../socket";
 import IntermediateScoreboard from "../components/IntermediateScoreboard";
 import QuestionRenderer from "../components/quiz/QuestionRenderer";
@@ -101,11 +102,11 @@ function Quiz() {
     };
   }, [name, room, navigate]);
 
-  // Timer effect for questions
-  useEffect(() => {
-    if (!question || selected !== null || timer <= 0 || showExplanation) return;
-
-    const interval = setInterval(() => {
+  // Timer effect for questions - using managed interval
+  useManagedInterval(
+    () => {
+      if (!question || selected !== null || timer <= 0 || showExplanation) return;
+      
       setTimer(prev => {
         if (prev <= 1) {
           // Time's up, auto-submit null answer
@@ -114,26 +115,26 @@ function Quiz() {
         }
         return prev - 1;
       });
-    }, 1000);
+    },
+    1000,
+    [question, selected, timer, showExplanation]
+  );
 
-    return () => clearInterval(interval);
-  }, [question, selected, timer, showExplanation]);
-
-  // Timer effect for explanations
-  useEffect(() => {
-    if (!showExplanation || explanationTimer <= 0) return;
-
-    const interval = setInterval(() => {
+  // Timer effect for explanations - using managed interval
+  useManagedInterval(
+    () => {
+      if (!showExplanation || explanationTimer <= 0) return;
+      
       setExplanationTimer(prev => {
         if (prev <= 1) {
           return 0;
         }
         return prev - 1;
       });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [showExplanation, explanationTimer]);
+    },
+    1000,
+    [showExplanation, explanationTimer]
+  );
 
   const handleAnswer = (index) => {
     if (selected !== null) return; // Prevent multiple selections
