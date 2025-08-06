@@ -4,9 +4,9 @@
 const gameConfig = {
   // Points and scoring configuration
   points: {
-    base: 1000,      // Maximum points possible per question
+    base: 100,       // Base points per question (reasonable default)
     incorrect: 0,    // Points for wrong answers
-    // Question type multipliers
+    // Question type multipliers (no longer used - handled by new scoring system)
     multipliers: {
       'multiple_choice_4': 1.0,    // Standard 4-option questions
       'multiple_choice_2': 0.8,    // 2-option questions (easier)
@@ -83,7 +83,7 @@ const gameConfig = {
     // Scoring
     pointCalculation: 'time-bonus', // 'fixed', 'time-bonus', 'streak-bonus'
     streakBonus: true,
-    basePoints: 1000,
+    basePoints: 100,
     
     // Display Options
     showProgress: true,

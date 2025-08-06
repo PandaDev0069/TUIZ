@@ -7,6 +7,7 @@ import PreviewHostControls from '../components/PreviewHostControls';
 import PreviewModeSelector from '../components/PreviewModeSelector';
 import PreviewExplanationDisplay from '../components/PreviewExplanationDisplay';
 import PostQuestionDisplay from '../components/quiz/PostQuestionDisplay/PostQuestionDisplay';
+import { calculateScore } from '../utils/scoringSystem';
 import { showSuccess, showError } from '../utils/toast';
 import './quizPreview.css';
 
@@ -231,23 +232,22 @@ function QuizPreview() {
   const updatePlayerScore = (playerId, isCorrect, responseTime) => {
     setPlayerScores(prev => {
       const currentPlayer = prev[playerId];
-      const basePoints = currentQuestion.points || 100;
-      let pointsEarned = 0;
       
       if (isCorrect) {
-        // Calculate points based on settings
-        if (settings.game_settings?.pointCalculation === 'time-bonus') {
-          const timeBonus = Math.floor((timer / (currentQuestion.timeLimit || 30)) * basePoints * 0.5);
-          pointsEarned = basePoints + timeBonus;
-        } else {
-          pointsEarned = basePoints;
-        }
+        // Use the new advanced scoring system
+        const basePoints = currentQuestion.points || 100;
+        const timeLimit = currentQuestion.timeLimit || 30;
+        const currentStreak = currentPlayer.streak || 0;
         
-        // Streak bonus
-        const newStreak = currentPlayer.streak + 1;
-        if (settings.game_settings?.streakBonus && newStreak > 1) {
-          pointsEarned += Math.floor(pointsEarned * 0.1 * Math.min(newStreak, 5));
-        }
+        const pointsEarned = calculateScore({
+          basePoints,
+          streakCount: currentStreak,
+          timeTaken: responseTime,
+          timeLimit,
+          gameSettings: settings.game_settings || {}
+        });
+        
+        const newStreak = currentStreak + 1;
         
         return {
           ...prev,

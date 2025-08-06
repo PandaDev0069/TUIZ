@@ -188,26 +188,15 @@ class GameSettingsService {
 
   /**
    * Calculate points for a question based on settings
+   * Note: With the new advanced scoring system, this should return raw base points.
+   * All bonuses (time, streak) are calculated at runtime by scoringSystem.js
    * @param {Object} question - Question object
    * @param {Object} gameSettings - Game settings
-   * @returns {Number} Calculated points
+   * @returns {Number} Raw base points (no multipliers applied)
    */
   static calculateQuestionPoints(question, gameSettings) {
-    let basePoints = question.points || gameSettings.basePoints;
-
-    switch (gameSettings.pointCalculation) {
-      case 'time-bonus':
-        // Add 50% bonus for time-based scoring
-        return Math.round(basePoints * 1.5);
-      
-      case 'streak-bonus':
-        // Keep base points, streak bonus applied at runtime
-        return basePoints;
-      
-      case 'fixed':
-      default:
-        return basePoints;
-    }
+    // Return raw base points - let the new scoring system handle all bonuses
+    return question.points || gameSettings.basePoints || 100;
   }
 
   /**

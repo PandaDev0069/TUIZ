@@ -11,6 +11,7 @@ const roomManager = require('./utils/RoomManager');
 const QuestionService = require('./services/QuestionService');
 const QuestionFormatAdapter = require('./adapters/QuestionFormatAdapter');
 const GameSettingsService = require('./services/GameSettingsService');
+const { calculateGameScore } = require('./utils/scoringSystem');
 const { validateStorageConfig } = require('./utils/storageConfig');
 const activeGameUpdater = require('./utils/ActiveGameUpdater');
 
@@ -1446,48 +1447,39 @@ io.on('connection', (socket) => {
       // Validate the answer
       const isCorrect = selectedOption === currentQuestion.correctIndex;
       
-      // Calculate points using game settings
+      // Calculate points using the new advanced scoring system
       const gameFlowConfig = activeGame.gameFlowConfig || {};
-      const pointCalculation = gameFlowConfig.pointCalculation || 'fixed';
+      const scoreResult = calculateGameScore({
+        question: currentQuestion,
+        gameSettings: gameFlowConfig,
+        player: player,
+        timeTaken: timeTaken,
+        isCorrect: isCorrect
+      });
       
-      let points = 0;
+      const points = scoreResult.points;
+      
       if (isCorrect) {
-        // Base points from question or game settings
-        const basePoints = currentQuestion.points || gameFlowConfig.basePoints || 1000;
+        // Update player streak and score
+        player.streak = scoreResult.newStreak;
+        player.score += points;
         
-        switch (pointCalculation) {
-          case 'time-bonus':
-            // Time bonus: full points if answered quickly
-            const timeBonus = Math.max(0, basePoints - (timeTaken * 10));
-            points = Math.round(timeBonus);
-            break;
-          
-          case 'streak-bonus':
-            // Streak bonus: extra points for consecutive correct answers
-            const streakMultiplier = gameFlowConfig.streakBonus ? (1 + (player.streak * 0.1)) : 1;
-            points = Math.round(basePoints * streakMultiplier);
-            break;
-          
-          case 'fixed':
-          default:
-            points = basePoints;
-            break;
+        // Log detailed breakdown for debugging
+        if (scoreResult.breakdown) {
+          const breakdown = scoreResult.breakdown;
+          console.log(`✅ ${player.name}: Correct! Score breakdown:`, {
+            base: breakdown.basePoints,
+            streak: breakdown.streakBonus,
+            time: breakdown.timeBonus,
+            total: breakdown.finalScore,
+            bonuses: breakdown.bonusesEnabled
+          });
         }
-        
-        // Additional streak bonus if enabled
-        if (gameFlowConfig.streakBonus && player.streak > 0) {
-          points += player.streak * 100;
-        }
-        
-        // Update player streak
-        player.streak++;
       } else {
         // Reset streak on wrong answer
         player.streak = 0;
+        console.log(`❌ ${player.name}: Wrong answer - streak reset`);
       }
-      
-      // Update player score
-      player.score += points;
       
       // Record the answer
       const answerData = {
@@ -1502,8 +1494,6 @@ io.on('connection', (socket) => {
       };
       
       activeGame.currentAnswers.push(answerData);
-      
-      console.log(`${isCorrect ? '✅' : '❌'} ${player.name}: ${isCorrect ? 'Correct' : 'Wrong'} (+${points} points, streak: ${player.streak})`);
       
       // Send confirmation to player
       socket.emit('answerResult', {

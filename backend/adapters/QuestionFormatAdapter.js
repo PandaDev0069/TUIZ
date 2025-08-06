@@ -179,22 +179,17 @@ class QuestionFormatAdapter {
   }
 
   /**
-   * Calculate question points based on settings and question type
+   * Calculate question points - now simplified to use raw points
+   * The advanced scoring system in scoringSystem.js handles all bonuses
    * @param {Object} dbQuestion - Database question
    * @param {Object} gameSettings - Game settings
    * @param {string} questionType - Game question type
-   * @returns {number} - Points for this question
+   * @returns {number} - Base points for this question
    */
   calculatePoints(dbQuestion, gameSettings, questionType) {
-    const basePoints = dbQuestion.points || gameConfig.points.base;
-    
-    // Apply question type multiplier
-    const typeMultiplier = gameConfig.points.multipliers[questionType] || 1.0;
-    
-    // Apply game settings multiplier if time-bonus is enabled
-    const settingsMultiplier = gameSettings.pointCalculation === 'time-bonus' ? 1.2 : 1.0;
-    
-    return Math.round(basePoints * typeMultiplier * settingsMultiplier);
+    // Return the raw points from the question or use game defaults
+    // The new scoring system handles all multipliers and bonuses
+    return dbQuestion.points || gameSettings.basePoints || gameConfig.points.base;
   }
 
   /**
