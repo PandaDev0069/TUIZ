@@ -4,7 +4,7 @@ import { useManagedInterval } from "../utils/timerManager";
 import socket from "../socket";
 import IntermediateScoreboard from "../components/IntermediateScoreboard";
 import QuestionRenderer from "../components/quiz/QuestionRenderer";
-import PostQuestionDisplay from "../components/quiz/PostQuestionDisplay";
+import UnifiedPostQuestion from "../components/quiz/UnifiedPostQuestion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import "./quiz.css";
 
@@ -220,11 +220,9 @@ function Quiz() {
     };
 
     return (
-      <PostQuestionDisplay
+      <UnifiedPostQuestion
         explanation={explanation}
         leaderboard={leaderboard}
-        showExplanation={!!explanation.title || !!explanation.text || !!explanation.image_url}
-        showLeaderboard={!!leaderboard}
         explanationDuration={explanationTimer * 1000}
         onComplete={handleExplanationComplete}
         gameSettings={{}}
