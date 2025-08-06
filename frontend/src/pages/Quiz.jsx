@@ -51,6 +51,21 @@ function Quiz() {
       
       setQuestionScore(0);
       setShowIntermediateScores(false);
+      
+      // Auto-scroll to quiz content on mobile when new question arrives
+      if (window.innerWidth <= 768) {
+        setTimeout(() => {
+          console.log('📱 Auto-scrolling to new quiz question');
+          const quizContent = document.querySelector('.quiz-question-content-wrapper');
+          if (quizContent) {
+            quizContent.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start',
+              inline: 'nearest'
+            });
+          }
+        }, 500); // Delay to allow DOM update and image loading
+      }
     });
 
     // Handle answer result from server
@@ -80,6 +95,21 @@ function Quiz() {
       
       // Hide question interface during explanation
       setQuestion(null);
+      
+      // Auto-scroll to explanation on mobile
+      if (window.innerWidth <= 768) {
+        setTimeout(() => {
+          console.log('📱 Auto-scrolling to explanation');
+          const explanationContent = document.querySelector('.explanation-content, .quiz-explanation');
+          if (explanationContent) {
+            explanationContent.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start',
+              inline: 'nearest'
+            });
+          }
+        }, 300);
+      }
     });
 
     // Handle intermediate scoreboard

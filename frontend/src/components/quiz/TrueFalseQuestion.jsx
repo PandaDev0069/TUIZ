@@ -49,7 +49,7 @@ const TrueFalseQuestion = ({
         <h2 className="quiz-question-text">{question.question}</h2>
       </div>
       
-      <div className="quiz-true-false-container">
+      <div className="quiz-true-false-container" id="quiz-options-focus-target">
         <AnswerOption
           option={getEnhancedTrueOption()}
           index={0}

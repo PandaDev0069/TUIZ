@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import MultipleChoiceQuestion from './MultipleChoiceQuestion';
 import TrueFalseQuestion from './TrueFalseQuestion';
 import './QuestionRenderer.css';
@@ -13,6 +13,59 @@ const QuestionRenderer = ({
   showTimer = true 
 }) => {
   if (!question) return null;
+
+  // Refs for auto-scroll functionality
+  const questionContentRef = useRef(null);
+  const optionsRef = useRef(null);
+
+  // Auto-scroll to options when new question loads
+  useEffect(() => {
+    if (question && questionContentRef.current) {
+      // Small delay to ensure DOM is fully rendered
+      const scrollTimeout = setTimeout(() => {
+        // Check if this is a mobile device
+        const isMobile = window.innerWidth <= 768;
+        
+        if (isMobile) {
+          // On mobile, we want to scroll so the options are visible
+          // First, try to get the options container
+          const optionsContainer = questionContentRef.current.querySelector('.quiz-options-container, .quiz-true-false-container');
+          
+          if (optionsContainer) {
+            console.log('📱 Auto-scrolling to quiz options on mobile');
+            
+            // Calculate ideal scroll position
+            const containerRect = optionsContainer.getBoundingClientRect();
+            const questionRect = questionContentRef.current.getBoundingClientRect();
+            
+            // Scroll to show the top of options with some padding
+            const targetScrollTop = window.pageYOffset + containerRect.top - window.innerHeight * 0.3;
+            
+            window.scrollTo({
+              top: Math.max(0, targetScrollTop),
+              behavior: 'smooth'
+            });
+          } else {
+            // Fallback: scroll to the question content wrapper
+            questionContentRef.current.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+              inline: 'nearest'
+            });
+          }
+        } else {
+          // On desktop, center the question content
+          questionContentRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+        }
+      }, 300); // Delay to allow image loading and layout
+
+      return () => clearTimeout(scrollTimeout);
+    }
+  }, [question?.id]); // Trigger when question ID changes
 
   const getQuestionTypeComponent = () => {
     switch (question.type) {
@@ -111,7 +164,7 @@ const QuestionRenderer = ({
         </span>
       </div>
 
-      <div className="quiz-question-content-wrapper">
+      <div className="quiz-question-content-wrapper" ref={questionContentRef}>
         {getQuestionTypeComponent()}
       </div>
     </div>

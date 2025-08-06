@@ -1,4 +1,4 @@
-/* Mobile-First Quiz Page Styles */
+/* Mobile-First Quiz Page Styles with Auto-Scroll Support */
 .quiz-page {
   max-width: 100%;
   margin: 0 auto;
@@ -6,6 +6,25 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* Enhanced scroll behavior for auto-scroll */
+  scroll-behavior: smooth;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Page container with mobile keyboard support */
+.page-container {
+  scroll-behavior: smooth;
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Quiz content wrapper for better scroll targeting */
+.quiz-question-content-wrapper {
+  scroll-margin-top: 80px;
+  scroll-margin-bottom: 50px;
 }
 
 .quiz-header {
@@ -210,10 +229,32 @@
   }
 }
 
-/* Mobile responsive improvements */
+/* Mobile responsive improvements with auto-scroll support */
 @media (max-width: 768px) {
   .quiz-page {
     padding: 0.5rem;
+    /* Enhanced mobile scrolling */
+    scroll-padding-top: 100px;
+    scroll-padding-bottom: 50px;
+  }
+
+  /* Better auto-scroll behavior for mobile */
+  .page-container {
+    scroll-padding-top: 80px;
+    scroll-padding-bottom: 100px;
+    /* Ensure smooth scrolling on mobile */
+    overscroll-behavior: contain;
+  }
+
+  /* Enhanced scroll margins for quiz components */
+  .quiz-question-content-wrapper {
+    scroll-margin-top: 100px;
+    scroll-margin-bottom: 80px;
+  }
+
+  #quiz-options-focus-target {
+    scroll-margin-top: 140px;
+    scroll-margin-bottom: 100px;
   }
 
   .quiz-header {

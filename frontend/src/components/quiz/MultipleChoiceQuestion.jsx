@@ -47,7 +47,7 @@ const MultipleChoiceQuestion = ({
         <h2 className="quiz-question-text">{question.question}</h2>
       </div>
       
-      <div className={`quiz-options-container ${getLayoutClass()}`}>
+      <div className={`quiz-options-container ${getLayoutClass()}`} id="quiz-options-focus-target">
         {question.options.map((opt, i) => {
           const optionImageUrl = question._dbData?.answers?.[i]?.image_url;
           

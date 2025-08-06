@@ -123,7 +123,7 @@ button:active {
   }
 }
 
-/* Mobile keyboard support */
+/* Mobile keyboard support - Enhanced */
 @media (max-width: 768px) {
   .page-container {
     /* Ensure proper scrolling on mobile */
@@ -133,6 +133,8 @@ button:active {
     -webkit-overflow-scrolling: touch;
     /* Smooth scrolling for better UX */
     scroll-behavior: smooth;
+    /* Ensure container can accommodate keyboard */
+    padding-bottom: 200px;
   }
 
   .card {
@@ -140,12 +142,15 @@ button:active {
     max-height: none;
     margin: auto;
     /* Add padding for better keyboard experience */
-    margin-bottom: 100px; /* Extra space for keyboard */
+    margin-bottom: 150px; /* Extra space for keyboard */
     /* Ensure card stays visible during keyboard interaction */
     position: relative;
     z-index: 1;
+    /* Better positioning for mobile keyboard scenarios */
+    transform-origin: center top;
   }
 
+  /* Enhanced input styling for mobile keyboard interaction */
   input {
     /* Prevent zoom on iOS Safari */
     font-size: 16px;
@@ -155,22 +160,55 @@ button:active {
     border-radius: 12px;
     /* Better spacing for touch */
     min-height: 50px;
+    /* Ensure inputs are always clickable */
+    position: relative;
+    z-index: 5;
+    /* Better touch target */
+    padding: 1rem;
   }
 
+  /* Enhanced focus states for better mobile visibility */
   input:focus {
     /* Ensure focused inputs have better visibility */
     transform: scale(1.02);
     transition: transform 0.2s ease;
-    /* Add a subtle glow effect */
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+    /* Add a stronger glow effect for better visibility */
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
+    border-color: rgba(255, 255, 255, 0.9);
+    /* Ensure the focused input is always visible */
+    position: relative;
+    z-index: 10;
+    /* Force repaint to ensure visibility */
+    will-change: transform;
   }
 
   /* Handle viewport changes for mobile keyboard */
   .input-group {
-    scroll-margin-top: 100px;
-    scroll-margin-bottom: 100px;
+    scroll-margin-top: 120px; /* Increased for better spacing */
+    scroll-margin-bottom: 120px;
     /* Ensure inputs have enough spacing */
     gap: 1.5rem;
+    /* Better positioning for keyboard scenarios */
+    position: relative;
+    /* Ensure proper stacking */
+    z-index: 2;
+  }
+  
+  /* Special styling for room code input when focused */
+  input[placeholder="ルームコード"]:focus {
+    /* Extra prominent styling for room code input */
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.6);
+    transform: scale(1.03);
+    /* Ensure it stays above other elements */
+    z-index: 15;
+    /* Add subtle animation to draw attention */
+    animation: focusPulse 0.3s ease-in-out;
+  }
+
+  @keyframes focusPulse {
+    0% { transform: scale(1.02); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1.03); }
   }
 
   /* Better button accessibility on mobile */
