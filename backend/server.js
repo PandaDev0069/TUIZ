@@ -567,6 +567,7 @@ const showQuestionExplanation = (gameCode) => {
   const explanationData = {
     questionId: currentQuestion.id,
     questionNumber: activeGame.currentQuestionIndex + 1,
+    totalQuestions: activeGame.questions.length,
     correctAnswer: currentQuestion.correctIndex,
     correctOption: currentQuestion.options[currentQuestion.correctIndex],
     
@@ -577,15 +578,11 @@ const showQuestionExplanation = (gameCode) => {
       image_url: currentQuestion._dbData?.explanation_image_url || currentQuestion.explanation_image_url
     },
     
-    // Leaderboard data (include immediately with explanation)
-    leaderboard: {
-      standings: leaderboard,
-      totalQuestions: activeGame.questions.length,
-      isGameOver: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length,
-      isLastQuestion: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length,
-      correctOption: getCorrectAnswerText(currentQuestion),
-      answerStats: calculateAnswerStatistics(activeGame.currentAnswers, currentQuestion)
-    },
+    // Flattened leaderboard data for consistency with showLeaderboard events
+    standings: leaderboard,
+    isGameOver: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length,
+    isLastQuestion: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length,
+    answerStats: calculateAnswerStatistics(activeGame.currentAnswers, currentQuestion),
     
     // Timing - use explanationTime from settings (converted to ms)
     explanationTime: (gameSettings.explanationTime || 30) * 1000,
@@ -594,6 +591,17 @@ const showQuestionExplanation = (gameCode) => {
   
   // Send explanation with leaderboard to all players immediately
   io.to(gameCode).emit('showExplanation', explanationData);
+  
+  // Send individual player answer data to each player
+  for (const [socketId, player] of activeGame.players) {
+    const playerAnswerData = getCurrentPlayerAnswerData(activeGame.currentAnswers, player.name);
+    if (playerAnswerData) {
+      io.to(socketId).emit('playerAnswerData', {
+        questionId: currentQuestion.id,
+        ...playerAnswerData
+      });
+    }
+  }
   
   // After explanation, proceed to next question (leaderboard already shown during explanation)
   setTimeout(async () => {
@@ -646,6 +654,17 @@ const showIntermediateLeaderboard = (gameCode) => {
   // Send leaderboard to all players immediately
   io.to(gameCode).emit('showLeaderboard', leaderboardData);
   
+  // Send individual player answer data to each player
+  for (const [socketId, player] of activeGame.players) {
+    const playerAnswerData = getCurrentPlayerAnswerData(activeGame.currentAnswers, player.name);
+    if (playerAnswerData) {
+      io.to(socketId).emit('playerAnswerData', {
+        questionId: currentQuestion.id,
+        ...playerAnswerData
+      });
+    }
+  }
+  
   // Auto-advance to next question or end game (only if autoAdvance is enabled)
   if (gameSettings.autoAdvance !== false) {
     setTimeout(async () => {
@@ -665,6 +684,21 @@ const getCorrectAnswerText = (question) => {
     return question.options[correctIndex];
   }
   
+  return null;
+};
+
+// Helper function to get current player answer data
+const getCurrentPlayerAnswerData = (answers, playerName) => {
+  const playerAnswer = answers.find(answer => answer.playerName === playerName);
+  if (playerAnswer) {
+    return {
+      selectedOption: playerAnswer.selectedOption,
+      isCorrect: playerAnswer.isCorrect,
+      points: playerAnswer.points,
+      timeTaken: playerAnswer.timeTaken,
+      answeredAt: playerAnswer.answeredAt
+    };
+  }
   return null;
 };
 

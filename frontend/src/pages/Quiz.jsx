@@ -26,6 +26,7 @@ function Quiz() {
   const [explanationTimer, setExplanationTimer] = useState(0);
   const [answerResult, setAnswerResult] = useState(null);
   const [latestStandings, setLatestStandings] = useState(null); // Store latest leaderboard standings
+  const [currentPlayerAnswerData, setCurrentPlayerAnswerData] = useState(null); // Store current player's answer data for accuracy
 
   useEffect(() => {
     if (!name || !room) {
@@ -43,6 +44,7 @@ function Quiz() {
       setExplanationData(null);
       setAnswerResult(null);
       setLatestStandings(null); // Reset standings for new question
+      setCurrentPlayerAnswerData(null); // Reset answer data for new question
       
       // Use dynamic timer from question or default to 10
       const questionTimer = q.timeLimit ? Math.round(q.timeLimit / 1000) : 10;
@@ -110,6 +112,12 @@ function Quiz() {
       }
     });
 
+    // Handle individual player answer data for accurate status
+    socket.on('playerAnswerData', (data) => {
+      console.log('🎯 Received player answer data:', data);
+      setCurrentPlayerAnswerData(data);
+    });
+
     // Handle intermediate scoreboard - for questions without explanations
     socket.on('showLeaderboard', (data) => {
       console.log('🏆 Received intermediate leaderboard data:', data);
@@ -138,7 +146,7 @@ function Quiz() {
               streak: currentPlayerData.streak,
               rank: currentPlayerData.rank,
               questionScore: questionScore || 0,
-              isCorrect: answerResult?.isCorrect ?? (feedback?.includes('正解') || false)
+              isCorrect: currentPlayerAnswerData?.isCorrect ?? answerResult?.isCorrect ?? (feedback?.includes('正解') || false)
             };
           }
           return { 
@@ -147,7 +155,7 @@ function Quiz() {
             score: score, 
             rank: data.standings.length + 1,
             questionScore: questionScore || 0,
-            isCorrect: answerResult?.isCorrect ?? (feedback?.includes('正解') || false),
+            isCorrect: currentPlayerAnswerData?.isCorrect ?? answerResult?.isCorrect ?? (feedback?.includes('正解') || false),
             streak: streak
           };
         })(),
@@ -184,6 +192,7 @@ function Quiz() {
       socket.off('question');
       socket.off('answerResult');
       socket.off('showExplanation');
+      socket.off('playerAnswerData');
       socket.off('showLeaderboard');
       socket.off('game_over');
     };
@@ -282,14 +291,43 @@ function Quiz() {
         correctOption: explanationData.correctOption,
         answerStats: explanationData.answerStats,
         
-        // Current player data
-        currentPlayer: explanationData.currentPlayer || {
-          name: name,
-          score: score,
-          streak: streak,
-          questionScore: questionScore,
-          isCorrect: answerResult?.isCorrect ?? (feedback?.includes('正解') || false)
-        },
+        // Current player data - prioritize server data over local state
+        currentPlayer: (() => {
+          // First try to get current player from server standings (most accurate)
+          const serverPlayerData = explanationData.standings?.find(p => p.name === name);
+          if (serverPlayerData) {
+            return {
+              ...serverPlayerData,
+              id: serverPlayerData.name,
+              name: serverPlayerData.name,
+              score: serverPlayerData.score,
+              streak: serverPlayerData.streak,
+              rank: serverPlayerData.rank || (explanationData.standings?.findIndex(p => p.name === name) + 1),
+              questionScore: questionScore || 0,
+              isCorrect: currentPlayerAnswerData?.isCorrect ?? answerResult?.isCorrect ?? (feedback?.includes('正解') || false)
+            };
+          }
+          
+          // Fallback to explanationData.currentPlayer if provided
+          if (explanationData.currentPlayer) {
+            return {
+              ...explanationData.currentPlayer,
+              questionScore: questionScore || 0,
+              isCorrect: currentPlayerAnswerData?.isCorrect ?? answerResult?.isCorrect ?? (feedback?.includes('正解') || false)
+            };
+          }
+          
+          // Final fallback to local state (least accurate)
+          return {
+            id: name,
+            name: name,
+            score: score,
+            streak: streak,
+            rank: (explanationData.standings?.length || 0) + 1,
+            questionScore: questionScore || 0,
+            isCorrect: currentPlayerAnswerData?.isCorrect ?? answerResult?.isCorrect ?? (feedback?.includes('正解') || false)
+          };
+        })(),
         
         // Standings data
         standings: explanationData.standings || (latestStandings && latestStandings.map((player, index) => ({

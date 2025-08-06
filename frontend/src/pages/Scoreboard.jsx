@@ -83,12 +83,6 @@ function Scoreboard() {
     }
   };
 
-  const getStreakEmoji = (streak) => {
-    if (streak >= 5) return '🔥';
-    if (streak >= 3) return '✨';
-    return '';
-  };
-
   const getScoreColor = (position) => {
     switch (position) {
       case 0: return '#FFD700'; // Gold
@@ -178,7 +172,7 @@ function Scoreboard() {
                 <span className="position">#{index + 4}</span>
                 <span className="medal">{getMedalEmoji(index + 3)}</span>
                 <span className="name">
-                  {player.name} {getStreakEmoji(player.streak)}
+                  {player.name}
                 </span>
                 {player.rankChange && (
                   <span className="rank-change">{getRankChangeIcon(player.rankChange)}</span>
