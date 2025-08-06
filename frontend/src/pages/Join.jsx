@@ -24,7 +24,9 @@ function Join() {
   }, [isAuthenticated, user]);
 
   useEffect(() => {
-    console.log('Socket connected:', socket.connected);
+    if (import.meta.env.DEV) {
+      console.log('Socket connected:', socket.connected);
+    }
     
     socket.on('error', ({ message }) => {
       setError(message);
@@ -63,7 +65,9 @@ function Join() {
       
       const isKeyboardOpen = isKeyboardOpen1 || isKeyboardOpen2 || isKeyboardOpen3;
       
-      console.log(`📏 Resize - Initial: ${initialViewportHeight}, Current: ${currentHeight}, Diff: ${heightDifference}, Keyboard: ${isKeyboardOpen}`);
+      if (import.meta.env.DEV) {
+        console.log(`📏 Resize - Initial: ${initialViewportHeight}, Current: ${currentHeight}, Diff: ${heightDifference}, Keyboard: ${isKeyboardOpen}`);
+      }
       
       if (isKeyboardOpen) {
         // Delay to ensure the keyboard is fully shown and DOM is updated
@@ -72,7 +76,9 @@ function Join() {
           const isRoomInput = activeElement === roomInputRef.current;
           const isNameInput = activeElement === nameInputRef.current;
           
-          console.log(`⌨️ Keyboard open - Active element: ${isRoomInput ? 'Room Code' : isNameInput ? 'Name' : 'Other'}`);
+          if (import.meta.env.DEV) {
+            console.log(`⌨️ Keyboard open - Active element: ${isRoomInput ? 'Room Code' : isNameInput ? 'Name' : 'Other'}`);
+          }
           
           if (activeElement && (isNameInput || isRoomInput)) {
             // Method 1: Standard scrollIntoView
@@ -85,7 +91,9 @@ function Join() {
             // Method 2: Manual scroll calculation (more reliable for room input)
             setTimeout(() => {
               if (isRoomInput) {
-                console.log(`🎯 Extra scroll for room code input`);
+                if (import.meta.env.DEV) {
+                  console.log(`🎯 Extra scroll for room code input`);
+                }
                 const rect = activeElement.getBoundingClientRect();
                 const absoluteElementTop = rect.top + window.pageYOffset;
                 const targetPosition = absoluteElementTop - (window.innerHeight * 0.4);
@@ -140,7 +148,9 @@ function Join() {
     // For mobile devices, scroll the input into view when focused
     if (window.innerWidth <= 768) {
       const isRoomInput = inputRef === roomInputRef;
-      console.log(`📱 Mobile input focus: ${isRoomInput ? 'Room Code' : 'Name'} input`);
+      if (import.meta.env.DEV) {
+        console.log(`📱 Mobile input focus: ${isRoomInput ? 'Room Code' : 'Name'} input`);
+      }
       
       // Immediate scroll for better responsiveness
       if (inputRef.current) {
@@ -154,14 +164,18 @@ function Join() {
       // Additional delayed scroll to handle keyboard opening
       setTimeout(() => {
         if (inputRef.current) {
-          console.log(`🔄 Delayed scroll for ${isRoomInput ? 'Room Code' : 'Name'} input`);
+          if (import.meta.env.DEV) {
+            console.log(`🔄 Delayed scroll for ${isRoomInput ? 'Room Code' : 'Name'} input`);
+          }
           
           if (isRoomInput) {
             // Special handling for room code input - scroll more aggressively
             const elementRect = inputRef.current.getBoundingClientRect();
             const targetScrollTop = window.pageYOffset + elementRect.top - window.innerHeight * 0.35;
             
-            console.log(`📍 Room code scroll target: ${targetScrollTop}, current: ${window.pageYOffset}`);
+            if (import.meta.env.DEV) {
+              console.log(`📍 Room code scroll target: ${targetScrollTop}, current: ${window.pageYOffset}`);
+            }
             
             window.scrollTo({
               top: Math.max(0, targetScrollTop),
@@ -187,11 +201,15 @@ function Join() {
     }
     
     setError("");
-    console.log('Attempting to join game:', room, 'with name:', name);
+    if (import.meta.env.DEV) {
+      console.log('Attempting to join game:', room, 'with name:', name);
+    }
     
     // Set up listener before emitting
     socket.once('joinedGame', ({ gameCode, playerCount, gameStatus, player }) => {
-      console.log('Join successful! Game:', gameCode, 'Player:', player, 'Total Players:', playerCount);
+      if (import.meta.env.DEV) {
+        console.log('Join successful! Game:', gameCode, 'Player:', player, 'Total Players:', playerCount);
+      }
       
       // Pass the correct player count information to WaitingRoom
       navigate('/waiting', { 
@@ -212,7 +230,9 @@ function Join() {
       userId: isAuthenticated ? user?.id : null
     };
     
-    console.log('Join data:', joinData);
+    if (import.meta.env.DEV) {
+      console.log('Join data:', joinData);
+    }
     socket.emit('joinGame', joinData);
   };
 

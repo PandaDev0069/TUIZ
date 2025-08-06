@@ -74,7 +74,9 @@ function WaitingRoom() {
       try {
         socket.emit('getPlayerList', { gameCode });
       } catch (error) {
-        console.error('Error requesting player list:', error);
+        if (import.meta.env.DEV) {
+          console.error('Error requesting player list:', error);
+        }
       }
     })
 
@@ -123,7 +125,9 @@ function WaitingRoom() {
 
     // Cleanup listeners
     return () => {
-      console.log('🎮 WaitingRoom: Cleaning up socket listeners');
+      if (import.meta.env.DEV) {
+        console.log('🎮 WaitingRoom: Cleaning up socket listeners');
+      }
       socket.off('joinedGame')
       socket.off('playerList')
       socket.off('playerJoined')

@@ -1,6 +1,10 @@
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 
+// Environment detection for logging
+const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
+const isLocalhost = process.env.IS_LOCALHOST === 'true' || !process.env.NODE_ENV;
+
 // Supabase configuration
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
@@ -64,6 +68,7 @@ class AuthMiddleware {
         });
 
       if (profileError) {
+        // Always log profile creation errors as they're critical
         console.error('Failed to create user profile:', profileError);
         // Don't fail the registration, profile can be created later
       }
@@ -75,6 +80,7 @@ class AuthMiddleware {
       });
 
       if (sessionError) {
+        // Always log session errors as they're critical
         console.error('Failed to generate session:', sessionError);
       }
 
@@ -131,16 +137,20 @@ class AuthMiddleware {
       
       return result;
     } catch (error) {
-      console.log('❌ Token verification failed:', error.message);
+      if (isDevelopment || isLocalhost) {
+        console.log('❌ Token verification failed:', error.message);
+      }
       
       // Fallback to manual JWT verification using Supabase JWT secret
       if (supabaseJwtSecret) {
         try {
           const decoded = jwt.verify(token, supabaseJwtSecret);
-          console.log('✅ Manual JWT verification successful:', {
-            userId: decoded.sub,
-            email: decoded.email
-          });
+          if (isDevelopment || isLocalhost) {
+            console.log('✅ Manual JWT verification successful:', {
+              userId: decoded.sub,
+              email: decoded.email
+            });
+          }
           
           const fallbackResult = {
             success: true,
@@ -159,7 +169,9 @@ class AuthMiddleware {
           
           return fallbackResult;
         } catch (jwtError) {
-          console.log('❌ Manual JWT verification failed:', jwtError.message);
+          if (isDevelopment || isLocalhost) {
+            console.log('❌ Manual JWT verification failed:', jwtError.message);
+          }
           throw new Error('Token verification failed: ' + jwtError.message);
         }
       }
@@ -217,6 +229,7 @@ class AuthMiddleware {
           .single();
 
         if (createError) {
+          // Always log profile creation errors as they're critical
           console.error('Failed to create user profile:', createError);
           return res.status(500).json({ 
             success: false, 
@@ -234,6 +247,7 @@ class AuthMiddleware {
 
       next();
     } catch (error) {
+      // Always log authentication errors as they're security-related
       console.error('Authentication error:', error);
       return res.status(403).json({ 
         success: false, 
@@ -265,7 +279,9 @@ class AuthMiddleware {
         }
       } catch (error) {
         // Invalid token, but we don't reject the request
-        console.log('Optional auth failed:', error.message);
+        if (isDevelopment || isLocalhost) {
+          console.log('Optional auth failed:', error.message);
+        }
       }
     }
 

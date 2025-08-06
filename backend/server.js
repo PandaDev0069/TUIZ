@@ -30,28 +30,39 @@ const authHelper = new SupabaseAuthHelper(db.supabaseAdmin);
 // Initialize cleanup scheduler
 const cleanupScheduler = new CleanupScheduler(db);
 
+// Environment detection for logging
+const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
+const isLocalhost = process.env.IS_LOCALHOST === 'true' || !process.env.NODE_ENV;
+
 // Test database connection and validate storage configuration on startup
 (async () => {
   try {
     const isConnected = await db.testConnection();
     if (isConnected) {
-      console.log('✅ Database connected successfully');
+      if (isDevelopment || isLocalhost) {
+        console.log('✅ Database connected successfully');
+      }
       
       // Start cleanup scheduler after successful database connection
       cleanupScheduler.start();
     } else {
+      // Always log connection failures as they're critical
       console.error('❌ Database connection failed');
     }
     
     // Validate storage configuration
-    console.log('\n🔍 Validating storage configuration...');
+    if (isDevelopment || isLocalhost) {
+      console.log('\n🔍 Validating storage configuration...');
+    }
     const storageValidation = validateStorageConfig();
     
     if (!storageValidation.isValid) {
+      // Always log configuration issues as they're critical
       console.error('\n❌ Storage configuration issues detected. Please check your .env file.');
     }
     
   } catch (error) {
+    // Always log startup errors as they're critical
     console.error('❌ Startup validation error:', error);
   }
 })();
@@ -87,7 +98,9 @@ app.use(express.urlencoded({
 // Middleware to handle payload size errors
 app.use((error, req, res, next) => {
   if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
-    console.error('Bad JSON body:', error.message);
+    if (isDevelopment || isLocalhost) {
+      console.error('Bad JSON body:', error.message);
+    }
     return res.status(400).json({ 
       error: 'Invalid JSON format',
       message: 'Request body contains invalid JSON' 
@@ -95,7 +108,9 @@ app.use((error, req, res, next) => {
   }
   
   if (error.type === 'entity.too.large') {
-    console.error('Payload too large:', error.message);
+    if (isDevelopment || isLocalhost) {
+      console.error('Payload too large:', error.message);
+    }
     return res.status(413).json({ 
       error: 'Payload too large',
       message: 'Request payload is too large. Please reduce file sizes or split the request.',
@@ -505,9 +520,12 @@ const socketAllowedOrigins = [
   /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:5173$/ // Allow 172.16-31.x.x network
 ];
 
-console.log('🔌 Socket.IO CORS Configuration:');
-console.log('  Environment SOCKET_CORS_ORIGIN:', process.env.SOCKET_CORS_ORIGIN || 'Not set');
-console.log('  Socket origins include Vercel domain: ✅');
+// Only log Socket.IO configuration in development
+if (isDevelopment || isLocalhost) {
+  console.log('🔌 Socket.IO CORS Configuration:');
+  console.log('  Environment SOCKET_CORS_ORIGIN:', process.env.SOCKET_CORS_ORIGIN || 'Not set');
+  console.log('  Socket origins include Vercel domain: ✅');
+}
 
 const io = new Server(server, {
     cors: {
@@ -541,27 +559,37 @@ const checkForQuestionCompletion = (gameCode) => {
   
   // If all players answered
   if (allPlayersAnswered) {
-    console.log(`📝 All players answered question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
+    if (isDevelopment || isLocalhost) {
+      console.log(`📝 All players answered question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
+    }
     
     // Show immediate answer feedback first
     setTimeout(async () => {
-      // Debug the explanation check
-      console.log(`🔍 Checking explanation for question ${activeGame.currentQuestionIndex + 1}:
-      gameSettings.showExplanations: ${gameSettings.showExplanations}
-      question.explanation_title: ${currentQuestion.explanation_title}
-      question.explanation_text: ${currentQuestion.explanation_text}
-      question.explanation_image_url: ${currentQuestion.explanation_image_url}
-      question._dbData: ${JSON.stringify(currentQuestion._dbData)}`);
+      // Debug the explanation check - only in development
+      if (isDevelopment || isLocalhost) {
+        console.log(`🔍 Checking explanation for question ${activeGame.currentQuestionIndex + 1}:
+        gameSettings.showExplanations: ${gameSettings.showExplanations}
+        question.explanation_title: ${currentQuestion.explanation_title}
+        question.explanation_text: ${currentQuestion.explanation_text}
+        question.explanation_image_url: ${currentQuestion.explanation_image_url}
+        question._dbData: ${JSON.stringify(currentQuestion._dbData)}`);
+      }
       
       const shouldShowExpl = GameSettingsService.shouldShowExplanation(currentQuestion, gameSettings);
-      console.log(`🔍 Should show explanation: ${shouldShowExpl}`);
+      if (isDevelopment || isLocalhost) {
+        console.log(`🔍 Should show explanation: ${shouldShowExpl}`);
+      }
       
       // Check if we should show explanation
       if (shouldShowExpl) {
-        console.log(`💡 Showing explanation for question ${activeGame.currentQuestionIndex + 1}`);
+        if (isDevelopment || isLocalhost) {
+          console.log(`💡 Showing explanation for question ${activeGame.currentQuestionIndex + 1}`);
+        }
         showQuestionExplanation(gameCode);
       } else if (gameSettings.showLeaderboard) {
-        console.log(`🏆 Showing intermediate leaderboard after question ${activeGame.currentQuestionIndex + 1}`);
+        if (isDevelopment || isLocalhost) {
+          console.log(`🏆 Showing intermediate leaderboard after question ${activeGame.currentQuestionIndex + 1}`);
+        }
         showIntermediateLeaderboard(gameCode);
       } else {
         // No explanation or leaderboard, proceed to next question
@@ -581,7 +609,9 @@ const showQuestionExplanation = (gameCode) => {
   const currentQuestion = activeGame.questions[activeGame.currentQuestionIndex];
   const gameSettings = activeGame.game_settings || {};
   
-  console.log(`💡 Showing explanation for question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
+  if (isDevelopment || isLocalhost) {
+    console.log(`💡 Showing explanation for question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
+  }
   
   // Calculate current standings for leaderboard
   const leaderboard = Array.from(activeGame.players.values())
@@ -639,7 +669,9 @@ const showQuestionExplanation = (gameCode) => {
   // After explanation, proceed to next question (leaderboard already shown during explanation)
   setTimeout(async () => {
     // Don't show additional leaderboard after explanation since it's already shown during explanation
-    console.log(`⏭️ Proceeding to next question after explanation for question ${activeGame.currentQuestionIndex + 1}`);
+    if (isDevelopment || isLocalhost) {
+      console.log(`⏭️ Proceeding to next question after explanation for question ${activeGame.currentQuestionIndex + 1}`);
+    }
     await proceedToNextQuestion(gameCode);
   }, explanationData.explanationTime);
 };
@@ -651,7 +683,9 @@ const showIntermediateLeaderboard = (gameCode) => {
   
   const gameSettings = activeGame.game_settings || {};
   
-  console.log(`🏆 Showing intermediate leaderboard for game ${gameCode}`);
+  if (isDevelopment || isLocalhost) {
+    console.log(`🏆 Showing intermediate leaderboard for game ${gameCode}`);
+  }
   
   // Calculate current standings
   const leaderboard = Array.from(activeGame.players.values())
@@ -705,7 +739,9 @@ const showIntermediateLeaderboard = (gameCode) => {
       await proceedToNextQuestion(gameCode);
     }, leaderboardData.displayTime);
   } else {
-    console.log(`⏸️ Manual advance mode - waiting for host to continue`);
+    if (isDevelopment || isLocalhost) {
+      console.log(`⏸️ Manual advance mode - waiting for host to continue`);
+    }
   }
 };
 
@@ -765,13 +801,17 @@ const proceedToNextQuestion = async (gameCode) => {
   
   // Prevent double question sending
   if (activeGame.questionInProgress) {
-    console.log(`⚠️ Question transition already in progress for game ${gameCode}`);
+    if (isDevelopment || isLocalhost) {
+      console.log(`⚠️ Question transition already in progress for game ${gameCode}`);
+    }
     return;
   }
   
   activeGame.questionInProgress = true;
   
-  console.log(`➡️ Proceeding to next question in game ${gameCode}`);
+  if (isDevelopment || isLocalhost) {
+    console.log(`➡️ Proceeding to next question in game ${gameCode}`);
+  }
   
   // Move to next question
   activeGame.currentQuestionIndex++;
@@ -838,7 +878,9 @@ const sendNextQuestion = async (gameCode) => {
     _dbData: question._dbData // Contains explanation data
   });
 
-  console.log(`📋 Sent question ${questionIndex + 1} to game ${gameCode} (${Math.round(question.timeLimit/1000)}s): ${question.question.substring(0, 50)}...`);
+  if (isDevelopment || isLocalhost) {
+    console.log(`📋 Sent question ${questionIndex + 1} to game ${gameCode} (${Math.round(question.timeLimit/1000)}s): ${question.question.substring(0, 50)}...`);
+  }
 };
 
 // Helper function to end game
@@ -884,7 +926,9 @@ const endGame = async (gameCode) => {
   // Send game over event
   io.to(gameCode).emit('game_over', { scoreboard });
 
-  console.log(`🏁 Game ${gameCode} ended. Winner: ${scoreboard[0]?.name || 'No players'}`);
+  if (isDevelopment || isLocalhost) {
+    console.log(`🏁 Game ${gameCode} ended. Winner: ${scoreboard[0]?.name || 'No players'}`);
+  }
 };
 
 // ================================================================
@@ -892,12 +936,16 @@ const endGame = async (gameCode) => {
 // ================================================================
 
 io.on('connection', (socket) => {
-  console.log(`🔌 New user connected: ${socket.id}`);
+  if (isDevelopment || isLocalhost) {
+    console.log(`🔌 New user connected: ${socket.id}`);
+  }
 
   // Create a new game
   socket.on('createGame', async ({ hostId, questionSetId, settings }) => {
     try {
-      console.log(`🎮 Creating game: Host ${hostId}, QuestionSet ${questionSetId}`);
+      if (isDevelopment || isLocalhost) {
+        console.log(`🎮 Creating game: Host ${hostId}, QuestionSet ${questionSetId}`);
+      }
       
       // Extract actual user ID from hostId (remove the temporary prefix)
       const actualHostId = hostId.includes('host_') ? 
@@ -928,9 +976,13 @@ io.on('connection', (socket) => {
               delete questionSetSettings.game_settings;
             }
             
-            console.log(`✅ Retrieved from database - Title: ${gameTitle}`);
+            if (isDevelopment) {
+              console.log(`✅ Retrieved from database - Title: ${gameTitle}`);
+            }
           } else {
-            console.warn(`⚠️ Could not fetch question set: ${qsError?.message || 'Not found'}`);
+            if (isDevelopment) {
+              console.warn(`⚠️ Could not fetch question set: ${qsError?.message || 'Not found'}`);
+            }
             gameTitle = gameTitle || 'クイズゲーム'; // Default fallback title
           }
         } catch (fetchError) {
@@ -992,7 +1044,9 @@ io.on('connection', (socket) => {
         created_at: new Date().toISOString()
       };
       
-      console.log(`🔄 Creating game in database...`);
+      if (isDevelopment) {
+        console.log(`🔄 Creating game in database...`);
+      }
       const dbResult = await db.createGame(gameData);
       
       if (!dbResult.success) {
@@ -1000,7 +1054,9 @@ io.on('connection', (socket) => {
       }
       
       const dbGame = dbResult.game;
-      console.log(`✅ Game created in database with UUID: ${dbGame.id}`);
+      if (isDevelopment) {
+        console.log(`✅ Game created in database with UUID: ${dbGame.id}`);
+      }
       
       // Update the room in RoomManager with the database UUID
       const room = roomManager.getRoom(gameCode);
@@ -1009,7 +1065,9 @@ io.on('connection', (socket) => {
         room.gameUUID = dbGame.id; // Keep explicit reference
         room.roomCode = gameCode; // Keep room code reference
       } else {
-        console.error(`❌ Could not find room ${gameCode} in RoomManager to update gameId`);
+        if (isDevelopment) {
+          console.error(`❌ Could not find room ${gameCode} in RoomManager to update gameId`);
+        }
       }
       
       // Create a memory game object with database reference
@@ -1025,7 +1083,9 @@ io.on('connection', (socket) => {
         dbGame: dbGame // Keep reference to full database object
       };
       
-      console.log(`✅ Game created: ${gameCode} (UUID: ${dbGame.id})`);
+      if (isDevelopment) {
+        console.log(`✅ Game created: ${gameCode} (UUID: ${dbGame.id})`);
+      }
       
       // Store in activeGames for backwards compatibility
       activeGames.set(gameCode, {
@@ -1059,11 +1119,13 @@ io.on('connection', (socket) => {
   // Join an existing game
   socket.on('joinGame', async ({ playerName, gameCode, isAuthenticated = false, userId = null }) => {
     try {
-      console.log(`👤 Join Game Request:
-      Player: ${playerName}
-      Game Code: ${gameCode}
-      Is Authenticated: ${isAuthenticated}
-      User ID: ${userId}`);
+      if (isDevelopment) {
+        console.log(`👤 Join Game Request:
+        Player: ${playerName}
+        Game Code: ${gameCode}
+        Is Authenticated: ${isAuthenticated}
+        User ID: ${userId}`);
+      }
       
       // Find the active game
       const activeGame = activeGames.get(gameCode);
@@ -1081,7 +1143,9 @@ io.on('connection', (socket) => {
       // Check for pending players_cap update from room manager
       const room = roomManager.getRoom(gameCode);
       if (room && room._pendingPlayersCap !== undefined) {
-        console.log(`🔄 Applying pending maxPlayers update: ${activeGame.game_settings?.maxPlayers} → ${room._pendingPlayersCap}`);
+        if (isDevelopment) {
+          console.log(`🔄 Applying pending maxPlayers update: ${activeGame.game_settings?.maxPlayers} → ${room._pendingPlayersCap}`);
+        }
         if (!activeGame.game_settings) activeGame.game_settings = {};
         activeGame.game_settings.maxPlayers = room._pendingPlayersCap;
         delete room._pendingPlayersCap; // Clear the pending update
@@ -1091,11 +1155,15 @@ io.on('connection', (socket) => {
       const maxPlayers = activeGame.game_settings?.maxPlayers || 50;
       
       // Debug logging for game capacity check
-      console.log(`🔍 Game capacity check - Current players: ${activeGame.players.size}, Max players: ${maxPlayers}, Room pending cap: ${room?._pendingPlayersCap}`);
+      if (isDevelopment) {
+        console.log(`🔍 Game capacity check - Current players: ${activeGame.players.size}, Max players: ${maxPlayers}, Room pending cap: ${room?._pendingPlayersCap}`);
+      }
       
       // Check if game is full
       if (activeGame.players.size >= maxPlayers) {
-        console.log(`❌ Game ${gameCode} is full: ${activeGame.players.size}/${maxPlayers}`);
+        if (isDevelopment) {
+          console.log(`❌ Game ${gameCode} is full: ${activeGame.players.size}/${maxPlayers}`);
+        }
         socket.emit('error', { message: 'Game is full' });
         return;
       }

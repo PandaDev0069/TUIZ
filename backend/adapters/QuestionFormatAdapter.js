@@ -1,5 +1,9 @@
 const gameConfig = require('../config/gameConfig');
 
+// Environment detection for logging
+const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
+const isLocalhost = process.env.IS_LOCALHOST === 'true' || !process.env.NODE_ENV;
+
 class QuestionFormatAdapter {
   constructor() {
     // Question type mapping from database to game format
@@ -96,7 +100,9 @@ class QuestionFormatAdapter {
       return transformedQuestion;
 
     } catch (error) {
-      console.error('❌ Error transforming question:', error);
+      if (isDevelopment) {
+        console.error('❌ Error transforming question:', error);
+      }
       throw new Error(`Question transformation failed: ${error.message}`);
     }
   }
@@ -108,14 +114,18 @@ class QuestionFormatAdapter {
    */
   getCorrectAnswerIndex(answers) {
     if (!answers || !Array.isArray(answers)) {
-      console.warn('⚠️ No answers provided for correct index calculation');
+      if (isDevelopment) {
+        console.warn('⚠️ No answers provided for correct index calculation');
+      }
       return -1;
     }
 
     const correctIndex = answers.findIndex(answer => answer.is_correct === true);
     
     if (correctIndex === -1) {
-      console.warn('⚠️ No correct answer found in answers array');
+      if (isDevelopment) {
+        console.warn('⚠️ No correct answer found in answers array');
+      }
     }
 
     return correctIndex;
@@ -244,7 +254,9 @@ class QuestionFormatAdapter {
           transformed.questionNumber = index + 1;
           transformedQuestions.push(transformed);
         } catch (error) {
-          console.error(`❌ Failed to transform question ${index + 1}:`, error);
+          if (isDevelopment) {
+            console.error(`❌ Failed to transform question ${index + 1}:`, error);
+          }
           errors.push({
             index: index + 1,
             questionId: dbQuestion?.id || 'unknown',
@@ -254,14 +266,18 @@ class QuestionFormatAdapter {
       });
 
       if (errors.length > 0) {
-        console.warn(`⚠️ ${errors.length} questions failed transformation:`, errors);
+        if (isDevelopment) {
+          console.warn(`⚠️ ${errors.length} questions failed transformation:`, errors);
+        }
       }
 
       if (transformedQuestions.length === 0) {
         throw new Error('No questions were successfully transformed');
       }
 
-      console.log(`✅ Successfully transformed ${transformedQuestions.length}/${dbQuestions.length} questions`);
+      if (isDevelopment) {
+        console.log(`✅ Successfully transformed ${transformedQuestions.length}/${dbQuestions.length} questions`);
+      }
 
       return {
         success: true,
@@ -272,7 +288,9 @@ class QuestionFormatAdapter {
       };
 
     } catch (error) {
-      console.error('❌ Batch transformation failed:', error);
+      if (isDevelopment) {
+        console.error('❌ Batch transformation failed:', error);
+      }
       return {
         success: false,
         error: error.message,

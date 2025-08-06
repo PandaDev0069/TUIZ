@@ -33,7 +33,9 @@ class ImagePreloader {
       progress: 0
     };
 
-    console.log(`🖼️ Starting to preload ${imageUrls.length} images...`);
+    if (import.meta.env.DEV) {
+      console.log(`🖼️ Starting to preload ${imageUrls.length} images...`);
+    }
 
     if (imageUrls.length === 0) {
       onProgress && onProgress(0, 0, 100);
@@ -53,7 +55,9 @@ class ImagePreloader {
       progress: 100
     };
 
-    console.log(`✅ Image preloading complete:`, finalStats);
+    if (import.meta.env.DEV) {
+      console.log(`✅ Image preloading complete:`, finalStats);
+    }
     onProgress && onProgress(finalStats.loaded, finalStats.total, 100);
 
     return {
@@ -136,7 +140,9 @@ class ImagePreloader {
 
       img.onerror = (error) => {
         cleanup();
-        console.warn(`❌ Failed to preload image: ${url}`, error);
+        if (import.meta.env.DEV) {
+          console.warn(`❌ Failed to preload image: ${url}`, error);
+        }
         this.preloadedImages.set(url, { success: false, error, url });
         this.preloadStats.failed++;
         this.updateProgress(onProgress);
@@ -158,7 +164,9 @@ class ImagePreloader {
       setTimeout(() => {
         if (!this.preloadedImages.has(url)) {
           cleanup();
-          console.warn(`⏰ Image load timeout: ${url}`);
+          if (import.meta.env.DEV) {
+            console.warn(`⏰ Image load timeout: ${url}`);
+          }
           this.preloadedImages.set(url, { success: false, error: 'timeout', url });
           this.preloadStats.failed++;
           this.updateProgress(onProgress);
@@ -216,7 +224,9 @@ class ImagePreloader {
       failed: 0,
       progress: 0
     };
-    console.log('🗑️ Image preloader cache cleared');
+    if (import.meta.env.DEV) {
+      console.log('🗑️ Image preloader cache cleared');
+    }
   }
 
   /**
@@ -255,7 +265,9 @@ class ImagePreloader {
       });
     }
 
-    console.log(`🚀 Preloading ${criticalUrls.length} critical images...`);
+    if (import.meta.env.DEV) {
+      console.log(`🚀 Preloading ${criticalUrls.length} critical images...`);
+    }
 
     // Update stats for critical images only
     this.preloadStats.total = criticalUrls.length;
