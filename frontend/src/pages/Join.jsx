@@ -191,8 +191,17 @@ function Join() {
     
     // Set up listener before emitting
     socket.once('joinedGame', ({ gameCode, playerCount, gameStatus, player }) => {
-      console.log('Join successful! Game:', gameCode, 'Player:', player);
-      navigate('/waiting', { state: { name, room: gameCode, initialPlayers: [player] } });
+      console.log('Join successful! Game:', gameCode, 'Player:', player, 'Total Players:', playerCount);
+      
+      // Pass the correct player count information to WaitingRoom
+      navigate('/waiting', { 
+        state: { 
+          name, 
+          room: gameCode, 
+          initialPlayers: [player], // Current player data
+          serverPlayerCount: playerCount // Server's authoritative count
+        } 
+      });
     });
     
     // Send user authentication info if available

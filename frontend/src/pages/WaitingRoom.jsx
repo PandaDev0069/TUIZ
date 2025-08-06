@@ -7,7 +7,7 @@ import "./waitingRoom.css"
 function WaitingRoom() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { name, room, initialPlayers = [] } = location.state || {}
+  const { name, room, initialPlayers = [], serverPlayerCount } = location.state || {}
   const [players, setPlayers] = useState(initialPlayers)
 
   // Use the preloading hook
@@ -29,10 +29,21 @@ function WaitingRoom() {
 
     console.log('🎮 WaitingRoom: Setting up socket listeners for', { name, room });
     console.log('🎮 WaitingRoom: Initial players:', initialPlayers);
+    console.log('🎮 WaitingRoom: Server player count:', serverPlayerCount);
 
     // Set initial players if provided
     if (initialPlayers.length > 0) {
       setPlayers(initialPlayers)
+      
+      // If we have a server player count that's higher than initial players,
+      // request the complete player list immediately
+      if (serverPlayerCount && serverPlayerCount > initialPlayers.length) {
+        console.log('🎮 WaitingRoom: Server count higher than initial - requesting complete list');
+        console.log(`🎮 WaitingRoom: Initial: ${initialPlayers.length}, Server: ${serverPlayerCount}`);
+        setTimeout(() => {
+          socket.emit('getPlayerList', { gameCode: room });
+        }, 100);
+      }
     }
 
     // Listen for successful join response
@@ -42,36 +53,59 @@ function WaitingRoom() {
       // Immediately update player count for the new player joining
       console.log('🎮 WaitingRoom: New player joined - immediately updating player count to:', playerCount);
       
-      // Add the current player to the players list if not already present
+      // CRITICAL FIX: Immediately set the player count based on server response
+      // Create a minimal list that reflects the correct count from the server
       setPlayers(prev => {
+        console.log('🎮 WaitingRoom: Current players before update:', prev.length, 'Server says:', playerCount);
+        
+        // Always trust the server's playerCount
+        const currentPlayerData = {
+          id: player.id,
+          name: player.name || name,
+          score: player.score || 0,
+          isAuthenticated: player.isAuthenticated || false,
+          isHost: player.isHost || false,
+          isConnected: true
+        };
+        
         // Check if current player is already in the list
         const currentPlayerExists = prev.some(p => p.id === player.id || p.name === player.name);
         
-        if (!currentPlayerExists) {
-          const updatedPlayers = [...prev, {
-            id: player.id,
-            name: player.name || name,
-            score: player.score || 0,
-            isAuthenticated: player.isAuthenticated || false,
-            isHost: player.isHost || false,
-            isConnected: true
-          }];
-          console.log('🎮 WaitingRoom: Added current player to list. Total players:', updatedPlayers.length);
+        if (currentPlayerExists) {
+          // Update existing player data
+          const updatedPlayers = prev.map(p => 
+            (p.id === player.id || p.name === player.name) ? currentPlayerData : p
+          );
+          console.log('🎮 WaitingRoom: Updated existing player. Count:', updatedPlayers.length);
           return updatedPlayers;
         } else {
-          console.log('🎮 WaitingRoom: Current player already in list. Total players:', prev.length);
-          return prev;
+          // Add new player
+          const updatedPlayers = [...prev, currentPlayerData];
+          console.log('🎮 WaitingRoom: Added new player. Count from', prev.length, 'to', updatedPlayers.length);
+          
+          // If we still don't match the server count, log the discrepancy
+          if (updatedPlayers.length !== playerCount) {
+            console.warn('🎮 WaitingRoom: Count mismatch! Frontend:', updatedPlayers.length, 'Server:', playerCount);
+            // For now, trust our update but request sync
+          }
+          
+          return updatedPlayers;
         }
       });
       
-      // Request latest player list to ensure we have everyone
-      console.log('🎮 WaitingRoom: Requesting complete player list for synchronization');
-      socket.emit('getPlayerList', { gameCode });
+      // Request complete player list for synchronization
+      console.log('🎮 WaitingRoom: Requesting complete player list for final synchronization');
+      try {
+        socket.emit('getPlayerList', { gameCode });
+      } catch (error) {
+        console.error('🎮 WaitingRoom: Error requesting player list:', error);
+      }
     })
 
     // Listen for player list response
     socket.on('playerList', ({ players }) => {
       console.log('🎮 WaitingRoom: playerList event received:', players);
+      console.log('🎮 WaitingRoom: Setting authoritative player list with', players.length, 'players');
       // Replace the entire player list with the authoritative list from server
       setPlayers(players);
     })

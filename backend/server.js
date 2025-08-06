@@ -1096,52 +1096,59 @@ io.on('connection', (socket) => {
       - Score: ${player.score}`);
       
       // Send current game state to the joining player FIRST
-      socket.emit('joinedGame', {
-        gameCode,
-        playerCount: activeGame.players.size,
-        gameStatus: activeGame.status,
-        player: {
-          ...player,
-          dbRecord: dbGamePlayer ? true : false,
-          playerUUID: playerUUID,
-          isHost: player.isHost || false // Include host status
-        }
-      });
+      try {
+        socket.emit('joinedGame', {
+          gameCode,
+          playerCount: activeGame.players.size,
+          gameStatus: activeGame.status,
+          player: {
+            ...player,
+            dbRecord: dbGamePlayer ? true : false,
+            playerUUID: playerUUID,
+            isHost: player.isHost || false // Include host status
+          }
+        });
+        
+        console.log(`✅ joinedGame event sent to new player ${playerName} with playerCount: ${activeGame.players.size}`);
+      } catch (emitError) {
+        console.error(`❌ Error sending joinedGame event to ${playerName}:`, emitError);
+      }
       
-      console.log(`✅ joinedGame event sent to new player ${playerName} with playerCount: ${activeGame.players.size}`);
-      
-      // Now notify all players (including the new one) about the updated player list
-      const allPlayers = Array.from(activeGame.players.values()).map(p => ({
-        id: p.id,
-        name: p.name,
-        score: p.score,
-        isAuthenticated: p.isAuthenticated,
-        isHost: p.isHost || false,
-        isConnected: p.isConnected
-      })).filter(p => p.isConnected);
+      // Wait a brief moment to ensure the new player's frontend is ready to receive events
+      setTimeout(() => {
+        // Now notify all players (including the new one) about the updated player list
+        const allPlayers = Array.from(activeGame.players.values()).map(p => ({
+          id: p.id,
+          name: p.name,
+          score: p.score,
+          isAuthenticated: p.isAuthenticated,
+          isHost: p.isHost || false,
+          isConnected: p.isConnected
+        })).filter(p => p.isConnected);
 
-      console.log(`🔔 Emitting playerJoined event for player ${player.name} in game ${gameCode}`);
-      console.log(`📊 Player data:`, {
-        id: player.id,
-        name: player.name,
-        totalPlayers: activeGame.players.size,
-        allPlayersCount: allPlayers.length
-      });
-      
-      io.to(gameCode).emit('playerJoined', {
-        player: {
+        console.log(`🔔 Emitting playerJoined event for player ${player.name} in game ${gameCode} (after ${allPlayers.length} total players)`);
+        console.log(`📊 Player data:`, {
           id: player.id,
           name: player.name,
-          score: player.score,
-          isAuthenticated: player.isAuthenticated,
-          isHost: player.isHost || false, // Include host status
-          isReturningPlayer: player.isReturningPlayer || false
-        },
-        totalPlayers: activeGame.players.size,
-        allPlayers: allPlayers // Include complete player list
-      });
-      
-      console.log(`✅ playerJoined event emitted to room ${gameCode} with ${allPlayers.length} total players`);
+          totalPlayers: activeGame.players.size,
+          allPlayersCount: allPlayers.length
+        });
+        
+        io.to(gameCode).emit('playerJoined', {
+          player: {
+            id: player.id,
+            name: player.name,
+            score: player.score,
+            isAuthenticated: player.isAuthenticated,
+            isHost: player.isHost || false, // Include host status
+            isReturningPlayer: player.isReturningPlayer || false
+          },
+          totalPlayers: activeGame.players.size,
+          allPlayers: allPlayers // Include complete player list
+        });
+        
+        console.log(`✅ playerJoined event emitted to room ${gameCode} with ${allPlayers.length} total players`);
+      }, 50); // Small delay to ensure frontend is ready
       
     } catch (error) {
       console.error('Error joining game:', error);
@@ -1152,11 +1159,12 @@ io.on('connection', (socket) => {
   // Get current player list for a game
   socket.on('getPlayerList', ({ gameCode }) => {
     try {
-      console.log(`📋 Get Player List Request for: ${gameCode}`);
+      console.log(`📋 Get Player List Request for: ${gameCode} from socket: ${socket.id}`);
       
       const activeGame = activeGames.get(gameCode);
       
       if (!activeGame) {
+        console.log(`❌ Game ${gameCode} not found for player list request`);
         socket.emit('error', { message: 'Game not found' });
         return;
       }
@@ -1171,7 +1179,8 @@ io.on('connection', (socket) => {
         isConnected: player.isConnected
       })).filter(player => player.isConnected); // Only send connected players
       
-      console.log(`📋 Sending player list: ${players.length} players`);
+      console.log(`📋 Sending player list for game ${gameCode}: ${players.length} players`);
+      console.log(`📋 Player names: ${players.map(p => p.name).join(', ')}`);
       socket.emit('playerList', { players });
       
     } catch (error) {
