@@ -38,42 +38,90 @@ function WaitingRoom() {
     // Listen for successful join response
     socket.on('joinedGame', ({ gameCode, playerCount, gameStatus, player }) => {
       console.log('🎮 WaitingRoom: joinedGame event received:', { gameCode, playerCount, gameStatus, player });
-      // Request current player list
+      
+      // Immediately update player count for the new player joining
+      console.log('🎮 WaitingRoom: New player joined - immediately updating player count to:', playerCount);
+      
+      // Add the current player to the players list if not already present
+      setPlayers(prev => {
+        // Check if current player is already in the list
+        const currentPlayerExists = prev.some(p => p.id === player.id || p.name === player.name);
+        
+        if (!currentPlayerExists) {
+          const updatedPlayers = [...prev, {
+            id: player.id,
+            name: player.name || name,
+            score: player.score || 0,
+            isAuthenticated: player.isAuthenticated || false,
+            isHost: player.isHost || false,
+            isConnected: true
+          }];
+          console.log('🎮 WaitingRoom: Added current player to list. Total players:', updatedPlayers.length);
+          return updatedPlayers;
+        } else {
+          console.log('🎮 WaitingRoom: Current player already in list. Total players:', prev.length);
+          return prev;
+        }
+      });
+      
+      // Request latest player list to ensure we have everyone
+      console.log('🎮 WaitingRoom: Requesting complete player list for synchronization');
       socket.emit('getPlayerList', { gameCode });
     })
 
     // Listen for player list response
     socket.on('playerList', ({ players }) => {
       console.log('🎮 WaitingRoom: playerList event received:', players);
+      // Replace the entire player list with the authoritative list from server
       setPlayers(players);
     })
 
     // Listen for new players joining
-    socket.on('playerJoined', ({ player, totalPlayers }) => {
-      console.log('🎮 WaitingRoom: playerJoined event received:', { player, totalPlayers });
-      // Add the new player to the list
-      setPlayers(prev => {
-        const updated = [...prev];
-        // Check if player already exists
-        const existingIndex = updated.findIndex(p => p.id === player.id);
-        if (existingIndex >= 0) {
-          updated[existingIndex] = player;
-        } else {
-          updated.push(player);
+    socket.on('playerJoined', ({ player, totalPlayers, allPlayers }) => {
+      console.log('🎮 WaitingRoom: playerJoined event received:', { player, totalPlayers, allPlayers });
+      
+      if (allPlayers && allPlayers.length > 0) {
+        // Use the complete player list from the server for consistency
+        console.log('🎮 WaitingRoom: Updating with complete player list from server:', allPlayers);
+        setPlayers(allPlayers);
+        
+        // Special case: If the joining player is the current user, ensure immediate UI update
+        if (player.name === name) {
+          console.log('🎮 WaitingRoom: Current user joined - ensuring immediate count update to:', allPlayers.length);
         }
-        console.log('🎮 WaitingRoom: Updated players after join:', updated);
-        return updated;
-      });
+      } else {
+        // Fallback: Add the new player to the existing list
+        setPlayers(prev => {
+          const updated = [...prev];
+          // Check if player already exists
+          const existingIndex = updated.findIndex(p => p.id === player.id);
+          if (existingIndex >= 0) {
+            updated[existingIndex] = player;
+          } else {
+            updated.push(player);
+          }
+          console.log('🎮 WaitingRoom: Updated players after join (fallback):', updated);
+          return updated;
+        });
+      }
     })
 
     // Listen for players disconnecting
-    socket.on('playerDisconnected', ({ playerId, playerName, remainingPlayers }) => {
-      console.log('🎮 WaitingRoom: playerDisconnected event received:', { playerId, playerName, remainingPlayers });
-      setPlayers(prev => {
-        const updated = prev.filter(p => p.id !== playerId);
-        console.log('🎮 WaitingRoom: Updated players after disconnect:', updated);
-        return updated;
-      });
+    socket.on('playerDisconnected', ({ playerId, playerName, remainingPlayers, allPlayers }) => {
+      console.log('🎮 WaitingRoom: playerDisconnected event received:', { playerId, playerName, remainingPlayers, allPlayers });
+      
+      if (allPlayers && allPlayers.length >= 0) {
+        // Use the complete updated player list from the server
+        console.log('🎮 WaitingRoom: Updating with complete player list after disconnect:', allPlayers);
+        setPlayers(allPlayers);
+      } else {
+        // Fallback: Remove the disconnected player from existing list
+        setPlayers(prev => {
+          const updated = prev.filter(p => p.id !== playerId);
+          console.log('🎮 WaitingRoom: Updated players after disconnect (fallback):', updated);
+          return updated;
+        });
+      }
     })
 
     // Listen for game start
