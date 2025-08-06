@@ -7,14 +7,14 @@ import ProfileSettingsModal from '../components/ProfileSettingsModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { useConfirmation } from '../hooks/useConfirmation';
-import { useManagedTimeout } from '../utils/timerManager';
+import { useTimerManager } from '../utils/timerManager';
 import './dashboard.css';
 
 function Dashboard() {
   const { user, logout, isAuthenticated, apiCall } = useAuth();
   const navigate = useNavigate();
   const { showConfirmation, confirmationProps } = useConfirmation();
-  const managedTimeout = useManagedTimeout();
+  const timerManager = useTimerManager();
   const [myQuizSets, setMyQuizSets] = useState([]);
   const [draftQuizzes, setDraftQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +39,7 @@ function Dashboard() {
   // Helper function to show messages
   const showMessage = (type, text) => {
     setMessage({ type, text });
-    managedTimeout.setTimeout(() => {
+    timerManager.setTimeout(() => {
       setMessage({ type: '', text: '' });
     }, 5000); // Clear message after 5 seconds
   };

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useGameSettings } from '../hooks/useGameSettings';
 import { showSuccess, showError } from '../utils/toast';
 import LoadingSkeleton from './LoadingSkeleton';
-import { useManagedTimeout } from '../utils/timerManager';
+import { useTimerManager } from '../utils/timerManager';
 import './gameSettingsPanel.css';
 
 const settingsConfig = {
@@ -211,7 +211,7 @@ const GameSettingsPanel = ({ questionSetId, gameId, onClose }) => {
   const { settings, loading, saving, error, updateSettings, resetToDefaults } = useGameSettings(questionSetId, gameId);
   const [localSettings, setLocalSettings] = useState({});
   const [hasChanges, setHasChanges] = useState(false);
-  const managedTimeout = useManagedTimeout();
+  const timerManager = useTimerManager();
 
   useEffect(() => {
     if (settings) {
@@ -226,8 +226,8 @@ const GameSettingsPanel = ({ questionSetId, gameId, onClose }) => {
     setHasChanges(true);
 
     // Debounced auto-save using managed timeout
-    managedTimeout.clearAll(); // Clear any existing save timeout
-    managedTimeout.setTimeout(async () => {
+    timerManager.clearAll(); // Clear any existing save timeout
+    timerManager.setTimeout(async () => {
       const success = await updateSettings({ [key]: value });
       if (success) {
         setHasChanges(false);
