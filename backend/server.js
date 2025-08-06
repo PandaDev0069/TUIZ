@@ -607,10 +607,14 @@ const showIntermediateLeaderboard = (gameCode) => {
   // Send leaderboard to all players
   io.to(gameCode).emit('showLeaderboard', leaderboardData);
   
-  // Auto-advance to next question or end game
-  setTimeout(async () => {
-    await proceedToNextQuestion(gameCode);
-  }, leaderboardData.displayTime);
+  // Auto-advance to next question or end game (only if autoAdvance is enabled)
+  if (gameSettings.autoAdvance !== false) {
+    setTimeout(async () => {
+      await proceedToNextQuestion(gameCode);
+    }, leaderboardData.displayTime);
+  } else {
+    console.log(`⏸️ Manual advance mode - waiting for host to continue`);
+  }
 };
 
 // Helper function to calculate answer statistics
@@ -640,6 +644,14 @@ const proceedToNextQuestion = async (gameCode) => {
   const activeGame = activeGames.get(gameCode);
   if (!activeGame) return;
   
+  // Prevent double question sending
+  if (activeGame.questionInProgress) {
+    console.log(`⚠️ Question transition already in progress for game ${gameCode}`);
+    return;
+  }
+  
+  activeGame.questionInProgress = true;
+  
   console.log(`➡️ Proceeding to next question in game ${gameCode}`);
   
   // Move to next question
@@ -647,6 +659,13 @@ const proceedToNextQuestion = async (gameCode) => {
   
   // Send next question or end game
   await sendNextQuestion(gameCode);
+  
+  // Reset the flag after sending the question
+  setTimeout(() => {
+    if (activeGame) {
+      activeGame.questionInProgress = false;
+    }
+  }, 1000); // 1 second buffer
 };
 
 // Helper function to send next question
@@ -912,7 +931,8 @@ io.on('connection', (socket) => {
         host: hostId,
         questions: [],
         currentQuestionIndex: 0,
-        currentAnswers: []
+        currentAnswers: [],
+        questionInProgress: false
       });
       
       // Join the host to the game room
