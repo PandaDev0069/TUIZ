@@ -16,11 +16,21 @@ const MultipleChoiceQuestion = ({
     const optionCount = question.options?.length || 0;
     const hasImages = question._dbData?.answers?.some(answer => answer.image_url);
     
-    if (hasImages) {
-      return optionCount <= 2 ? 'grid-horizontal' : 'grid-2x2';
+    // Mobile-first responsive layouts based on option count
+    switch (optionCount) {
+      case 2:
+        // Two options: side by side (horizontal)
+        return 'layout-2-horizontal';
+      case 3:
+        // Three options: 2 on top, 1 below
+        return 'layout-3-two-one';
+      case 4:
+        // Four options: 2x2 grid
+        return 'layout-4-grid';
+      default:
+        // Fallback for other counts (5+) - vertical list
+        return 'layout-vertical';
     }
-    
-    return optionCount <= 2 ? 'list-horizontal' : 'list-vertical';
   };
 
   return (

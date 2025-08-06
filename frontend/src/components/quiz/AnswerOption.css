@@ -1,8 +1,8 @@
 /**
  * AnswerOption.css
  * 
- * Styles for the AnswerOption component with support for text + image layouts,
- * interactive states, and responsive design.
+ * Enhanced styles for the AnswerOption component with improved mobile-first design,
+ * larger touch targets, and better responsive layouts.
  */
 
 .quiz-answer-option {
@@ -10,16 +10,33 @@
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 60px;
+  min-height: 80px; /* Increased from 60px for better touch targets */
   margin-bottom: 0.75rem;
   padding: 0;
   background: white;
   border: 2px solid #e9ecef;
-  border-radius: 8px;
+  border-radius: 12px; /* Slightly more rounded for modern look */
   cursor: pointer;
   transition: all 0.2s ease;
   overflow: hidden;
   list-style: none;
+}
+
+/* Enhanced Mobile Touch Targets */
+@media (max-width: 768px) {
+  .quiz-answer-option {
+    min-height: 100px; /* Larger for tablet touch */
+    border-radius: 16px;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .quiz-answer-option {
+    min-height: 120px; /* Extra large for phone touch */
+    border-radius: 20px;
+    margin-bottom: 1.2rem;
+  }
 }
 
 .quiz-answer-option:hover:not(.disabled) {
@@ -39,13 +56,28 @@
   box-shadow: 0 1px 4px rgba(0, 123, 255, 0.3);
 }
 
-/* Option content layout */
+/* Option content layout - Enhanced for mobile */
 .quiz-option-content {
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 1rem;
+  padding: 1.2rem; /* Increased from 1rem */
   gap: 1rem;
+}
+
+/* Enhanced mobile content sizing */
+@media (max-width: 768px) {
+  .quiz-option-content {
+    padding: 1.5rem;
+    gap: 1.2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .quiz-option-content {
+    padding: 2rem 1.5rem; /* Extra padding for comfortable touch */
+    gap: 1rem;
+  }
 }
 
 /* Image container */
@@ -105,7 +137,7 @@
   font-size: 1.5rem;
 }
 
-/* Text container */
+/* Text container - Enhanced mobile typography */
 .quiz-option-text-container {
   flex: 1;
   display: flex;
@@ -116,11 +148,28 @@
 
 .quiz-option-text {
   flex: 1;
-  font-size: 1rem;
+  font-size: 1.1rem; /* Increased from 1rem */
   font-weight: 500;
   color: #212529;
   line-height: 1.4;
   word-wrap: break-word;
+}
+
+/* Enhanced mobile text sizing */
+@media (max-width: 768px) {
+  .quiz-option-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+}
+
+@media (max-width: 480px) {
+  .quiz-option-text {
+    font-size: 1.3rem; /* Larger text for small screens */
+    font-weight: 600;
+    line-height: 1.4;
+  }
 }
 
 /* Option indicators */
@@ -202,85 +251,89 @@
   border-color: #e9ecef;
 }
 
-/* Question type specific styles */
+/* Question type specific styles - Enhanced */
 .quiz-answer-option.true_false {
-  min-height: 80px;
+  min-height: 100px; /* Increased for better touch */
 }
 
 .quiz-answer-option.true_false .quiz-option-text {
-  font-size: 1.1rem;
+  font-size: 1.2rem; /* Increased from 1.1rem */
   font-weight: 600;
   text-align: center;
   flex: none;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Style the O and X symbols more prominently */
+.quiz-answer-option.true_false .quiz-option-text::first-letter {
+  font-size: 1.5em;
+  font-weight: 700;
+  color: inherit;
 }
 
 .quiz-answer-option.true_false .quiz-option-text-container {
   justify-content: center;
 }
 
+/* Enhanced mobile true/false sizing */
+@media (max-width: 768px) {
+  .quiz-answer-option.true_false {
+    min-height: 120px;
+  }
+  
+  .quiz-answer-option.true_false .quiz-option-text {
+    font-size: 1.3rem;
+  }
+  
+  .quiz-answer-option.true_false .quiz-option-text::first-letter {
+    font-size: 1.8em;
+  }
+}
+
+@media (max-width: 480px) {
+  .quiz-answer-option.true_false {
+    min-height: 140px;
+  }
+  
+  .quiz-answer-option.true_false .quiz-option-text {
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+  
+  .quiz-answer-option.true_false .quiz-option-text::first-letter {
+    font-size: 2em;
+  }
+}
+
 /* Image layout adjustments */
 .quiz-answer-option.has-image {
-  min-height: 80px;
+  min-height: 100px; /* Increased from 80px */
 }
 
 .quiz-answer-option.has-image .quiz-option-content {
-  padding: 0.75rem;
+  padding: 1rem; /* Increased from 0.75rem */
 }
 
-/* Responsive design */
+/* Legacy responsive design - Updated to work with new mobile-first approach */
 @media (max-width: 768px) {
-  .quiz-answer-option {
-    min-height: 50px;
-    margin-bottom: 0.5rem;
-    border-radius: 6px;
-  }
-  
-  .quiz-option-content {
-    padding: 0.75rem;
-    gap: 0.75rem;
-  }
-  
   .quiz-option-image-container {
     width: 60px;
     height: 45px;
   }
   
-  .quiz-option-text {
-    font-size: 0.9rem;
-  }
-  
-  .quiz-answer-option.true_false {
-    min-height: 60px;
-  }
-  
-  .quiz-answer-option.true_false .quiz-option-text {
-    font-size: 1rem;
-  }
-  
   .quiz-answer-option.has-image {
-    min-height: 60px;
+    min-height: 100px;
   }
 }
 
 @media (max-width: 480px) {
-  .quiz-answer-option {
-    border-radius: 4px;
-    min-height: 45px;
-  }
-  
-  .quiz-option-content {
-    padding: 0.5rem;
-    gap: 0.5rem;
-  }
-  
   .quiz-option-image-container {
     width: 50px;
     height: 40px;
-  }
-  
-  .quiz-option-text {
-    font-size: 0.85rem;
   }
   
   .quiz-option-indicators {
@@ -290,11 +343,7 @@
   .quiz-selected-indicator,
   .quiz-correct-indicator,
   .quiz-wrong-indicator {
-    font-size: 1rem;
-  }
-  
-  .quiz-answer-option.true_false .quiz-option-text {
-    font-size: 0.95rem;
+    font-size: 1.1rem; /* Slightly larger for mobile */
   }
 }
 

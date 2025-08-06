@@ -5,8 +5,17 @@
 
 // Get API base URL from environment variables or determine dynamically
 const getApiBaseUrl = () => {
-  // First priority: environment variable
-  if (import.meta.env.VITE_API_BASE_URL) {
+  // Check if we're accessing via IP address (mobile device)
+  const hostname = window.location.hostname;
+  const isIPAddress = /^\d+\.\d+\.\d+\.\d+$/.test(hostname);
+  
+  // If accessing via IP address, use the same IP for backend with port 3001
+  if (isIPAddress) {
+    return `http://${hostname}:3001`;
+  }
+  
+  // First priority: environment variable (only for localhost)
+  if (import.meta.env.VITE_API_BASE_URL && (hostname === 'localhost' || hostname === '127.0.0.1')) {
     return import.meta.env.VITE_API_BASE_URL;
   }
 
@@ -21,7 +30,6 @@ const getApiBaseUrl = () => {
   }
 
   // Fallback: determine based on hostname
-  const hostname = window.location.hostname;
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:3001';
   }
@@ -32,8 +40,17 @@ const getApiBaseUrl = () => {
 
 // Get WebSocket URL for Socket.IO
 const getSocketUrl = () => {
-  // First priority: environment variable
-  if (import.meta.env.VITE_SOCKET_URL) {
+  // Check if we're accessing via IP address (mobile device)
+  const hostname = window.location.hostname;
+  const isIPAddress = /^\d+\.\d+\.\d+\.\d+$/.test(hostname);
+  
+  // If accessing via IP address, use the same IP for backend with port 3001
+  if (isIPAddress) {
+    return `http://${hostname}:3001`;
+  }
+  
+  // First priority: environment variable (only for localhost)
+  if (import.meta.env.VITE_SOCKET_URL && (hostname === 'localhost' || hostname === '127.0.0.1')) {
     return import.meta.env.VITE_SOCKET_URL;
   }
 
@@ -88,6 +105,17 @@ export const apiConfig = {
   }
 };
 
+// Debug logging for mobile connections
+const hostname = window.location.hostname;
+const isIPAddress = /^\d+\.\d+\.\d+\.\d+$/.test(hostname);
+
+console.log('🔧 API Configuration Debug:');
+console.log(`  Hostname: ${hostname}`);
+console.log(`  Is IP Address: ${isIPAddress}`);
+console.log(`  Base URL: ${apiConfig.baseUrl}`);
+console.log(`  Socket URL: ${apiConfig.socketUrl}`);
+console.log(`  Environment: ${import.meta.env.MODE}`);
+
 // Environment validation
 export const validateEnvironment = () => {
   const warnings = [];
@@ -128,7 +156,5 @@ export const getConfigInfo = () => {
 
 // Initialize and validate on import
 validateEnvironment();
-
-console.log('🔧 API Configuration initialized:', getConfigInfo());
 
 export default apiConfig;

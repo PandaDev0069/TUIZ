@@ -326,11 +326,24 @@
 @media (max-width: 768px) {
   .auth-container {
     padding: 1rem;
+    /* Ensure proper scrolling on mobile */
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
   }
 
   .auth-content {
     padding: 2rem 1.5rem;
     max-width: 100%;
+    /* Allow the content to be scrollable */
+    max-height: none;
+    margin: auto;
+    /* Add padding for better keyboard experience */
+    margin-bottom: 100px; /* Extra space for keyboard */
+    position: relative;
+    z-index: 1;
   }
 
   .auth-title {
@@ -339,6 +352,41 @@
 
   .auth-subtitle {
     font-size: 1.3rem;
+  }
+
+  /* Mobile keyboard support */
+  .auth-input {
+    /* Prevent zoom on iOS Safari */
+    font-size: 16px;
+    /* Better spacing for touch */
+    min-height: 50px;
+    /* Improve mobile input experience */
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .auth-input:focus {
+    /* Ensure focused inputs have better visibility */
+    transform: scale(1.01);
+    transition: transform 0.2s ease;
+    /* Enhanced focus state */
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
+  }
+
+  /* Handle viewport changes for mobile keyboard */
+  .input-group {
+    scroll-margin-top: 100px;
+    scroll-margin-bottom: 100px;
+    /* Ensure inputs have enough spacing */
+    gap: 2rem;
+  }
+
+  /* Better button accessibility on mobile */
+  .auth-button {
+    min-height: 50px;
+    touch-action: manipulation;
+    /* Ensure button stays accessible */
+    margin-top: 1.5rem;
   }
 }
 
@@ -354,7 +402,7 @@
 
   .auth-input {
     padding: 0.8rem;
-    font-size: 0.9rem;
+    font-size: 16px; /* Consistent font size to prevent zoom */
   }
 
   .input-wrapper.has-toggle .auth-input {
@@ -383,7 +431,13 @@
   }
 }
 
-
+/* iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+  .auth-container {
+    /* Better iOS support */
+    min-height: -webkit-fill-available;
+  }
+}
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {

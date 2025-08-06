@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import './auth.css';
@@ -18,6 +18,12 @@ function Register() {
 
   const { register, checkAvailability, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  
+  // Refs for input elements for mobile keyboard handling
+  const emailInputRef = useRef(null);
+  const nameInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
+  const confirmPasswordInputRef = useRef(null);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -25,6 +31,52 @@ function Register() {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
+
+  // Mobile keyboard handling
+  useEffect(() => {
+    const handleResize = () => {
+      const isKeyboardOpen = window.innerHeight < window.screen.height * 0.75;
+      
+      if (isKeyboardOpen) {
+        setTimeout(() => {
+          const activeElement = document.activeElement;
+          const inputRefs = [emailInputRef, nameInputRef, passwordInputRef, confirmPasswordInputRef];
+          if (activeElement && inputRefs.some(ref => ref.current === activeElement)) {
+            activeElement.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+              inline: 'nearest'
+            });
+          }
+        }, 100);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(handleResize, 500);
+    });
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, []);
+
+  // Handle input focus for mobile keyboard
+  const handleInputFocus = (inputRef) => {
+    if (window.innerWidth <= 768) {
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+        }
+      }, 300);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -176,6 +228,7 @@ function Register() {
             </label>
             <div className="input-wrapper">
               <input
+                ref={emailInputRef}
                 type="email"
                 id="email"
                 name="email"
@@ -183,6 +236,7 @@ function Register() {
                 placeholder="例: user@example.com"
                 value={formData.email}
                 onChange={handleChange}
+                onFocus={() => handleInputFocus(emailInputRef)}
                 disabled={loading}
                 autoComplete="email"
               />
@@ -202,6 +256,7 @@ function Register() {
             </label>
             <div className="input-wrapper">
               <input
+                ref={nameInputRef}
                 type="text"
                 id="name"
                 name="name"
@@ -209,6 +264,7 @@ function Register() {
                 placeholder="例: 田中太郎"
                 value={formData.name}
                 onChange={handleChange}
+                onFocus={() => handleInputFocus(nameInputRef)}
                 disabled={loading}
                 autoComplete="name"
               />
@@ -229,6 +285,7 @@ function Register() {
             </label>
             <div className="input-wrapper has-toggle">
               <input
+                ref={passwordInputRef}
                 type={showPassword ? 'text' : 'password'}
                 id="password"
                 name="password"
@@ -236,6 +293,7 @@ function Register() {
                 placeholder="6文字以上のパスワード"
                 value={formData.password}
                 onChange={handleChange}
+                onFocus={() => handleInputFocus(passwordInputRef)}
                 disabled={loading}
                 autoComplete="new-password"
               />
@@ -261,6 +319,7 @@ function Register() {
             </label>
             <div className="input-wrapper has-toggle">
               <input
+                ref={confirmPasswordInputRef}
                 type={showConfirmPassword ? 'text' : 'password'}
                 id="confirmPassword"
                 name="confirmPassword"
@@ -268,6 +327,7 @@ function Register() {
                 placeholder="パスワードを再入力"
                 value={formData.confirmPassword}
                 onChange={handleChange}
+                onFocus={() => handleInputFocus(confirmPasswordInputRef)}
                 disabled={loading}
                 autoComplete="new-password"
               />

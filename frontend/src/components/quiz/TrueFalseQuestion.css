@@ -39,14 +39,15 @@
   text-align: center;
 }
 
-/* True/False Container */
+/* True/False Container - Enhanced Mobile Layout */
 .quiz-true-false-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
+  gap: 1.5rem;
   width: 100%;
   margin: 2rem 0;
+  padding: 0 1rem;
 }
 
 .quiz-true-false-option {
@@ -55,6 +56,42 @@
   min-height: 150px;
   position: relative;
   transition: all 0.3s ease;
+}
+
+/* Enhanced Mobile True/False Layout */
+@media (max-width: 768px) {
+  .quiz-true-false-container {
+    gap: 1rem;
+    margin: 1.5rem 0;
+    padding: 0 0.5rem;
+  }
+  
+  .quiz-true-false-option {
+    min-height: 120px;
+    max-width: none; /* Allow full width on mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .quiz-true-false-container {
+    gap: 0.8rem;
+    margin: 1rem 0;
+  }
+  
+  .quiz-true-false-option {
+    min-height: 140px; /* Bigger buttons for touch */
+  }
+  
+  /* Stack vertically on very small screens if needed */
+  .quiz-true-false-container.stack-mobile {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .quiz-true-false-container.stack-mobile .quiz-true-false-option {
+    max-width: 80%;
+    margin: 0 auto;
+  }
 }
 
 /* Special styling for true/false options */

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
 import socket from '../socket';
@@ -10,6 +10,11 @@ function Join() {
   const [room, setRoom] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  
+  // Refs for input elements
+  const nameInputRef = useRef(null);
+  const roomInputRef = useRef(null);
+  const cardRef = useRef(null);
 
   // Auto-fill name for authenticated users
   useEffect(() => {
@@ -30,6 +35,58 @@ function Join() {
       socket.off('error');
     };
   }, []);
+
+  // Mobile keyboard handling
+  useEffect(() => {
+    const handleResize = () => {
+      // Detect if viewport height has significantly decreased (keyboard opened)
+      const isKeyboardOpen = window.innerHeight < window.screen.height * 0.75;
+      
+      if (isKeyboardOpen) {
+        // Small delay to ensure the keyboard is fully shown
+        setTimeout(() => {
+          const activeElement = document.activeElement;
+          if (activeElement && (activeElement === nameInputRef.current || activeElement === roomInputRef.current)) {
+            // Scroll the active input into view
+            activeElement.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+              inline: 'nearest'
+            });
+          }
+        }, 100);
+      }
+    };
+
+    // Listen for viewport changes
+    window.addEventListener('resize', handleResize);
+    
+    // Also handle orientationchange for mobile devices
+    window.addEventListener('orientationchange', () => {
+      setTimeout(handleResize, 500); // Delay for orientation change
+    });
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, []);
+
+  // Handle input focus for mobile keyboard
+  const handleInputFocus = (inputRef) => {
+    // For mobile devices, scroll the input into view when focused
+    if (window.innerWidth <= 768) {
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+        }
+      }, 300); // Delay to allow keyboard to show
+    }
+  };
 
   const handleJoin = () => {
     if (!name || !room) {
@@ -60,34 +117,44 @@ function Join() {
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
-      handleJoin();
+      // Close mobile keyboard and scroll to button
+      e.target.blur();
+      
+      // Small delay to allow keyboard to close
+      setTimeout(() => {
+        handleJoin();
+      }, 100);
     }
   };
 
   return (
     <div className="page-container">
-      <div className="card">
+      <div className="card" ref={cardRef}>
         <h1>TUIZ情報王</h1>
         <p>名前とルームコードを入力ください。</p>
 
         <div className="input-group">
           <input
+            ref={nameInputRef}
             className="input"
             type="text"
             placeholder="名前"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyPress={handleKeyPress}
+            onFocus={() => handleInputFocus(nameInputRef)}
             maxLength={20}
           />
 
           <input
+            ref={roomInputRef}
             className="input"
             type="text"
             placeholder="ルームコード"
             value={room}
             onChange={(e) => setRoom(e.target.value.toUpperCase())}
             onKeyPress={handleKeyPress}
+            onFocus={() => handleInputFocus(roomInputRef)}
             maxLength={6}
           />
         </div>

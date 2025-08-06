@@ -56,9 +56,14 @@ const cleanupScheduler = new CleanupScheduler(db);
 
 const app = express();
 
-// CORS configuration for Supabase
+// CORS configuration for Supabase - Allow network access
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: [
+    process.env.CORS_ORIGIN || 'http://localhost:5173',
+    /^http:\/\/192\.168\.\d+\.\d+:5173$/, // Allow local network IPs
+    /^http:\/\/10\.\d+\.\d+\.\d+:5173$/, // Allow 10.x.x.x network
+    /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:5173$/ // Allow 172.16-31.x.x network
+  ],
   credentials: true
 }));
 
@@ -464,10 +469,15 @@ app.use((error, req, res, next) => {
 
 const server = http.createServer(app);
 
-// Socket.IO server with enhanced CORS
+// Socket.IO server with enhanced CORS - Allow network access
 const io = new Server(server, {
     cors: {
-        origin: process.env.SOCKET_CORS_ORIGIN || 'http://localhost:5173',
+        origin: [
+          process.env.SOCKET_CORS_ORIGIN || 'http://localhost:5173',
+          /^http:\/\/192\.168\.\d+\.\d+:5173$/, // Allow local network IPs
+          /^http:\/\/10\.\d+\.\d+\.\d+:5173$/, // Allow 10.x.x.x network
+          /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:5173$/ // Allow 172.16-31.x.x network
+        ],
         methods: ['GET', 'POST'],
         credentials: true
     },
@@ -536,7 +546,20 @@ const showQuestionExplanation = (gameCode) => {
   
   console.log(`💡 Showing explanation for question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
   
-  // Prepare explanation data
+  // Calculate current standings for leaderboard
+  const leaderboard = Array.from(activeGame.players.values())
+    .map(player => ({
+      name: player.name,
+      score: player.score || 0,
+      streak: player.streak || 0
+    }))
+    .sort((a, b) => b.score - a.score)
+    .map((player, index) => ({
+      ...player,
+      rank: index + 1
+    }));
+
+  // Prepare explanation data with leaderboard
   const explanationData = {
     questionId: currentQuestion.id,
     questionNumber: activeGame.currentQuestionIndex + 1,
@@ -553,12 +576,19 @@ const showQuestionExplanation = (gameCode) => {
     // Answer statistics
     answerStats: calculateAnswerStatistics(activeGame.currentAnswers, currentQuestion),
     
+    // Leaderboard data (include immediately with explanation)
+    leaderboard: {
+      standings: leaderboard,
+      totalQuestions: activeGame.questions.length,
+      isGameOver: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length
+    },
+    
     // Timing - use explanationTime from settings (converted to ms)
     explanationTime: (gameSettings.explanationTime || 30) * 1000,
     autoAdvance: gameSettings.autoAdvance !== false
   };
   
-  // Send explanation to all players
+  // Send explanation with leaderboard to all players immediately
   io.to(gameCode).emit('showExplanation', explanationData);
   
   // After explanation, show leaderboard or proceed to next question
@@ -604,7 +634,7 @@ const showIntermediateLeaderboard = (gameCode) => {
     autoAdvance: gameSettings.autoAdvance !== false
   };
   
-  // Send leaderboard to all players
+  // Send leaderboard to all players immediately
   io.to(gameCode).emit('showLeaderboard', leaderboardData);
   
   // Auto-advance to next question or end game (only if autoAdvance is enabled)

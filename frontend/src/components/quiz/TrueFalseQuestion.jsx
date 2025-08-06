@@ -16,6 +16,25 @@ const TrueFalseQuestion = ({
   const trueOption = question.options[0];
   const falseOption = question.options[1];
 
+  // Enhanced option display with O/X symbols
+  const getEnhancedTrueOption = () => {
+    const baseText = trueOption || "正しい";
+    // Add O symbol if not already present
+    if (!baseText.includes('○') && !baseText.includes('O')) {
+      return `○ ${baseText}`;
+    }
+    return baseText;
+  };
+
+  const getEnhancedFalseOption = () => {
+    const baseText = falseOption || "間違い";
+    // Add X symbol if not already present
+    if (!baseText.includes('×') && !baseText.includes('X')) {
+      return `× ${baseText}`;
+    }
+    return baseText;
+  };
+
   return (
     <div className="quiz-true-false-question">
       <div className="quiz-question-header">
@@ -32,7 +51,7 @@ const TrueFalseQuestion = ({
       
       <div className="quiz-true-false-container">
         <AnswerOption
-          option={trueOption || "正しい (○)"}
+          option={getEnhancedTrueOption()}
           index={0}
           questionType="true_false"
           isSelected={selected === 0}
@@ -42,7 +61,6 @@ const TrueFalseQuestion = ({
           imageUrl={question._dbData?.answers?.[0]?.image_url}
           onClick={onAnswer}
           className="quiz-true-false-option quiz-true-option"
-          variant="true"
         />
         
         <div className="quiz-vs-divider">
@@ -50,7 +68,7 @@ const TrueFalseQuestion = ({
         </div>
         
         <AnswerOption
-          option={falseOption || "間違い (×)"}
+          option={getEnhancedFalseOption()}
           index={1}
           questionType="true_false"
           isSelected={selected === 1}
@@ -60,7 +78,6 @@ const TrueFalseQuestion = ({
           imageUrl={question._dbData?.answers?.[1]?.image_url}
           onClick={onAnswer}
           className="quiz-true-false-option quiz-false-option"
-          variant="false"
         />
       </div>
       

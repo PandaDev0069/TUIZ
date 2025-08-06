@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import './auth.css';
@@ -14,6 +14,10 @@ function Login() {
 
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  
+  // Refs for input elements for mobile keyboard handling
+  const emailInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -21,6 +25,51 @@ function Login() {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
+
+  // Mobile keyboard handling
+  useEffect(() => {
+    const handleResize = () => {
+      const isKeyboardOpen = window.innerHeight < window.screen.height * 0.75;
+      
+      if (isKeyboardOpen) {
+        setTimeout(() => {
+          const activeElement = document.activeElement;
+          if (activeElement && (activeElement === emailInputRef.current || activeElement === passwordInputRef.current)) {
+            activeElement.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+              inline: 'nearest'
+            });
+          }
+        }, 100);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(handleResize, 500);
+    });
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, []);
+
+  // Handle input focus for mobile keyboard
+  const handleInputFocus = (inputRef) => {
+    if (window.innerWidth <= 768) {
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+        }
+      }, 300);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -79,7 +128,13 @@ function Login() {
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
-      handleSubmit(e);
+      // Close mobile keyboard and scroll to button
+      e.target.blur();
+      
+      // Small delay to allow keyboard to close
+      setTimeout(() => {
+        handleSubmit(e);
+      }, 100);
     }
   };
 
@@ -112,6 +167,7 @@ function Login() {
             </label>
             <div className="input-wrapper">
               <input
+                ref={emailInputRef}
                 type="text"
                 id="emailOrName"
                 name="emailOrName"
@@ -120,6 +176,7 @@ function Login() {
                 value={formData.emailOrName}
                 onChange={handleChange}
                 onKeyPress={handleKeyPress}
+                onFocus={() => handleInputFocus(emailInputRef)}
                 disabled={loading}
                 autoComplete="username"
               />
@@ -136,6 +193,7 @@ function Login() {
             </label>
             <div className="input-wrapper has-toggle">
               <input
+                ref={passwordInputRef}
                 type={showPassword ? 'text' : 'password'}
                 id="password"
                 name="password"
@@ -144,6 +202,7 @@ function Login() {
                 value={formData.password}
                 onChange={handleChange}
                 onKeyPress={handleKeyPress}
+                onFocus={() => handleInputFocus(passwordInputRef)}
                 disabled={loading}
                 autoComplete="current-password"
               />
