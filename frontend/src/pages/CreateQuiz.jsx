@@ -111,7 +111,9 @@ function CreateQuiz() {
             }));
             
             setQuestions(formattedQuestions);
-            console.log('Questions loaded:', formattedQuestions.length);
+            if (import.meta.env.DEV) {
+              console.log('Questions loaded:', formattedQuestions.length);
+            }
           }
 
           // Populate settings if they exist in the quiz
@@ -172,7 +174,9 @@ function CreateQuiz() {
   useEffect(() => {
     const state = location.state;
     if (state?.returnFromPreview && state.currentQuizId && !currentQuizId) {
-      console.log('🔄 Restoring currentQuizId from preview navigation:', state.currentQuizId);
+      if (import.meta.env.DEV) {
+        console.log('🔄 Restoring currentQuizId from preview navigation:', state.currentQuizId);
+      }
       setCurrentQuizId(state.currentQuizId);
     }
   }, [location.state, currentQuizId]);

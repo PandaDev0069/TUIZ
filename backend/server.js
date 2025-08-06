@@ -914,7 +914,9 @@ const endGame = async (gameCode) => {
       });
       
       if (statusResult.success) {
-        console.log(`✅ Updated database game status to 'finished' for game ${activeGame.id}`);
+        if (isDevelopment || isLocalhost) {
+          console.log(`✅ Updated database game status to 'finished' for game ${activeGame.id}`);
+        }
       } else {
         console.error(`❌ Failed to update database game status: ${statusResult.error}`);
       }
@@ -1188,7 +1190,9 @@ io.on('connection', (socket) => {
         try {
           // Use the database UUID directly (no need to look up again)
           const gameUUID = activeGame.id;
-          console.log(`🔄 Adding player to database game ${gameUUID}...`);
+          if (isDevelopment) {
+            console.log(`🔄 Adding player to database game ${gameUUID}...`);
+          }
           
           const playerData = {
             name: playerName,
@@ -1197,7 +1201,9 @@ io.on('connection', (socket) => {
           };
           
           if (playerData.is_host) {
-            console.log(`👑 Host ${playerName} is joining their own game`);
+            if (isDevelopment) {
+              console.log(`👑 Host ${playerName} is joining their own game`);
+            }
           }
           
           const result = await db.addPlayerToGame(gameUUID, playerData);
@@ -1206,13 +1212,15 @@ io.on('connection', (socket) => {
             dbGamePlayer = result.gamePlayer;
             playerUUID = dbGamePlayer.player_id;
             
-            console.log(`✅ Player ${playerName} added to database:
-            - Game ID: ${gameUUID}
-            - Player UUID: ${playerUUID}
-            - Type: ${dbGamePlayer.is_guest ? 'Guest' : 'User'}
-            - Is Host: ${dbGamePlayer.is_host ? 'Yes' : 'No'}
-            - Returning Player: ${result.isReturningPlayer}
-            - New Player: ${result.isNewPlayer}`);
+            if (isDevelopment || isLocalhost) {
+              console.log(`✅ Player ${playerName} added to database:
+              - Game ID: ${gameUUID}
+              - Player UUID: ${playerUUID}
+              - Type: ${dbGamePlayer.is_guest ? 'Guest' : 'User'}
+              - Is Host: ${dbGamePlayer.is_host ? 'Yes' : 'No'}
+              - Returning Player: ${result.isReturningPlayer}
+              - New Player: ${result.isNewPlayer}`);
+            }
             
             // Update player object with database info
             player.dbId = dbGamePlayer.id;
@@ -1226,13 +1234,19 @@ io.on('connection', (socket) => {
             // If returning player, restore their previous score
             if (result.isReturningPlayer) {
               player.score = dbGamePlayer.current_score || 0;
-              console.log(`♻️ Restored returning player score: ${player.score}`);
+              if (isDevelopment || isLocalhost) {
+                console.log(`♻️ Restored returning player score: ${player.score}`);
+              }
             }
           } else {
-            console.warn(`⚠️ Failed to add player to database: ${result.error}`);
+            if (isDevelopment || isLocalhost) {
+              console.warn(`⚠️ Failed to add player to database: ${result.error}`);
+            }
           }
         } catch (dbError) {
-          console.error('❌ Database error while adding player:', dbError);
+          if (isDevelopment || isLocalhost) {
+            console.error('❌ Database error while adding player:', dbError);
+          }
         }
       }
       
@@ -1250,10 +1264,12 @@ io.on('connection', (socket) => {
         (player.isReturningPlayer ? 'Rejoined' : 'Joined') : 
         'Joined (Memory Only)';
       
-      console.log(`✅ Player ${playerName} ${statusMsg.toLowerCase()} game ${gameCode} 
-      - Socket ID: ${socket.id}
-      - Player UUID: ${playerUUID || 'None'}
-      - Score: ${player.score}`);
+      if (isDevelopment || isLocalhost) {
+        console.log(`✅ Player ${playerName} ${statusMsg.toLowerCase()} game ${gameCode} 
+        - Socket ID: ${socket.id}
+        - Player UUID: ${playerUUID || 'None'}
+        - Score: ${player.score}`);
+      }
       
       // Send current game state to the joining player FIRST
       try {
@@ -1335,7 +1351,9 @@ io.on('connection', (socket) => {
   // Start the game
   socket.on('startGame', async ({ gameCode }) => {
     try {
-      console.log(`🚀 Start Game Request for: ${gameCode}`);
+      if (isDevelopment) {
+        console.log(`🚀 Start Game Request for: ${gameCode}`);
+      }
       
       const activeGame = activeGames.get(gameCode);
       
@@ -1356,7 +1374,9 @@ io.on('connection', (socket) => {
       }
       
       // Load questions from database using QuestionService
-      console.log(`📚 Loading questions from database for question set: ${activeGame.question_set_id}`);
+      if (isDevelopment) {
+        console.log(`📚 Loading questions from database for question set: ${activeGame.question_set_id}`);
+      }
       
       const questionResult = await questionService.getQuestionSetForGame(activeGame.question_set_id);
       
@@ -1370,10 +1390,14 @@ io.on('connection', (socket) => {
       }
       
       const dbQuestions = questionResult.questions;
-      console.log(`📝 Successfully loaded ${dbQuestions.length} questions from database`);
+      if (isDevelopment) {
+        console.log(`📝 Successfully loaded ${dbQuestions.length} questions from database`);
+      }
       
       // Transform questions using QuestionFormatAdapter
-      console.log(`🔄 Transforming questions with game settings...`);
+      if (isDevelopment) {
+        console.log(`🔄 Transforming questions with game settings...`);
+      }
       const transformResult = questionAdapter.transformMultipleQuestions(dbQuestions, activeGame.game_settings);
       
       if (!transformResult.success || transformResult.questions.length === 0) {
@@ -1387,22 +1411,29 @@ io.on('connection', (socket) => {
       
       const questions = transformResult.questions;
       
-      console.log(`� Transformed ${questions.length} questions to game format`);
+      if (isDevelopment) {
+        console.log(`� Transformed ${questions.length} questions to game format`);
+      }
       
       // Log question types for debugging
       const questionTypes = questions.map(q => q.type);
-            console.log(`✅ Successfully transformed ${questions.length} questions to game format`);
+      if (isDevelopment) {
+        console.log(`✅ Successfully transformed ${questions.length} questions to game format`);
+      }
       
       // Log transformation summary
       if (transformResult.errors.length > 0) {
-        console.warn(`⚠️ ${transformResult.errors.length} questions had transformation errors:`, 
-          transformResult.errors.map(e => `Q${e.index}: ${e.error}`).join(', '));
+        if (isDevelopment) {
+          console.warn(`⚠️ ${transformResult.errors.length} questions had transformation errors:`, 
+            transformResult.errors.map(e => `Q${e.index}: ${e.error}`).join(', '));
+        }
       }
       
       // Log question types for debugging
       const typeSummary = questionAdapter.getQuestionTypeSummary(questions);
-      console.log(`📋 Question types: ${Object.entries(typeSummary.types).map(([type, count]) => `${type}(${count})`).join(', ')}`);
-      
+      if (isDevelopment) {
+        console.log(`📋 Question types: ${Object.entries(typeSummary.types).map(([type, count]) => `${type}(${count})`).join(', ')}`);
+      }
       // Validate we have valid questions
       if (questions.length === 0) {
         console.error('❌ No valid questions after transformation');
@@ -1414,18 +1445,24 @@ io.on('connection', (socket) => {
       }
       
       // Apply game settings to questions using GameSettingsService
-      console.log(`🎯 Applying game settings to gameplay...`);
+      if (isDevelopment) {
+        console.log(`🎯 Applying game settings to gameplay...`);
+      }
       const settingsResult = GameSettingsService.applySettingsToGame(activeGame.game_settings, questions);
       
       if (!settingsResult.success) {
         console.error(`❌ Failed to apply game settings: ${settingsResult.error}`);
-        console.warn(`⚠️ Falling back to questions without enhanced settings`);
+        if (isDevelopment) {
+          console.warn(`⚠️ Falling back to questions without enhanced settings`);
+        }
       }
       
       const finalQuestions = settingsResult.questions;
       const gameFlowConfig = settingsResult.gameFlowConfig;
       
-      console.log(`🎮 Game flow configured:`, GameSettingsService.getSettingsSummary(settingsResult.gameSettings || activeGame.game_settings));
+      if (isDevelopment) {
+        console.log(`🎮 Game flow configured:`, GameSettingsService.getSettingsSummary(settingsResult.gameSettings || activeGame.game_settings));
+      }
       
       // Final validation
       if (finalQuestions.length === 0) {
@@ -1453,7 +1490,9 @@ io.on('connection', (socket) => {
           });
           
           if (statusResult.success) {
-            console.log(`✅ Updated database game status to 'active' for game ${activeGame.id}`);
+            if (isDevelopment || isLocalhost) {
+              console.log(`✅ Updated database game status to 'active' for game ${activeGame.id}`);
+            }
           } else {
             console.error(`❌ Failed to update database game status: ${statusResult.error}`);
           }
@@ -1462,7 +1501,9 @@ io.on('connection', (socket) => {
         }
       }
       
-      console.log(`✅ Game ${gameCode} started with ${activeGame.players.size} players`);
+      if (isDevelopment) {
+        console.log(`✅ Game ${gameCode} started with ${activeGame.players.size} players`);
+      }
       
       // Notify all players that the game has started
       io.to(gameCode).emit('gameStarted', {
@@ -1484,7 +1525,9 @@ io.on('connection', (socket) => {
 
   // Handle next question request (from host)
   socket.on('next_question', async ({ room }) => {
-    console.log(`⏭️ Next question requested for room: ${room}`);
+    if (isDevelopment || isLocalhost) {
+      console.log(`⏭️ Next question requested for room: ${room}`);
+    }
     
     const activeGame = activeGames.get(room);
     if (!activeGame) {
@@ -1513,12 +1556,14 @@ io.on('connection', (socket) => {
   // Handle player answers
   socket.on('answer', ({ gameCode, questionId, selectedOption, timeTaken }) => {
     try {
-      console.log(`💭 Answer received:
-      Game: ${gameCode}
-      Player: ${socket.playerName}
-      Question: ${questionId}
-      Answer: ${selectedOption}
-      Time: ${timeTaken}s`);
+      if (isDevelopment || isLocalhost) {
+        console.log(`💭 Answer received:
+        Game: ${gameCode}
+        Player: ${socket.playerName}
+        Question: ${questionId}
+        Answer: ${selectedOption}
+        Time: ${timeTaken}s`);
+      }
       
       const activeGame = activeGames.get(gameCode);
       if (!activeGame || activeGame.status !== 'active') {
@@ -1566,7 +1611,7 @@ io.on('connection', (socket) => {
         player.score += points;
         
         // Log detailed breakdown for debugging
-        if (scoreResult.breakdown) {
+        if (scoreResult.breakdown && (isDevelopment || isLocalhost)) {
           const breakdown = scoreResult.breakdown;
           console.log(`✅ ${player.name}: Correct! Score breakdown:`, {
             base: breakdown.basePoints,
@@ -1579,7 +1624,9 @@ io.on('connection', (socket) => {
       } else {
         // Reset streak on wrong answer
         player.streak = 0;
-        console.log(`❌ ${player.name}: Wrong answer - streak reset`);
+        if (isDevelopment || isLocalhost) {
+          console.log(`❌ ${player.name}: Wrong answer - streak reset`);
+        }
       }
       
       // Record the answer
@@ -1633,7 +1680,9 @@ io.on('connection', (socket) => {
   // Handle question preloading for waiting room
   socket.on('preloadQuestions', async ({ gameCode }) => {
     try {
-      console.log(`⏳ Preload request for game: ${gameCode}`);
+      if (isDevelopment || isLocalhost) {
+        console.log(`⏳ Preload request for game: ${gameCode}`);
+      }
       
       const activeGame = activeGames.get(gameCode);
       if (!activeGame) {
@@ -1648,7 +1697,9 @@ io.on('connection', (socket) => {
         return;
       }
       
-      console.log(`📚 Preloading questions for question set: ${questionSetId}`);
+      if (isDevelopment || isLocalhost) {
+        console.log(`📚 Preloading questions for question set: ${questionSetId}`);
+      }
       
       // Use QuestionService to get preload data
       const preloadResult = await questionService.preloadQuestionsForWaiting(questionSetId);
@@ -1659,7 +1710,9 @@ io.on('connection', (socket) => {
         return;
       }
       
-      console.log(`✅ Sending preload data: ${preloadResult.questions.length} questions, ${preloadResult.imageUrls.length} images`);
+      if (isDevelopment || isLocalhost) {
+        console.log(`✅ Sending preload data: ${preloadResult.questions.length} questions, ${preloadResult.imageUrls.length} images`);
+      }
       
       // Send preload data to the client
       socket.emit('questionPreload', {
@@ -1677,7 +1730,9 @@ io.on('connection', (socket) => {
 
   // Handle player disconnection
   socket.on('disconnect', () => {
-    console.log(`🔌 User disconnected: ${socket.id}`);
+    if (isDevelopment || isLocalhost) {
+      console.log(`🔌 User disconnected: ${socket.id}`);
+    }
     
     // Handle game cleanup
     if (socket.gameCode) {
@@ -1708,12 +1763,16 @@ io.on('connection', (socket) => {
             allPlayers: connectedPlayers // Include updated player list
           });
           
-          console.log(`👋 Player ${player.name} disconnected from game ${socket.gameCode}`);
+          if (isDevelopment || isLocalhost) {
+            console.log(`👋 Player ${player.name} disconnected from game ${socket.gameCode}`);
+          }
         }
         
         // If host disconnected, you might want to handle that specially
         if (socket.hostOfGame) {
-          console.log(`🎮 Host disconnected from game ${socket.hostOfGame}`);
+          if (isDevelopment || isLocalhost) {
+            console.log(`🎮 Host disconnected from game ${socket.hostOfGame}`);
+          }
           // Could transfer host to another player or end the game
         }
       }
