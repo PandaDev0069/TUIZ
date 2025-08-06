@@ -9,32 +9,45 @@ const getApiBaseUrl = () => {
   const hostname = window.location.hostname;
   const isIPAddress = /^\d+\.\d+\.\d+\.\d+$/.test(hostname);
   
+  // Debug logging for environment variables
+  console.log('🔧 Environment Variables Debug:');
+  console.log(`  PROD mode: ${import.meta.env.PROD}`);
+  console.log(`  DEV mode: ${import.meta.env.DEV}`);
+  console.log(`  VITE_BACKEND_URL_PROD: ${import.meta.env.VITE_BACKEND_URL_PROD || 'Not set'}`);
+  console.log(`  VITE_API_BASE_URL: ${import.meta.env.VITE_API_BASE_URL || 'Not set'}`);
+  
   // If accessing via IP address, use the same IP for backend with port 3001
   if (isIPAddress) {
+    console.log('📱 Using IP address mode');
     return `http://${hostname}:3001`;
   }
   
   // First priority: Production environment variable for production builds
   if (import.meta.env.PROD && import.meta.env.VITE_BACKEND_URL_PROD) {
+    console.log('🏭 Using production backend URL');
     return import.meta.env.VITE_BACKEND_URL_PROD;
   }
   
   // Second priority: environment variable (only for localhost)
   if (import.meta.env.VITE_API_BASE_URL && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+    console.log('🏠 Using localhost API base URL');
     return import.meta.env.VITE_API_BASE_URL;
   }
 
   // Third priority: check if we're in development
   if (import.meta.env.DEV) {
+    console.log('🔧 Using development localhost');
     return 'http://localhost:3001';
   }
 
   // Fallback: determine based on hostname
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    console.log('🏠 Using localhost fallback');
     return 'http://localhost:3001';
   }
 
   // Production fallback: use same origin with /api prefix
+  console.log('⚠️ Using same-origin fallback (this might be wrong)');
   return `${window.location.protocol}//${window.location.host}`;
 };
 

@@ -59,13 +59,17 @@ const cleanupScheduler = new CleanupScheduler(db);
 const app = express();
 
 // CORS configuration for Supabase - Allow network access
+const allowedOrigins = [
+  process.env.CORS_ORIGIN || 'http://localhost:5173',
+  'https://tuiz-nine.vercel.app', // Add your Vercel domain
+  /^https:\/\/.*\.vercel\.app$/, // Allow any Vercel preview domains
+  /^http:\/\/192\.168\.\d+\.\d+:5173$/, // Allow local network IPs
+  /^http:\/\/10\.\d+\.\d+\.\d+:5173$/, // Allow 10.x.x.x network
+  /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:5173$/ // Allow 172.16-31.x.x network
+];
+
 app.use(cors({
-  origin: [
-    process.env.CORS_ORIGIN || 'http://localhost:5173',
-    /^http:\/\/192\.168\.\d+\.\d+:5173$/, // Allow local network IPs
-    /^http:\/\/10\.\d+\.\d+\.\d+:5173$/, // Allow 10.x.x.x network
-    /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:5173$/ // Allow 172.16-31.x.x network
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
 
@@ -492,14 +496,22 @@ app.use((error, req, res, next) => {
 const server = http.createServer(app);
 
 // Socket.IO server with enhanced CORS - Allow network access
+const socketAllowedOrigins = [
+  process.env.SOCKET_CORS_ORIGIN || 'http://localhost:5173',
+  'https://tuiz-nine.vercel.app', // Add your Vercel domain
+  /^https:\/\/.*\.vercel\.app$/, // Allow any Vercel preview domains
+  /^http:\/\/192\.168\.\d+\.\d+:5173$/, // Allow local network IPs
+  /^http:\/\/10\.\d+\.\d+\.\d+:5173$/, // Allow 10.x.x.x network
+  /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:5173$/ // Allow 172.16-31.x.x network
+];
+
+console.log('🔌 Socket.IO CORS Configuration:');
+console.log('  Environment SOCKET_CORS_ORIGIN:', process.env.SOCKET_CORS_ORIGIN || 'Not set');
+console.log('  Socket origins include Vercel domain: ✅');
+
 const io = new Server(server, {
     cors: {
-        origin: [
-          process.env.SOCKET_CORS_ORIGIN || 'http://localhost:5173',
-          /^http:\/\/192\.168\.\d+\.\d+:5173$/, // Allow local network IPs
-          /^http:\/\/10\.\d+\.\d+\.\d+:5173$/, // Allow 10.x.x.x network
-          /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:5173$/ // Allow 172.16-31.x.x network
-        ],
+        origin: socketAllowedOrigins,
         methods: ['GET', 'POST'],
         credentials: true
     },
