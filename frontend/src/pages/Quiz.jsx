@@ -24,6 +24,7 @@ function Quiz() {
   const [showExplanation, setShowExplanation] = useState(false);
   const [explanationData, setExplanationData] = useState(null);
   const [explanationTimer, setExplanationTimer] = useState(0);
+  const [initialExplanationDuration, setInitialExplanationDuration] = useState(0); // Store original duration
   const [answerResult, setAnswerResult] = useState(null);
   const [latestStandings, setLatestStandings] = useState(null); // Store latest leaderboard standings
   const [currentPlayerAnswerData, setCurrentPlayerAnswerData] = useState(null); // Store current player's answer data for accuracy
@@ -92,6 +93,7 @@ function Quiz() {
       // Set explanation timer
       const explainTimer = Math.round(data.explanationTime / 1000) || 30;
       setExplanationTimer(explainTimer);
+      setInitialExplanationDuration(explainTimer); // Store the original duration
       
       // Hide question interface during explanation
       setQuestion(null);
@@ -181,6 +183,7 @@ function Quiz() {
       });
       setShowExplanation(true);
       setExplanationTimer(5); // 5 seconds for intermediate
+      setInitialExplanationDuration(5); // Store the original duration
     });
 
     // Handle game over
@@ -271,6 +274,7 @@ function Quiz() {
     setShowExplanation(false);
     setExplanationData(null);
     setExplanationTimer(0);
+    setInitialExplanationDuration(0); // Reset the duration
   };
 
   // Unified explanation/leaderboard display
@@ -339,8 +343,8 @@ function Quiz() {
         isIntermediate: explanationData.isIntermediate || false
       },
       
-      // Duration for timer
-      duration: explanationTimer * 1000
+      // Duration for timer - USE INITIAL DURATION, not current timer
+      duration: initialExplanationDuration * 1000
     };
 
     console.log('🔍 PostQuestionDisplay data:', {

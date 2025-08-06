@@ -18,29 +18,29 @@ import './PostQuestionDisplay.css';
  * - No complex state management or conditional logic
  */
 const PostQuestionDisplay = ({ displayData, onComplete }) => {
-  const [timeLeft, setTimeLeft] = useState(displayData.duration);
+  // Use timeLimit in milliseconds (like QuestionRenderer) instead of converting to seconds
+  const timeLimit = displayData.duration; // Keep in milliseconds
+  const durationInSeconds = Math.ceil(timeLimit / 1000);
+  const [timer, setTimer] = useState(durationInSeconds);
   const [isClosing, setIsClosing] = useState(false);
 
-  // Simple timer logic - decrements every 100ms
+  // Timer logic matching QuestionRenderer - decrements every second
   useManagedInterval(
     () => {
-      setTimeLeft(prev => {
-        if (prev <= 100) {
+      setTimer(prev => {
+        if (prev <= 1) {
           // Start closing animation
           setIsClosing(true);
           // Complete after animation
           setTimeout(() => onComplete?.(), 300);
           return 0;
         }
-        return prev - 100;
+        return prev - 1;
       });
     },
-    100,
+    1000, // 1 second interval like QuestionRenderer
     [onComplete]
   );
-
-  // Calculate progress percentage for timer display
-  const progressPercent = (timeLeft / displayData.duration) * 100;
 
   // Binary rendering decision - no complex conditionals
   return (
@@ -48,15 +48,15 @@ const PostQuestionDisplay = ({ displayData, onComplete }) => {
       {displayData.explanation ? (
         <WithExplanationLayout 
           displayData={displayData}
-          timeLeft={timeLeft}
-          progressPercent={progressPercent}
+          timer={timer}
+          timeLimit={timeLimit}
           isClosing={isClosing}
         />
       ) : (
         <LeaderboardOnlyLayout 
           displayData={displayData}
-          timeLeft={timeLeft}
-          progressPercent={progressPercent}
+          timer={timer}
+          timeLimit={timeLimit}
           isClosing={isClosing}
         />
       )}

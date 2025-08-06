@@ -139,7 +139,7 @@ function Scoreboard() {
               <div className="player-info">
                 <span className="player-medal">{getMedalEmoji(index)}</span>
                 <span className="player-name">
-                  {player.name} {getStreakEmoji(player.streak)}
+                  {player.name}
                 </span>
                 <span 
                   className="player-score"

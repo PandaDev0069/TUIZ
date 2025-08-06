@@ -1,4 +1,5 @@
 import React from 'react';
+import TimerComponent from './TimerComponent';
 
 /**
  * WithExplanationLayout - Layout for questions WITH explanations
@@ -8,32 +9,15 @@ import React from 'react';
  * - Leaderboard section (top 5 players, stats)  
  * - Own result section (player performance)
  */
-const WithExplanationLayout = ({ displayData, timeLeft, progressPercent, isClosing }) => {
+function WithExplanationLayout({ displayData, userNickname, timer, timeLimit, isClosing, onClose }) {
   const { explanation, leaderboard } = displayData;
 
   return (
     <div className={`pqd-overlay ${isClosing ? 'pqd-closing' : ''}`}>
       <div className="pqd-container pqd-with-explanation">
         
-        {/* Timer Header */}
-        <div className="pqd-timer-header">
-          <div className="pqd-timer-circle">
-            <svg className="pqd-timer-svg" viewBox="0 0 36 36">
-              <path
-                className="pqd-timer-bg"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className="pqd-timer-progress"
-                strokeDasharray={`${progressPercent}, 100`}
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-            </svg>
-            <span className="pqd-timer-text">{Math.ceil(timeLeft / 1000)}</span>
-          </div>
-        </div>
-
-        <div className="pqd-content">
+      {/* Timer Header - Using exact QuestionRenderer implementation */}
+      <TimerComponent timer={timer} timeLimit={timeLimit} />        <div className="pqd-content">
           
           {/* Explanation Section */}
           <div className="pqd-explanation-section">

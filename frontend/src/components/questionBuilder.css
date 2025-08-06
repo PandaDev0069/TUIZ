@@ -893,7 +893,7 @@
 }
 
 .preview-answer-option {
-  background: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   padding: 1rem;
@@ -1105,7 +1105,7 @@
 }
 
 .question-builder-preview-answer-option {
-  background: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   padding: 1rem;
