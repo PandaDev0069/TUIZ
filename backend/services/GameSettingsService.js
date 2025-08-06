@@ -282,7 +282,7 @@ class GameSettingsService {
         return gameSettings.showExplanations ? gameSettings.explanationTime * 1000 : 0;
       
       case 'leaderboard':
-        return gameSettings.showLeaderboard ? 5000 : 1000; // 5s or 1s
+        return gameSettings.showLeaderboard ? gameSettings.explanationTime * 1000 : 1000; // Use explanation time or 1s
       
       default:
         return 3000; // Default 3 seconds

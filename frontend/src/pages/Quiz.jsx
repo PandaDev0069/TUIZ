@@ -25,6 +25,7 @@ function Quiz() {
   const [explanationData, setExplanationData] = useState(null);
   const [explanationTimer, setExplanationTimer] = useState(0);
   const [initialExplanationDuration, setInitialExplanationDuration] = useState(0); // Store original duration
+  const [gameExplanationTime, setGameExplanationTime] = useState(30); // Store game's explanation time setting
   const [answerResult, setAnswerResult] = useState(null);
   const [latestStandings, setLatestStandings] = useState(null); // Store latest leaderboard standings
   const [currentPlayerAnswerData, setCurrentPlayerAnswerData] = useState(null); // Store current player's answer data for accuracy
@@ -94,6 +95,9 @@ function Quiz() {
       const explainTimer = Math.round(data.explanationTime / 1000) || 30;
       setExplanationTimer(explainTimer);
       setInitialExplanationDuration(explainTimer); // Store the original duration
+      
+      // Store the game's explanation time setting for use in leaderboard displays
+      setGameExplanationTime(explainTimer);
       
       // Hide question interface during explanation
       setQuestion(null);
@@ -182,8 +186,8 @@ function Quiz() {
         ...leaderboardData 
       });
       setShowExplanation(true);
-      setExplanationTimer(5); // 5 seconds for intermediate
-      setInitialExplanationDuration(5); // Store the original duration
+      setExplanationTimer(data.explanationTime); // Use explanation time from server
+      setInitialExplanationDuration(data.explanationTime); // Store the original duration
     });
 
     // Handle game over

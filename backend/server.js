@@ -643,7 +643,8 @@ const showIntermediateLeaderboard = (gameCode) => {
     totalQuestions: activeGame.questions.length,
     standings: leaderboard,
     isGameOver: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length,
-    displayTime: 5000, // 5 seconds
+    displayTime: (gameSettings.explanationTime || 30) * 1000, // Use explanation time setting
+    explanationTime: (gameSettings.explanationTime || 30) * 1000, // Also include for frontend consistency
     autoAdvance: gameSettings.autoAdvance !== false,
     
     // Add answer stats and correct answer for consistency with explanation events
