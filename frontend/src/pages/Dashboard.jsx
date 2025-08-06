@@ -7,12 +7,14 @@ import ProfileSettingsModal from '../components/ProfileSettingsModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { useConfirmation } from '../hooks/useConfirmation';
+import { useManagedTimeout } from '../utils/timerManager';
 import './dashboard.css';
 
 function Dashboard() {
   const { user, logout, isAuthenticated, apiCall } = useAuth();
   const navigate = useNavigate();
   const { showConfirmation, confirmationProps } = useConfirmation();
+  const managedTimeout = useManagedTimeout();
   const [myQuizSets, setMyQuizSets] = useState([]);
   const [draftQuizzes, setDraftQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +39,7 @@ function Dashboard() {
   // Helper function to show messages
   const showMessage = (type, text) => {
     setMessage({ type, text });
-    setTimeout(() => {
+    managedTimeout.setTimeout(() => {
       setMessage({ type: '', text: '' });
     }, 5000); // Clear message after 5 seconds
   };
@@ -87,11 +89,6 @@ function Dashboard() {
   const handleCreateQuiz = () => {
     // Navigate to quiz creation page
     navigate('/create-quiz');
-  };
-
-  const handleQuickStart = () => {
-    // Navigate to existing host flow for now
-    navigate('/host');
   };
 
   const handleStartQuiz = (questionSetId, title) => {
@@ -281,12 +278,6 @@ function Dashboard() {
                 <p>ルームコードでゲームに参加する</p>
               </div>
 
-              <div className="action-card" onClick={handleQuickStart}>
-                <div className="action-icon">🚀</div>
-                <h3>クイックスタート</h3>
-                <p>デフォルトクイズで今すぐゲームを開始</p>
-              </div>
-
               <div className="action-card disabled">
                 <div className="action-icon">📊</div>
                 <h3>分析・統計</h3>
@@ -294,10 +285,11 @@ function Dashboard() {
                 <div className="action-badge coming-soon">準備中</div>
               </div>
 
-              <div className="action-card" onClick={() => navigate('/create-quiz')}>
+              <div className="action-card disabled">
                 <div className="action-icon">📂</div>
                 <h3>クイズライブラリ</h3>
                 <p>作成したクイズを管理・編集</p>
+                <div className="action-badge coming-soon">準備中</div>
               </div>
             </div>
           </section>
