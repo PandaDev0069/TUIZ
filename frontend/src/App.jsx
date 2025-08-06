@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import socket from './socket'
 import { AuthProvider } from './contexts/AuthContext'
 import AuthDebugger from './components/AuthDebugger'
@@ -51,6 +52,7 @@ function App() {
         <Route path="/scoreboard" element={<Scoreboard />} />
       </Routes>
       <ToastContainer />
+      <SpeedInsights />
     </AuthProvider>
   )
 }
