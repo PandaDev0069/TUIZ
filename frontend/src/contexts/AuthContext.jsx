@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { apiConfig } from '../utils/apiConfig';
 
 const AuthContext = createContext();
 
@@ -14,11 +15,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // API base URL
-  const API_BASE = window.location.hostname === 'localhost' 
-    ? 'http://localhost:3001' 
-    : `http://${window.location.hostname}:3001`;
 
   // Initialize auth state from localStorage
   useEffect(() => {
@@ -38,7 +34,7 @@ export const AuthProvider = ({ children }) => {
 
   // Make authenticated API calls
   const apiCall = async (endpoint, options = {}) => {
-    const url = `${API_BASE}/api${endpoint}`;
+    const url = apiConfig.getApiUrl(endpoint);
     
     // Handle different content types
     const headers = { ...options.headers };
@@ -90,7 +86,7 @@ export const AuthProvider = ({ children }) => {
   // Verify token validity
   const verifyToken = async (tokenToVerify) => {
     try {
-      const response = await fetch(`${API_BASE}/api/auth/profile`, {
+      const response = await fetch(apiConfig.getApiUrl('/auth/profile'), {
         headers: {
           'Authorization': `Bearer ${tokenToVerify}`,
         },

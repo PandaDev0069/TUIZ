@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { showError } from '../utils/toast';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import socket from '../socket';
+import { apiConfig } from '../utils/apiConfig';
 import './host.css';
 
 function Host() {
@@ -21,8 +22,8 @@ function Host() {
 
   const fetchQuestionSets = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/question-sets/public')
-      const data = await response.json()
+      const response = await fetch(apiConfig.getUrl('questionSetsPublic'));
+      const data = await response.json();
       setQuestionSets(data.questionSets || [])
       if (data.questionSets && data.questionSets.length > 0) {
         setSelectedQuestionSet(data.questionSets[0].id)

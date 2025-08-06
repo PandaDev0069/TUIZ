@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfirmation } from '../hooks/useConfirmation';
 import ConfirmationModal from './ConfirmationModal';
+import { apiConfig } from '../utils/apiConfig';
 import './profileSettingsModal.css';
 
 const ProfileSettingsModal = ({ isOpen, onClose }) => {
@@ -87,9 +88,7 @@ const ProfileSettingsModal = ({ isOpen, onClose }) => {
       uploadFormData.append('userId', user.id);
 
       // Upload image
-      const response = await fetch(`${window.location.hostname === 'localhost' 
-        ? 'http://localhost:3001' 
-        : `http://${window.location.hostname}:3001`}/api/auth/upload-avatar`, {
+      const response = await fetch(apiConfig.getApiUrl('/auth/upload-avatar'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('tuiz_token')}`
