@@ -26,25 +26,6 @@ header_pages:
   - FEATURE_REQUESTS.md
   - DEVELOPMENT_GUIDE.md
 
-# Collections
-collections:
-  docs:
-    output: true
-    permalink: /:collection/:name/
-
-# Defaults
-defaults:
-  - scope:
-      path: ""
-      type: "pages"
-    values:
-      layout: "default"
-  - scope:
-      path: ""
-      type: "docs"
-    values:
-      layout: "default"
-
 # Exclude files from processing
 exclude:
   - node_modules/
@@ -55,6 +36,21 @@ exclude:
   - Gemfile.lock
   - vendor/
   - archive/
+  - "*.log"
+  - "ADVANCED_SCORING_SYSTEM_SUMMARY.md"
+  - "Day2_MemoryLeak_Implementation_Summary.md"
+  - "EXPLANATION_LEADERBOARD_CLEANUP_PLAN.md"
+  - "IMPLEMENTATION_AUDIT_AND_FOLLOWUP_PLAN.md"
+  - "PostQuestionDisplay_Implementation_Complete.md"
+  - "Prompt_and_WorkFlow.md"
+  - "QUIZ_DEVELOPMENT_ROADMAP.md"
+  - "TODO's.md"
+  - "UnifiedPostQuestion_Complexity_Audit.md"
+  - "cleanup-summary.md"
+  - "feature_req.md"
+  - "game-settings-fix-summary.md"
+  - "host_lobby_settings_guide.md"
+  - "plan.md"
 
 # Include files
 include:

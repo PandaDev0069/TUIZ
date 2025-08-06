@@ -132,7 +132,9 @@ npm run test:integration
 import React from 'react';
 import styles from './Component.module.css';
 
-const Component = ({ prop1, prop2 }) => {
+const Component = (props) => {
+  const { prop1, prop2 } = props;
+  
   // Hooks at the top
   const [state, setState] = useState(initialState);
   
@@ -165,7 +167,7 @@ router.use(authMiddleware);
 router.get('/endpoint', async (req, res) => {
   try {
     // Logic here
-    res.json({ success: true, data });
+    res.json({ success: true, data: responseData });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -257,11 +259,11 @@ if (isDevelopment || isLocalhost) {
 const logger = {
   info: (message, data) => {
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[INFO] ${message}`, data);
+      console.log('[INFO] ' + message, data);
     }
   },
   error: (message, error) => {
-    console.error(`[ERROR] ${message}`, error);
+    console.error('[ERROR] ' + message, error);
   }
 };
 ```
