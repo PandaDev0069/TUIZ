@@ -7,6 +7,9 @@ const socket = io(apiConfig.socketUrl, {
     forceNew: true
 });
 
-console.log(`🔌 Connecting to backend at: ${apiConfig.socketUrl}`);
+// Only log socket connection in development
+if (import.meta.env.DEV) {
+  console.log(`🔌 Connecting to backend at: ${apiConfig.socketUrl}`);
+}
 
 export default socket;

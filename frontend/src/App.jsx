@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
+import { Analytics } from '@vercel/analytics/react'
 import socket from './socket'
 import { AuthProvider } from './contexts/AuthContext'
 import AuthDebugger from './components/AuthDebugger'
@@ -23,7 +24,10 @@ import Scoreboard from './pages/Scoreboard'
 function App() {
   useEffect(() => {
     socket.on('connect', () => {
-      console.log(`Connected to server with ID: ${socket.id}`);
+      // Only log connection in development
+      if (import.meta.env.DEV) {
+        console.log(`Connected to server with ID: ${socket.id}`);
+      }
     });
 
     return () => {
@@ -53,6 +57,7 @@ function App() {
       </Routes>
       <ToastContainer />
       <SpeedInsights />
+      <Analytics />
     </AuthProvider>
   )
 }

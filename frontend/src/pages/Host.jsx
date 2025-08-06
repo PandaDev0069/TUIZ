@@ -29,7 +29,9 @@ function Host() {
         setSelectedQuestionSet(data.questionSets[0].id)
       }
     } catch (error) {
-      console.error('Error fetching question sets:', error)
+      if (import.meta.env.DEV) {
+        console.error('Error fetching question sets:', error);
+      }
       // Set a default if fetch fails
       setQuestionSets([{
         id: 'default-questions',
@@ -63,7 +65,9 @@ function Host() {
     
     // Listen for game creation success
     socket.once('gameCreated', ({ game, gameCode }) => {
-      console.log('Game created successfully:', game);
+      if (import.meta.env.DEV) {
+        console.log('Game created successfully:', game);
+      }
       navigate('/host/lobby', { 
         state: { 
           room: gameCode, 
@@ -76,7 +80,9 @@ function Host() {
     
     // Listen for errors
     socket.once('error', ({ message }) => {
-      console.error('Game creation failed:', message);
+      if (import.meta.env.DEV) {
+        console.error('Game creation failed:', message);
+      }
       showError('ゲーム作成に失敗しました: ' + message);
     })
   }

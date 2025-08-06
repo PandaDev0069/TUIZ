@@ -11,9 +11,11 @@ function HostLobby() {
   const [players, setPlayers] = useState([])
   const [showSettings, setShowSettings] = useState(false)
 
-  // Debug logging
-  console.log('HostLobby state:', state);
-  console.log('HostLobby questionSetId:', questionSetId);
+  // Debug logging - only in development
+  if (import.meta.env.DEV) {
+    console.log('HostLobby state:', state);
+    console.log('HostLobby questionSetId:', questionSetId);
+  }
 
   useEffect(() => {
     if (!room || !title) {
@@ -23,11 +25,15 @@ function HostLobby() {
 
     // Listen for new players joining the game
     socket.on('playerJoined', ({ player, totalPlayers }) => {
-      console.log('New player joined:', player);
+      if (import.meta.env.DEV) {
+        console.log('New player joined:', player);
+      }
       // Get updated player list from the game
       setPlayers(prev => {
         const updated = [...prev, player.name];
-        console.log('Host lobby - players updated:', updated);
+        if (import.meta.env.DEV) {
+          console.log('Host lobby - players updated:', updated);
+        }
         return updated;
       });
     });
@@ -44,7 +50,9 @@ function HostLobby() {
 
   const handleOpenSettings = () => {
     if (!questionSetId) {
-      console.error('No questionSetId available for settings');
+      if (import.meta.env.DEV) {
+        console.error('No questionSetId available for settings');
+      }
       alert('設定を開けません: 問題セットIDが見つかりません');
       return;
     }

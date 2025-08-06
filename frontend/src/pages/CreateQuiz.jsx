@@ -54,11 +54,15 @@ function CreateQuiz() {
         try {
           setIsDraftLoading(true);
           draftLoadedRef.current = true; // Prevent re-loading
-          console.log('Loading quiz for editing:', questionSetId, { draftMode, wasPublished });
+          if (import.meta.env.DEV) {
+            console.log('Loading quiz for editing:', questionSetId, { draftMode, wasPublished });
+          }
           
           // Load the quiz data (same API works for both drafts and published)
           const quizData = await loadDraft(questionSetId);
-          console.log('Quiz data loaded:', quizData);
+          if (import.meta.env.DEV) {
+            console.log('Quiz data loaded:', quizData);
+          }
           
           // Populate metadata
           if (quizData.quiz) {

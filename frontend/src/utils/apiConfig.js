@@ -8,29 +8,35 @@ const getApiBaseUrl = () => {
   // Check if we're accessing via IP address (mobile device)
   const hostname = window.location.hostname;
   const isIPAddress = /^\d+\.\d+\.\d+\.\d+$/.test(hostname);
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
   
-  // Debug logging for environment variables
-  console.log('🔧 Environment Variables Debug:');
-  console.log(`  PROD mode: ${import.meta.env.PROD}`);
-  console.log(`  DEV mode: ${import.meta.env.DEV}`);
-  console.log(`  VITE_BACKEND_URL_PROD: ${import.meta.env.VITE_BACKEND_URL_PROD || 'Not set'}`);
-  console.log(`  VITE_API_BASE_URL: ${import.meta.env.VITE_API_BASE_URL || 'Not set'}`);
+  // Debug logging only for development/localhost environments
+  if (import.meta.env.DEV || isLocalhost) {
+    console.log('🔧 API Config Debug - Environment Variables:');
+    console.log(`  Environment: ${import.meta.env.MODE}`);
+    console.log(`  Hostname: ${hostname}`);
+    console.log(`  VITE_BACKEND_URL_PROD: ${import.meta.env.VITE_BACKEND_URL_PROD || 'Not set'}`);
+    console.log(`  VITE_API_BASE_URL: ${import.meta.env.VITE_API_BASE_URL || 'Not set'}`);
+  }
   
   // If accessing via IP address, use the same IP for backend with port 3001
   if (isIPAddress) {
-    console.log('📱 Using IP address mode');
+    if (import.meta.env.DEV || isLocalhost) {
+      console.log('📱 Using IP address mode for mobile testing');
+    }
     return `http://${hostname}:3001`;
   }
   
   // First priority: Production environment variable for production builds
   if (import.meta.env.PROD && import.meta.env.VITE_BACKEND_URL_PROD) {
-    console.log('🏭 Using production backend URL');
     return import.meta.env.VITE_BACKEND_URL_PROD;
   }
   
   // Second priority: environment variable (only for localhost)
-  if (import.meta.env.VITE_API_BASE_URL && (hostname === 'localhost' || hostname === '127.0.0.1')) {
-    console.log('🏠 Using localhost API base URL');
+  if (import.meta.env.VITE_API_BASE_URL && isLocalhost) {
+    if (import.meta.env.DEV) {
+      console.log('🏠 Using localhost API base URL');
+    }
     return import.meta.env.VITE_API_BASE_URL;
   }
 
@@ -41,13 +47,18 @@ const getApiBaseUrl = () => {
   }
 
   // Fallback: determine based on hostname
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    console.log('🏠 Using localhost fallback');
+  if (isLocalhost) {
+    if (import.meta.env.DEV) {
+      console.log('🏠 Using localhost fallback');
+    }
     return 'http://localhost:3001';
   }
 
   // Production fallback: use same origin with /api prefix
-  console.log('⚠️ Using same-origin fallback (this might be wrong)');
+  // Only log warning in development to avoid production console spam
+  if (import.meta.env.DEV) {
+    console.warn('⚠️ Using same-origin fallback - verify production config');
+  }
   return `${window.location.protocol}//${window.location.host}`;
 };
 
@@ -56,6 +67,7 @@ const getSocketUrl = () => {
   // Check if we're accessing via IP address (mobile device)
   const hostname = window.location.hostname;
   const isIPAddress = /^\d+\.\d+\.\d+\.\d+$/.test(hostname);
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
   
   // If accessing via IP address, use the same IP for backend with port 3001
   if (isIPAddress) {
@@ -68,7 +80,7 @@ const getSocketUrl = () => {
   }
   
   // Second priority: environment variable (for localhost and development)
-  if (import.meta.env.VITE_SOCKET_URL && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+  if (import.meta.env.VITE_SOCKET_URL && isLocalhost) {
     return import.meta.env.VITE_SOCKET_URL;
   }
 
@@ -121,16 +133,20 @@ export const apiConfig = {
   }
 };
 
-// Debug logging for mobile connections
+// Debug logging for mobile connections - only in development
 const hostname = window.location.hostname;
 const isIPAddress = /^\d+\.\d+\.\d+\.\d+$/.test(hostname);
+const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
 
-console.log('🔧 API Configuration Debug:');
-console.log(`  Hostname: ${hostname}`);
-console.log(`  Is IP Address: ${isIPAddress}`);
-console.log(`  Base URL: ${apiConfig.baseUrl}`);
-console.log(`  Socket URL: ${apiConfig.socketUrl}`);
-console.log(`  Environment: ${import.meta.env.MODE}`);
+// Only log configuration details in development/localhost environments
+if (import.meta.env.DEV || isLocalhost) {
+  console.log('🔧 API Configuration Debug:');
+  console.log(`  Hostname: ${hostname}`);
+  console.log(`  Is IP Address: ${isIPAddress}`);
+  console.log(`  Base URL: ${apiConfig.baseUrl}`);
+  console.log(`  Socket URL: ${apiConfig.socketUrl}`);
+  console.log(`  Environment: ${import.meta.env.MODE}`);
+}
 
 // Environment validation
 export const validateEnvironment = () => {
@@ -144,7 +160,8 @@ export const validateEnvironment = () => {
     warnings.push('VITE_SOCKET_URL not set in production environment');
   }
 
-  if (warnings.length > 0) {
+  // Only log warnings in development to avoid production console spam
+  if (warnings.length > 0 && import.meta.env.DEV) {
     console.warn('Environment configuration warnings:', warnings);
   }
 

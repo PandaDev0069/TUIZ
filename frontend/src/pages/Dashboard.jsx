@@ -74,7 +74,9 @@ function Dashboard() {
         draftCount: draftQuizzes.length
       });
     } catch (error) {
-      console.error('Error fetching quiz sets:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error fetching quiz sets:', error);
+      }
       showMessage('error', 'クイズデータの取得に失敗しました: ' + error.message);
     } finally {
       setLoading(false);
@@ -105,7 +107,9 @@ function Dashboard() {
     
     // Listen for game creation success
     socket.once('gameCreated', ({ game, gameCode }) => {
-      console.log('Game created successfully:', game);
+      if (import.meta.env.DEV) {
+        console.log('Game created successfully:', game);
+      }
       // Use the title from the game object (which includes the resolved title from the server)
       const resolvedTitle = game.game_settings?.title || 'クイズゲーム';
       navigate('/host/lobby', { state: { room: gameCode, title: resolvedTitle, gameId: game.id, questionSetId: questionSetId } });
@@ -113,7 +117,9 @@ function Dashboard() {
     
     // Listen for errors
     socket.once('error', ({ message }) => {
-      console.error('Game creation failed:', message);
+      if (import.meta.env.DEV) {
+        console.error('Game creation failed:', message);
+      }
       showError('ゲーム作成に失敗しました: ' + message);
     });
   };
@@ -140,7 +146,9 @@ function Dashboard() {
         } 
       });
     } catch (error) {
-      console.error('Error setting quiz to draft mode:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error setting quiz to draft mode:', error);
+      }
       showMessage('error', '編集モードへの変更に失敗しました: ' + error.message);
     }
   };
@@ -172,7 +180,9 @@ function Dashboard() {
       showMessage('success', '下書きが削除されました。');
       fetchMyQuizSets(); // Refresh the list
     } catch (error) {
-      console.error('Error deleting draft:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error deleting draft:', error);
+      }
       showMessage('error', '削除に失敗しました: ' + error.message);
     }
   };
@@ -193,7 +203,9 @@ function Dashboard() {
       showMessage('success', 'クイズセットが削除されました。');
       fetchMyQuizSets(); // Refresh the list
     } catch (error) {
-      console.error('Error deleting quiz set:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error deleting quiz set:', error);
+      }
       showMessage('error', '削除に失敗しました: ' + error.message);
     }
   };

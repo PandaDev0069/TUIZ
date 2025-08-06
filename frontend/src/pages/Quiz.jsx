@@ -38,7 +38,9 @@ function Quiz() {
 
     // Receive question from server
     socket.on('question', (q) => {
-      console.log('📋 Received question:', q);
+      if (import.meta.env.DEV) {
+        console.log('📋 Received question:', q);
+      }
       setQuestion(q);
       setSelected(null);
       setFeedback("");
@@ -57,7 +59,9 @@ function Quiz() {
       // Auto-scroll to quiz content on mobile when new question arrives
       if (window.innerWidth <= 768) {
         setTimeout(() => {
-          console.log('📱 Auto-scrolling to new quiz question');
+          if (import.meta.env.DEV) {
+            console.log('📱 Auto-scrolling to new quiz question');
+          }
           const quizContent = document.querySelector('.quiz-question-content-wrapper');
           if (quizContent) {
             quizContent.scrollIntoView({
@@ -72,7 +76,9 @@ function Quiz() {
 
     // Handle answer result from server
     socket.on('answerResult', (result) => {
-      console.log('✅ Answer result:', result);
+      if (import.meta.env.DEV) {
+        console.log('✅ Answer result:', result);
+      }
       setAnswerResult(result);
       setScore(result.newScore);
       setStreak(result.streak);
@@ -87,7 +93,9 @@ function Quiz() {
 
     // Handle explanation display
     socket.on('showExplanation', (data) => {
-      console.log('💡 Showing explanation:', data);
+      if (import.meta.env.DEV) {
+        console.log('💡 Showing explanation:', data);
+      }
       setExplanationData(data);
       setShowExplanation(true);
       
@@ -105,7 +113,9 @@ function Quiz() {
       // Auto-scroll to explanation on mobile
       if (window.innerWidth <= 768) {
         setTimeout(() => {
-          console.log('📱 Auto-scrolling to explanation');
+          if (import.meta.env.DEV) {
+            console.log('📱 Auto-scrolling to explanation');
+          }
           const explanationContent = document.querySelector('.explanation-content, .quiz-explanation');
           if (explanationContent) {
             explanationContent.scrollIntoView({
@@ -120,14 +130,18 @@ function Quiz() {
 
     // Handle individual player answer data for accurate status
     socket.on('playerAnswerData', (data) => {
-      console.log('🎯 Received player answer data:', data);
+      if (import.meta.env.DEV) {
+        console.log('🎯 Received player answer data:', data);
+      }
       setCurrentPlayerAnswerData(data);
     });
 
     // Handle intermediate scoreboard - for questions without explanations
     socket.on('showLeaderboard', (data) => {
-      console.log('🏆 Received intermediate leaderboard data:', data);
-      console.log('Current player state:', { score, streak, questionScore, answerResult, feedback });
+      if (import.meta.env.DEV) {
+        console.log('🏆 Received intermediate leaderboard data:', data);
+        console.log('Current player state:', { score, streak, questionScore, answerResult, feedback });
+      }
       
       // Store the latest standings for use in explanations
       setLatestStandings(data.standings);
@@ -178,7 +192,9 @@ function Quiz() {
         isIntermediate: true
       };
       
-      console.log('Unified intermediate leaderboard data:', leaderboardData);
+      if (import.meta.env.DEV) {
+        console.log('Unified intermediate leaderboard data:', leaderboardData);
+      }
       
       // Use the same explanation system but with no explanation content
       setExplanationData({ 
@@ -351,15 +367,17 @@ function Quiz() {
       duration: initialExplanationDuration * 1000
     };
 
-    console.log('🔍 PostQuestionDisplay data:', {
-      hasExplanation: !!displayData.explanation,
-      hasAnswerStats: !!displayData.leaderboard.answerStats,
-      hasStandings: !!(displayData.leaderboard.standings && displayData.leaderboard.standings.length > 0),
-      standingsCount: displayData.leaderboard.standings?.length || 0,
-      currentPlayer: displayData.leaderboard.currentPlayer,
-      isIntermediate: displayData.leaderboard.isIntermediate,
-      duration: displayData.duration
-    });
+    if (import.meta.env.DEV) {
+      console.log('🔍 PostQuestionDisplay data:', {
+        hasExplanation: !!displayData.explanation,
+        hasAnswerStats: !!displayData.leaderboard.answerStats,
+        hasStandings: !!(displayData.leaderboard.standings && displayData.leaderboard.standings.length > 0),
+        standingsCount: displayData.leaderboard.standings?.length || 0,
+        currentPlayer: displayData.leaderboard.currentPlayer,
+        isIntermediate: displayData.leaderboard.isIntermediate,
+        duration: displayData.duration
+      });
+    }
 
     return (
       <PostQuestionDisplay
