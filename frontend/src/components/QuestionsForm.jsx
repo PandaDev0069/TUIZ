@@ -655,22 +655,9 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
               <span className="stat-label">総ポイント</span>
               <span className="stat-value">
                 {questions.reduce((total, q) => {
-                  const basePoints = 1000;
-                  const answerCount = q.answers.length;
-                  const isMaruBatsu = q.answers.some(a => 
-                    a.text.includes('○') || a.text.includes('×') || 
-                    a.text.includes('正') || a.text.includes('誤')
-                  );
-                  
-                  let typeMultiplier;
-                  if (answerCount === 2) {
-                    typeMultiplier = isMaruBatsu ? 0.8 : 0.8; // Both true/false and 2-choice are 0.8
-                  } else {
-                    typeMultiplier = 1.0; // 4-choice
-                  }
-                  
-                  const pointMultiplier = q.points === '0' ? 0 : q.points === 'double' ? 2 : 1;
-                  return total + Math.round(basePoints * typeMultiplier * pointMultiplier);
+                  // Use the actual points value from the question, defaulting to 100
+                  const questionPoints = q.points || 100;
+                  return total + questionPoints;
                 }, 0)}点
               </span>
             </div>
