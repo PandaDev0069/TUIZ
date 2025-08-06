@@ -1,0 +1,84 @@
+# GitHub Pages Configuration for TUIZ Documentation
+
+# Site settings
+title: "TUIZ Documentation"
+description: "Real-time Quiz Application Documentation"
+url: "https://pandadev0069.github.io"
+baseurl: "/TUIZ"
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: minima
+
+# Plugin settings
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Navigation
+header_pages:
+  - README.md
+  - BUG_TRACKER.md
+  - TODO.md
+  - ROADMAP.md
+  - FEATURE_REQUESTS.md
+  - DEVELOPMENT_GUIDE.md
+
+# Collections
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
+  - scope:
+      path: ""
+      type: "docs"
+    values:
+      layout: "default"
+
+# Exclude files from processing
+exclude:
+  - node_modules/
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - vendor/
+  - archive/
+
+# Include files
+include:
+  - _pages
+
+# Markdown settings
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+    span:
+      line_numbers: false
+    block:
+      line_numbers: true
+
+# SEO settings
+author:
+  name: "PandaDev0069"
+  
+twitter:
+  username: pandadev0069
+  
+social:
+  name: PandaDev0069
+  links:
+    - https://github.com/PandaDev0069
