@@ -57,8 +57,7 @@ function Host() {
       questionSetId: selectedQuestionSet,
       settings: {
         title: title || null, // Send null if no manual title provided
-        maxPlayers: 50,
-        questionTime: 30
+        fromQuestionSet: true // Flag to indicate we want to use question set settings
       }
     })
     

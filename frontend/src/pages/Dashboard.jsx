@@ -99,8 +99,7 @@ function Dashboard() {
       questionSetId: questionSetId,
       settings: {
         title: null, // Let server fetch title from question set
-        maxPlayers: 50,
-        questionTime: 30
+        fromQuestionSet: true // Flag to indicate we want to use question set settings
       }
     });
     

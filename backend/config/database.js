@@ -458,9 +458,24 @@ class DatabaseManager {
 
   async updateGameStatus(gameId, status, additionalData = {}) {
     try {
+      if (!this.supabaseAdmin) {
+        throw new Error('Service role required for updating game status');
+      }
+
       const updateData = { status, ...additionalData };
       
-      const { data, error } = await this.supabase
+      // First check if the game exists
+      const { data: existingGame, error: checkError } = await this.supabaseAdmin
+        .from('games')
+        .select('id')
+        .eq('id', gameId)
+        .single();
+
+      if (checkError) {
+        throw new Error(`Game not found: ${checkError.message}`);
+      }
+
+      const { data, error } = await this.supabaseAdmin
         .from('games')
         .update(updateData)
         .eq('id', gameId)

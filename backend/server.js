@@ -485,25 +485,44 @@ const checkForQuestionCompletion = (gameCode) => {
   if (!activeGame || activeGame.status !== 'active') return;
   
   const gameFlowConfig = activeGame.gameFlowConfig || {};
+  const gameSettings = activeGame.game_settings || {};
   const currentQuestion = activeGame.questions[activeGame.currentQuestionIndex];
   if (!currentQuestion) return;
   
   // Check if all players have answered
   const allPlayersAnswered = activeGame.currentAnswers.length >= activeGame.players.size;
   
-  // If all players answered or auto-advance is disabled and we're waiting for manual advance
+  // If all players answered
   if (allPlayersAnswered) {
     console.log(`📝 All players answered question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
     
-    // Check if we should show explanation
-    if (GameSettingsService.shouldShowExplanation(currentQuestion, gameFlowConfig)) {
-      showQuestionExplanation(gameCode);
-    } else {
-      // No explanation, move to next question after brief delay
-      setTimeout(() => {
-        proceedToNextQuestion(gameCode);
-      }, 2000); // 2 second delay to show final answers
-    }
+    // Show immediate answer feedback first
+    setTimeout(async () => {
+      // Debug the explanation check
+      console.log(`🔍 Checking explanation for question ${activeGame.currentQuestionIndex + 1}:
+      gameSettings.showExplanations: ${gameSettings.showExplanations}
+      question.explanation_title: ${currentQuestion.explanation_title}
+      question.explanation_text: ${currentQuestion.explanation_text}
+      question.explanation_image_url: ${currentQuestion.explanation_image_url}
+      question._dbData: ${JSON.stringify(currentQuestion._dbData)}`);
+      
+      const shouldShowExpl = GameSettingsService.shouldShowExplanation(currentQuestion, gameSettings);
+      console.log(`🔍 Should show explanation: ${shouldShowExpl}`);
+      
+      // Check if we should show explanation
+      if (shouldShowExpl) {
+        console.log(`💡 Showing explanation for question ${activeGame.currentQuestionIndex + 1}`);
+        showQuestionExplanation(gameCode);
+      } else if (gameSettings.showLeaderboard) {
+        console.log(`🏆 Showing intermediate leaderboard after question ${activeGame.currentQuestionIndex + 1}`);
+        showIntermediateLeaderboard(gameCode);
+      } else {
+        // No explanation or leaderboard, proceed to next question
+        setTimeout(async () => {
+          await proceedToNextQuestion(gameCode);
+        }, 2000); // 2 second delay to show final answers
+      }
+    }, 1000); // 1 second to show answer results
   }
 };
 
@@ -513,7 +532,7 @@ const showQuestionExplanation = (gameCode) => {
   if (!activeGame) return;
   
   const currentQuestion = activeGame.questions[activeGame.currentQuestionIndex];
-  const gameFlowConfig = activeGame.gameFlowConfig || {};
+  const gameSettings = activeGame.game_settings || {};
   
   console.log(`💡 Showing explanation for question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
   
@@ -534,20 +553,64 @@ const showQuestionExplanation = (gameCode) => {
     // Answer statistics
     answerStats: calculateAnswerStatistics(activeGame.currentAnswers, currentQuestion),
     
-    // Timing
-    explanationTime: currentQuestion.explanationTime || gameFlowConfig.explanationTime || 30000,
-    autoAdvance: gameFlowConfig.autoAdvance !== false
+    // Timing - use explanationTime from settings (converted to ms)
+    explanationTime: (gameSettings.explanationTime || 30) * 1000,
+    autoAdvance: gameSettings.autoAdvance !== false
   };
   
   // Send explanation to all players
   io.to(gameCode).emit('showExplanation', explanationData);
   
-  // Auto-advance to next question after explanation time
-  if (gameFlowConfig.autoAdvance !== false) {
-    setTimeout(() => {
-      proceedToNextQuestion(gameCode);
-    }, explanationData.explanationTime);
-  }
+  // After explanation, show leaderboard or proceed to next question
+  setTimeout(async () => {
+    if (gameSettings.showLeaderboard) {
+      console.log(`🏆 Showing leaderboard after explanation for question ${activeGame.currentQuestionIndex + 1}`);
+      showIntermediateLeaderboard(gameCode);
+    } else {
+      await proceedToNextQuestion(gameCode);
+    }
+  }, explanationData.explanationTime);
+};
+
+// Helper function to show intermediate leaderboard
+const showIntermediateLeaderboard = (gameCode) => {
+  const activeGame = activeGames.get(gameCode);
+  if (!activeGame) return;
+  
+  const gameSettings = activeGame.game_settings || {};
+  
+  console.log(`🏆 Showing intermediate leaderboard for game ${gameCode}`);
+  
+  // Calculate current standings
+  const leaderboard = Array.from(activeGame.players.values())
+    .map(player => ({
+      name: player.name,
+      score: player.score || 0,
+      streak: player.streak || 0
+    }))
+    .sort((a, b) => b.score - a.score)
+    .map((player, index) => ({
+      ...player,
+      rank: index + 1
+    }));
+  
+  // Prepare leaderboard data
+  const leaderboardData = {
+    questionNumber: activeGame.currentQuestionIndex + 1,
+    totalQuestions: activeGame.questions.length,
+    standings: leaderboard,
+    isGameOver: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length,
+    displayTime: 5000, // 5 seconds
+    autoAdvance: gameSettings.autoAdvance !== false
+  };
+  
+  // Send leaderboard to all players
+  io.to(gameCode).emit('showLeaderboard', leaderboardData);
+  
+  // Auto-advance to next question or end game
+  setTimeout(async () => {
+    await proceedToNextQuestion(gameCode);
+  }, leaderboardData.displayTime);
 };
 
 // Helper function to calculate answer statistics
@@ -573,7 +636,7 @@ const calculateAnswerStatistics = (answers, question) => {
 };
 
 // Helper function to proceed to next question
-const proceedToNextQuestion = (gameCode) => {
+const proceedToNextQuestion = async (gameCode) => {
   const activeGame = activeGames.get(gameCode);
   if (!activeGame) return;
   
@@ -583,11 +646,11 @@ const proceedToNextQuestion = (gameCode) => {
   activeGame.currentQuestionIndex++;
   
   // Send next question or end game
-  sendNextQuestion(gameCode);
+  await sendNextQuestion(gameCode);
 };
 
 // Helper function to send next question
-const sendNextQuestion = (gameCode) => {
+const sendNextQuestion = async (gameCode) => {
   const activeGame = activeGames.get(gameCode);
   if (!activeGame) return;
 
@@ -596,7 +659,7 @@ const sendNextQuestion = (gameCode) => {
 
   if (!question) {
     // Game over - send final results
-    endGame(gameCode);
+    await endGame(gameCode);
     return;
   }
 
@@ -641,7 +704,7 @@ const sendNextQuestion = (gameCode) => {
 };
 
 // Helper function to end game
-const endGame = (gameCode) => {
+const endGame = async (gameCode) => {
   const activeGame = activeGames.get(gameCode);
   if (!activeGame) return;
 
@@ -661,6 +724,24 @@ const endGame = (gameCode) => {
   // Update game status
   activeGame.status = 'finished';
   activeGame.ended_at = new Date().toISOString();
+
+  // Update database status to 'finished'
+  if (activeGame.id && db) {
+    try {
+      const statusResult = await db.updateGameStatus(activeGame.id, 'finished', {
+        ended_at: new Date().toISOString(),
+        current_players: activeGame.players.size
+      });
+      
+      if (statusResult.success) {
+        console.log(`✅ Updated database game status to 'finished' for game ${activeGame.id}`);
+      } else {
+        console.error(`❌ Failed to update database game status: ${statusResult.error}`);
+      }
+    } catch (dbError) {
+      console.error('❌ Database error updating game status:', dbError);
+    }
+  }
 
   // Send game over event
   io.to(gameCode).emit('game_over', { scoreboard });
@@ -703,6 +784,16 @@ io.on('connection', (socket) => {
           if (!qsError && questionSet) {
             gameTitle = gameTitle || questionSet.title;
             questionSetSettings = questionSet.play_settings || {};
+            
+            // Flatten any nested game_settings to prevent duplication
+            if (questionSetSettings.game_settings) {
+              questionSetSettings = {
+                ...questionSetSettings,
+                ...questionSetSettings.game_settings
+              };
+              delete questionSetSettings.game_settings;
+            }
+            
             console.log(`✅ Retrieved from database - Title: ${gameTitle}, Settings:`, questionSetSettings);
           } else {
             console.warn(`⚠️ Could not fetch question set: ${qsError?.message || 'Not found'}`);
@@ -721,13 +812,42 @@ io.on('connection', (socket) => {
         title: gameTitle         // Always use resolved title
       };
       
-      console.log(`🎮 Final game settings:`, gameSettings);
+      console.log(`🔍 Settings merge debug:
+      Question Set Settings: ${JSON.stringify(questionSetSettings)}
+      Manual Settings: ${JSON.stringify(settings)}
+      Merged Game Settings: ${JSON.stringify(gameSettings)}`);
+      
+      // Clean settings - only keep game settings, not metadata
+      const cleanGameSettings = {
+        // Player Management - preserve question set value if it exists
+        maxPlayers: gameSettings.maxPlayers !== undefined ? gameSettings.maxPlayers : 50,
+        
+        // Game Flow
+        autoAdvance: gameSettings.autoAdvance !== undefined ? gameSettings.autoAdvance : true,
+        showExplanations: gameSettings.showExplanations !== undefined ? gameSettings.showExplanations : true,
+        explanationTime: gameSettings.explanationTime !== undefined ? gameSettings.explanationTime : 30,
+        showLeaderboard: gameSettings.showLeaderboard !== undefined ? gameSettings.showLeaderboard : true,
+        
+        // Scoring
+        pointCalculation: gameSettings.pointCalculation || 'fixed',
+        streakBonus: gameSettings.streakBonus !== undefined ? gameSettings.streakBonus : false,
+        
+        // Display Options
+        showProgress: gameSettings.showProgress !== undefined ? gameSettings.showProgress : true,
+        showCorrectAnswer: gameSettings.showCorrectAnswer !== undefined ? gameSettings.showCorrectAnswer : true,
+        
+        // Advanced
+        spectatorMode: gameSettings.spectatorMode !== undefined ? gameSettings.spectatorMode : true,
+        allowAnswerChange: gameSettings.allowAnswerChange !== undefined ? gameSettings.allowAnswerChange : false
+      };
+      
+      console.log(`🎮 Final game settings:`, cleanGameSettings);
       
       // Use RoomManager to create the room
       const gameCode = roomManager.createRoom(
         `Host_${actualHostId}`,
         questionSetId,
-        gameSettings
+        cleanGameSettings
       );
       
       if (!gameCode) {
@@ -739,10 +859,10 @@ io.on('connection', (socket) => {
         host_id: actualHostId,
         question_set_id: questionSetId,
         game_code: gameCode,
-        players_cap: gameSettings?.maxPlayers || 50,
+        players_cap: cleanGameSettings.maxPlayers,
         current_players: 0,
         status: 'waiting',
-        game_settings: gameSettings,
+        game_settings: cleanGameSettings, // Store only clean settings
         created_at: new Date().toISOString()
       };
       
@@ -1072,6 +1192,24 @@ io.on('connection', (socket) => {
       activeGame.currentQuestionIndex = 0;
       activeGame.started_at = new Date().toISOString();
       
+      // Update database status to 'active'
+      if (activeGame.id && db) {
+        try {
+          const statusResult = await db.updateGameStatus(activeGame.id, 'active', {
+            started_at: new Date().toISOString(),
+            current_players: activeGame.players.size
+          });
+          
+          if (statusResult.success) {
+            console.log(`✅ Updated database game status to 'active' for game ${activeGame.id}`);
+          } else {
+            console.error(`❌ Failed to update database game status: ${statusResult.error}`);
+          }
+        } catch (dbError) {
+          console.error('❌ Database error updating game status:', dbError);
+        }
+      }
+      
       console.log(`✅ Game ${gameCode} started with ${activeGame.players.size} players`);
       
       // Notify all players that the game has started
@@ -1082,8 +1220,8 @@ io.on('connection', (socket) => {
       });
       
       // Send the first question after a short delay
-      setTimeout(() => {
-        sendNextQuestion(gameCode);
+      setTimeout(async () => {
+        await sendNextQuestion(gameCode);
       }, 3000);
       
     } catch (error) {
@@ -1093,7 +1231,7 @@ io.on('connection', (socket) => {
   });
 
   // Handle next question request (from host)
-  socket.on('next_question', ({ room }) => {
+  socket.on('next_question', async ({ room }) => {
     console.log(`⏭️ Next question requested for room: ${room}`);
     
     const activeGame = activeGames.get(room);
@@ -1113,10 +1251,10 @@ io.on('connection', (socket) => {
     
     if (activeGame.currentQuestionIndex >= activeGame.questions.length) {
       // Game is over
-      endGame(room);
+      await endGame(room);
     } else {
       // Send next question
-      sendNextQuestion(room);
+      await sendNextQuestion(room);
     }
   });
 

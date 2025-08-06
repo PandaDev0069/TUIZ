@@ -64,6 +64,11 @@ class QuestionFormatAdapter {
         timeLimit: timeLimit,
         points: points,
         
+        // Explanation data at top level for GameSettingsService
+        explanation_title: dbQuestion.explanation_title,
+        explanation_text: dbQuestion.explanation_text,
+        explanation_image_url: dbQuestion.explanation_image_url,
+        
         // Original database data for advanced features
         _dbData: {
           id: dbQuestion.id,

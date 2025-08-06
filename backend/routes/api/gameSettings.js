@@ -61,19 +61,23 @@ router.get('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
     // Parse and clean settings from play_settings JSON
     const rawSettings = questionSet.play_settings || {};
     
+    // Handle any nested game_settings that might still exist
+    const flattenedSettings = rawSettings.game_settings ? 
+      { ...rawSettings, ...rawSettings.game_settings } : rawSettings;
+    
     // Extract only the simplified settings we support
     const cleanSettings = {
-      maxPlayers: rawSettings.maxPlayers || rawSettings.players_cap || DEFAULT_SETTINGS.maxPlayers,
-      autoAdvance: rawSettings.autoAdvance !== undefined ? rawSettings.autoAdvance : DEFAULT_SETTINGS.autoAdvance,
-      showExplanations: rawSettings.showExplanations !== undefined ? rawSettings.showExplanations : DEFAULT_SETTINGS.showExplanations,
-      explanationTime: rawSettings.explanationTime || DEFAULT_SETTINGS.explanationTime,
-      showLeaderboard: rawSettings.showLeaderboard !== undefined ? rawSettings.showLeaderboard : DEFAULT_SETTINGS.showLeaderboard,
-      pointCalculation: rawSettings.pointCalculation || DEFAULT_SETTINGS.pointCalculation,
-      streakBonus: rawSettings.streakBonus !== undefined ? rawSettings.streakBonus : DEFAULT_SETTINGS.streakBonus,
-      showProgress: rawSettings.showProgress !== undefined ? rawSettings.showProgress : DEFAULT_SETTINGS.showProgress,
-      showCorrectAnswer: rawSettings.showCorrectAnswer !== undefined ? rawSettings.showCorrectAnswer : DEFAULT_SETTINGS.showCorrectAnswer,
-      spectatorMode: rawSettings.spectatorMode !== undefined ? rawSettings.spectatorMode : DEFAULT_SETTINGS.spectatorMode,
-      allowAnswerChange: rawSettings.allowAnswerChange !== undefined ? rawSettings.allowAnswerChange : DEFAULT_SETTINGS.allowAnswerChange
+      maxPlayers: flattenedSettings.maxPlayers || flattenedSettings.players_cap || DEFAULT_SETTINGS.maxPlayers,
+      autoAdvance: flattenedSettings.autoAdvance !== undefined ? flattenedSettings.autoAdvance : DEFAULT_SETTINGS.autoAdvance,
+      showExplanations: flattenedSettings.showExplanations !== undefined ? flattenedSettings.showExplanations : DEFAULT_SETTINGS.showExplanations,
+      explanationTime: flattenedSettings.explanationTime || DEFAULT_SETTINGS.explanationTime,
+      showLeaderboard: flattenedSettings.showLeaderboard !== undefined ? flattenedSettings.showLeaderboard : DEFAULT_SETTINGS.showLeaderboard,
+      pointCalculation: flattenedSettings.pointCalculation || DEFAULT_SETTINGS.pointCalculation,
+      streakBonus: flattenedSettings.streakBonus !== undefined ? flattenedSettings.streakBonus : DEFAULT_SETTINGS.streakBonus,
+      showProgress: flattenedSettings.showProgress !== undefined ? flattenedSettings.showProgress : DEFAULT_SETTINGS.showProgress,
+      showCorrectAnswer: flattenedSettings.showCorrectAnswer !== undefined ? flattenedSettings.showCorrectAnswer : DEFAULT_SETTINGS.showCorrectAnswer,
+      spectatorMode: flattenedSettings.spectatorMode !== undefined ? flattenedSettings.spectatorMode : DEFAULT_SETTINGS.spectatorMode,
+      allowAnswerChange: flattenedSettings.allowAnswerChange !== undefined ? flattenedSettings.allowAnswerChange : DEFAULT_SETTINGS.allowAnswerChange
     };
 
     res.json({
