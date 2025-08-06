@@ -25,7 +25,6 @@ class RoomManager {
     });
 
     console.log(`🎮 Created game room: ${roomCode} by ${hostName}`);
-    console.log(`📋 Settings:`, gameSettings);
     
     return roomCode;
   }

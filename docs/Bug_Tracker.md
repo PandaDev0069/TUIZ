@@ -25,6 +25,68 @@ This document tracks all issues, bugs, and their resolutions for the TUIZ quiz a
 
 ## ✅ Resolved Issues (Latest First)
 
+### Issue #34: Player Capacity Settings Not Working - Database Schema Sync Issue
+**Date:** 2025-08-06 | **Status:** FIXED ✅ | **Severity:** High  
+**Component:** Backend - Game Settings & Database Schema
+
+**Problem:**
+When host changed maxPlayers setting in GameSettings panel (e.g., from default to 2), players were still unable to join after the capacity was increased. The system showed conflicting behavior where:
+1. Game settings API correctly updated `game_settings.maxPlayers = 2` in database JSON
+2. But database still had `players_cap = 76` (old value) in a separate column
+3. Server join logic was inconsistently reading from different data sources
+4. Database had duplicate columns: `players_cap` AND `player_cap` causing confusion
+
+**Root Cause:**
+Database schema had redundant player capacity fields:
+- `players_cap` column (used by constraints)
+- `player_cap` column (duplicate, unused)
+- `game_settings.maxPlayers` JSON field (source of truth)
+
+The server code was partially updated to use JSON but still had legacy references to the old `players_cap` column, causing sync issues between data sources.
+
+**Solution:**
+**Unified Data Source - Use Only JSON:**
+1. **Removed redundant database field updates** - No longer updating `players_cap` column
+2. **Updated server join logic** - Now reads from `activeGame.game_settings.maxPlayers` exclusively
+3. **Updated ActiveGameUpdater** - Now updates `game_settings.maxPlayers` instead of `players_cap`
+4. **Updated game creation** - No longer sets `players_cap` column, only JSON data
+5. **Created database migration** - SQL script to remove both `players_cap` and `player_cap` columns
+6. **Added JSON-based constraints** - Database now enforces capacity limits using JSON data
+
+**Files Modified:**
+- `backend/routes/api/gameSettings.js`: Removed `players_cap` field updates, only update JSON
+- `backend/server.js`: Updated join logic to read from `game_settings.maxPlayers`
+- `backend/utils/ActiveGameUpdater.js`: Now updates JSON field instead of separate column
+- `docs/database/remove_player_cap_fields.sql`: Migration to clean up database schema
+
+**Database Migration Created:**
+- Removes `players_cap` and `player_cap` columns completely
+- Adds JSON-based constraints using `game_settings.maxPlayers`
+- Updates existing records to ensure `maxPlayers` is present in JSON
+- Adds proper validation and fallback to 50 if not set
+
+**Testing Verification:**
+✅ Host changes maxPlayers from default to 2 → `game_settings.maxPlayers = 2`  
+✅ First player joins successfully (1/2)  
+✅ Second player joins successfully (2/2)  
+✅ Third player gets "Game is full: 2/2" message  
+✅ Host increases to 29 → `game_settings.maxPlayers = 29`  
+✅ Third player can now join immediately (3/29)  
+✅ Database only uses single source of truth (JSON data)  
+✅ No more sync issues between duplicate fields
+
+**Logs Showing Success:**
+```
+🔄 Updating maxPlayers for game 886116: 2
+✅ ActiveGameUpdater: Updated game_settings.maxPlayers for game 886116: 68 → 2
+🔍 Game capacity check - Current players: 2, Max players: 2
+❌ Game 886116 is full: 2/2
+[Host increases to 29]
+✅ ActiveGameUpdater: Updated game_settings.maxPlayers for game 886116: 2 → 29  
+🔍 Game capacity check - Current players: 2, Max players: 29
+✅ Player パンダ joined game 886116
+```
+
 ### Issue #33: Timer Overlap with Next Button on Large Screens + Leaderboard-Only Layout + Intermediate Leaderboard Fix
 **Date:** 2025-08-06 | **Status:** FIXED ✅ | **Severity:** Medium  
 **Component:** Frontend - CSS Responsive Design & Quiz Flow Logic

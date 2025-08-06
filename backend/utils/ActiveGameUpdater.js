@@ -12,7 +12,7 @@ class ActiveGameUpdater {
     console.log('✅ ActiveGameUpdater: Set activeGames reference');
   }
 
-  // Update players_cap for a specific game
+  // Update maxPlayers in game_settings for a specific game
   updatePlayersCap(gameCode, newPlayersCap) {
     if (!this.activeGamesRef) {
       console.warn('⚠️ ActiveGameUpdater: activeGames reference not set');
@@ -25,20 +25,25 @@ class ActiveGameUpdater {
       return false;
     }
 
-    const oldCap = activeGame.players_cap;
-    activeGame.players_cap = newPlayersCap;
-    console.log(`✅ ActiveGameUpdater: Updated players_cap for game ${gameCode}: ${oldCap} → ${newPlayersCap}`);
+    // Ensure game_settings exists
+    if (!activeGame.game_settings) {
+      activeGame.game_settings = {};
+    }
+
+    const oldCap = activeGame.game_settings.maxPlayers;
+    activeGame.game_settings.maxPlayers = newPlayersCap;
+    console.log(`✅ ActiveGameUpdater: Updated game_settings.maxPlayers for game ${gameCode}: ${oldCap} → ${newPlayersCap}`);
     return true;
   }
 
-  // Get current players_cap for a game
+  // Get current maxPlayers for a game
   getPlayersCap(gameCode) {
     if (!this.activeGamesRef) {
       return null;
     }
 
     const activeGame = this.activeGamesRef.get(gameCode);
-    return activeGame ? activeGame.players_cap : null;
+    return activeGame ? activeGame.game_settings?.maxPlayers : null;
   }
 }
 

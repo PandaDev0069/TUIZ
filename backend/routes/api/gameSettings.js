@@ -8,9 +8,9 @@ const activeGameUpdater = require('../../utils/ActiveGameUpdater');
 // Initialize database
 const db = new DatabaseManager();
 
-// Helper function to update activeGame players_cap
+// Helper function to update activeGame maxPlayers in game_settings
 function updateActiveGamePlayersCap(gameCode, maxPlayers) {
-  console.log(`🔄 Updating players_cap for game ${gameCode}: ${maxPlayers}`);
+  console.log(`🔄 Updating maxPlayers for game ${gameCode}: ${maxPlayers}`);
   
   // Store the update in room manager for backup
   const room = roomManager.getRoom(gameCode);
@@ -24,7 +24,7 @@ function updateActiveGamePlayersCap(gameCode, maxPlayers) {
   // Try to update activeGame directly
   const success = activeGameUpdater.updatePlayersCap(gameCode, maxPlayers);
   if (success) {
-    console.log(`✅ Successfully updated activeGame players_cap for ${gameCode}`);
+    console.log(`✅ Successfully updated activeGame maxPlayers for ${gameCode}`);
   } else {
     console.log(`⚠️ Could not update activeGame directly, will rely on pending update`);
   }
@@ -379,21 +379,27 @@ router.put('/:questionSetId/reset', AuthMiddleware.authenticateToken, async (req
 router.get('/game/:gameId', async (req, res) => {
   try {
     const { gameId } = req.params;
+    console.log(`🔍 Looking for room with database gameId: ${gameId}`);
 
-    // Get game room data
-    const room = roomManager.getRoom(gameId);
+    // Get game room data by database gameId (not room code)
+    const roomInfo = roomManager.findRoomByGameId(gameId);
     
-    if (!room) {
+    if (!roomInfo) {
+      console.log(`❌ No room found with gameId: ${gameId}`);
       return res.status(404).json({
         success: false,
         error: 'Game not found'
       });
     }
 
+    const { roomCode, room } = roomInfo;
+    console.log(`✅ Found room ${roomCode} with gameId ${gameId}`);
+
     // Return current game settings
     res.json({
       success: true,
       gameId: gameId,
+      roomCode: roomCode,
       settings: room.gameSettings || DEFAULT_SETTINGS,
       status: room.status
     });
@@ -413,6 +419,7 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
   try {
     const { gameId } = req.params;
     const { settings } = req.body;
+    console.log(`🔄 Updating settings for gameId: ${gameId}`, settings);
 
     if (!settings || typeof settings !== 'object') {
       return res.status(400).json({
@@ -421,15 +428,19 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
       });
     }
 
-    // Get game room data
-    const room = roomManager.getRoom(gameId);
+    // Get game room data by database gameId (not room code)
+    const roomInfo = roomManager.findRoomByGameId(gameId);
     
-    if (!room) {
+    if (!roomInfo) {
+      console.log(`❌ No room found with gameId: ${gameId}`);
       return res.status(404).json({
         success: false,
         error: 'Game not found'
       });
     }
+
+    const { roomCode, room } = roomInfo;
+    console.log(`✅ Found room ${roomCode} to update settings`);
 
     // Only allow settings changes during lobby phase
     if (room.status !== 'waiting') {
@@ -463,7 +474,32 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
       ...validatedSettings
     };
 
-    console.log(`Active game settings updated for ${gameId}:`, validatedSettings);
+    // Update activeGame players_cap if maxPlayers was changed
+    if (validatedSettings.maxPlayers !== undefined) {
+      updateActiveGamePlayersCap(roomCode, validatedSettings.maxPlayers);
+    }
+    
+    // Update the database to keep it in sync
+    try {
+      const updateData = {
+        game_settings: room.gameSettings // Update the full game settings JSON only
+      };
+      
+      const { error: dbError } = await db.supabaseAdmin
+        .from('games')
+        .update(updateData)
+        .eq('id', gameId);
+        
+      if (dbError) {
+        console.error('⚠️ Failed to update database game settings:', dbError);
+      } else {
+        console.log(`✅ Database updated for game ${gameId}:`, updateData);
+      }
+    } catch (dbUpdateError) {
+      console.error('⚠️ Database update error:', dbUpdateError);
+    }
+
+    console.log(`✅ Active game settings updated for ${gameId}:`, validatedSettings);
 
     res.json({
       success: true,

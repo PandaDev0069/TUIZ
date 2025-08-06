@@ -18,8 +18,21 @@ export const useGameSettings = (questionSetId, gameId = null) => {
       setLoading(true);
       setError(null);
       
-      console.log('Loading settings for questionSetId:', questionSetId);
-      const response = await apiCall(`/game-settings/${questionSetId}`, {
+      // Choose API endpoint based on whether we have an active game
+      let apiUrl, logMessage;
+      if (gameId) {
+        // Load current game settings (from active room)
+        apiUrl = `/game-settings/game/${gameId}`;
+        logMessage = `Loading game settings for gameId: ${gameId}`;
+      } else {
+        // Load question set default settings
+        apiUrl = `/game-settings/${questionSetId}`;
+        logMessage = `Loading settings for questionSetId: ${questionSetId}`;
+      }
+      
+      console.log(logMessage);
+      
+      const response = await apiCall(apiUrl, {
         method: 'GET'
       });
 
@@ -29,8 +42,25 @@ export const useGameSettings = (questionSetId, gameId = null) => {
         console.log('Settings loaded successfully:', response.settings);
         setSettings(response.settings);
       } else {
-        console.error('Settings API failed:', response.error || 'Unknown error');
-        setError(response.error || 'Failed to load settings');
+        // If game-specific settings failed and we have a gameId, try question set defaults
+        if (gameId && apiUrl.includes('/game/')) {
+          console.warn(`⚠️ Game settings failed for gameId ${gameId}, falling back to question set defaults`);
+          
+          const fallbackResponse = await apiCall(`/game-settings/${questionSetId}`, {
+            method: 'GET'
+          });
+          
+          if (fallbackResponse.success && fallbackResponse.settings) {
+            console.log('✅ Fallback settings loaded successfully:', fallbackResponse.settings);
+            setSettings(fallbackResponse.settings);
+          } else {
+            console.error('❌ Both game and question set settings failed:', fallbackResponse.error || 'Unknown error');
+            setError(fallbackResponse.error || 'Failed to load settings');
+          }
+        } else {
+          console.error('Settings API failed:', response.error || 'Unknown error');
+          setError(response.error || 'Failed to load settings');
+        }
       }
     } catch (err) {
       console.error('Failed to load settings:', err);
@@ -54,7 +84,6 @@ export const useGameSettings = (questionSetId, gameId = null) => {
       
       if (gameId) {
         requestBody.gameId = gameId;
-        console.log('🔄 Updating settings with game sync for gameId:', gameId);
       }
 
       const response = await apiCall(`/game-settings/${questionSetId}`, {

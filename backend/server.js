@@ -821,10 +821,7 @@ io.on('connection', (socket) => {
   // Create a new game
   socket.on('createGame', async ({ hostId, questionSetId, settings }) => {
     try {
-      console.log(`🎮 Create Game Request:
-      Host ID: ${hostId}
-      Question Set ID: ${questionSetId}
-      Settings: ${JSON.stringify(settings)}`);
+      console.log(`🎮 Creating game: Host ${hostId}, QuestionSet ${questionSetId}`);
       
       // Extract actual user ID from hostId (remove the temporary prefix)
       const actualHostId = hostId.includes('host_') ? 
@@ -836,7 +833,6 @@ io.on('connection', (socket) => {
       
       if (!gameTitle || !settings?.fromQuestionSet) {
         try {
-          console.log(`📚 Fetching title and settings from question set: ${questionSetId}`);
           const { data: questionSet, error: qsError } = await db.supabaseAdmin
             .from('question_sets')
             .select('title, play_settings')
@@ -856,7 +852,7 @@ io.on('connection', (socket) => {
               delete questionSetSettings.game_settings;
             }
             
-            console.log(`✅ Retrieved from database - Title: ${gameTitle}, Settings:`, questionSetSettings);
+            console.log(`✅ Retrieved from database - Title: ${gameTitle}`);
           } else {
             console.warn(`⚠️ Could not fetch question set: ${qsError?.message || 'Not found'}`);
             gameTitle = gameTitle || 'クイズゲーム'; // Default fallback title
@@ -873,11 +869,6 @@ io.on('connection', (socket) => {
         ...settings,             // Manual settings (override)
         title: gameTitle         // Always use resolved title
       };
-      
-      console.log(`🔍 Settings merge debug:
-      Question Set Settings: ${JSON.stringify(questionSetSettings)}
-      Manual Settings: ${JSON.stringify(settings)}
-      Merged Game Settings: ${JSON.stringify(gameSettings)}`);
       
       // Clean settings - only keep game settings, not metadata
       const cleanGameSettings = {
@@ -903,8 +894,6 @@ io.on('connection', (socket) => {
         allowAnswerChange: gameSettings.allowAnswerChange !== undefined ? gameSettings.allowAnswerChange : false
       };
       
-      console.log(`🎮 Final game settings:`, cleanGameSettings);
-      
       // Use RoomManager to create the room
       const gameCode = roomManager.createRoom(
         `Host_${actualHostId}`,
@@ -921,10 +910,9 @@ io.on('connection', (socket) => {
         host_id: actualHostId,
         question_set_id: questionSetId,
         game_code: gameCode,
-        players_cap: cleanGameSettings.maxPlayers,
         current_players: 0,
         status: 'waiting',
-        game_settings: cleanGameSettings, // Store only clean settings
+        game_settings: cleanGameSettings, // Store only clean settings (includes maxPlayers)
         created_at: new Date().toISOString()
       };
       
@@ -941,12 +929,9 @@ io.on('connection', (socket) => {
       // Update the room in RoomManager with the database UUID
       const room = roomManager.getRoom(gameCode);
       if (room) {
-        console.log(`🔍 Before update - Room ${gameCode} gameId: ${room.gameId}`);
         room.gameId = dbGame.id; // Update to use database UUID
         room.gameUUID = dbGame.id; // Keep explicit reference
         room.roomCode = gameCode; // Keep room code reference
-        console.log(`🔄 Updated room ${gameCode} with database gameId: ${dbGame.id}`);
-        console.log(`🔍 After update - Room ${gameCode} gameId: ${room.gameId}`);
       } else {
         console.error(`❌ Could not find room ${gameCode} in RoomManager to update gameId`);
       }
@@ -958,9 +943,8 @@ io.on('connection', (socket) => {
         host_id: actualHostId,
         question_set_id: questionSetId,
         status: 'waiting',
-        players_cap: gameSettings?.maxPlayers || 50,
         current_players: 0,
-        game_settings: gameSettings,
+        game_settings: cleanGameSettings, // Only use game_settings (includes maxPlayers)
         created_at: dbGame.created_at,
         dbGame: dbGame // Keep reference to full database object
       };
@@ -1021,17 +1005,21 @@ io.on('connection', (socket) => {
       // Check for pending players_cap update from room manager
       const room = roomManager.getRoom(gameCode);
       if (room && room._pendingPlayersCap !== undefined) {
-        console.log(`🔄 Applying pending players_cap update: ${activeGame.players_cap} → ${room._pendingPlayersCap}`);
-        activeGame.players_cap = room._pendingPlayersCap;
+        console.log(`🔄 Applying pending maxPlayers update: ${activeGame.game_settings?.maxPlayers} → ${room._pendingPlayersCap}`);
+        if (!activeGame.game_settings) activeGame.game_settings = {};
+        activeGame.game_settings.maxPlayers = room._pendingPlayersCap;
         delete room._pendingPlayersCap; // Clear the pending update
       }
       
+      // Get current maxPlayers from game_settings (fallback to 50)
+      const maxPlayers = activeGame.game_settings?.maxPlayers || 50;
+      
       // Debug logging for game capacity check
-      console.log(`🔍 Game capacity check - Current players: ${activeGame.players.size}, Players cap: ${activeGame.players_cap}, Room pending cap: ${room?._pendingPlayersCap}`);
+      console.log(`🔍 Game capacity check - Current players: ${activeGame.players.size}, Max players: ${maxPlayers}, Room pending cap: ${room?._pendingPlayersCap}`);
       
       // Check if game is full
-      if (activeGame.players.size >= (activeGame.players_cap || 50)) {
-        console.log(`❌ Game ${gameCode} is full: ${activeGame.players.size}/${activeGame.players_cap}`);
+      if (activeGame.players.size >= maxPlayers) {
+        console.log(`❌ Game ${gameCode} is full: ${activeGame.players.size}/${maxPlayers}`);
         socket.emit('error', { message: 'Game is full' });
         return;
       }
