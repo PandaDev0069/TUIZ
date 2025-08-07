@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://tuiz-nine.vercel.app/sitemap.xml
+
+# Disallow crawling of API endpoints if any are exposed
+Disallow: /api/
+Disallow: /socket.io/
+
+# Allow all other pages
+Allow: /
+Allow: /login
+Allow: /register
+Allow: /dashboard
+Allow: /join
+Allow: /host
