@@ -180,7 +180,10 @@ router.post('/bulk-upload-images', RateLimitMiddleware.createUploadLimit(), Auth
         
         const filePath = `${userId}/${fileName}`;
         
-        console.log(`📤 Uploading ${mapping.type} image:`, filePath);
+        SecurityUtils.safeLog('info', 'Uploading image', {
+          mappingType: mapping.type,
+          filePath: filePath
+        });
         
         // Upload to Supabase Storage
         const { data: uploadData, error: uploadError } = await db.supabaseAdmin.storage
@@ -207,7 +210,10 @@ router.post('/bulk-upload-images', RateLimitMiddleware.createUploadLimit(), Auth
           .from(bucketName)
           .getPublicUrl(filePath);
         
-        console.log(`✅ ${mapping.type} image uploaded:`, publicUrl);
+        SecurityUtils.safeLog('info', 'Image uploaded successfully', {
+          mappingType: mapping.type,
+          publicUrl: publicUrl
+        });
         
         uploadResults.push({
           index: i,
@@ -217,7 +223,10 @@ router.post('/bulk-upload-images', RateLimitMiddleware.createUploadLimit(), Auth
         });
         
       } catch (error) {
-        console.error(`Error uploading image ${i}:`, error);
+        SecurityUtils.safeLog('error', 'Error uploading image', {
+          imageIndex: i,
+          error: error
+        });
         uploadResults.push({
           index: i,
           mapping: mapping,
@@ -227,7 +236,10 @@ router.post('/bulk-upload-images', RateLimitMiddleware.createUploadLimit(), Auth
       }
     }
     
-    console.log(`🎉 Bulk image upload completed: ${uploadResults.filter(r => r.success).length}/${uploadResults.length} successful`);
+    SecurityUtils.safeLog('info', 'Bulk image upload completed', {
+      successCount: uploadResults.filter(r => r.success).length,
+      totalCount: uploadResults.length
+    });
     
     res.json({
       success: true,

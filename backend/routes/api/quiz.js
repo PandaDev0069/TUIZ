@@ -65,7 +65,7 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
 
     // Read the uploaded file with path validation
     const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
-    const safePath = SecurityUtils.validateFilePath(req.file.path, uploadsDir);
+    const safePath = SecurityUtils.validateThumbnailPath(req.file.path);
     const filePath = safePath;
     const fileName = SecurityUtils.sanitizeFilename(req.file.filename);
     const fileBuffer = fs.readFileSync(safePath);
@@ -82,7 +82,16 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
     if (uploadError) {
       console.error('Supabase upload error:', uploadError);
       // Clean up local file
-      fs.unlinkSync(filePath);
+      try {
+        const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
+        const safePath = SecurityUtils.validateFilePath(filePath, uploadsDir);
+        fs.unlinkSync(safePath);
+      } catch (cleanupError) {
+        SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
+          filePath: filePath,
+          error: cleanupError.message
+        });
+      }
       return res.status(500).json({ 
         success: false, 
         message: 'Failed to upload to storage',
@@ -111,9 +120,14 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
     // Clean up local file if it exists
     if (req.file && req.file.path) {
       try {
-        fs.unlinkSync(req.file.path);
+        const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
+        const safePath = SecurityUtils.validateFilePath(req.file.path, uploadsDir);
+        fs.unlinkSync(safePath);
       } catch (cleanupError) {
-        console.error('File cleanup error:', cleanupError);
+        SecurityUtils.safeLog('error', 'File cleanup error', {
+          filePath: req.file.path,
+          error: cleanupError.message
+        });
       }
     }
     
@@ -194,7 +208,16 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
     if (uploadError) {
       console.error('❌ Supabase upload error:', uploadError);
       // Clean up local file
-      fs.unlinkSync(filePath);
+      try {
+        const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
+        const safePath = SecurityUtils.validateFilePath(filePath, uploadsDir);
+        fs.unlinkSync(safePath);
+      } catch (cleanupError) {
+        SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
+          filePath: filePath,
+          error: cleanupError.message
+        });
+      }
       return res.status(500).json({ 
         success: false, 
         message: 'Failed to upload to storage',
@@ -238,7 +261,16 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
       }
 
       // Clean up local file
-      fs.unlinkSync(filePath);
+      try {
+        const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
+        const safePath = SecurityUtils.validateFilePath(filePath, uploadsDir);
+        fs.unlinkSync(safePath);
+      } catch (cleanupError) {
+        SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
+          filePath: filePath,
+          error: cleanupError.message
+        });
+      }
       
       return res.status(500).json({
         success: false,
@@ -289,9 +321,21 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
     }
 
     // Clean up local file
-    fs.unlinkSync(filePath);
+    try {
+      const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
+      const safePath = SecurityUtils.validateFilePath(filePath, uploadsDir);
+      fs.unlinkSync(safePath);
+    } catch (cleanupError) {
+      SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
+        filePath: filePath,
+        error: cleanupError.message
+      });
+    }
 
-    console.log(`🎉 Thumbnail upload completed for quiz: ${quizId} - ${thumbnailUrl}`);
+    SecurityUtils.safeLog('info', 'Thumbnail upload completed for quiz', {
+      quizId: quizId,
+      thumbnailUrl: thumbnailUrl
+    });
 
     res.json({
       success: true,
@@ -306,10 +350,15 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
     // Clean up local file if it exists
     if (req.file && req.file.path) {
       try {
-        fs.unlinkSync(req.file.path);
+        const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
+        const safePath = SecurityUtils.validateFilePath(req.file.path, uploadsDir);
+        fs.unlinkSync(safePath);
         console.log('🧹 Cleaned up local file after error');
       } catch (cleanupError) {
-        console.error('❌ File cleanup error:', cleanupError);
+        SecurityUtils.safeLog('error', 'File cleanup error', {
+          filePath: req.file.path,
+          error: cleanupError.message
+        });
       }
     }
 
@@ -383,7 +432,10 @@ router.delete('/:id/thumbnail', RateLimitMiddleware.createModerateLimit(), AuthM
       }
     }
 
-    console.log(`Thumbnail deleted for quiz ${quizId} by user:`, req.user.name);
+    SecurityUtils.safeLog('info', 'Thumbnail deleted for quiz by user', {
+      quizId: quizId,
+      userName: req.user.name
+    });
 
     res.json({
       success: true,
@@ -764,7 +816,10 @@ router.put('/:id', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authent
       });
     }
 
-    console.log(`✅ Quiz updated: ${quizId} (${updateData.title || existingQuiz.title})`);
+    SecurityUtils.safeLog('info', 'Quiz updated', {
+      quizId: quizId,
+      title: updateData.title || existingQuiz.title
+    });
     
     // Remove the old validation code that was duplicated above
     const { data: quiz, error } = await userSupabase
@@ -904,7 +959,9 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
 
     // Delete images from storage
     if (imagesToDelete.length > 0) {
-      console.log(`🖼️ Deleting ${imagesToDelete.length} images from storage`);
+      SecurityUtils.safeLog('info', 'Deleting images from storage', {
+        imageCount: imagesToDelete.length
+      });
       
       for (const imageUrl of imagesToDelete) {
         try {
@@ -920,13 +977,21 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
               .remove([filePath]);
             
             if (deleteError) {
-              console.warn(`⚠️ Failed to delete image ${filePath}:`, deleteError);
+              SecurityUtils.safeLog('warn', 'Failed to delete image', {
+                filePath: filePath,
+                error: deleteError
+              });
             } else {
-              console.log(`✅ Deleted image: ${filePath}`);
+              SecurityUtils.safeLog('info', 'Deleted image', {
+                filePath: filePath
+              });
             }
           }
         } catch (imageError) {
-          console.warn(`⚠️ Error deleting image ${imageUrl}:`, imageError);
+          SecurityUtils.safeLog('warn', 'Error deleting image', {
+            imageUrl: imageUrl,
+            error: imageError
+          });
         }
       }
     }
@@ -981,7 +1046,9 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
       });
     }
 
-    console.log(`🎉 Quiz "${quizData.title}" deleted completely (including thumbnail)`);
+    SecurityUtils.safeLog('info', 'Quiz deleted completely including thumbnail', {
+      quizTitle: quizData.title
+    });
 
     res.json({
       success: true,
@@ -1090,8 +1157,12 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
     const quizId = req.params.id;
     const { play_settings } = req.body;
 
-    console.log(`📤 Publishing quiz ${quizId} for user ${req.user.id} (${req.user.name})`);
-    console.log(`🎮 Play settings:`, play_settings);
+    SecurityUtils.safeLog('info', 'Publishing quiz for user', {
+      quizId: quizId,
+      userId: req.user.id,
+      userName: req.user.name
+    });
+    SecurityUtils.safeLog('info', 'Play settings', play_settings);
 
     // Create user-scoped Supabase client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
@@ -1116,7 +1187,10 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
       .single();
 
     if (fetchError || !currentQuiz) {
-      console.error(`❌ Quiz ${quizId} not found or access denied:`, fetchError?.message);
+      SecurityUtils.safeLog('error', 'Quiz not found or access denied', {
+        quizId: quizId,
+        error: fetchError?.message
+      });
       return res.status(404).json({
         success: false,
         message: 'Quiz not found or access denied',
@@ -1124,7 +1198,10 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
       });
     }
 
-    console.log(`📋 Found quiz: "${currentQuiz.title}" with ${currentQuiz.questions?.length || 0} questions`);
+    SecurityUtils.safeLog('info', 'Found quiz with questions', {
+      quizTitle: currentQuiz.title,
+      questionCount: currentQuiz.questions?.length || 0
+    });
     console.log(`🔍 Quiz data structure:`, {
       id: currentQuiz.id,
       title: currentQuiz.title,
@@ -1139,7 +1216,8 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
       .select('id, question_text, question_set_id')
       .eq('question_set_id', quizId);
     
-    console.log(`🔍 Direct questions check for quiz ${quizId}:`, {
+    SecurityUtils.safeLog('info', 'Direct questions check for quiz', {
+      quizId: quizId,
       count: directQuestionsCheck?.length || 0,
       questions: directQuestionsCheck,
       error: directQuestionsError?.message
@@ -1151,7 +1229,8 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
       .select('id, question_text, question_set_id')
       .eq('question_set_id', quizId);
     
-    console.log(`🔍 Admin questions check for quiz ${quizId}:`, {
+    SecurityUtils.safeLog('info', 'Admin questions check for quiz', {
+      quizId: quizId,
       count: adminQuestionsCheck?.length || 0,
       questions: adminQuestionsCheck,
       error: adminQuestionsError?.message
@@ -1194,7 +1273,10 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
     });
 
     if (validationErrors.length > 0) {
-      console.warn(`⚠️ Validation failed for quiz ${quizId}:`, validationErrors);
+      SecurityUtils.safeLog('warn', 'Validation failed for quiz', {
+        quizId: quizId,
+        errors: validationErrors
+      });
       return res.status(400).json({
         success: false,
         message: 'Quiz validation failed',
@@ -1202,7 +1284,9 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
       });
     }
 
-    console.log(`✅ Quiz ${quizId} passed validation checks`);
+    SecurityUtils.safeLog('info', 'Quiz passed validation checks', {
+      quizId: quizId
+    });
 
     // Update quiz to published status with settings
     const updateData = {
@@ -1228,7 +1312,10 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
       updateData.total_questions = currentQuiz.questions.length;
     }
 
-    console.log(`🔄 Updating quiz ${quizId} with data:`, updateData);
+    SecurityUtils.safeLog('info', 'Updating quiz with data', {
+      quizId: quizId,
+      updateData: updateData
+    });
 
     const { data: publishedQuiz, error: publishError } = await userSupabase
       .from('question_sets')
@@ -1238,7 +1325,10 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
       .single();
 
     if (publishError) {
-      console.error(`❌ Publish error for quiz ${quizId}:`, publishError);
+      SecurityUtils.safeLog('error', 'Publish error for quiz', {
+        quizId: quizId,
+        error: publishError
+      });
       return res.status(500).json({
         success: false,
         message: 'Failed to publish quiz',
@@ -1246,7 +1336,11 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
       });
     }
 
-    console.log(`🎉 Quiz ${quizId} successfully published by user ${req.user.id} (${req.user.name})`);
+    SecurityUtils.safeLog('info', 'Quiz successfully published by user', {
+      quizId: quizId,
+      userId: req.user.id,
+      userName: req.user.name
+    });
 
     res.json({
       success: true,

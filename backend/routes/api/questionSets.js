@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const DatabaseManager = require('../../config/database');
 const AuthMiddleware = require('../../middleware/auth');
+const SecurityUtils = require('../../utils/SecurityUtils');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -199,7 +200,10 @@ router.post('/:id/upload-thumbnail', AuthMiddleware.authenticateToken, upload.si
       });
     }
 
-    console.log(`Thumbnail uploaded for question set ${id} by user:`, req.user.name);
+    SecurityUtils.safeLog('info', 'Thumbnail uploaded for question set by user', {
+      questionSetId: id,
+      userName: req.user.name
+    });
 
     res.json({
       success: true,
@@ -288,7 +292,10 @@ router.delete('/:id/thumbnail', AuthMiddleware.authenticateToken, async (req, re
       }
     }
 
-    console.log(`Thumbnail deleted for question set ${id} by user:`, req.user.name);
+    SecurityUtils.safeLog('info', 'Thumbnail deleted for question set by user', {
+      questionSetId: id,
+      userName: req.user.name
+    });
 
     res.json({
       success: true,
@@ -412,7 +419,10 @@ router.patch('/:id/metadata', AuthMiddleware.authenticateToken, async (req, res)
     const { id } = req.params;
     const { title, description, category, difficulty_level, is_public, estimated_duration, thumbnail_url, tags, status } = req.body;
     
-    console.log(`Updating question set metadata for ${id}:`, req.body);
+    SecurityUtils.safeLog('info', 'Updating question set metadata', {
+      questionSetId: id,
+      updateData: req.body
+    });
     
     // Create user-scoped Supabase client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
@@ -482,7 +492,10 @@ router.patch('/:id/finalize', AuthMiddleware.authenticateToken, async (req, res)
     const { id } = req.params;
     const { total_questions, settings } = req.body;
     
-    console.log(`Finalizing question set ${id} with ${total_questions} questions`);
+    SecurityUtils.safeLog('info', 'Finalizing question set', {
+      questionSetId: id,
+      totalQuestions: total_questions
+    });
     
     // Create user-scoped Supabase client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);

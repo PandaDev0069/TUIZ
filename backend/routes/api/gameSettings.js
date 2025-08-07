@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const DatabaseManager = require('../../config/database');
 const AuthMiddleware = require('../../middleware/auth');
+const SecurityUtils = require('../../utils/SecurityUtils');
 const roomManager = require('../../utils/RoomManager');
 const activeGameUpdater = require('../../utils/ActiveGameUpdater');
 
@@ -10,15 +11,23 @@ const db = new DatabaseManager();
 
 // Helper function to update activeGame maxPlayers in game_settings
 function updateActiveGamePlayersCap(gameCode, maxPlayers) {
-  console.log(`🔄 Updating maxPlayers for game ${gameCode}: ${maxPlayers}`);
+  SecurityUtils.safeLog('info', 'Updating maxPlayers for game', {
+    gameCode: gameCode,
+    maxPlayers: maxPlayers
+  });
   
   // Store the update in room manager for backup
   const room = roomManager.getRoom(gameCode);
   if (room) {
     room._pendingPlayersCap = maxPlayers;
-    console.log(`✅ Set _pendingPlayersCap = ${maxPlayers} for room ${gameCode}`);
+    SecurityUtils.safeLog('info', 'Set pending players cap for room', {
+      gameCode: gameCode,
+      maxPlayers: maxPlayers
+    });
   } else {
-    console.log(`❌ Room ${gameCode} not found in roomManager`);
+    SecurityUtils.safeLog('warn', 'Room not found in roomManager', {
+      gameCode: gameCode
+    });
   }
   
   // Try to update activeGame directly

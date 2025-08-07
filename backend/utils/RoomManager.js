@@ -1,4 +1,5 @@
 const gameConfig = require('../config/gameConfig');
+const SecurityUtils = require('./SecurityUtils');
 
 class RoomManager {
   constructor() {
@@ -24,7 +25,10 @@ class RoomManager {
       scores: new Map()
     });
 
-    console.log(`🎮 Created game room: ${roomCode} by ${hostName}`);
+    SecurityUtils.safeLog('info', 'Created game room', {
+      roomCode: roomCode,
+      hostName: hostName
+    });
     
     return roomCode;
   }
@@ -77,7 +81,10 @@ class RoomManager {
       ...newSettings
     };
 
-    console.log(`⚙️ Updated settings for room ${roomCode}:`, newSettings);
+    SecurityUtils.safeLog('info', 'Updated settings for room', {
+      roomCode: roomCode,
+      newSettings: newSettings
+    });
     
     return { success: true, settings: room.gameSettings };
   }
@@ -86,7 +93,9 @@ class RoomManager {
   removeRoom(roomCode) {
     const removed = this.rooms.delete(roomCode);
     if (removed) {
-      console.log(`🗑️ Removed room: ${roomCode}`);
+      SecurityUtils.safeLog('info', 'Removed room', {
+        roomCode: roomCode
+      });
     }
     return removed;
   }

@@ -185,6 +185,75 @@ class SecurityUtils {
         console.log(logEntry, safeData);
     }
   }
+
+  /**
+   * Validate thumbnail upload path specifically
+   * @param {string} filePath - File path to validate
+   * @returns {string} - Safe absolute path
+   */
+  static validateThumbnailPath(filePath) {
+    if (!filePath || typeof filePath !== 'string') {
+      throw new Error('Invalid thumbnail file path');
+    }
+    
+    // Define allowed base directories for thumbnails
+    const allowedBaseDirs = [
+      path.resolve(__dirname, '../routes/uploads/thumbnails'),
+      path.resolve(process.cwd(), 'backend/routes/uploads/thumbnails'),
+      path.resolve(__dirname, '../../routes/uploads/thumbnails')
+    ];
+    
+    // Resolve to absolute path and normalize
+    const absolutePath = path.resolve(filePath);
+    
+    // Check if the resolved path is within any of the allowed directories
+    const isAllowed = allowedBaseDirs.some(baseDir => {
+      const normalizedBase = path.resolve(baseDir);
+      return absolutePath.startsWith(normalizedBase + path.sep) || absolutePath === normalizedBase;
+    });
+    
+    if (!isAllowed) {
+      throw new Error('Thumbnail path traversal attempt detected');
+    }
+    
+    return absolutePath;
+  }
+
+  /**
+   * Validate user input for SQL/NoSQL injection patterns
+   * @param {string} input - User input to validate
+   * @param {string} context - Context where input is used (for logging)
+   * @returns {string} - Sanitized input
+   */
+  static validateUserInput(input, context = 'unknown') {
+    if (!input || typeof input !== 'string') {
+      return '';
+    }
+
+    // Check for potential injection patterns
+    const dangerousPatterns = [
+      /(\$\{|\$\()/g,  // Template literal injection
+      /`.*`/g,         // Backtick template strings
+      /__proto__/g,    // Prototype pollution
+      /constructor/g,  // Constructor access
+      /eval\s*\(/g,    // Eval function calls
+      /function\s*\(/g // Function constructors
+    ];
+
+    for (const pattern of dangerousPatterns) {
+      if (pattern.test(input)) {
+        this.safeLog('warn', 'Potential injection attempt detected', {
+          context: context,
+          inputLength: input.length,
+          pattern: pattern.toString()
+        });
+        // Remove dangerous patterns
+        input = input.replace(pattern, '');
+      }
+    }
+
+    return input.trim();
+  }
 }
 
 module.exports = SecurityUtils;
