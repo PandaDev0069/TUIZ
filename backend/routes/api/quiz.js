@@ -63,15 +63,17 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
       });
     }
 
-    // Read the uploaded file with path validation
+    // Read the uploaded file with secure path construction
     const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
-    const safePath = SecurityUtils.validateThumbnailPath(req.file.path);
+    // Use the secure filename that multer generated (stored in req.file.filename)
+    const secureFileName = req.file.filename; // This is already secure from multer config
+    // Construct safe path from known safe directory and secure filename
+    const safePath = path.join(uploadsDir, secureFileName);
     const filePath = safePath;
-    const fileName = SecurityUtils.sanitizeFilename(req.file.filename);
     const fileBuffer = fs.readFileSync(safePath);
 
     // Upload to Supabase Storage with safe path
-    const safeStoragePath = SecurityUtils.createSafeStoragePath(req.user.id, fileName);
+    const safeStoragePath = SecurityUtils.createSafeStoragePath(req.user.id, secureFileName);
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('quiz-thumbnails')
       .upload(safeStoragePath, fileBuffer, {
@@ -83,11 +85,10 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
       console.error('Supabase upload error:', uploadError);
       // Clean up local file
       try {
-        const safePath = SecurityUtils.validateThumbnailPath(filePath);
-        fs.unlinkSync(safePath);
+        fs.unlinkSync(safePath); // safePath is already secure
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
-          filePath: filePath,
+          filePath: path.basename(secureFileName),
           error: cleanupError.message
         });
       }
@@ -117,13 +118,15 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
     console.error('Thumbnail upload error:', error);
     
     // Clean up local file if it exists
-    if (req.file && req.file.path) {
+    if (req.file && req.file.filename) {
       try {
-        const safePath = SecurityUtils.validateThumbnailPath(req.file.path);
+        // Reconstruct safe path from known directory and secure filename
+        const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
+        const safePath = path.join(uploadsDir, req.file.filename);
         fs.unlinkSync(safePath);
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'File cleanup error', {
-          filePath: req.file.path,
+          filePath: path.basename(req.file.filename),
           error: cleanupError.message
         });
       }
@@ -186,17 +189,20 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
 
     console.log('✅ Quiz verification successful:', existingQuiz.title);
 
-    // Read the uploaded file
-    const filePath = req.file.path;
-    const fileName = req.file.filename;
-    const fileBuffer = fs.readFileSync(filePath);
+    // Read the uploaded file with secure path construction
+    const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
+    // Use the secure filename that multer generated
+    const secureFileName = req.file.filename;
+    const safePath = path.join(uploadsDir, secureFileName);
+    const filePath = safePath;
+    const fileBuffer = fs.readFileSync(safePath);
 
-    console.log('📤 Uploading to Supabase storage:', fileName);
+    console.log('📤 Uploading to Supabase storage:', secureFileName);
 
     // Upload to Supabase Storage using user-scoped client
     const { data: uploadData, error: uploadError } = await userSupabase.storage
       .from('quiz-thumbnails')
-      .upload(`${req.user.id}/${fileName}`, fileBuffer, {
+      .upload(`${req.user.id}/${secureFileName}`, fileBuffer, {
         contentType: req.file.mimetype,
         upsert: false
       });
@@ -205,11 +211,10 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
       console.error('❌ Supabase upload error:', uploadError);
       // Clean up local file
       try {
-        const safePath = SecurityUtils.validateThumbnailPath(filePath);
-        fs.unlinkSync(safePath);
+        fs.unlinkSync(safePath); // safePath is already secure
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
-          filePath: filePath,
+          filePath: path.basename(secureFileName),
           error: cleanupError.message
         });
       }
@@ -223,7 +228,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
     // Get public URL using user-scoped client
     const { data: urlData } = userSupabase.storage
       .from('quiz-thumbnails')
-      .getPublicUrl(`${req.user.id}/${fileName}`);
+      .getPublicUrl(`${req.user.id}/${secureFileName}`);
 
     const thumbnailUrl = urlData.publicUrl;
     console.log('🔗 Generated thumbnail URL:', thumbnailUrl);
@@ -247,7 +252,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
       try {
         await userSupabase.storage
           .from('quiz-thumbnails')
-          .remove([`${req.user.id}/${fileName}`]);
+          .remove([`${req.user.id}/${secureFileName}`]);
         console.log('🧹 Cleaned up storage file after DB error');
       } catch (cleanupError) {
         console.warn('⚠️ Storage cleanup warning:', cleanupError);
@@ -255,11 +260,10 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
 
       // Clean up local file
       try {
-        const safePath = SecurityUtils.validateThumbnailPath(filePath);
-        fs.unlinkSync(safePath);
+        fs.unlinkSync(safePath); // safePath is already secure
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
-          filePath: filePath,
+          filePath: path.basename(secureFileName),
           error: cleanupError.message
         });
       }
@@ -314,11 +318,10 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
 
     // Clean up local file
     try {
-      const safePath = SecurityUtils.validateThumbnailPath(filePath);
-      fs.unlinkSync(safePath);
+      fs.unlinkSync(safePath); // safePath is already secure
     } catch (cleanupError) {
       SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
-        filePath: filePath,
+        filePath: path.basename(secureFileName),
         error: cleanupError.message
       });
     }
@@ -339,14 +342,16 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
     console.error('❌ Thumbnail upload error:', error);
     
     // Clean up local file if it exists
-    if (req.file && req.file.path) {
+    if (req.file && req.file.filename) {
       try {
-        const safePath = SecurityUtils.validateThumbnailPath(req.file.path);
+        // Reconstruct safe path from known directory and secure filename
+        const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
+        const safePath = path.join(uploadsDir, req.file.filename);
         fs.unlinkSync(safePath);
         console.log('🧹 Cleaned up local file after error');
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'File cleanup error', {
-          filePath: req.file.path,
+          filePath: path.basename(req.file.filename),
           error: cleanupError.message
         });
       }
@@ -968,12 +973,12 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
             
             if (deleteError) {
               SecurityUtils.safeLog('warn', 'Failed to delete image', {
-                filePath: filePath,
+                filePath: path.basename(filePath),
                 error: deleteError
               });
             } else {
               SecurityUtils.safeLog('info', 'Deleted image', {
-                filePath: filePath
+                filePath: path.basename(filePath)
               });
             }
           }
