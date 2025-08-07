@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const DatabaseManager = require('../../config/database');
 const AuthMiddleware = require('../../middleware/auth');
 const RateLimitMiddleware = require('../../middleware/rateLimiter');
+const SecurityUtils = require('../../utils/SecurityUtils');
 
 // Initialize database
 const db = new DatabaseManager();
