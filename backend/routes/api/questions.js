@@ -372,7 +372,10 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
       });
     }
     
-    console.log(`Starting bulk update for ${questions.length} questions in set:`, question_set_id);
+    SecurityUtils.safeLog('info', 'Starting bulk update for questions in set', {
+      questionCount: questions.length,
+      questionSetId: question_set_id
+    });
     
     // Use database transaction to ensure atomicity
     const updatedQuestions = [];

@@ -33,9 +33,11 @@ function updateActiveGamePlayersCap(gameCode, maxPlayers) {
   // Try to update activeGame directly
   const success = activeGameUpdater.updatePlayersCap(gameCode, maxPlayers);
   if (success) {
-    console.log(`✅ Successfully updated activeGame maxPlayers for ${gameCode}`);
+    SecurityUtils.safeLog('info', 'Successfully updated activeGame maxPlayers', {
+      gameCode: gameCode
+    });
   } else {
-    console.log(`⚠️ Could not update activeGame directly, will rely on pending update`);
+    SecurityUtils.safeLog('warn', 'Could not update activeGame directly, will rely on pending update');
   }
 }
 
@@ -365,7 +367,9 @@ router.put('/:questionSetId/reset', AuthMiddleware.authenticateToken, async (req
       });
     }
 
-    console.log(`Settings reset to defaults for question set ${questionSetId}`);
+    SecurityUtils.safeLog('info', 'Settings reset to defaults for question set', {
+      questionSetId: questionSetId
+    });
 
     res.json({
       success: true,
@@ -502,13 +506,19 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
       if (dbError) {
         console.error('⚠️ Failed to update database game settings:', dbError);
       } else {
-        console.log(`✅ Database updated for game ${gameId}:`, updateData);
+        SecurityUtils.safeLog('info', 'Database updated for game', {
+          gameId: gameId,
+          updateData: updateData
+        });
       }
     } catch (dbUpdateError) {
       console.error('⚠️ Database update error:', dbUpdateError);
     }
 
-    console.log(`✅ Active game settings updated for ${gameId}:`, validatedSettings);
+    SecurityUtils.safeLog('info', 'Active game settings updated', {
+      gameId: gameId,
+      validatedSettings: validatedSettings
+    });
 
     res.json({
       success: true,

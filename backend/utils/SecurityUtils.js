@@ -196,15 +196,17 @@ class SecurityUtils {
       throw new Error('Invalid thumbnail file path');
     }
     
+    // Normalize and resolve the path
+    const normalizedPath = path.normalize(filePath);
+    const absolutePath = path.resolve(normalizedPath);
+    
     // Define allowed base directories for thumbnails
     const allowedBaseDirs = [
       path.resolve(__dirname, '../routes/uploads/thumbnails'),
       path.resolve(process.cwd(), 'backend/routes/uploads/thumbnails'),
-      path.resolve(__dirname, '../../routes/uploads/thumbnails')
+      path.resolve(__dirname, '../../routes/uploads/thumbnails'),
+      path.resolve(__dirname, '../../../uploads/thumbnails')
     ];
-    
-    // Resolve to absolute path and normalize
-    const absolutePath = path.resolve(filePath);
     
     // Check if the resolved path is within any of the allowed directories
     const isAllowed = allowedBaseDirs.some(baseDir => {
@@ -213,7 +215,24 @@ class SecurityUtils {
     });
     
     if (!isAllowed) {
+      // Log the security violation
+      this.safeLog('warn', 'Thumbnail path traversal attempt detected', {
+        attemptedPath: filePath,
+        resolvedPath: absolutePath,
+        allowedDirs: allowedBaseDirs
+      });
       throw new Error('Thumbnail path traversal attempt detected');
+    }
+    
+    // Additional check: ensure the file has an allowed extension
+    const ext = path.extname(absolutePath).toLowerCase();
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+    if (ext && !allowedExtensions.includes(ext)) {
+      this.safeLog('warn', 'Invalid file extension for thumbnail', {
+        filePath: filePath,
+        extension: ext
+      });
+      throw new Error('Invalid file extension for thumbnail');
     }
     
     return absolutePath;

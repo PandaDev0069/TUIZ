@@ -83,8 +83,7 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
       console.error('Supabase upload error:', uploadError);
       // Clean up local file
       try {
-        const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
-        const safePath = SecurityUtils.validateFilePath(filePath, uploadsDir);
+        const safePath = SecurityUtils.validateThumbnailPath(filePath);
         fs.unlinkSync(safePath);
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
@@ -120,8 +119,7 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
     // Clean up local file if it exists
     if (req.file && req.file.path) {
       try {
-        const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
-        const safePath = SecurityUtils.validateFilePath(req.file.path, uploadsDir);
+        const safePath = SecurityUtils.validateThumbnailPath(req.file.path);
         fs.unlinkSync(safePath);
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'File cleanup error', {
@@ -131,15 +129,13 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
       }
     }
     
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Internal server error',
       error: error.message 
     });
   }
-});
-
-// Upload thumbnail for existing quiz
+});// Upload thumbnail for existing quiz
 router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMiddleware.authenticateToken, upload.single('thumbnail'), async (req, res) => {
   try {
     const quizId = req.params.id;
@@ -209,8 +205,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
       console.error('❌ Supabase upload error:', uploadError);
       // Clean up local file
       try {
-        const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
-        const safePath = SecurityUtils.validateFilePath(filePath, uploadsDir);
+        const safePath = SecurityUtils.validateThumbnailPath(filePath);
         fs.unlinkSync(safePath);
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
@@ -221,11 +216,9 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
       return res.status(500).json({ 
         success: false, 
         message: 'Failed to upload to storage',
-        error: uploadError.message 
+        error: uploadError.message
       });
-    }
-
-    console.log('✅ File uploaded to storage successfully');
+    }    console.log('✅ File uploaded to storage successfully');
 
     // Get public URL using user-scoped client
     const { data: urlData } = userSupabase.storage
@@ -262,8 +255,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
 
       // Clean up local file
       try {
-        const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
-        const safePath = SecurityUtils.validateFilePath(filePath, uploadsDir);
+        const safePath = SecurityUtils.validateThumbnailPath(filePath);
         fs.unlinkSync(safePath);
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
@@ -322,8 +314,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
 
     // Clean up local file
     try {
-      const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
-      const safePath = SecurityUtils.validateFilePath(filePath, uploadsDir);
+      const safePath = SecurityUtils.validateThumbnailPath(filePath);
       fs.unlinkSync(safePath);
     } catch (cleanupError) {
       SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
@@ -350,8 +341,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
     // Clean up local file if it exists
     if (req.file && req.file.path) {
       try {
-        const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
-        const safePath = SecurityUtils.validateFilePath(req.file.path, uploadsDir);
+        const safePath = SecurityUtils.validateThumbnailPath(req.file.path);
         fs.unlinkSync(safePath);
         console.log('🧹 Cleaned up local file after error');
       } catch (cleanupError) {
