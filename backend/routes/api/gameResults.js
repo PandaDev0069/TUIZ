@@ -5,6 +5,9 @@ const { createClient } = require('@supabase/supabase-js');
 const AuthMiddleware = require('../../middleware/auth');
 const RateLimitMiddleware = require('../../middleware/rateLimiter');
 
+// Auth middleware shorthand
+const auth = AuthMiddleware.authenticateToken;
+
 const db = new DatabaseManager();
 
 // Get game results/leaderboard for a specific game
