@@ -4,6 +4,8 @@ const path = require('path');
 const fs = require('fs');
 const DatabaseManager = require('../../config/database');
 const AuthMiddleware = require('../../middleware/auth');
+const SecurityUtils = require('../../utils/SecurityUtils');
+const RateLimitMiddleware = require('../../middleware/rateLimiter');
 
 // Initialize database manager
 const dbManager = new DatabaseManager();
@@ -22,10 +24,14 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    // Generate unique filename with timestamp
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, `thumbnail-${uniqueSuffix}${ext}`);
+    try {
+      // Generate secure filename to prevent path injection
+      const secureFilename = SecurityUtils.generateSecureFilename(file.originalname, 'thumbnail');
+      cb(null, secureFilename);
+    } catch (error) {
+      console.error('Filename generation error:', error.message);
+      cb(error, null);
+    }
   }
 });
 
@@ -57,15 +63,18 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
       });
     }
 
-    // Read the uploaded file
-    const filePath = req.file.path;
-    const fileName = req.file.filename;
-    const fileBuffer = fs.readFileSync(filePath);
+    // Read the uploaded file with path validation
+    const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
+    const safePath = SecurityUtils.validateFilePath(req.file.path, uploadsDir);
+    const filePath = safePath;
+    const fileName = SecurityUtils.sanitizeFilename(req.file.filename);
+    const fileBuffer = fs.readFileSync(safePath);
 
-    // Upload to Supabase Storage
+    // Upload to Supabase Storage with safe path
+    const safeStoragePath = SecurityUtils.createSafeStoragePath(req.user.id, fileName);
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('quiz-thumbnails')
-      .upload(`${req.user.id}/${fileName}`, fileBuffer, {
+      .upload(safeStoragePath, fileBuffer, {
         contentType: req.file.mimetype,
         upsert: false
       });
@@ -81,10 +90,10 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
       });
     }
 
-    // Get public URL
+    // Get public URL with safe path
     const { data: urlData } = supabase.storage
       .from('quiz-thumbnails')
-      .getPublicUrl(`${req.user.id}/${fileName}`);
+      .getPublicUrl(safeStoragePath);
 
     // Clean up local file
     fs.unlinkSync(filePath);
