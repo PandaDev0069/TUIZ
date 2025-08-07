@@ -69,7 +69,6 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
     const secureFileName = req.file.filename; // This is already secure from multer config
     // Construct safe path from known safe directory and secure filename
     const safePath = path.join(uploadsDir, secureFileName);
-    const filePath = safePath;
     const fileBuffer = fs.readFileSync(safePath);
 
     // Upload to Supabase Storage with safe path
@@ -105,7 +104,7 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
       .getPublicUrl(safeStoragePath);
 
     // Clean up local file
-    fs.unlinkSync(filePath);
+    fs.unlinkSync(safePath);
 
     res.json({
       success: true,
@@ -194,7 +193,6 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
     // Use the secure filename that multer generated
     const secureFileName = req.file.filename;
     const safePath = path.join(uploadsDir, secureFileName);
-    const filePath = safePath;
     const fileBuffer = fs.readFileSync(safePath);
 
     console.log('📤 Uploading to Supabase storage:', secureFileName);
