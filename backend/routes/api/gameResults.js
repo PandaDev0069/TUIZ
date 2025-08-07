@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const DatabaseManager = require('../../config/database');
-const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const AuthMiddleware = require('../../middleware/auth');
 const RateLimitMiddleware = require('../../middleware/rateLimiter');

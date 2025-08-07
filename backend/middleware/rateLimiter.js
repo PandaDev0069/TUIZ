@@ -18,12 +18,8 @@ class RateLimitMiddleware {
       standardHeaders: true,
       legacyHeaders: false,
       // Skip successful OPTIONS requests
-      skip: (req) => req.method === 'OPTIONS',
-      // Custom key generator to handle proxies better
-      keyGenerator: (req) => {
-        return req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 
-               (req.connection.socket ? req.connection.socket.remoteAddress : null);
-      }
+      skip: (req) => req.method === 'OPTIONS'
+      // Remove custom keyGenerator to use default IPv6-safe implementation
     });
   }
 
