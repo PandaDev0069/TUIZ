@@ -4,6 +4,7 @@ const multer = require('multer');
 const rateLimit = require('express-rate-limit');
 const DatabaseManager = require('../../config/database');
 const AuthMiddleware = require('../../middleware/auth');
+const RateLimitMiddleware = require('../../middleware/rateLimiter');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -40,7 +41,7 @@ const upload = multer({
 });
 
 // Get all questions for a specific question set
-router.get('/set/:id', AuthMiddleware.authenticateToken, async (req, res) => {
+router.get('/set/:id', RateLimitMiddleware.createReadLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -89,7 +90,7 @@ router.get('/set/:id', AuthMiddleware.authenticateToken, async (req, res) => {
 // IMPORTANT: Bulk routes must come BEFORE parameterized routes like /:id
 
 // Bulk upload images for questions and answers (to be called before bulk save)
-router.post('/bulk-upload-images', AuthMiddleware.authenticateToken, upload.array('images', 50), async (req, res) => {
+router.post('/bulk-upload-images', RateLimitMiddleware.createUploadLimit(), AuthMiddleware.authenticateToken, upload.array('images', 50), async (req, res) => {
   try {
     console.log('🖼️ BULK IMAGE UPLOAD ENDPOINT HIT');
     console.log('Files received:', req.files?.length || 0);
@@ -242,7 +243,7 @@ router.post('/bulk-upload-images', AuthMiddleware.authenticateToken, upload.arra
 });
 
 // Bulk create questions for a question set
-router.post('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
+router.post('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { question_set_id, questions } = req.body;
     
@@ -314,7 +315,7 @@ router.post('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
 });
 
 // Bulk update questions
-router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
+router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   console.log('🔥 BULK UPDATE ENDPOINT HIT');
   console.log('Request body:', JSON.stringify(req.body, null, 2));
   console.log('User from auth:', req.user);
@@ -799,7 +800,7 @@ router.put('/bulk', AuthMiddleware.authenticateToken, async (req, res) => {
 });
 
 // Reorder questions in a question set
-router.put('/set/:id/reorder', AuthMiddleware.authenticateToken, async (req, res) => {
+router.put('/set/:id/reorder', RateLimitMiddleware.createModerateLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { questionOrder } = req.body; // Array of question IDs in desired order
@@ -877,7 +878,7 @@ router.put('/set/:id/reorder', AuthMiddleware.authenticateToken, async (req, res
 // NOW the parameterized routes that might conflict
 
 // Create a new question
-router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
+router.post('/', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { 
       question_set_id, 
@@ -970,7 +971,7 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
 });
 
 // Update a question
-router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
+router.put('/:id', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { 
@@ -1049,7 +1050,7 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
 });
 
 // Delete a question
-router.delete('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
+router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -1099,7 +1100,7 @@ router.delete('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
 });
 
 // Upload image for a question
-router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single('image'), async (req, res) => {
+router.post('/:id/upload-image', RateLimitMiddleware.createUploadLimit(), AuthMiddleware.authenticateToken, upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -1199,7 +1200,7 @@ router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single
 });
 
 // Delete image for a question
-router.delete('/:id/image', AuthMiddleware.authenticateToken, async (req, res) => {
+router.delete('/:id/image', RateLimitMiddleware.createModerateLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -1274,7 +1275,7 @@ router.delete('/:id/image', AuthMiddleware.authenticateToken, async (req, res) =
 });
 
 // Delete explanation image for a question
-router.delete('/:id/explanation-image', deleteImageLimiter, AuthMiddleware.authenticateToken, async (req, res) => {
+router.delete('/:id/explanation-image', RateLimitMiddleware.createModerateLimit(), deleteImageLimiter, AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     

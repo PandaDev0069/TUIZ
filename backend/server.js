@@ -14,6 +14,7 @@ const GameSettingsService = require('./services/GameSettingsService');
 const { calculateGameScore } = require('./utils/scoringSystem');
 const { validateStorageConfig } = require('./utils/storageConfig');
 const activeGameUpdater = require('./utils/ActiveGameUpdater');
+const RateLimitMiddleware = require('./middleware/rateLimiter');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -83,6 +84,9 @@ app.use(cors({
   origin: allowedOrigins,
   credentials: true
 }));
+
+// Apply global rate limiting for DDoS protection
+app.use('/api/', RateLimitMiddleware.createGlobalLimit());
 
 // Increase payload limits for image uploads and large quiz data
 app.use(express.json({ 
