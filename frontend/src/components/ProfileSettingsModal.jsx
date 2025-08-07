@@ -6,7 +6,7 @@ import { apiConfig } from '../utils/apiConfig';
 import { useTimerManager } from '../utils/timerManager';
 import './profileSettingsModal.css';
 
-const ProfileSettingsModal = ({ isOpen, onClose }) => {
+const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
   const { user, apiCall, refreshUser } = useAuth();
   const { showConfirmation, confirmationProps } = useConfirmation();
   const timerManager = useTimerManager();
@@ -114,6 +114,11 @@ const ProfileSettingsModal = ({ isOpen, onClose }) => {
       // Refresh user data from server to get updated avatar
       await refreshUser();
       
+      // Notify parent component of profile update
+      if (onProfileUpdated) {
+        onProfileUpdated();
+      }
+      
       // Clear selected file
       setSelectedFile(null);
       
@@ -143,6 +148,11 @@ const ProfileSettingsModal = ({ isOpen, onClose }) => {
 
       // Refresh user data from server
       await refreshUser();
+      
+      // Notify parent component of profile update
+      if (onProfileUpdated) {
+        onProfileUpdated();
+      }
       
       showMessage('success', 'プロフィールが更新されました！');
       onClose();
@@ -189,6 +199,11 @@ const ProfileSettingsModal = ({ isOpen, onClose }) => {
 
       // Refresh user data from server
       await refreshUser();
+
+      // Notify parent component of profile update
+      if (onProfileUpdated) {
+        onProfileUpdated();
+      }
 
       // Clear local state
       setPreview('');
