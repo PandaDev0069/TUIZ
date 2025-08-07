@@ -63,13 +63,21 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
       });
     }
 
-    // Read the uploaded file with secure path construction
+    // Read the uploaded file with secure path construction and validation
     const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
     // Use the secure filename that multer generated (stored in req.file.filename)
     const secureFileName = req.file.filename; // This is already secure from multer config
     // Construct safe path from known safe directory and secure filename
     const safePath = path.join(uploadsDir, secureFileName);
-    const fileBuffer = fs.readFileSync(safePath);
+    
+    // Additional security validation - ensure path is within allowed directory
+    const normalizedSafePath = path.resolve(safePath);
+    const normalizedUploadsDir = path.resolve(uploadsDir);
+    if (!normalizedSafePath.startsWith(normalizedUploadsDir + path.sep)) {
+      throw new Error('Path traversal attempt detected');
+    }
+    
+    const fileBuffer = fs.readFileSync(normalizedSafePath);
 
     // Upload to Supabase Storage with safe path
     const safeStoragePath = SecurityUtils.createSafeStoragePath(req.user.id, secureFileName);
@@ -84,7 +92,7 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
       console.error('Supabase upload error:', uploadError);
       // Clean up local file
       try {
-        fs.unlinkSync(safePath); // safePath is already secure
+        fs.unlinkSync(normalizedSafePath); // normalizedSafePath is validated
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
           filePath: path.basename(secureFileName),
@@ -104,7 +112,7 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
       .getPublicUrl(safeStoragePath);
 
     // Clean up local file
-    fs.unlinkSync(safePath);
+    fs.unlinkSync(normalizedSafePath);
 
     res.json({
       success: true,
@@ -119,10 +127,15 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
     // Clean up local file if it exists
     if (req.file && req.file.filename) {
       try {
-        // Reconstruct safe path from known directory and secure filename
+        // Reconstruct safe path from known directory and secure filename with validation
         const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
         const safePath = path.join(uploadsDir, req.file.filename);
-        fs.unlinkSync(safePath);
+        const normalizedSafePath = path.resolve(safePath);
+        const normalizedUploadsDir = path.resolve(uploadsDir);
+        if (!normalizedSafePath.startsWith(normalizedUploadsDir + path.sep)) {
+          throw new Error('Path traversal attempt detected in cleanup');
+        }
+        fs.unlinkSync(normalizedSafePath);
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'File cleanup error', {
           filePath: path.basename(req.file.filename),
@@ -188,12 +201,20 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
 
     console.log('✅ Quiz verification successful:', existingQuiz.title);
 
-    // Read the uploaded file with secure path construction
+    // Read the uploaded file with secure path construction and validation
     const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
     // Use the secure filename that multer generated
     const secureFileName = req.file.filename;
     const safePath = path.join(uploadsDir, secureFileName);
-    const fileBuffer = fs.readFileSync(safePath);
+    
+    // Additional security validation - ensure path is within allowed directory
+    const normalizedSafePath = path.resolve(safePath);
+    const normalizedUploadsDir = path.resolve(uploadsDir);
+    if (!normalizedSafePath.startsWith(normalizedUploadsDir + path.sep)) {
+      throw new Error('Path traversal attempt detected');
+    }normalizedSafePath
+    
+    const fileBuffer = fs.readFileSync(normalizedSafePath);
 
     console.log('📤 Uploading to Supabase storage:', secureFileName);
 
@@ -209,7 +230,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
       console.error('❌ Supabase upload error:', uploadError);
       // Clean up local file
       try {
-        fs.unlinkSync(safePath); // safePath is already secure
+        fs.unlinkSync(normalizedSafePath); // normalizedSafePath is already secure
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
           filePath: path.basename(secureFileName),
@@ -258,7 +279,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
 
       // Clean up local file
       try {
-        fs.unlinkSync(safePath); // safePath is already secure
+        fs.unlinkSync(normalizedSafePath); // normalizedSafePath is already secure
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
           filePath: path.basename(secureFileName),
@@ -316,7 +337,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
 
     // Clean up local file
     try {
-      fs.unlinkSync(safePath); // safePath is already secure
+      fs.unlinkSync(normalizedSafePath); // normalizedSafePath is already secure
     } catch (cleanupError) {
       SecurityUtils.safeLog('error', 'Failed to cleanup local file', {
         filePath: path.basename(secureFileName),
@@ -342,10 +363,15 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
     // Clean up local file if it exists
     if (req.file && req.file.filename) {
       try {
-        // Reconstruct safe path from known directory and secure filename
+        // Reconstruct safe path from known directory and secure filename with validation
         const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
         const safePath = path.join(uploadsDir, req.file.filename);
-        fs.unlinkSync(safePath);
+        const normalizedSafePath = path.resolve(safePath);
+        const normalizedUploadsDir = path.resolve(uploadsDir);
+        if (!normalizedSafePath.startsWith(normalizedUploadsDir + path.sep)) {
+          throw new Error('Path traversal attempt detected in cleanup');
+        }
+        fs.unlinkSync(normalizedSafePath);
         console.log('🧹 Cleaned up local file after error');
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'File cleanup error', {
