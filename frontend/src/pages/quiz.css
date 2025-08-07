@@ -4,6 +4,7 @@
   margin: 0 auto;
   padding: 1rem;
   min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
   display: flex;
   flex-direction: column;
   /* Enhanced scroll behavior for auto-scroll */

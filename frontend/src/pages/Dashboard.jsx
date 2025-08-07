@@ -11,7 +11,7 @@ import { useTimerManager } from '../utils/timerManager';
 import './dashboard.css';
 
 function Dashboard() {
-  const { user, logout, isAuthenticated, apiCall } = useAuth();
+  const { user, logout, isAuthenticated, apiCall, refreshUser } = useAuth();
   const navigate = useNavigate();
   const { showConfirmation, confirmationProps } = useConfirmation();
   const timerManager = useTimerManager();
@@ -20,6 +20,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [profileImageError, setProfileImageError] = useState(false);
   const [stats, setStats] = useState({
     totalQuizSets: 0,
     totalGames: 0,
@@ -33,8 +34,30 @@ function Dashboard() {
     } else {
       // Fetch user's quiz sets when authenticated
       fetchMyQuizSets();
+      // Refresh user data to ensure we have the latest profile information
+      refreshUserData();
     }
   }, [isAuthenticated, navigate]);
+
+  // Refresh user data when component mounts
+  const refreshUserData = async () => {
+    try {
+      await refreshUser();
+      setProfileImageError(false); // Reset image error state
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+    }
+  };
+
+  // Handle profile image load error
+  const handleImageError = () => {
+    setProfileImageError(true);
+  };
+
+  // Handle profile image load success
+  const handleImageLoad = () => {
+    setProfileImageError(false);
+  };
 
   // Helper function to show messages
   const showMessage = (type, text) => {
@@ -238,11 +261,13 @@ function Dashboard() {
               onClick={() => setShowProfileModal(true)}
               title="プロフィール設定"
             >
-              {user.avatar_url ? (
+              {user.avatar_url && !profileImageError ? (
                 <img 
                   src={user.avatar_url} 
                   alt="プロフィール画像" 
                   className="dashboard__user-avatar"
+                  onError={handleImageError}
+                  onLoad={handleImageLoad}
                 />
               ) : (
                 <span className="dashboard__user-avatar-placeholder">👤</span>
@@ -487,6 +512,7 @@ function Dashboard() {
       <ProfileSettingsModal 
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
+        onProfileUpdated={refreshUserData}
       />
 
       {/* Confirmation Modal */}
