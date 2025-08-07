@@ -24,16 +24,51 @@
   padding-top: 2rem;
 }
 
+.logo-container {
+  margin-bottom: 1rem;
+}
+
+.app-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  animation: logoFloat 3s ease-in-out infinite;
+}
+
+.app-logo:hover {
+  transform: scale(1.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes logoFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 .app-title {
   font-size: clamp(3rem, 8vw, 4.5rem);
   font-weight: 600;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   background: linear-gradient(45deg, #ffffff, #f0f9ff);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: titleGlow 3s ease-in-out infinite alternate;
+}
+
+.app-subtitle {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  margin-bottom: 0;
+  font-weight: 300;
+  letter-spacing: 0.5px;
 }
 
 @keyframes titleGlow {
@@ -48,8 +83,57 @@
 
 /* Main Action Section */
 .main-actions {
+  margin-bottom: 3rem;
+  width: 100%;
+}
+
+/* Features Section */
+.features-section {
   margin-bottom: 4rem;
   width: 100%;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.feature-item {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.feature-item:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.feature-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.feature-item h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: white;
+}
+
+.feature-item p {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin: 0;
 }
 
 .action-cards {
@@ -165,19 +249,57 @@
   text-align: center;
 }
 
-.footer-content p {
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.footer-main p {
   opacity: 0.7;
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
 }
 
-.footer-links {
+.footer-tech {
   opacity: 0.6;
   font-size: 0.8rem;
 }
 
+.footer-tech span {
+  margin: 0 0.5rem;
+}
+
+.footer-license {
+  opacity: 0.7;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.footer-license span {
+  margin: 0 0.5rem;
+}
+
+.footer-links {
+  opacity: 0.6;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
 .footer-links span {
   margin: 0 0.5rem;
+}
+
+.footer-link {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.footer-link:hover {
+  color: white;
+  text-decoration: underline;
 }
 
 /* Mobile Responsive */
@@ -191,8 +313,30 @@
     padding-top: 1rem;
   }
   
+  .app-logo {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .app-subtitle {
+    font-size: 1rem;
+  }
+  
   .main-actions {
+    margin-bottom: 2rem;
+  }
+  
+  .features-section {
     margin-bottom: 3rem;
+  }
+  
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .feature-item {
+    padding: 1rem 0.5rem;
   }
   
   .action-cards {
@@ -203,9 +347,22 @@
   .action-card {
     padding: 1.5rem;
   }
+  
+  .footer-content {
+    gap: 0.8rem;
+  }
 }
 
 @media (max-width: 480px) {
+  .app-logo {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+  
   .action-cards {
     gap: 1rem;
   }
@@ -216,5 +373,15 @@
   
   .card-icon {
     font-size: 2.5rem;
+  }
+  
+  .feature-icon {
+    font-size: 1.5rem;
+  }
+  
+  .footer-license,
+  .footer-tech,
+  .footer-links {
+    font-size: 0.75rem;
   }
 }

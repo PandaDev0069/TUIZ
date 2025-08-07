@@ -20,6 +20,8 @@ import HostLobby from './pages/HostLobby'
 import Quiz from './pages/Quiz'
 import QuizControl from './pages/QuizControl'
 import Scoreboard from './pages/Scoreboard'
+import Privacy from './pages/Privacy'
+import License from './pages/License'
 
 function App() {
   useEffect(() => {
@@ -54,6 +56,8 @@ function App() {
         <Route path="/quiz" element={<Quiz />} />
         <Route path="/quiz/control" element={<QuizControl />} />
         <Route path="/scoreboard" element={<Scoreboard />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/license" element={<License />} />
       </Routes>
       <ToastContainer />
       <SpeedInsights />

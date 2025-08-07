@@ -1,0 +1,265 @@
+/* Static Pages Styles - Privacy and License */
+.static-page-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.static-page-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  line-height: 1.6;
+}
+
+/* Header Styles */
+.static-page-header {
+  margin-bottom: 2rem;
+  text-align: center;
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 0.9rem;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(-5px);
+}
+
+.static-page-header h1 {
+  font-size: 2.5rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.last-updated {
+  opacity: 0.8;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* Main Content */
+.static-page-main {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 2rem;
+}
+
+/* Section Styles */
+.privacy-section,
+.license-section,
+.license-info,
+.open-source-info,
+.tech-stack {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.privacy-section:last-child,
+.tech-stack {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.static-page-main h2 {
+  color: #fbbf24;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.static-page-main h3 {
+  color: #60a5fa;
+  font-size: 1.2rem;
+  margin: 1rem 0 0.5rem 0;
+  font-weight: 600;
+}
+
+.static-page-main h4 {
+  color: #a78bfa;
+  font-size: 1rem;
+  margin: 0.8rem 0 0.4rem 0;
+  font-weight: 600;
+}
+
+.static-page-main p {
+  margin-bottom: 1rem;
+  opacity: 0.9;
+}
+
+.static-page-main ul {
+  margin: 0.5rem 0 1rem 1.5rem;
+  opacity: 0.9;
+}
+
+.static-page-main li {
+  margin-bottom: 0.5rem;
+}
+
+/* License Specific Styles */
+.license-text {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border-left: 4px solid #10b981;
+  margin-bottom: 2rem;
+}
+
+.license-text p {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9rem;
+  line-height: 1.8;
+}
+
+.license-explanation {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.permission-item,
+.condition-item,
+.limitation-item {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.permission-item {
+  border-left: 4px solid #10b981;
+}
+
+.condition-item {
+  border-left: 4px solid #f59e0b;
+}
+
+.limitation-item {
+  border-left: 4px solid #ef4444;
+}
+
+.github-info {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin: 1rem 0;
+}
+
+.github-link-section {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.contact-link,
+.github-link {
+  color: #60a5fa;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.contact-link:hover,
+.github-link:hover {
+  color: #93c5fd;
+  text-decoration: underline;
+}
+
+/* Tech Stack */
+.tech-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.tech-category {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tech-category ul {
+  margin-left: 1rem;
+}
+
+/* Footer */
+.static-page-footer {
+  text-align: center;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .static-page-content {
+    padding: 1rem;
+  }
+
+  .static-page-header h1 {
+    font-size: 2rem;
+    margin-top: 3rem;
+  }
+
+  .back-button {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 1rem;
+  }
+
+  .static-page-main {
+    padding: 1.5rem;
+  }
+
+  .license-explanation {
+    grid-template-columns: 1fr;
+  }
+
+  .tech-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .static-page-content {
+    padding: 0.5rem;
+  }
+
+  .static-page-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .static-page-main {
+    padding: 1rem;
+  }
+
+  .back-button {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+}
