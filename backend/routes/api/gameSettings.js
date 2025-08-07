@@ -296,7 +296,7 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
       }
     }
 
-    console.log(`Settings updated for question set ${questionSetId}:`, validatedSettings);
+    console.log('Settings updated for question set %s:', questionSetId, validatedSettings);
 
     res.json({
       success: true,

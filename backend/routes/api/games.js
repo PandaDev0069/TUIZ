@@ -3,6 +3,7 @@ const router = express.Router();
 const roomManager = require('../../utils/RoomManager');
 const { getAuthenticatedUser } = require('../../helpers/authHelper');
 const DatabaseManager = require('../../config/database');
+const RateLimitMiddleware = require('../../middleware/rateLimiter');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -10,7 +11,7 @@ const db = new DatabaseManager();
 // Room manager is already initialized as a singleton
 
 // Get all active games
-router.get('/active', async (req, res) => {
+router.get('/active', RateLimitMiddleware.createReadLimit(), async (req, res) => {
   try {
     const rooms = roomManager.getAllRooms();
     const activeGames = Object.values(rooms).map(room => ({

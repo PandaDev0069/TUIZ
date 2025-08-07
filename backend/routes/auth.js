@@ -3,6 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 const multer = require('multer');
 const path = require('path');
 const AuthMiddleware = require('../middleware/auth');
+const RateLimitMiddleware = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -57,7 +58,7 @@ const validateInput = {
 };
 
 // Register new user
-router.post('/register', AuthMiddleware.loginRateLimit(), async (req, res) => {
+router.post('/register', RateLimitMiddleware.createAuthLimit(), AuthMiddleware.loginRateLimit(), async (req, res) => {
   try {
     const { email, name, password, confirmPassword } = req.body;
 
@@ -185,7 +186,7 @@ router.post('/register', AuthMiddleware.loginRateLimit(), async (req, res) => {
 });
 
 // Login user
-router.post('/login', AuthMiddleware.loginRateLimit(), async (req, res) => {
+router.post('/login', RateLimitMiddleware.createAuthLimit(), AuthMiddleware.loginRateLimit(), async (req, res) => {
   try {
     const { emailOrName, password } = req.body;
 
@@ -272,7 +273,7 @@ router.post('/login', AuthMiddleware.loginRateLimit(), async (req, res) => {
 });
 
 // Get current user profile
-router.get('/profile', AuthMiddleware.authenticateToken, (req, res) => {
+router.get('/profile', RateLimitMiddleware.createReadLimit(), AuthMiddleware.authenticateToken, (req, res) => {
   res.json({
     success: true,
     user: req.user
@@ -280,7 +281,7 @@ router.get('/profile', AuthMiddleware.authenticateToken, (req, res) => {
 });
 
 // Refresh token
-router.post('/refresh', AuthMiddleware.authenticateToken, async (req, res) => {
+router.post('/refresh', RateLimitMiddleware.createAuthLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     // With Supabase, refresh tokens are handled differently
     // For now, return the existing token or suggest re-login
@@ -298,7 +299,7 @@ router.post('/refresh', AuthMiddleware.authenticateToken, async (req, res) => {
 });
 
 // Upload avatar image
-router.post('/upload-avatar', AuthMiddleware.authenticateToken, upload.single('avatar'), async (req, res) => {
+router.post('/upload-avatar', RateLimitMiddleware.createUploadLimit(), AuthMiddleware.authenticateToken, upload.single('avatar'), async (req, res) => {
   try {
     const user = req.user;
     const file = req.file;
@@ -385,7 +386,7 @@ router.post('/upload-avatar', AuthMiddleware.authenticateToken, upload.single('a
 });
 
 // Update user profile
-router.put('/update-profile', AuthMiddleware.authenticateToken, async (req, res) => {
+router.put('/update-profile', RateLimitMiddleware.createModerateLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const user = req.user;
     const { name, avatar_url } = req.body;
@@ -462,7 +463,7 @@ router.put('/update-profile', AuthMiddleware.authenticateToken, async (req, res)
 });
 
 // Logout (client-side will remove token)
-router.post('/logout', AuthMiddleware.authenticateToken, (req, res) => {
+router.post('/logout', RateLimitMiddleware.createGeneralLimit(), AuthMiddleware.authenticateToken, (req, res) => {
   res.json({
     success: true,
     message: 'ログアウトしました。'
@@ -470,7 +471,7 @@ router.post('/logout', AuthMiddleware.authenticateToken, (req, res) => {
 });
 
 // Delete avatar image
-router.delete('/delete-avatar', AuthMiddleware.authenticateToken, async (req, res) => {
+router.delete('/delete-avatar', RateLimitMiddleware.createModerateLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const user = req.user;
 
@@ -529,7 +530,7 @@ router.delete('/delete-avatar', AuthMiddleware.authenticateToken, async (req, re
 });
 
 // Check if email/name is available
-router.post('/check-availability', async (req, res) => {
+router.post('/check-availability', RateLimitMiddleware.createGeneralLimit(), async (req, res) => {
   try {
     const { email, name } = req.body;
     

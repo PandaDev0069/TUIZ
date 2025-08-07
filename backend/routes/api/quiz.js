@@ -48,7 +48,7 @@ const upload = multer({
 });
 
 // Upload thumbnail endpoint
-router.post('/upload-thumbnail', AuthMiddleware.authenticateToken, upload.single('thumbnail'), async (req, res) => {
+router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMiddleware.authenticateToken, upload.single('thumbnail'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ 
@@ -117,7 +117,7 @@ router.post('/upload-thumbnail', AuthMiddleware.authenticateToken, upload.single
 });
 
 // Upload thumbnail for existing quiz
-router.post('/:id/upload-thumbnail', AuthMiddleware.authenticateToken, upload.single('thumbnail'), async (req, res) => {
+router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMiddleware.authenticateToken, upload.single('thumbnail'), async (req, res) => {
   try {
     const quizId = req.params.id;
     
@@ -313,7 +313,7 @@ router.post('/:id/upload-thumbnail', AuthMiddleware.authenticateToken, upload.si
 });
 
 // Delete thumbnail for existing quiz
-router.delete('/:id/thumbnail', AuthMiddleware.authenticateToken, async (req, res) => {
+router.delete('/:id/thumbnail', RateLimitMiddleware.createModerateLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const quizId = req.params.id;
 
@@ -392,7 +392,7 @@ router.delete('/:id/thumbnail', AuthMiddleware.authenticateToken, async (req, re
 });
 
 // Create quiz with metadata
-router.post('/create', AuthMiddleware.authenticateToken, async (req, res) => {
+router.post('/create', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const {
       title,
@@ -504,7 +504,7 @@ router.post('/create', AuthMiddleware.authenticateToken, async (req, res) => {
 });
 
 // Get user's quizzes
-router.get('/my-quizzes', AuthMiddleware.authenticateToken, async (req, res) => {
+router.get('/my-quizzes', RateLimitMiddleware.createReadLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     // Create user-scoped Supabase client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
@@ -558,7 +558,7 @@ router.get('/my-quizzes', AuthMiddleware.authenticateToken, async (req, res) => 
 });
 
 // Get quiz by ID
-router.get('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
+router.get('/:id', RateLimitMiddleware.createReadLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const quizId = req.params.id;
 
@@ -613,7 +613,7 @@ router.get('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
 });
 
 // Update quiz metadata
-router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
+router.put('/:id', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const quizId = req.params.id;
     const updateData = { ...req.body };
@@ -791,7 +791,7 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
 });
 
 // Delete quiz
-router.delete('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
+router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const quizId = req.params.id;
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
@@ -1310,7 +1310,7 @@ router.patch('/:id/question-count', AuthMiddleware.authenticateToken, async (req
 });
 
 // Publish quiz (final step)
-router.post('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) => {
+router.post('/:id/publish', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const quizId = req.params.id;
     const { play_settings = {} } = req.body;
@@ -1392,7 +1392,7 @@ router.post('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) =
 });
 
 // Get quiz with questions (for loading drafts)
-router.get('/:id/questions', AuthMiddleware.authenticateToken, async (req, res) => {
+router.get('/:id/questions', RateLimitMiddleware.createReadLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const quizId = req.params.id;
 
