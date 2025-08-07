@@ -131,6 +131,13 @@ router.post('/bulk-upload-images', AuthMiddleware.authenticateToken, upload.arra
     const userId = req.user?.id;
     const uploadResults = [];
     
+    // Ensure req.files is an array to prevent type confusion
+    if (!Array.isArray(req.files)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid files format'
+      });
+    }
     // Upload each image file
     for (let i = 0; i < req.files.length; i++) {
       const file = req.files[i];
