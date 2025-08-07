@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 const DatabaseManager = require('../../config/database');
 const AuthMiddleware = require('../../middleware/auth');
 
@@ -10,6 +11,16 @@ const OrderManager = require('../../utils/OrderManager');
 
 // Initialize order manager
 const orderManager = new OrderManager();
+
+// Rate limiter for image deletion routes
+const deleteImageLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: {
+    success: false,
+    error: 'Too many requests, please try again later.'
+  }
+});
 
 // Configure multer for image uploads
 const storage = multer.memoryStorage();
@@ -1263,7 +1274,7 @@ router.delete('/:id/image', AuthMiddleware.authenticateToken, async (req, res) =
 });
 
 // Delete explanation image for a question
-router.delete('/:id/explanation-image', AuthMiddleware.authenticateToken, async (req, res) => {
+router.delete('/:id/explanation-image', deleteImageLimiter, AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
