@@ -419,7 +419,7 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
   try {
     const { gameId } = req.params;
     const { settings } = req.body;
-    console.log(`🔄 Updating settings for gameId: ${gameId}`, settings);
+    console.log('🔄 Updating settings for gameId: %s', gameId, settings);
 
     if (!settings || typeof settings !== 'object') {
       return res.status(400).json({
