@@ -21,7 +21,7 @@ function Home() {
             <img src="/logo.png" alt="TUIZ Logo" className="app-logo" />
           </div>
           <h1 className="app-title">TUIZ情報王</h1>
-          <p className="app-subtitle">Real-time Interactive Quiz Platform</p>
+          <p className="app-subtitle">リアルタイム・インタラクティブ・クイズプラットフォーム</p>
         </header>
 
         {/* Main Action Section */}
@@ -52,18 +52,18 @@ function Home() {
           <div className="features-grid">
             <div className="feature-item">
               <div className="feature-icon">⚡</div>
-              <h4>Real-time</h4>
-              <p>Instant synchronization</p>
+              <h4>リアルタイム</h4>
+              <p>瞬時に同期</p>
             </div>
             <div className="feature-item">
               <div className="feature-icon">📚</div>
-              <h4>Educational</h4>
-              <p>Perfect for learning</p>
+              <h4>教育的</h4>
+              <p>学習に最適</p>
             </div>
             <div className="feature-item">
               <div className="feature-icon">🎨</div>
-              <h4>Interactive</h4>
-              <p>Engaging experience</p>
+              <h4>インタラクティブ</h4>
+              <p>魅力的な体験</p>
             </div>
           </div>
         </section>
@@ -90,11 +90,11 @@ function Home() {
                 GitHub
               </a>
               <span>•</span>
-              <a href="/LICENSE" className="footer-link">
+              <a href="/license" className="footer-link">
                 License
               </a>
               <span>•</span>
-              <span className="footer-link">Privacy</span>
+              <a href="/privacy" className="footer-link">Privacy</a>
             </div>
           </div>
         </footer>
