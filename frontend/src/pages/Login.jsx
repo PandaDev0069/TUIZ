@@ -18,6 +18,7 @@ function Login() {
   // Refs for input elements for mobile keyboard handling
   const emailInputRef = useRef(null);
   const passwordInputRef = useRef(null);
+  const passwordGroupRef = useRef(null); // Target the entire input-group instead
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -34,12 +35,21 @@ function Login() {
       if (isKeyboardOpen) {
         setTimeout(() => {
           const activeElement = document.activeElement;
-          if (activeElement && (activeElement === emailInputRef.current || activeElement === passwordInputRef.current)) {
+          if (activeElement && activeElement === emailInputRef.current) {
             activeElement.scrollIntoView({
               behavior: 'smooth',
               block: 'center',
               inline: 'nearest'
             });
+          } else if (activeElement && activeElement === passwordInputRef.current) {
+            // For password field, scroll the entire input group
+            if (passwordGroupRef.current) {
+              passwordGroupRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+                inline: 'nearest'
+              });
+            }
           }
         }, 100);
       }
@@ -57,11 +67,13 @@ function Login() {
   }, []);
 
   // Handle input focus for mobile keyboard
-  const handleInputFocus = (inputRef) => {
+  const handleInputFocus = (inputRef, groupRef = null) => {
     if (window.innerWidth <= 768) {
       setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.scrollIntoView({
+        // For password field, scroll the entire input group; for others, scroll the input
+        const targetElement = groupRef ? groupRef.current : inputRef.current;
+        if (targetElement) {
+          targetElement.scrollIntoView({
             behavior: 'smooth',
             block: 'center',
             inline: 'nearest'
@@ -187,7 +199,7 @@ function Login() {
           </div>
 
           {/* Password Input */}
-          <div className="input-group">
+          <div className="input-group" ref={passwordGroupRef}>
             <label htmlFor="password" className="input-label">
               パスワード
             </label>
@@ -202,7 +214,7 @@ function Login() {
                 value={formData.password}
                 onChange={handleChange}
                 onKeyPress={handleKeyPress}
-                onFocus={() => handleInputFocus(passwordInputRef)}
+                onFocus={() => handleInputFocus(passwordInputRef, passwordGroupRef)}
                 disabled={loading}
                 autoComplete="current-password"
               />

@@ -14,7 +14,8 @@ body {
 
 .join-container {
   min-height: 100vh;
-  width: 100vw;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -125,24 +126,24 @@ button:active {
 
 /* Mobile keyboard support - Enhanced */
 @media (max-width: 768px) {
-  .page-container {
+  .join-container {
     /* Ensure proper scrolling on mobile */
     min-height: 100vh;
-    min-height: 100dvh; /* Dynamic viewport height */
+    min-height: 100svh; /* Small viewport height - excludes mobile UI */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     /* Smooth scrolling for better UX */
     scroll-behavior: smooth;
     /* Ensure container can accommodate keyboard */
-    padding-bottom: 200px;
+    padding-bottom: 2rem;
   }
 
-  .card {
+  .join-card {
     /* Allow the card to be scrollable */
     max-height: none;
     margin: auto;
     /* Add padding for better keyboard experience */
-    margin-bottom: 150px; /* Extra space for keyboard */
+    margin-bottom: 2rem; /* Safe space for mobile UI */
     /* Ensure card stays visible during keyboard interaction */
     position: relative;
     z-index: 1;

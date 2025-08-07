@@ -1,7 +1,8 @@
 /* Authentication Pages Styles */
 .auth-container {
   min-height: 100vh;
-  width: 100vw;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+  width: 100%;
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
   display: flex;
   align-items: center;
@@ -173,6 +174,10 @@
   align-items: center;
   justify-content: center;
   color: rgba(255, 255, 255, 0.8);
+  /* Override any global button styles */
+  margin: 0 !important;
+  min-height: auto !important;
+  touch-action: manipulation !important;
 }
 
 /* Override global button hover styles */
@@ -328,7 +333,7 @@
     padding: 1rem;
     /* Ensure proper scrolling on mobile */
     min-height: 100vh;
-    min-height: 100dvh; /* Dynamic viewport height */
+    min-height: 100svh; /* Small viewport height - excludes mobile UI */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
@@ -341,7 +346,7 @@
     max-height: none;
     margin: auto;
     /* Add padding for better keyboard experience */
-    margin-bottom: 100px; /* Extra space for keyboard */
+    margin-bottom: 2rem; /* Safe space for mobile UI */
     position: relative;
     z-index: 1;
   }
@@ -388,6 +393,29 @@
     /* Ensure button stays accessible */
     margin-top: 1.5rem;
   }
+
+  /* Adjust password toggle position on mobile tablets */
+  .input-wrapper .password-toggle {
+    top: calc(50% - 2px) !important; /* Slight upward adjustment for better alignment */
+    transform: translateY(-50%) !important;
+    position: absolute !important;
+    margin: 0 !important;
+    padding: 0.4rem !important;
+    min-height: auto !important;
+    z-index: 10 !important; /* Ensure it's clickable */
+    pointer-events: auto !important;
+    cursor: pointer !important;
+  }
+  
+  .input-wrapper .password-toggle:hover {
+    transform: translateY(calc(-50% - 2px)) !important;
+    top: calc(50% - 2px) !important;
+  }
+
+  .input-wrapper .password-toggle:active {
+    transform: translateY(calc(-50% - 2px)) !important;
+    top: calc(50% - 2px) !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -423,11 +451,30 @@
     right: 0.8rem;
   }
 
-  .password-toggle {
-    font-size: 0.9rem;
-    right: 0.4rem;
-    width: 2.2rem;
-    height: 2.2rem;
+  .input-wrapper .password-toggle {
+    font-size: 0.9rem !important;
+    right: 0.4rem !important;
+    width: 2.2rem !important;
+    height: 2.2rem !important;
+    top: calc(50% - 1px) !important; /* Minimal upward adjustment for small mobile */
+    transform: translateY(-50%) !important;
+    position: absolute !important;
+    margin: 0 !important;
+    padding: 0.3rem !important;
+    min-height: auto !important;
+    z-index: 10 !important; /* Ensure it's clickable */
+    pointer-events: auto !important;
+    cursor: pointer !important;
+  }
+
+  .input-wrapper .password-toggle:hover {
+    transform: translateY(calc(-50% - 1px)) !important;
+    top: calc(50% - 1px) !important;
+  }
+
+  .input-wrapper .password-toggle:active {
+    transform: translateY(calc(-50% - 1px)) !important;
+    top: calc(50% - 1px) !important;
   }
 }
 

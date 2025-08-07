@@ -1,10 +1,12 @@
 /* Home Page Styles */
 .home-container {
   min-height: 100vh;
-  width: 100vw;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+  width: 100%;
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
   color: white;
   overflow-x: hidden;
+  position: relative;
 }
 
 .home-content {
@@ -15,6 +17,7 @@
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
 }
 
 /* Header Section */
@@ -304,8 +307,15 @@
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+  .home-container {
+    min-height: 100vh;
+    min-height: 100svh; /* Small viewport height - excludes mobile UI */
+  }
+  
   .home-content {
     padding: 1rem;
+    min-height: 100vh;
+    min-height: 100svh; /* Small viewport height - excludes mobile UI */
   }
   
   .home-header {
@@ -351,9 +361,27 @@
   .footer-content {
     gap: 0.8rem;
   }
+  
+  /* Ensure footer sticks to bottom on mobile */
+  .home-footer {
+    margin-top: auto;
+    padding-top: 2rem;
+    padding-bottom: 2rem; /* Add bottom padding for mobile */
+  }
 }
 
 @media (max-width: 480px) {
+  .home-container {
+    min-height: 100vh;
+    min-height: 100svh; /* Small viewport height for very small screens */
+  }
+  
+  .home-content {
+    min-height: 100vh;
+    min-height: 100svh;
+    padding: 0.5rem;
+  }
+  
   .app-logo {
     width: 50px;
     height: 50px;
@@ -383,5 +411,10 @@
   .footer-tech,
   .footer-links {
     font-size: 0.75rem;
+  }
+  
+  /* Additional mobile safety */
+  .home-footer {
+    padding-bottom: 2.5rem; /* Extra padding for mobile browser UI */
   }
 }

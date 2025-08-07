@@ -1,6 +1,7 @@
 /* Static Pages Styles - Privacy and License */
 .static-page-container {
   min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -217,8 +218,14 @@
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+  .static-page-container {
+    min-height: 100vh;
+    min-height: 100svh; /* Small viewport height - excludes mobile UI */
+  }
+  
   .static-page-content {
     padding: 1rem;
+    padding-bottom: 2rem; /* Safe space for mobile UI */
   }
 
   .static-page-header h1 {
