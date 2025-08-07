@@ -20,8 +20,8 @@ class SecurityUtils {
     // Remove path components and dangerous characters
     const sanitized = filename
       .replace(/[<>:"/\\|?*\x00-\x1f]/g, '') // Remove dangerous characters
-      .replace(/^\.+/, '') // Remove leading dots
-      .replace(/\.+$/, '') // Remove trailing dots
+      .replace(/^\.{1,50}/, '') // Remove leading dots (max 50 to prevent ReDoS)
+      .replace(/\.{1,50}$/, '') // Remove trailing dots (max 50 to prevent ReDoS)
       .replace(/\s+/g, '_') // Replace spaces with underscores
       .substring(0, 255); // Limit length
     
