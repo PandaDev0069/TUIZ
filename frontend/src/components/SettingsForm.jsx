@@ -163,11 +163,12 @@ function SettingsForm({ settings, setSettings, questions, onPreviewQuiz, onReord
         {/* Quick Actions */}
         <div className="quick-actions">
           <button 
-            className="action-button preview"
-            onClick={onPreviewQuiz}
-            title="クイズの流れを確認"
+            className="action-button preview disabled"
+            disabled={true}
+            title="プレビュー機能は準備中です"
           >
             👁️ プレビュー
+            <span className="upcoming-label">準備中</span>
           </button>
           <button 
             className="action-button reorder"
