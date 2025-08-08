@@ -65,7 +65,9 @@ const isLocalhost = process.env.IS_LOCALHOST === 'true' || !process.env.NODE_ENV
 const app = express();
 
 // Trust proxy for Render platform (fixes X-Forwarded-For header issues)
-app.set('trust proxy', true);
+// Set to 1 to trust only the first proxy (Render's load balancer)
+// This is more secure than trusting all proxies (true)
+app.set('trust proxy', 1);
 
 // CORS configuration for Supabase - Allow network access
 const allowedOrigins = [

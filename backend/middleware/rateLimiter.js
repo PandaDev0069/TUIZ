@@ -18,8 +18,9 @@ class RateLimitMiddleware {
       standardHeaders: true,
       legacyHeaders: false,
       // Skip successful OPTIONS requests
-      skip: (req) => req.method === 'OPTIONS'
-      // Remove custom keyGenerator to use default IPv6-safe implementation
+      skip: (req) => req.method === 'OPTIONS',
+      // Properly handle trusted proxy configuration
+      trustProxy: 1 // Trust only the first proxy (matches Express app setting)
     });
   }
 
@@ -35,7 +36,8 @@ class RateLimitMiddleware {
       },
       standardHeaders: true,
       legacyHeaders: false,
-      skipSuccessfulRequests: true // Don't count successful auth requests
+      skipSuccessfulRequests: true, // Don't count successful auth requests
+      trustProxy: 1
     });
   }
 
@@ -50,7 +52,8 @@ class RateLimitMiddleware {
         error: 'STRICT_RATE_LIMIT_EXCEEDED'
       },
       standardHeaders: true,
-      legacyHeaders: false
+      legacyHeaders: false,
+      trustProxy: 1
     });
   }
 
@@ -65,7 +68,8 @@ class RateLimitMiddleware {
         error: 'MODERATE_RATE_LIMIT_EXCEEDED'
       },
       standardHeaders: true,
-      legacyHeaders: false
+      legacyHeaders: false,
+      trustProxy: 1
     });
   }
 
@@ -84,7 +88,8 @@ class RateLimitMiddleware {
       // Skip rate limiting for authenticated users in development
       skip: (req) => {
         return isDevelopment && req.user;
-      }
+      },
+      trustProxy: 1
     });
   }
 
@@ -99,7 +104,8 @@ class RateLimitMiddleware {
         error: 'UPLOAD_RATE_LIMIT_EXCEEDED'
       },
       standardHeaders: true,
-      legacyHeaders: false
+      legacyHeaders: false,
+      trustProxy: 1
     });
   }
 
@@ -114,7 +120,8 @@ class RateLimitMiddleware {
         error: 'GAME_RATE_LIMIT_EXCEEDED'
       },
       standardHeaders: true,
-      legacyHeaders: false
+      legacyHeaders: false,
+      trustProxy: 1
     });
   }
 
@@ -129,7 +136,8 @@ class RateLimitMiddleware {
         error: 'QUIZ_RATE_LIMIT_EXCEEDED'
       },
       standardHeaders: true,
-      legacyHeaders: false
+      legacyHeaders: false,
+      trustProxy: 1
     });
   }
 
@@ -144,7 +152,8 @@ class RateLimitMiddleware {
         error: 'GLOBAL_RATE_LIMIT_EXCEEDED'
       },
       standardHeaders: true,
-      legacyHeaders: false
+      legacyHeaders: false,
+      trustProxy: 1
     });
   }
 }
