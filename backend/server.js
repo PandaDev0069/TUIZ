@@ -1,4 +1,5 @@
 require('dotenv').config();
+const logger = require('./utils/logger');
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
@@ -15,7 +16,6 @@ const { calculateGameScore } = require('./utils/scoringSystem');
 const { validateStorageConfig } = require('./utils/storageConfig');
 const activeGameUpdater = require('./utils/ActiveGameUpdater');
 const RateLimitMiddleware = require('./middleware/rateLimiter');
-const logger = require('./utils/logger');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -1786,6 +1786,7 @@ io.on('connection', (socket) => {
 const PORT = 3001;
 const HOST = '0.0.0.0'; // Listen on all network interfaces
 server.listen(PORT, HOST, () => {
+    logger.showConfig(); // Show logging configuration
     logger.info(`🚀 Server is running on ${HOST}:${PORT}`);
     if (isDevelopment || isLocalhost) {
       logger.debug(`📱 Mobile access: Use your computer's local IP address (e.g., 192.168.1.xxx:${PORT})`);

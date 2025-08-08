@@ -1,7 +1,11 @@
 // Storage Configuration Validator
 // This utility helps validate that all storage-related environment variables are properly configured
 
+const logger = require('./logger');
+
 const validateStorageConfig = () => {
+  logger.debug('🔍 Validating storage configuration...');
+  
   const errors = [];
   const warnings = [];
   
@@ -39,37 +43,30 @@ const validateStorageConfig = () => {
     warnings.push(`MAX_UPLOAD_SIZE (${maxUploadSize}) is very large. Consider reducing for better performance.`);
   }
   
-  // Environment detection for logging
-  const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
+  // Log configuration with logger (respects production/development mode)
+  logger.debug('📁 Storage Configuration:');
+  logger.debug('========================');
   
-  // Log configuration (development only, or if there are errors/warnings)
-  if (isDevelopment || errors.length > 0 || warnings.length > 0) {
-    console.log('📁 Storage Configuration:');
-    console.log('========================');
-    
-    Object.entries(storageVars).forEach(([key, value]) => {
-      const isDefault = !process.env[key];
-      console.log(`${key}: ${value}${isDefault ? ' (default)' : ''}`);
-    });
-    
-    console.log(`MAX_UPLOAD_SIZE: ${(maxUploadSize / 1024 / 1024).toFixed(1)}MB`);
-  }
+  Object.entries(storageVars).forEach(([key, value]) => {
+    const isDefault = !process.env[key];
+    logger.debug(`${key}: ${value}${isDefault ? ' (default)' : ''}`);
+  });
+  
+  logger.debug(`MAX_UPLOAD_SIZE: ${(maxUploadSize / 1024 / 1024).toFixed(1)}MB`);
   
   // Report validation results
   if (errors.length > 0) {
-    console.log('\n❌ Configuration Errors:');
-    errors.forEach(error => console.log(`  - ${error}`));
+    logger.error('\n❌ Configuration Errors:');
+    errors.forEach(error => logger.error(`  - ${error}`));
   }
   
   if (warnings.length > 0) {
-    console.log('\n⚠️  Configuration Warnings:');
-    warnings.forEach(warning => console.log(`  - ${warning}`));
+    logger.warn('\n⚠️  Configuration Warnings:');
+    warnings.forEach(warning => logger.warn(`  - ${warning}`));
   }
   
   if (errors.length === 0 && warnings.length === 0) {
-    if (isDevelopment) {
-      console.log('\n✅ Storage configuration looks good!');
-    }
+    logger.debug('\n✅ Storage configuration looks good!');
   }
   
   return {

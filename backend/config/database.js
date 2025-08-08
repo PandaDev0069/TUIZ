@@ -2,6 +2,7 @@ require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const { randomUUID } = require('crypto');
+const logger = require('../utils/logger');
 
 // Supabase configuration
 const supabaseUrl = 'https://khpkxopohylfteixbggo.supabase.co';
@@ -24,15 +25,12 @@ class DatabaseManager {
       null;
     
     // Only log on first initialization
-    console.log('✅ Supabase client initialized successfully');
-    console.log('📍 Supabase URL:', supabaseUrl);
-    console.log('🔑 Supabase Key:', supabaseKey ? 'Present' : 'Missing');
-    console.log('🔐 Supabase Service Key:', supabaseServiceKey ? 'Present' : 'Missing');
+    logger.info('✅ Supabase client initialized successfully');
+    logger.debug('📍 Supabase URL:', supabaseUrl);
+    logger.debug('🔑 Supabase Key:', supabaseKey ? 'Present' : 'Missing');
+    logger.debug('🔐 Supabase Service Key:', supabaseServiceKey ? 'Present' : 'Missing');
     
-    // Test connection only once
-    this.testConnection();
-    
-    // Store instance for singleton pattern
+    // Store instance for singleton pattern (removed automatic test connection)
     DatabaseManager.instance = this;
   }
 
@@ -43,14 +41,14 @@ class DatabaseManager {
         .select('count', { count: 'exact', head: true });
       
       if (error && error.code !== 'PGRST116') { // PGRST116 = table doesn't exist, which is OK
-        console.error('❌ Database connection test failed:', error);
+        logger.error('❌ Database connection test failed:', error);
         return false;
       } else {
-        console.log('✅ Database connection test successful');
+        logger.info('✅ Database connection test successful');
         return true;
       }
     } catch (err) {
-      console.error('❌ Database connection error:', err.message);
+      logger.error('❌ Database connection error:', err.message);
       return false;
     }
   }
