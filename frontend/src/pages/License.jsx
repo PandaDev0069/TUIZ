@@ -15,38 +15,34 @@ function License() {
           <div className="back-button" onClick={handleBackHome}>
             ← Back to Home
           </div>
-          <h1>MIT License</h1>
+          <h1>Apache License 2.0</h1>
           <p className="last-updated">TUIZ情報王 - Real-time Quiz Platform</p>
         </header>
 
         <main className="static-page-main">
           <section className="license-section">
             <div className="license-text">
-              <h2>MIT License</h2>
-              <p><strong>Copyright (c) 2025 TUIZ 情報王</strong></p>
+              <h2>Apache License 2.0</h2>
+              <p><strong>Copyright 2025 Panta Aashish</strong></p>
               
               <p>
-                Permission is hereby granted, free of charge, to any person obtaining a copy
-                of this software and associated documentation files (the "Software"), to deal
-                in the Software without restriction, including without limitation the rights
-                to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-                copies of the Software, and to permit persons to whom the Software is
-                furnished to do so, subject to the following conditions:
+                Licensed under the Apache License, Version 2.0 (the "License");
+                you may not use this file except in compliance with the License.
+                You may obtain a copy of the License at
+              </p>
+
+              <p className="license-url">
+                <a href="http://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener noreferrer">
+                  http://www.apache.org/licenses/LICENSE-2.0
+                </a>
               </p>
 
               <p>
-                The above copyright notice and this permission notice shall be included in all
-                copies or substantial portions of the Software.
-              </p>
-
-              <p>
-                THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-                IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-                FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-                AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-                LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-                OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-                SOFTWARE.
+                Unless required by applicable law or agreed to in writing, software
+                distributed under the License is distributed on an "AS IS" BASIS,
+                WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                See the License for the specific language governing permissions and
+                limitations under the License.
               </p>
             </div>
           </section>
@@ -57,31 +53,54 @@ function License() {
               <div className="permission-item">
                 <h3>✅ You can:</h3>
                 <ul>
-                  <li>Use the software for any purpose</li>
-                  <li>Copy and distribute the software</li>
-                  <li>Modify the software</li>
-                  <li>Create derivative works</li>
-                  <li>Use it for commercial purposes</li>
-                  <li>Distribute modified versions</li>
+                  <li>Use the software for personal and non-commercial purposes</li>
+                  <li>Copy and distribute the source code (non-commercially)</li>
+                  <li>Modify the source code</li>
+                  <li>Create derivative works (non-commercial)</li>
+                  <li>Distribute modified versions (non-commercial)</li>
+                  <li>Use for educational purposes</li>
                 </ul>
               </div>
 
               <div className="condition-item">
-                <h3>📋 Conditions:</h3>
+                <h3>📋 You must:</h3>
                 <ul>
-                  <li>Include the original copyright notice</li>
-                  <li>Include the license text in copies</li>
-                  <li>State any significant changes made</li>
+                  <li>Include the copyright notice</li>
+                  <li>Include the Apache License 2.0 text</li>
+                  <li>State significant changes made to the code</li>
+                  <li>Preserve all copyright, patent, trademark notices</li>
+                  <li>Get explicit permission for commercial use</li>
                 </ul>
               </div>
 
               <div className="limitation-item">
-                <h3>❌ Limitations:</h3>
+                <h3>❌ You cannot:</h3>
                 <ul>
-                  <li>No warranty is provided</li>
-                  <li>Authors are not liable for damages</li>
-                  <li>No guarantee of support or maintenance</li>
+                  <li>Use for commercial purposes without written permission</li>
+                  <li>Deploy for profit or resale without permission</li>
+                  <li>Use quiz content, images, or branding materials</li>
+                  <li>Hold authors liable for damages</li>
+                  <li>Expect warranty or support</li>
+                  <li>Use trademarks without permission</li>
                 </ul>
+              </div>
+            </div>
+            
+            <div className="custom-restrictions">
+              <h3>🚫 TUIZ-Specific Restrictions:</h3>
+              <div className="restriction-details">
+                <p><strong>Excluded from License:</strong></p>
+                <ul>
+                  <li>📚 Quiz content (questions, images, audio files)</li>
+                  <li>🎨 Branding materials (logos, banners, icons)</li>
+                  <li>🎯 UI/UX design assets (non-source code)</li>
+                </ul>
+                
+                <p><strong>Commercial Use:</strong></p>
+                <p>Any commercial deployment, resale, or profit-generating use requires explicit written permission from the author.</p>
+                
+                <p><strong>Contact for Commercial Licensing:</strong><br />
+                For licensing inquiries, please contact via GitHub or project repository.</p>
               </div>
             </div>
           </section>
@@ -147,7 +166,7 @@ function License() {
         </main>
 
         <footer className="static-page-footer">
-          <p>&copy; 2025 TUIZ情報王. All rights reserved. Licensed under MIT License.</p>
+          <p>&copy; 2025 TUIZ情報王. All rights reserved. Licensed under Apache License 2.0.</p>
         </footer>
       </div>
     </div>

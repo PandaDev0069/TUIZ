@@ -80,7 +80,7 @@ function Home() {
               <span>Real-time Quiz Platform</span>
             </div>
             <div className="footer-license">
-              <span>📄 MIT License</span> • 
+              <span>📄 Apache License 2.0</span> • 
               <span>🚀 Open Source</span> • 
               <span>🌟 Built by PandaDev0069</span>
             </div>
