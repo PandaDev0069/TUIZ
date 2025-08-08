@@ -21,7 +21,6 @@ function Home() {
             <img src="/logo.png" alt="TUIZ Logo" className="app-logo" />
           </div>
           <h1 className="app-title">TUIZ情報王</h1>
-          <p className="app-subtitle">リアルタイム・インタラクティブ・クイズプラットフォーム</p>
         </header>
 
         {/* Main Action Section */}

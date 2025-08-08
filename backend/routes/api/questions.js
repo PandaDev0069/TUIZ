@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../../utils/logger');
 const router = express.Router();
 const multer = require('multer');
 const rateLimit = require('express-rate-limit');
@@ -329,10 +330,10 @@ router.post('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authe
 
 // Bulk update questions
 router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
-  console.log('🔥 BULK UPDATE ENDPOINT HIT');
-  console.log('Request body:', JSON.stringify(req.body, null, 2));
-  console.log('User from auth:', req.user);
-  console.log('User token present:', !!req.userToken);
+  logger.debug('🔥 BULK UPDATE ENDPOINT HIT');
+  logger.debug('Request body:', JSON.stringify(req.body, null, 2));
+  logger.debug('User from auth:', req.user);
+  logger.debug('User token present:', !!req.userToken);
   
   try {
     const { question_set_id, questions } = req.body;
@@ -344,7 +345,7 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
       });
     }
     
-    console.log('Bulk update request received:', {
+    logger.debug('Bulk update request received:', {
       question_set_id,
       questionsCount: questions.length,
       userToken: req.userToken ? 'present' : 'missing'

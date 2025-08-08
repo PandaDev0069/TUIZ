@@ -1067,19 +1067,6 @@ const QuestionBuilder = forwardRef(({
                   <span className="input-hint">
                     {answer.text.length}/200 文字
                   </span>
-                  
-                  {/* Answer Explanation */}
-                  <textarea
-                    className="answer-textarea explanation-textarea"
-                    placeholder={`選択肢 ${index + 1} の説明 (オプション)`}
-                    value={answer.answer_explanation || ""}
-                    onChange={(e) => updateAnswer(index, "answer_explanation", e.target.value)}
-                    rows={2}
-                    maxLength={300}
-                  />
-                  <span className="input-hint">
-                    {(answer.answer_explanation || "").length}/300 文字
-                  </span>
                 </div>
 
                 {/* Answer Image */}

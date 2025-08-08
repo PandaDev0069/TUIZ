@@ -39,16 +39,21 @@ const validateStorageConfig = () => {
     warnings.push(`MAX_UPLOAD_SIZE (${maxUploadSize}) is very large. Consider reducing for better performance.`);
   }
   
-  // Log configuration
-  console.log('📁 Storage Configuration:');
-  console.log('========================');
+  // Environment detection for logging
+  const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
   
-  Object.entries(storageVars).forEach(([key, value]) => {
-    const isDefault = !process.env[key];
-    console.log(`${key}: ${value}${isDefault ? ' (default)' : ''}`);
-  });
-  
-  console.log(`MAX_UPLOAD_SIZE: ${(maxUploadSize / 1024 / 1024).toFixed(1)}MB`);
+  // Log configuration (development only, or if there are errors/warnings)
+  if (isDevelopment || errors.length > 0 || warnings.length > 0) {
+    console.log('📁 Storage Configuration:');
+    console.log('========================');
+    
+    Object.entries(storageVars).forEach(([key, value]) => {
+      const isDefault = !process.env[key];
+      console.log(`${key}: ${value}${isDefault ? ' (default)' : ''}`);
+    });
+    
+    console.log(`MAX_UPLOAD_SIZE: ${(maxUploadSize / 1024 / 1024).toFixed(1)}MB`);
+  }
   
   // Report validation results
   if (errors.length > 0) {
@@ -62,7 +67,9 @@ const validateStorageConfig = () => {
   }
   
   if (errors.length === 0 && warnings.length === 0) {
-    console.log('\n✅ Storage configuration looks good!');
+    if (isDevelopment) {
+      console.log('\n✅ Storage configuration looks good!');
+    }
   }
   
   return {

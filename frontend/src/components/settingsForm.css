@@ -71,17 +71,57 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  position: relative;
+  overflow: visible;
 }
 
 .action-button.preview {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: white;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  position: relative;
 }
 
 .action-button.preview:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+}
+
+.action-button.preview.disabled {
+  background: rgba(156, 163, 175, 0.5);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.action-button.preview.disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.upcoming-label {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  animation: pulse 2s infinite;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 .action-button.reorder {
