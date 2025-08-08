@@ -1,31 +1,12 @@
 /**
- * GameSettingsService.js
+ * GameSettingsService
  * 
- * Service for applying game settings      // Create game flow configuration
-      const gameFlowConfig = this.createGameFlowConfig(gameSettings);
-
-      if (isDevelopment) {
-        console.log('✅ Game settings applied successfully', {
-          questionsProcessed: enhancedQuestions.length,
-          averageTimeLimit: Math.round(enhancedQuestions.reduce((sum, q) => sum + q.timeLimit, 0) / enhancedQuestions.length / 1000),
-          showExplanations: gameSettings.showExplanations,
-          autoAdvance: gameSettings.autoAdvance
-        });
-      }lay mechanics.
+ * Service for applying game settings to questions and managing game flow mechanics.
  * Handles timing, explanations, scoring, and game flow configuration.
  */
 
-const gameConfig = require('../config/gameConfig');
-
-// Debug: Check gameConfig immediately after import (development only)
-const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
-if (isDevelopment) {
-  console.log('🔍 GameSettingsService loaded gameConfig:', {
-    hasDefaults: !!gameConfig.defaults,
-    configKeys: Object.keys(gameConfig),
-    defaultsStructure: gameConfig.defaults ? Object.keys(gameConfig.defaults) : 'undefined'
-  });
-}
+const gameConfig = require('../config/gameConfig.js');
+const logger = require('../utils/logger');
 
 class GameSettingsService {
   /**
@@ -36,23 +17,19 @@ class GameSettingsService {
    */
   static applySettingsToGame(settings, questions) {
     try {
-      if (isDevelopment) {
-        console.log('🎯 Applying game settings to questions...', {
-          settingsCount: Object.keys(settings).length,
-          questionsCount: questions.length
-        });
-      }
+      logger.debug('🎯 Applying game settings to questions...', {
+        settingsCount: Object.keys(settings).length,
+        questionsCount: questions.length
+      });
 
       // Get default values from game config
       const defaults = gameConfig.defaults;
       
-      if (isDevelopment) {
-        console.log('🔍 GameConfig structure:', {
-          hasDefaults: !!defaults,
-          gameConfigKeys: Object.keys(gameConfig),
-          defaultsKeys: defaults ? Object.keys(defaults) : 'N/A'
-        });
-      }
+      logger.debug('🔍 GameConfig structure:', {
+        hasDefaults: !!defaults,
+        gameConfigKeys: Object.keys(gameConfig),
+        defaultsKeys: defaults ? Object.keys(defaults) : 'N/A'
+      });
 
       // Fallback defaults if gameConfig.defaults is not available
       const fallbackDefaults = {
@@ -85,7 +62,7 @@ class GameSettingsService {
       // Create game flow configuration
       const gameFlowConfig = this.createGameFlowConfig(gameSettings);
 
-      console.log('✅ Game settings applied successfully', {
+      logger.debug('✅ Game settings applied successfully', {
         questionsProcessed: enhancedQuestions.length,
         averageTimeLimit: Math.round(enhancedQuestions.reduce((sum, q) => sum + q.timeLimit, 0) / enhancedQuestions.length / 1000),
         showExplanations: gameFlowConfig.showExplanations,

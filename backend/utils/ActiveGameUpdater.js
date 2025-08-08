@@ -1,6 +1,8 @@
 // ActiveGameUpdater.js
 // A utility to help update activeGames from other modules
 
+const logger = require('./logger');
+
 class ActiveGameUpdater {
   constructor() {
     this.activeGamesRef = null;
@@ -9,7 +11,7 @@ class ActiveGameUpdater {
   // Set the reference to activeGames map from server.js
   setActiveGamesRef(activeGamesMap) {
     this.activeGamesRef = activeGamesMap;
-    console.log('✅ ActiveGameUpdater: Set activeGames reference');
+    logger.debug('✅ ActiveGameUpdater: Set activeGames reference');
   }
 
   // Update maxPlayers in game_settings for a specific game
@@ -32,7 +34,7 @@ class ActiveGameUpdater {
 
     const oldCap = activeGame.game_settings.maxPlayers;
     activeGame.game_settings.maxPlayers = newPlayersCap;
-    console.log(`✅ ActiveGameUpdater: Updated game_settings.maxPlayers for game ${gameCode}: ${oldCap} → ${newPlayersCap}`);
+    logger.debug(`✅ ActiveGameUpdater: Updated game_settings.maxPlayers for game ${gameCode}: ${oldCap} → ${newPlayersCap}`);
     return true;
   }
 

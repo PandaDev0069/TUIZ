@@ -5,9 +5,41 @@
 
 class Logger {
   constructor() {
-    this.isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
-    this.isLocalhost = process.env.IS_LOCALHOST === 'true' || !process.env.NODE_ENV;
-    this.enableDebugLogs = this.isDevelopment || this.isLocalhost;
+    // Detect if running via nodemon (npm run dev) vs direct node (npm start)
+    this.isRunningViaNodemon = process.env.npm_lifecycle_event === 'dev' || 
+                               process.argv[0].includes('nodemon') ||
+                               process.env._.includes('nodemon') ||
+                               process.title.includes('nodemon');
+    
+    // Check if running via npm start specifically
+    this.isRunningViaNpmStart = process.env.npm_lifecycle_event === 'start';
+    
+    // Priority logic: npm script detection overrides NODE_ENV
+    // Development mode: running via nodemon/dev script OR explicit NODE_ENV=development (but not npm start)
+    this.isDevelopment = (process.env.NODE_ENV === 'development' && !this.isRunningViaNpmStart) || 
+                         this.isRunningViaNodemon;
+    
+    // Production-like mode: npm start explicitly OR no clear development indicators
+    this.isProductionLike = this.isRunningViaNpmStart || 
+                           (!this.isRunningViaNodemon && !this.isDevelopment);
+    
+    // Legacy localhost detection
+    this.isLocalhost = process.env.IS_LOCALHOST === 'true';
+    
+    // Enable debug logs: development mode OR explicit localhost override (but not if npm start)
+    this.enableDebugLogs = (this.isDevelopment || this.isLocalhost) && !this.isRunningViaNpmStart;
+    
+    // For hosted environments (Render, Vercel, etc.) - always minimal logging
+    this.isHostedEnvironment = process.env.RENDER || 
+                              process.env.VERCEL || 
+                              process.env.RAILWAY || 
+                              process.env.HEROKU;
+                       
+    // Override: If we're in a hosted environment, force minimal logging
+    if (this.isHostedEnvironment) {
+      this.enableDebugLogs = false;
+      this.isProductionLike = true;
+    }
   }
 
   // Always log critical errors and startup issues
@@ -20,9 +52,38 @@ class Logger {
     console.warn(...args);
   }
 
-  // Log important information (reduced in production)
+  // Show logging configuration at startup (only in debug mode)
+  showConfig() {
+    if (!this.enableDebugLogs) {
+      return; // Don't show config in production-like mode
+    }
+    
+    const config = {
+      'Script Used': process.env.npm_lifecycle_event || 'direct',
+      'Running via npm start': this.isRunningViaNpmStart,
+      'Running via Nodemon': this.isRunningViaNodemon,
+      'NODE_ENV': process.env.NODE_ENV || 'undefined',
+      'Hosted Environment': !!this.isHostedEnvironment,
+      'Development Mode': this.isDevelopment,
+      'Production-like Mode': this.isProductionLike,
+      'Debug Logs Enabled': this.enableDebugLogs
+    };
+    
+    console.log('🔧 Logger Configuration:', config);
+    
+    if (this.enableDebugLogs) {
+      console.log('📝 Logging Mode: DEVELOPMENT (verbose output - npm run dev detected)');
+    } else {
+      console.log('📝 Logging Mode: PRODUCTION-LIKE (minimal output - npm start detected)');
+    }
+  }
+
+  // Log important information (very minimal in production-like mode)
   info(...args) {
-    if (this.enableDebugLogs || this._isImportant(args[0])) {
+    if (this.enableDebugLogs) {
+      console.log(...args);
+    } else if (this.isProductionLike && this._isCritical(args[0])) {
+      // Only log critical startup/error info in production-like mode
       console.log(...args);
     }
   }
@@ -53,6 +114,26 @@ class Logger {
     if (this.enableDebugLogs || this._containsError(args)) {
       console.log(...args);
     }
+  }
+
+  // Check if message is critical and must be logged even in production
+  _isCritical(message) {
+    if (typeof message !== 'string') return false;
+    
+    const criticalKeywords = [
+      'server is running',
+      'database connected',
+      'connection failed', 
+      'configuration error',
+      'validation failed',
+      'fatal error',
+      'startup error',
+      'service is live'
+    ];
+    
+    return criticalKeywords.some(keyword => 
+      message.toLowerCase().includes(keyword.toLowerCase())
+    );
   }
 
   // Check if message contains important keywords that should always be logged
