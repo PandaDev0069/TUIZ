@@ -30,10 +30,7 @@ class DatabaseManager {
     logger.debug('🔑 Supabase Key:', supabaseKey ? 'Present' : 'Missing');
     logger.debug('🔐 Supabase Service Key:', supabaseServiceKey ? 'Present' : 'Missing');
     
-    // Test connection only once
-    this.testConnection();
-    
-    // Store instance for singleton pattern
+    // Store instance for singleton pattern (removed automatic test connection)
     DatabaseManager.instance = this;
   }
 
@@ -44,14 +41,14 @@ class DatabaseManager {
         .select('count', { count: 'exact', head: true });
       
       if (error && error.code !== 'PGRST116') { // PGRST116 = table doesn't exist, which is OK
-        console.error('❌ Database connection test failed:', error);
+        logger.error('❌ Database connection test failed:', error);
         return false;
       } else {
-        console.log('✅ Database connection test successful');
+        logger.info('✅ Database connection test successful');
         return true;
       }
     } catch (err) {
-      console.error('❌ Database connection error:', err.message);
+      logger.error('❌ Database connection error:', err.message);
       return false;
     }
   }
