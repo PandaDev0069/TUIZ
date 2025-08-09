@@ -1,6 +1,6 @@
 # 📋 TODO List
 
-**Last Updated**: August 10, 2025
+**Last Updated**: August 10, 2025 - Dashboard metadata updates completed ✅
 
 ## 🔥 High Priority Tasks
 
@@ -166,6 +166,10 @@
 ## ✅ Completed Tasks
 
 ### August 2025
+- [x] **Dashboard Metadata Updates** - Fixed dashboard to properly update question set statistics like times_played when games end
+- [x] **GameSettings Service Error Fix** - Resolved isDevelopment undefined error causing game settings to fail
+- [x] **Real-time Dashboard Sync** - Implemented WebSocket-based auto-refresh for quiz statistics
+- [x] **Duplicate Increment Prevention** - Fixed race condition causing times_played to increment multiple times per game
 - [x] **Production Logging Cleanup** - Removed excessive console statements from production
 - [x] **Environment Separation** - Fixed localhost frontend connecting to production backend
 - [x] **Documentation Restructure** - Organized scattered documentation files

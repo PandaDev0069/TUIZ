@@ -478,7 +478,7 @@ function Dashboard() {
                     <div className="quiz-set-stats">
                       <div className="stat-item">
                         <span className="stat-icon">🎮</span>
-                        <span className="stat-text">{quizSet.times_played || 0}回プレイ</span>
+                        <span className="stat-text">{quizSet.times_played || 0}回 プレイ</span>
                       </div>
                       <div className="stat-item">
                         <span className="stat-icon">⭐</span>

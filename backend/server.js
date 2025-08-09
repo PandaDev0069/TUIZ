@@ -889,6 +889,17 @@ const endGame = async (gameCode) => {
   const activeGame = activeGames.get(gameCode);
   if (!activeGame) return;
 
+  // Prevent duplicate endGame calls for the same game
+  if (activeGame.status === 'finished' || activeGame._ending) {
+    if (isDevelopment || isLocalhost) {
+      logger.gameActivity(gameCode, `⚠️ endGame called but already finished/ending`);
+    }
+    return;
+  }
+
+  // Mark game as ending to prevent race conditions
+  activeGame._ending = true;
+
   // Calculate final scoreboard
   const scoreboard = Array.from(activeGame.players.values())
     .map(player => ({
@@ -927,8 +938,14 @@ const endGame = async (gameCode) => {
         try {
           const incrementResult = await db.incrementQuestionSetTimesPlayed(activeGame.question_set_id);
           if (incrementResult.success) {
-            if (isDevelopment || isLocalhost) {
-              logger.database(`✅ Incremented times_played for question set ${activeGame.question_set_id}`);
+            if (incrementResult.skipped) {
+              if (isDevelopment || isLocalhost) {
+                logger.database(`⚠️ Skipped times_played increment for question set ${activeGame.question_set_id} (too recent)`);
+              }
+            } else {
+              if (isDevelopment || isLocalhost) {
+                logger.database(`✅ Incremented times_played for question set ${activeGame.question_set_id}`);
+              }
             }
           } else {
             console.error(`❌ Failed to increment times_played: ${incrementResult.error}`);
@@ -958,6 +975,17 @@ const endGame = async (gameCode) => {
   if (isDevelopment || isLocalhost) {
     logger.gameActivity(gameCode, `ended. Winner: ${scoreboard[0]?.name || 'No players'}`);
   }
+
+  // Clean up the ending flag and optionally remove the game after a delay
+  activeGame._ending = false;
+  
+  // Optional: Remove the game from memory after a delay to prevent memory leaks
+  // setTimeout(() => {
+  //   activeGames.delete(gameCode);
+  //   if (isDevelopment || isLocalhost) {
+  //     logger.gameActivity(gameCode, `🗑️ Cleaned up from memory`);
+  //   }
+  // }, 30000); // Clean up after 30 seconds
 };
 
 // ================================================================
