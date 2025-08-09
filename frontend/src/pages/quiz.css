@@ -34,7 +34,7 @@
   backdrop-filter: blur(10px);
   border-radius: 16px; /* Adjusted border radius since it's no longer stuck to top */
   padding: 1rem;
-  margin: 0 0 1rem 0; /* Simplified margin for natural flow */
+  margin: 0 0 1rem; /* Simplified margin for natural flow */
   z-index: 5; /* Reduced z-index since it's not overlaying */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -258,7 +258,7 @@
   }
 
   .quiz-header {
-    margin: 0 0 1rem 0; /* Updated to match the new relative positioning */
+    margin: 0 0 1rem; /* Updated to match the new relative positioning */
     padding: 0.75rem;
   }
 
