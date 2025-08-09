@@ -12,6 +12,7 @@
 - [x] **Documentation Restructure** - Organized docs folder with professional GitHub Pages setup
 
 ### 🚀 Immediate (This Week)
+- [x] **Dashboard Metadata Updates** - Fixed dashboard to properly update question set statistics like times_played when games end
 - [ ] **Complete Format String Fixes** - Replace remaining console.* statements with secure logging
 - [ ] **Security Audit Remaining APIs** - Review all API endpoints for additional vulnerabilities
 - [ ] **Fix Quiz Results Generation** - Investigate why game completion doesn't create results

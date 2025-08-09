@@ -921,6 +921,22 @@ const endGame = async (gameCode) => {
       } else {
         console.error(`❌ Failed to update database game status: ${statusResult.error}`);
       }
+
+      // Increment times_played for the question set if this game was based on a question set
+      if (activeGame.question_set_id) {
+        try {
+          const incrementResult = await db.incrementQuestionSetTimesPlayed(activeGame.question_set_id);
+          if (incrementResult.success) {
+            if (isDevelopment || isLocalhost) {
+              logger.database(`✅ Incremented times_played for question set ${activeGame.question_set_id}`);
+            }
+          } else {
+            console.error(`❌ Failed to increment times_played: ${incrementResult.error}`);
+          }
+        } catch (incrementError) {
+          console.error('❌ Error incrementing times_played:', incrementError);
+        }
+      }
     } catch (dbError) {
       console.error('❌ Database error updating game status:', dbError);
     }
@@ -928,6 +944,16 @@ const endGame = async (gameCode) => {
 
   // Send game over event
   io.to(gameCode).emit('game_over', { scoreboard });
+
+  // Emit game completion event for dashboard updates
+  if (activeGame.question_set_id && activeGame.hostId) {
+    io.emit('game_completed', { 
+      questionSetId: activeGame.question_set_id,
+      hostId: activeGame.hostId,
+      gameCode: gameCode,
+      playerCount: activeGame.players.size
+    });
+  }
 
   if (isDevelopment || isLocalhost) {
     logger.gameActivity(gameCode, `ended. Winner: ${scoreboard[0]?.name || 'No players'}`);
