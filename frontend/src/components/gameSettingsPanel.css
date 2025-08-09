@@ -441,12 +441,12 @@ input[type="range"].gamesettings__setting-slider::-webkit-slider-runnable-track 
 }
 
 .gamesettings__error h3 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   color: #ff6b6b;
 }
 
 .gamesettings__error p {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1.5rem;
   color: rgba(255, 255, 255, 0.8);
 }
 

@@ -95,7 +95,7 @@
   color: rgba(255, 255, 255, 0.9);
   font-size: 1.1rem;
   font-weight: 600;
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
 }
 
 /* ===== EXPLANATION SECTION ===== */
@@ -103,7 +103,7 @@
   color: white;
   font-size: 1.3rem;
   font-weight: 600;
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
 }
 
 .pqd-explanation-image-container {
@@ -125,7 +125,7 @@
 }
 
 .pqd-explanation-text p {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
 }
 
 /* ===== CORRECT ANSWER ===== */

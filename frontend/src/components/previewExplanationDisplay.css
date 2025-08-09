@@ -80,7 +80,7 @@
 }
 
 .question-recap h3 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   font-size: 1.2rem;
   font-weight: 600;
   color: #4CAF50;
@@ -136,7 +136,7 @@
 
 .correct-answer-section h4,
 .user-answer-section h4 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   font-size: 1.1rem;
   font-weight: 600;
 }
@@ -176,7 +176,7 @@
 }
 
 .explanation-section h4 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   font-size: 1.2rem;
   font-weight: 600;
   color: #FF9800;
