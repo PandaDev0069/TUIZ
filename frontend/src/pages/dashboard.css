@@ -4,7 +4,7 @@
 .dashboard {
   min-height: 100vh;
   min-height: 100dvh; /* Dynamic viewport height for mobile */
-  width: 100%;
+  max-width: 100%;
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
   color: white;
   font-family: 'Poppins', sans-serif;
@@ -35,7 +35,7 @@
 
 /* Element: dashboard__content */
 .dashboard__content {
-  max-width: 1400px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0;
   min-height: 100vh;
