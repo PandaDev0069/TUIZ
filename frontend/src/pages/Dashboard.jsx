@@ -274,6 +274,13 @@ function Dashboard() {
               )}
               {user.name}
             </button>
+            <button 
+              className="new-dashboard-button" 
+              onClick={() => navigate('/new-dashboard')}
+              title="Go to New upcoming Dashboard"
+            >
+              🎨 New Dashboard
+            </button>
             <button className="logout-button" onClick={handleLogout}>
               ログアウト
             </button>

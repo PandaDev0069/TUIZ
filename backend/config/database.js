@@ -387,6 +387,57 @@ class DatabaseManager {
     }
   }
 
+  async incrementQuestionSetTimesPlayed(questionSetId) {
+    try {
+      // Use admin client to bypass RLS for backend operations
+      const { data, error } = await this.supabaseAdmin
+        .rpc('increment_times_played', { question_set_id: questionSetId });
+
+      if (error) {
+        // Fallback to manual increment if RPC doesn't exist
+        console.log('RPC not found, using manual increment...');
+        const { data: currentData, error: fetchError } = await this.supabaseAdmin
+          .from('question_sets')
+          .select('times_played, updated_at')
+          .eq('id', questionSetId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const newTimesPlayed = (currentData.times_played || 0) + 1;
+        const now = new Date().toISOString();
+        
+        // Add a small delay to prevent rapid duplicate calls
+        const lastUpdate = new Date(currentData.updated_at);
+        const timeSinceLastUpdate = Date.now() - lastUpdate.getTime();
+        
+        if (timeSinceLastUpdate < 1000) { // Less than 1 second since last update
+          console.log(`⚠️ Skipping increment - too recent (${timeSinceLastUpdate}ms ago)`);
+          return { success: true, questionSet: currentData, skipped: true };
+        }
+        
+        const { data: updateData, error: updateError } = await this.supabaseAdmin
+          .from('question_sets')
+          .update({ 
+            times_played: newTimesPlayed,
+            updated_at: now
+          })
+          .eq('id', questionSetId)
+          .select('id, times_played')
+          .single();
+
+        if (updateError) throw updateError;
+        
+        return { success: true, questionSet: updateData };
+      }
+      
+      return { success: true, questionSet: data };
+    } catch (error) {
+      console.error('❌ Increment question set times played error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // ================================
   // GAME MANAGEMENT
   // ================================

@@ -889,6 +889,17 @@ const endGame = async (gameCode) => {
   const activeGame = activeGames.get(gameCode);
   if (!activeGame) return;
 
+  // Prevent duplicate endGame calls for the same game
+  if (activeGame.status === 'finished' || activeGame._ending) {
+    if (isDevelopment || isLocalhost) {
+      logger.gameActivity(gameCode, `⚠️ endGame called but already finished/ending`);
+    }
+    return;
+  }
+
+  // Mark game as ending to prevent race conditions
+  activeGame._ending = true;
+
   // Calculate final scoreboard
   const scoreboard = Array.from(activeGame.players.values())
     .map(player => ({
@@ -921,6 +932,28 @@ const endGame = async (gameCode) => {
       } else {
         console.error(`❌ Failed to update database game status: ${statusResult.error}`);
       }
+
+      // Increment times_played for the question set if this game was based on a question set
+      if (activeGame.question_set_id) {
+        try {
+          const incrementResult = await db.incrementQuestionSetTimesPlayed(activeGame.question_set_id);
+          if (incrementResult.success) {
+            if (incrementResult.skipped) {
+              if (isDevelopment || isLocalhost) {
+                logger.database(`⚠️ Skipped times_played increment for question set ${activeGame.question_set_id} (too recent)`);
+              }
+            } else {
+              if (isDevelopment || isLocalhost) {
+                logger.database(`✅ Incremented times_played for question set ${activeGame.question_set_id}`);
+              }
+            }
+          } else {
+            console.error(`❌ Failed to increment times_played: ${incrementResult.error}`);
+          }
+        } catch (incrementError) {
+          console.error('❌ Error incrementing times_played:', incrementError);
+        }
+      }
     } catch (dbError) {
       console.error('❌ Database error updating game status:', dbError);
     }
@@ -929,9 +962,30 @@ const endGame = async (gameCode) => {
   // Send game over event
   io.to(gameCode).emit('game_over', { scoreboard });
 
+  // Emit game completion event for dashboard updates
+  if (activeGame.question_set_id && activeGame.hostId) {
+    io.emit('game_completed', { 
+      questionSetId: activeGame.question_set_id,
+      hostId: activeGame.hostId,
+      gameCode: gameCode,
+      playerCount: activeGame.players.size
+    });
+  }
+
   if (isDevelopment || isLocalhost) {
     logger.gameActivity(gameCode, `ended. Winner: ${scoreboard[0]?.name || 'No players'}`);
   }
+
+  // Clean up the ending flag and optionally remove the game after a delay
+  activeGame._ending = false;
+  
+  // Optional: Remove the game from memory after a delay to prevent memory leaks
+  // setTimeout(() => {
+  //   activeGames.delete(gameCode);
+  //   if (isDevelopment || isLocalhost) {
+  //     logger.gameActivity(gameCode, `🗑️ Cleaned up from memory`);
+  //   }
+  // }, 30000); // Clean up after 30 seconds
 };
 
 // ================================================================

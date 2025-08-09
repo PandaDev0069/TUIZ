@@ -1,6 +1,6 @@
 # 📋 TODO List
 
-**Last Updated**: January 7, 2025
+**Last Updated**: August 10, 2025 - Dashboard metadata updates completed ✅
 
 ## 🔥 High Priority Tasks
 
@@ -12,19 +12,59 @@
 - [x] **Documentation Restructure** - Organized docs folder with professional GitHub Pages setup
 
 ### 🚀 Immediate (This Week)
+- [x] **Dashboard Metadata Updates** - Fixed dashboard to properly update question set statistics like times_played when games end
 - [ ] **Complete Format String Fixes** - Replace remaining console.* statements with secure logging
 - [ ] **Security Audit Remaining APIs** - Review all API endpoints for additional vulnerabilities
 - [ ] **Fix Quiz Results Generation** - Investigate why game completion doesn't create results
-- [ ] **Complete Host Control Panel Redesign** - Create new modern host interface
+- [ ] **Dashboard Redesign - Phase 1** - Modernize dashboard with new Kahoot-style layout and branding
+- [ ] **Quiz Library Implementation** - Create dedicated quiz management page with advanced filtering
 
 ### 📈 Short Term (This Month)
+- [ ] **Dashboard Redesign - Phase 2** - Complete integration of all modern dashboard components
+- [ ] **Quiz Library Advanced Features** - Add bulk operations, import/export, and public quiz discovery
 - [ ] **Answer Image Upload Feature** - Implement strategy for answer images in quiz creation
 - [ ] **Mobile Performance Optimization** - Improve mobile device performance
 - [ ] **Enhanced Error Messaging** - Better user-facing error messages
 
 ## 🎯 Development Goals
 
-### 🏗️ Core Features
+### � Dashboard Redesign & Modernization
+- [ ] **Logo Integration & Branding**
+  - [ ] Add TUIZ logo to top of dashboard header
+  - [ ] Ensure proper logo scaling and positioning
+  - [ ] Maintain consistent branding across all dashboard sections
+
+- [ ] **Quiz Library Page Creation**
+  - [ ] Create new `/quiz-library` route and page component
+  - [ ] Implement tabbed interface (My Library / Drafts / Explore Public)
+  - [ ] Add advanced search and filtering capabilities
+  - [ ] Integrate horizontal scrollers for content sections
+  - [ ] Add preview modal functionality for quiz sets
+  - [ ] Implement bulk operations (publish/unpublish, duplicate, delete)
+  - [ ] Add grid and list view toggles
+
+- [ ] **Kahoot-style Dashboard Layout**
+  - [ ] Redesign lower dashboard section with modern card-based layout
+  - [ ] Implement KPI cards showing user statistics
+  - [ ] Add horizontal scrolling sections for drafts and recent quizzes
+  - [ ] Modernize color scheme and spacing using Tailwind classes
+  - [ ] Add hover effects and smooth transitions
+  - [ ] Implement responsive design for all screen sizes
+
+- [ ] **Dashboard Navigation Enhancement**
+  - [ ] Update quick actions to navigate to quiz library
+  - [ ] Add breadcrumb navigation for better UX
+  - [ ] Implement proper loading states and skeletons
+  - [ ] Add search functionality within dashboard components
+
+- [ ] **Integration & Testing**
+  - [ ] Connect quiz library to existing API endpoints
+  - [ ] Ensure seamless navigation between dashboard and library
+  - [ ] Test all CRUD operations from new interfaces
+  - [ ] Validate responsive design across devices
+  - [ ] Performance testing for large quiz collections
+
+### �🏗️ Core Features
 - [ ] **Advanced Question Types**
   - [ ] Multiple choice with images
   - [ ] True/False questions
@@ -56,7 +96,92 @@
   - [ ] Progressive web app features
   - [ ] Accessibility improvements
 
-### 🔧 Technical Improvements
+### � Profile Settings Modal Remake Plan
+- [ ] Discovery & Audit
+  - [ ] Inventory current features (name, avatar upload, email display, account info, messages)
+  - [ ] Identify UX pain points (keyboard nav, focus trap, error clarity, toasts vs. inline)
+  - [ ] Align requirements with Dashboard Redesign phases
+
+- [ ] UX/Visual Redesign
+  - [ ] New modal layout matching New Dashboard glass/gradient branding
+  - [ ] Clear hierarchy: Avatar | Basic Info | Account Info | Actions
+  - [ ] Add inline helper text and validation messages
+  - [ ] Confirm destructive actions with consistent confirmation pattern
+
+- [ ] Accessibility (A11y)
+  - [ ] Proper ARIA roles (dialog, labelledby, describedby)
+  - [ ] Focus trap, initial focus, return focus to trigger on close
+  - [ ] ESC to close, overlay click optional, scroll lock
+  - [ ] High contrast, keyboard-only flows, labels tied to inputs
+
+- [ ] Avatar Pipeline Improvements
+  - [ ] Drag-and-drop file select with previews
+  - [ ] Client-side crop/zoom (square) and compress to WebP/PNG
+  - [ ] Image size/type validation with friendly errors
+  - [ ] Upload progress indicator and retry
+  - [ ] Remove image flow with undo grace window
+
+- [ ] Forms & Validation
+  - [ ] Adopt React Hook Form + Zod/Yup schema
+  - [ ] Debounced name updates with optimistic UI
+  - [ ] Internationalized validation messages (ja, en)
+
+- [ ] API & State Architecture
+  - [ ] Extract API calls to useProfileSettings hook
+  - [ ] Use AuthContext.refreshUser after successful mutations
+  - [ ] Add optimistic updates with rollback on error
+  - [ ] Centralize message handling (banner/toast) with variants
+
+- [ ] Component Architecture
+  - [ ] Split into Headless controller and Presentational components
+  - [ ] Keep BEM naming or migrate modal to CSS Modules while preserving global dashboard look
+  - [ ] Reusable subcomponents: AvatarUploader, Field, ActionBar
+
+- [ ] Responsiveness & Performance
+  - [ ] Mobile-first sizing, safe areas, one-handed controls
+  - [ ] Code-split modal; lazy-load heavy image tooling
+  - [ ] Memoize previews, throttle drag/crop; avoid layout shifts
+
+- [ ] i18n & Content
+  - [ ] Externalize all copy to i18n files
+  - [ ] Add friendly success/error copy in Japanese (default) with English fallback
+
+- [ ] Quality & Tests
+  - [ ] Unit tests for validators and hook logic
+  - [ ] Integration tests for modal open/close, submit, upload, remove
+  - [ ] Visual/regression tests (Storybook stories)
+
+- [ ] Rollout
+  - [ ] Feature flag: newProfileModal
+  - [ ] Telemetry: open rate, success rate, error rate, avg time to complete
+  - [ ] Gradual rollout, then remove legacy modal
+
+- [ ] Acceptance Criteria
+  - [ ] Keyboard and screen reader users can complete all tasks
+  - [ ] Avatar upload with crop/preview works on mobile and desktop
+  - [ ] Name update reflects in header immediately on save
+  - [ ] Errors are actionable and localized
+  - [ ] No CLS; modal loads under 150ms on repeat open
+
+### �🔧 Technical Improvements
+- [ ] **Dashboard Component Architecture**
+  - [ ] Extract reusable UI components (Badge, Card, HorizontalScroller)
+  - [ ] Create shared state management for quiz data
+  - [ ] Implement proper TypeScript interfaces for quiz objects
+  - [ ] Add loading and error boundary components
+
+- [ ] **Routing & Navigation**
+  - [ ] Add quiz library route to App.jsx
+  - [ ] Implement protected routes for authenticated users
+  - [ ] Add navigation guards and proper redirects
+  - [ ] Create breadcrumb navigation component
+
+- [ ] **State Management Optimization**
+  - [ ] Implement React Query for better data fetching
+  - [ ] Add optimistic updates for better UX
+  - [ ] Cache quiz data to reduce API calls
+  - [ ] Add real-time updates using WebSocket integration
+
 - [ ] **Code Quality**
   - [ ] Add TypeScript support
   - [ ] Comprehensive testing suite
@@ -76,6 +201,16 @@
   - [ ] Authentication improvements
 
 ## 🚀 Feature Requests
+
+### 🎮 Dashboard & Quiz Management
+- [ ] **Enhanced Quiz Discovery** - Smart recommendations based on user preferences
+- [ ] **Collaborative Features** - Allow sharing and collaborative editing of quizzes
+- [ ] **Advanced Analytics** - Detailed performance metrics and insights
+- [ ] **Import/Export Functionality** - Support for various quiz formats (CSV, JSON, Kahoot imports)
+- [ ] **Template System** - Pre-built quiz templates for quick creation
+- [ ] **Bulk Operations** - Mass edit, delete, or publish multiple quizzes
+- [ ] **Version Control** - Track changes and revert to previous versions
+- [ ] **Tagging System** - Advanced categorization and organization
 
 ### 🎮 Game Features
 - [ ] **Team Mode** - Allow players to form teams
@@ -97,13 +232,19 @@
 
 ## ✅ Completed Tasks
 
-### January 2025
+### August 2025
+- [x] **Dashboard Metadata Updates** - Fixed dashboard to properly update question set statistics like times_played when games end
+- [x] **GameSettings Service Error Fix** - Resolved isDevelopment undefined error causing game settings to fail
+- [x] **Real-time Dashboard Sync** - Implemented WebSocket-based auto-refresh for quiz statistics
+- [x] **Duplicate Increment Prevention** - Fixed race condition causing times_played to increment multiple times per game
 - [x] **Production Logging Cleanup** - Removed excessive console statements from production
 - [x] **Environment Separation** - Fixed localhost frontend connecting to production backend
 - [x] **Documentation Restructure** - Organized scattered documentation files
 - [x] **Player Capacity Bug Fix** - Resolved database schema sync issues
+- [ ] **Dashboard Redesign Planning** - Analyzed current dashboard structure and demo implementations
+- [ ] **Quiz Library Architecture** - Designed component structure for new quiz management system
 
-### December 2024
+### Juy 2025
 - [x] **Database Migration** - Updated schema for better performance
 - [x] **Socket.IO Integration** - Real-time communication improvements
 - [x] **Question Format Adapter** - Better question type handling

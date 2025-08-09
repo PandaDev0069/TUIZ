@@ -8,6 +8,12 @@
 const gameConfig = require('../config/gameConfig.js');
 const logger = require('../utils/logger');
 
+// Environment detection
+const isDevelopment = process.env.NODE_ENV === 'development' || 
+                     process.env.npm_lifecycle_event === 'dev' ||
+                     process.argv.includes('--dev') ||
+                     !process.env.NODE_ENV;
+
 class GameSettingsService {
   /**
    * Apply game settings to a question set for gameplay
