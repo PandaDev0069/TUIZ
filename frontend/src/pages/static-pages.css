@@ -43,7 +43,7 @@
 .static-page-header h1 {
   font-size: 2.5rem;
   font-weight: 600;
-  margin: 1rem 0 0.5rem 0;
+  margin: 1rem 0 0.5rem;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -91,14 +91,14 @@
 .static-page-main h3 {
   color: #60a5fa;
   font-size: 1.2rem;
-  margin: 1rem 0 0.5rem 0;
+  margin: 1rem 0 0.5rem;
   font-weight: 600;
 }
 
 .static-page-main h4 {
   color: #a78bfa;
   font-size: 1rem;
-  margin: 0.8rem 0 0.4rem 0;
+  margin: 0.8rem 0 0.4rem;
   font-weight: 600;
 }
 

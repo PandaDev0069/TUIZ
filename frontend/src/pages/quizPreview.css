@@ -87,7 +87,7 @@
 
 .preview-player-view-section h3,
 .preview-host-controls-section h3 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   font-size: 1.2rem;
   font-weight: 600;
   text-align: center;
@@ -170,7 +170,7 @@
 }
 
 .preview-no-question h3 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   font-size: 1.5rem;
 }
 

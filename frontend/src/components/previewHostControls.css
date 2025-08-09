@@ -91,7 +91,7 @@
 
 /* Current Question Info */
 .preview-current-question-info h4 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   font-size: 1.1rem;
   font-weight: 600;
   color: #4CAF50;
@@ -128,7 +128,7 @@
 
 /* Timer Controls */
 .preview-timer-controls h4 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   font-size: 1.1rem;
   font-weight: 600;
   color: #FF9800;
@@ -204,7 +204,7 @@
 
 /* Navigation Controls */
 .preview-navigation-controls h4 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   font-size: 1.1rem;
   font-weight: 600;
   color: #2196F3;
@@ -257,7 +257,7 @@
 
 /* Game Flow Controls */
 .preview-game-flow-controls h4 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   font-size: 1.1rem;
   font-weight: 600;
   color: #9C27B0;
@@ -300,7 +300,7 @@
 
 /* Settings Summary */
 .preview-settings-summary h4 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   font-size: 1.1rem;
   font-weight: 600;
   color: #607D8B;
@@ -334,7 +334,7 @@
 
 /* Mock Players */
 .preview-mock-players h4 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   font-size: 1.1rem;
   font-weight: 600;
   color: #795548;
@@ -574,7 +574,7 @@
 }
 
 .preview-instruction-text {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.5rem;
   font-size: 0.9rem;
   color: #2196F3;
 }
