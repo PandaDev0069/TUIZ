@@ -39,51 +39,6 @@ function Dashboard() {
     }
   }, [isAuthenticated, navigate]);
 
-  // Add effect to refresh data when user returns to dashboard (e.g., after hosting a game)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && isAuthenticated) {
-        // Refresh data when user returns to the tab/dashboard
-        fetchMyQuizSets();
-      }
-    };
-
-    const handleFocus = () => {
-      if (isAuthenticated) {
-        // Refresh data when user focuses on the window
-        fetchMyQuizSets();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [isAuthenticated]);
-
-  // Add socket listener for game completion to refresh quiz data
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const handleGameCompleted = (data) => {
-      // Refresh quiz data when a game using user's quiz completes
-      if (data && data.questionSetId) {
-        setTimeout(() => {
-          fetchMyQuizSets();
-        }, 1000); // Small delay to allow database to update
-      }
-    };
-
-    socket.on('game_completed', handleGameCompleted);
-
-    return () => {
-      socket.off('game_completed', handleGameCompleted);
-    };
-  }, [isAuthenticated]);
-
   // Refresh user data when component mounts
   const refreshUserData = async () => {
     try {
@@ -110,13 +65,6 @@ function Dashboard() {
     timerManager.setTimeout(() => {
       setMessage({ type: '', text: '' });
     }, 5000); // Clear message after 5 seconds
-  };
-
-  // Manual refresh function for quiz data
-  const handleRefreshData = async () => {
-    showMessage('info', 'データを更新しています...');
-    await fetchMyQuizSets();
-    showMessage('success', 'データが更新されました。');
   };
 
   const fetchMyQuizSets = async () => {
@@ -326,6 +274,13 @@ function Dashboard() {
               )}
               {user.name}
             </button>
+            <button 
+              className="new-dashboard-button" 
+              onClick={() => navigate('/new-dashboard')}
+              title="Go to New upcoming Dashboard"
+            >
+              🎨 New Dashboard
+            </button>
             <button className="logout-button" onClick={handleLogout}>
               ログアウト
             </button>
@@ -478,7 +433,7 @@ function Dashboard() {
                     <div className="quiz-set-stats">
                       <div className="stat-item">
                         <span className="stat-icon">🎮</span>
-                        <span className="stat-text">{quizSet.times_played || 0}回 プレイ</span>
+                        <span className="stat-text">{quizSet.times_played || 0}回プレイ</span>
                       </div>
                       <div className="stat-item">
                         <span className="stat-icon">⭐</span>

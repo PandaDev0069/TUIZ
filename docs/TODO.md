@@ -96,7 +96,74 @@
   - [ ] Progressive web app features
   - [ ] Accessibility improvements
 
-### 🔧 Technical Improvements
+### � Profile Settings Modal Remake Plan
+- [ ] Discovery & Audit
+  - [ ] Inventory current features (name, avatar upload, email display, account info, messages)
+  - [ ] Identify UX pain points (keyboard nav, focus trap, error clarity, toasts vs. inline)
+  - [ ] Align requirements with Dashboard Redesign phases
+
+- [ ] UX/Visual Redesign
+  - [ ] New modal layout matching New Dashboard glass/gradient branding
+  - [ ] Clear hierarchy: Avatar | Basic Info | Account Info | Actions
+  - [ ] Add inline helper text and validation messages
+  - [ ] Confirm destructive actions with consistent confirmation pattern
+
+- [ ] Accessibility (A11y)
+  - [ ] Proper ARIA roles (dialog, labelledby, describedby)
+  - [ ] Focus trap, initial focus, return focus to trigger on close
+  - [ ] ESC to close, overlay click optional, scroll lock
+  - [ ] High contrast, keyboard-only flows, labels tied to inputs
+
+- [ ] Avatar Pipeline Improvements
+  - [ ] Drag-and-drop file select with previews
+  - [ ] Client-side crop/zoom (square) and compress to WebP/PNG
+  - [ ] Image size/type validation with friendly errors
+  - [ ] Upload progress indicator and retry
+  - [ ] Remove image flow with undo grace window
+
+- [ ] Forms & Validation
+  - [ ] Adopt React Hook Form + Zod/Yup schema
+  - [ ] Debounced name updates with optimistic UI
+  - [ ] Internationalized validation messages (ja, en)
+
+- [ ] API & State Architecture
+  - [ ] Extract API calls to useProfileSettings hook
+  - [ ] Use AuthContext.refreshUser after successful mutations
+  - [ ] Add optimistic updates with rollback on error
+  - [ ] Centralize message handling (banner/toast) with variants
+
+- [ ] Component Architecture
+  - [ ] Split into Headless controller and Presentational components
+  - [ ] Keep BEM naming or migrate modal to CSS Modules while preserving global dashboard look
+  - [ ] Reusable subcomponents: AvatarUploader, Field, ActionBar
+
+- [ ] Responsiveness & Performance
+  - [ ] Mobile-first sizing, safe areas, one-handed controls
+  - [ ] Code-split modal; lazy-load heavy image tooling
+  - [ ] Memoize previews, throttle drag/crop; avoid layout shifts
+
+- [ ] i18n & Content
+  - [ ] Externalize all copy to i18n files
+  - [ ] Add friendly success/error copy in Japanese (default) with English fallback
+
+- [ ] Quality & Tests
+  - [ ] Unit tests for validators and hook logic
+  - [ ] Integration tests for modal open/close, submit, upload, remove
+  - [ ] Visual/regression tests (Storybook stories)
+
+- [ ] Rollout
+  - [ ] Feature flag: newProfileModal
+  - [ ] Telemetry: open rate, success rate, error rate, avg time to complete
+  - [ ] Gradual rollout, then remove legacy modal
+
+- [ ] Acceptance Criteria
+  - [ ] Keyboard and screen reader users can complete all tasks
+  - [ ] Avatar upload with crop/preview works on mobile and desktop
+  - [ ] Name update reflects in header immediately on save
+  - [ ] Errors are actionable and localized
+  - [ ] No CLS; modal loads under 150ms on repeat open
+
+### �🔧 Technical Improvements
 - [ ] **Dashboard Component Architecture**
   - [ ] Extract reusable UI components (Badge, Card, HorizontalScroller)
   - [ ] Create shared state management for quiz data
