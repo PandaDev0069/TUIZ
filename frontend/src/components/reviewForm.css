@@ -36,7 +36,7 @@
 
 .review-validation-errors h3 {
   color: #ef4444;
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 0.75rem;
   font-size: 1rem;
   font-weight: 600;
 }
@@ -84,7 +84,7 @@
   font-size: 1.25rem;
   font-weight: 600;
   color: white;
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   border-bottom: 2px solid rgba(255, 255, 255, 0.2);
   padding-bottom: 0.5rem;
 }
@@ -309,7 +309,7 @@
 }
 
 .review-chart-item h4 {
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 0.75rem;
   color: white;
   font-size: 1rem;
   font-weight: 500;
@@ -421,7 +421,7 @@
 }
 
 .review-settings-group h4 {
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 0.75rem;
   color: white;
   font-size: 1rem;
   font-weight: 600;
@@ -465,7 +465,7 @@
 
 .review-publish-timing h4,
 .review-publish-notifications h4 {
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 0.75rem;
   color: #6366f1;
   font-size: 1rem;
   font-weight: 600;
