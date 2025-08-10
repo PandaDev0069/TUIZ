@@ -435,10 +435,6 @@ function Dashboard() {
                         <span className="stat-text">{quizSet.times_played || 0}回プレイ</span>
                       </div>
                       <div className="stat-item">
-                        <span className="stat-icon">⭐</span>
-                        <span className="stat-text">平均{(quizSet.average_score || 0).toFixed(1)}点</span>
-                      </div>
-                      <div className="stat-item">
                         <span className="stat-icon">{quizSet.is_public ? '🌐' : '🔒'}</span>
                         <span className="stat-text">{quizSet.is_public ? '公開' : '非公開'}</span>
                       </div>
