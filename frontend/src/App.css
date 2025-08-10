@@ -12,18 +12,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
   border-radius: 10px;
   transition: all 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #5b5fd1, #9333ea);
+  background: linear-gradient(135deg, #5b5fd1 0%, #9333ea 100%);
   transform: scale(1.1);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
 }
 
 ::-webkit-scrollbar-corner {
