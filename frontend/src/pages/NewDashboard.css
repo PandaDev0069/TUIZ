@@ -568,6 +568,9 @@
 /* Quiz Cards */
 .dashboard__quizzes {
   margin-bottom: 2rem;
+  width: 95%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .dashboard__quizzes-grid {
