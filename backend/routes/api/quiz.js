@@ -544,7 +544,6 @@ router.post('/create', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.aut
       status: status || 'draft', // Default 'draft'
       total_questions: 0, // Default 0, will be updated as questions are added
       times_played: 0, // Default 0
-      average_score: 0.0, // Default 0.0
       completion_rate: 0.0, // Default 0.0
       play_settings: {}, // Default empty object
       last_played_at: null // Default null
@@ -589,7 +588,7 @@ router.get('/my-quizzes', RateLimitMiddleware.createReadLimit(), AuthMiddleware.
     // Create user-scoped Supabase client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
-    const { data: quizzes, error } = await userSupabase
+  const { data: quizzes, error } = await userSupabase
       .from('question_sets')
       .select(`
         id,
@@ -604,7 +603,6 @@ router.get('/my-quizzes', RateLimitMiddleware.createReadLimit(), AuthMiddleware.
         status,
         total_questions,
         times_played,
-        average_score,
         completion_rate,
         last_played_at,
         play_settings,
@@ -781,14 +779,9 @@ router.put('/:id', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authent
       }
     }
 
-    // Validate average_score if provided
-    if (updateData.average_score !== undefined && updateData.average_score !== null) {
-      if (typeof updateData.average_score !== 'number' || updateData.average_score < 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Average score must be a non-negative number'
-        });
-      }
+    // Remove deprecated fields if present in payload
+    if (Object.prototype.hasOwnProperty.call(updateData, 'average_score')) {
+      delete updateData.average_score;
     }
 
     // Validate completion_rate if provided

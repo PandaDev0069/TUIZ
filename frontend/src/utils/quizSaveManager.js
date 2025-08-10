@@ -30,7 +30,6 @@ export class QuizSaveManager {
       estimated_duration: cleanedMetadata.estimated_duration || null, // Can be null
       total_questions: 0, // Will be updated as questions are added
       times_played: 0,
-      average_score: 0.0,
       completion_rate: 0.0,
       last_played_at: null,
       
