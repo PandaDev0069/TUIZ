@@ -28,7 +28,9 @@ Thumbs.db
 # === VS Code ===
 .vscode/
 
-
-# == Database ===
+# === Database ===
 *.sqlite
 *.db
+
+# === GitHub/AI Instructions ===
+.github/

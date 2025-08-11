@@ -138,6 +138,15 @@
   font-weight: 600;
   text-align: center;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.celebration-icon {
+  color: #FFD700;
+  animation: bounce 2s infinite;
 }
 
 /* Podium Container - Kahoot Style */
@@ -208,6 +217,28 @@
   margin-bottom: 0.5rem;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
   animation: bounceIn 0.8s ease 1.5s both;
+  display: flex;
+  justify-content: center;
+}
+
+.medal-icon {
+  font-size: 1em;
+}
+
+.medal-icon.gold {
+  color: #FFD700;
+}
+
+.medal-icon.silver {
+  color: #C0C0C0;
+}
+
+.medal-icon.bronze {
+  color: #CD7F32;
+}
+
+.medal-icon.default {
+  color: #10B981;
 }
 
 .place-1 .player-medal {
@@ -384,6 +415,9 @@
   text-align: center;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Player Names in List */
@@ -434,6 +468,28 @@
   font-size: 1.2rem;
   margin-left: 0.5rem;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  display: flex;
+  align-items: center;
+}
+
+.rank-change-icon {
+  font-size: 1em;
+}
+
+.rank-change-icon.up {
+  color: #10B981;
+}
+
+.rank-change-icon.down {
+  color: #EF4444;
+}
+
+.rank-change-icon.same {
+  color: #6B7280;
+}
+
+.rank-change-icon.new {
+  color: #F59E0B;
 }
 
 /* Player Stats */
@@ -468,6 +524,14 @@
   min-width: 280px;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.button-icon {
+  font-size: 1.1em;
 }
 
 .restart-button::before {

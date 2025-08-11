@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { FaExclamationTriangle, FaEye, FaEyeSlash } from 'react-icons/fa';
 import './auth.css';
 
 function Login() {
@@ -167,7 +168,9 @@ function Login() {
           {/* General Error */}
           {errors.general && (
             <div className="error-message">
-              <span className="error-icon">⚠️</span>
+              <span className="error-icon">
+                <FaExclamationTriangle />
+              </span>
               {errors.general}
             </div>
           )}
@@ -225,7 +228,7 @@ function Login() {
                 disabled={loading}
                 title={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
               >
-                {showPassword ? '🙈' : '👁️'}
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
             {errors.password && (

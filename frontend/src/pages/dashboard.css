@@ -66,8 +66,6 @@
 }
 
 .dashboard__header-right {
-  position: absolute;
-  top: 1rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;

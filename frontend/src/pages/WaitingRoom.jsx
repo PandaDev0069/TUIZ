@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
+import { FaGamepad, FaBookOpen, FaCheckCircle, FaExclamationTriangle, FaClock } from 'react-icons/fa'
 import socket from "../socket"
 import useQuestionPreload from "../hooks/useQuestionPreload"
 import "./waitingRoom.css"
@@ -126,7 +127,7 @@ function WaitingRoom() {
     // Cleanup listeners
     return () => {
       if (import.meta.env.DEV) {
-        console.log('🎮 WaitingRoom: Cleaning up socket listeners');
+        console.log('WaitingRoom: Cleaning up socket listeners');
       }
       socket.off('joinedGame')
       socket.off('playerList')
@@ -150,7 +151,10 @@ function WaitingRoom() {
         {/* Preloading Progress */}
         {isPreloading && (
           <div className="preload-section">
-            <h3>📚 クイズの準備中...</h3>
+            <h3>
+              <FaBookOpen className="preload-icon" />
+              クイズの準備中...
+            </h3>
             
             <div className="preload-progress">
               <div className="progress-item">
@@ -201,7 +205,9 @@ function WaitingRoom() {
         {/* Completion Status */}
         {isComplete && (
           <div className="preload-complete">
-            <div className="complete-icon">✅</div>
+            <div className="complete-icon">
+              <FaCheckCircle />
+            </div>
             <p>クイズの準備が完了しました！</p>
             {questions.length > 0 && (
               <small>{questions.length}問の質問が読み込まれました</small>
@@ -212,7 +218,9 @@ function WaitingRoom() {
         {/* Error Handling */}
         {hasError && (
           <div className="preload-error">
-            <div className="error-icon">⚠️</div>
+            <div className="error-icon">
+              <FaExclamationTriangle />
+            </div>
             <p>準備中にエラーが発生しました</p>
             <small>{error}</small>
           </div>
@@ -220,7 +228,9 @@ function WaitingRoom() {
 
         {/* Default Loading for Non-Preload State */}
         {!isPreloading && !isComplete && !hasError && (
-          <div className="loading">⌛</div>
+          <div className="loading">
+            <FaClock />
+          </div>
         )}
         
         {/* Players List */}
