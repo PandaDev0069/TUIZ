@@ -42,7 +42,7 @@ function Badge({ tone = "slate", children }) {
   return <span className={`dashboard__badge dashboard__badge--${tone}`}>{children}</span>;
 }
 
-function QuizCard({ quiz, onEdit, onStart, onDelete }) {
+function QuizCard({ quiz, onEdit, onStart, onDelete, isDeleting = false, deletingQuizId }) {
   const [thumbnailError, setThumbnailError] = useState(false);
 
   const getDifficultyLabel = (difficulty) => {
@@ -62,6 +62,8 @@ function QuizCard({ quiz, onEdit, onStart, onDelete }) {
   const handleThumbnailLoad = () => {
     setThumbnailError(false);
   };
+
+  const isThisQuizDeleting = deletingQuizId === quiz.id;
 
   return (
     <div className="dashboard__quiz-card">
@@ -94,21 +96,42 @@ function QuizCard({ quiz, onEdit, onStart, onDelete }) {
         </div>
       </div>
       <div className="dashboard__quiz-card-actions">
-        <button className="dashboard__button dashboard__button--secondary" onClick={() => onEdit(quiz)}>
+        <button 
+          className="dashboard__button dashboard__button--secondary" 
+          onClick={() => onEdit(quiz)}
+          disabled={isDeleting}
+        >
           <Edit size={16} /> 編集
         </button>
-        <button className="dashboard__button dashboard__button--primary" onClick={() => onStart(quiz)}>
+        <button 
+          className="dashboard__button dashboard__button--primary" 
+          onClick={() => onStart(quiz)}
+          disabled={isDeleting}
+        >
           <Rocket size={16} /> ゲーム開始
         </button>
-        <button className="dashboard__button dashboard__button--danger" onClick={() => onDelete(quiz)}>
-          <Trash2 size={16} /> 削除
+        <button 
+          className={`dashboard__button dashboard__button--danger ${isThisQuizDeleting ? 'dashboard__button--loading' : ''}`}
+          onClick={() => onDelete(quiz)}
+          disabled={isDeleting}
+        >
+          {isThisQuizDeleting ? (
+            <>
+              <div className="dashboard__loading-spinner"></div>
+              削除中...
+            </>
+          ) : (
+            <>
+              <Trash2 size={16} /> 削除
+            </>
+          )}
         </button>
       </div>
     </div>
   );
 }
 
-function DraftCard({ draft, onEdit, onDelete }) {
+function DraftCard({ draft, onEdit, onDelete, isDeleting = false, deletingQuizId }) {
   const [thumbnailError, setThumbnailError] = useState(false);
 
   const handleThumbnailError = () => {
@@ -118,6 +141,8 @@ function DraftCard({ draft, onEdit, onDelete }) {
   const handleThumbnailLoad = () => {
     setThumbnailError(false);
   };
+
+  const isThisQuizDeleting = deletingQuizId === draft.id;
 
   return (
     <div className="dashboard__draft-card">
@@ -143,11 +168,28 @@ function DraftCard({ draft, onEdit, onDelete }) {
         </div>
       </div>
       <div className="dashboard__draft-card-actions">
-        <button className="dashboard__button dashboard__button--secondary" onClick={() => onEdit(draft)}>
+        <button 
+          className="dashboard__button dashboard__button--secondary" 
+          onClick={() => onEdit(draft)}
+          disabled={isDeleting}
+        >
           <Edit size={16} /> 続きを編集
         </button>
-        <button className="dashboard__button dashboard__button--danger" onClick={() => onDelete(draft)}>
-          <Trash2 size={16} /> 削除
+        <button 
+          className={`dashboard__button dashboard__button--danger ${isThisQuizDeleting ? 'dashboard__button--loading' : ''}`}
+          onClick={() => onDelete(draft)}
+          disabled={isDeleting}
+        >
+          {isThisQuizDeleting ? (
+            <>
+              <div className="dashboard__loading-spinner"></div>
+              削除中...
+            </>
+          ) : (
+            <>
+              <Trash2 size={16} /> 削除
+            </>
+          )}
         </button>
       </div>
     </div>
@@ -162,6 +204,8 @@ const Dashboard = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false); // Loading state for deleting
+  const [deletingQuizId, setDeletingQuizId] = useState(null); // Track which quiz is being deleted
   const [myQuizSets, setMyQuizSets] = useState([]);
   const [draftQuizzes, setDraftQuizzes] = useState([]);
   const [stats, setStats] = useState({
@@ -339,6 +383,11 @@ const Dashboard = () => {
   };
 
   const handleDeleteQuiz = async (quiz) => {
+    // Prevent multiple delete requests
+    if (deleting || deletingQuizId === quiz.id) {
+      return;
+    }
+
     try {
       const confirmed = await showConfirmation({
         title: 'クイズセットを削除',
@@ -349,6 +398,9 @@ const Dashboard = () => {
       });
 
       if (!confirmed) return;
+
+      setDeleting(true);
+      setDeletingQuizId(quiz.id);
       
       await apiCall(`/quiz/${quiz.id}`, { method: 'DELETE' });
       showSuccess('クイズセットが削除されました。');
@@ -356,10 +408,18 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error deleting quiz set:', error);
       showError('削除に失敗しました: ' + error.message);
+    } finally {
+      setDeleting(false);
+      setDeletingQuizId(null);
     }
   };
 
   const handleDeleteDraft = async (draft) => {
+    // Prevent multiple delete requests
+    if (deleting || deletingQuizId === draft.id) {
+      return;
+    }
+
     try {
       const confirmed = await showConfirmation({
         title: '下書きを削除',
@@ -370,6 +430,9 @@ const Dashboard = () => {
       });
 
       if (!confirmed) return;
+
+      setDeleting(true);
+      setDeletingQuizId(draft.id);
       
       await apiCall(`/quiz/${draft.id}`, { method: 'DELETE' });
       showSuccess('下書きが削除されました。');
@@ -377,6 +440,9 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error deleting draft:', error);
       showError('削除に失敗しました: ' + error.message);
+    } finally {
+      setDeleting(false);
+      setDeletingQuizId(null);
     }
   };
 
@@ -512,6 +578,8 @@ const Dashboard = () => {
                       draft={draft}
                       onEdit={handleContinueEditingDraft}
                       onDelete={handleDeleteDraft}
+                      isDeleting={deleting}
+                      deletingQuizId={deletingQuizId}
                     />
                   ))}
                 </div>
@@ -561,6 +629,8 @@ const Dashboard = () => {
                     onEdit={handleEditQuiz}
                     onStart={handleStartQuiz}
                     onDelete={handleDeleteQuiz}
+                    isDeleting={deleting}
+                    deletingQuizId={deletingQuizId}
                   />
                 ))}
               </div>

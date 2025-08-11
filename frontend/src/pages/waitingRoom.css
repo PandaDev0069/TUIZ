@@ -43,6 +43,9 @@
   font-size: 2rem;
   margin-top: 2rem;
   animation: pulse 2s infinite ease-in-out;
+  color: #a855f7;
+  display: flex;
+  justify-content: center;
 }
 
 /* Preloading Section */
@@ -61,6 +64,15 @@
   margin: 0 0 1rem;
   font-size: 1.1rem;
   color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.preload-icon {
+  color: #34d399;
+  animation: pulse 2s infinite ease-in-out;
 }
 
 .preload-progress {
@@ -162,6 +174,9 @@
   font-size: 2rem;
   margin-bottom: 0.5rem;
   animation: bounce 1s ease;
+  color: #10b981;
+  display: flex;
+  justify-content: center;
 }
 
 @keyframes bounce {
@@ -213,6 +228,9 @@
   font-size: 2rem;
   margin-bottom: 0.5rem;
   animation: shake 0.5s ease;
+  color: #ef4444;
+  display: flex;
+  justify-content: center;
 }
 
 @keyframes shake {

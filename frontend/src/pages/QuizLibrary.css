@@ -959,3 +959,46 @@
     order: 2;
   }
 }
+
+/* Loading Spinner for Clone Operations */
+.quiz-library__loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: quiz-library-spin 1s ease-in-out infinite;
+  margin-right: 0.5rem;
+}
+
+@keyframes quiz-library-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Loading Button State */
+.quiz-library__button--loading {
+  opacity: 0.8;
+  cursor: not-allowed;
+  pointer-events: none;
+  position: relative;
+}
+
+.quiz-library__button--loading:hover {
+  transform: none;
+  background: inherit;
+}
+
+/* Disabled buttons during cloning */
+.quiz-library__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.quiz-library__button:disabled:hover {
+  transform: none;
+  background: inherit;
+}

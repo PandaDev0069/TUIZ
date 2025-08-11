@@ -17,7 +17,6 @@
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  position: sticky;
   top: 0;
   z-index: 100;
 }
@@ -66,8 +65,6 @@
 }
 
 .dashboard__header-right {
-  position: absolute;
-  top: 1rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -1070,4 +1067,35 @@
     width: 100%;
     justify-content: center;
   }
+}
+
+/* Loading States */
+.dashboard__loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: dashboard-spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+@keyframes dashboard-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.dashboard__button--loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.dashboard__button--loading .dashboard__loading-spinner {
+  display: inline-block;
+}
+
+.dashboard__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
 }

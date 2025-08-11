@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { FaExclamationTriangle, FaEye, FaEyeSlash, FaCheckCircle } from 'react-icons/fa';
 import './auth.css';
 
 function Register() {
@@ -216,7 +217,9 @@ function Register() {
           {/* General Error */}
           {errors.general && (
             <div className="error-message">
-              <span className="error-icon">⚠️</span>
+              <span className="error-icon">
+                <FaExclamationTriangle />
+              </span>
               {errors.general}
             </div>
           )}
@@ -241,7 +244,9 @@ function Register() {
                 autoComplete="email"
               />
               {getFieldStatus('email') === 'success' && (
-                <span className="validation-icon success">✅</span>
+                <span className="validation-icon success">
+                  <FaCheckCircle />
+                </span>
               )}
             </div>
             {errors.email && (
@@ -269,7 +274,9 @@ function Register() {
                 autoComplete="name"
               />
               {getFieldStatus('name') === 'success' && (
-                <span className="validation-icon success">✅</span>
+                <span className="validation-icon success">
+                  <FaCheckCircle />
+                </span>
               )}
             </div>
             {errors.name && (
@@ -304,7 +311,7 @@ function Register() {
                 disabled={loading}
                 title={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
               >
-                {showPassword ? '🙈' : '👁️'}
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
             {errors.password && (
@@ -338,7 +345,7 @@ function Register() {
                 disabled={loading}
                 title={showConfirmPassword ? 'パスワードを隠す' : 'パスワードを表示'}
               >
-                {showConfirmPassword ? '🙈' : '👁️'}
+                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
             {errors.confirmPassword && (
