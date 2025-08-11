@@ -4,6 +4,7 @@
  * Enhanced styles for the AnswerOption component with improved mobile-first design,
  * larger touch targets, and better responsive layouts.
  */
+@import '../../styles/shared-utilities.css';
 
 .quiz-answer-option {
   position: relative;
@@ -12,11 +13,12 @@
   width: 100%;
   min-height: 80px; /* Increased from 60px for better touch targets */
   margin-bottom: 0.75rem;
+  /* Use shared utility class - see shared-utilities.css for .answer-option-base */
   padding: 0;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 12px; /* Slightly more rounded for modern look */
+  border: var(--button-border);
+  border-radius: var(--form-border-radius);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--button-transition);
   overflow: hidden;
   list-style: none;
 }

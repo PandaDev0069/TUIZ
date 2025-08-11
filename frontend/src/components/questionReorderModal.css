@@ -1,3 +1,5 @@
+@import '../styles/shared-utilities.css';
+
 /* Question Reorder Modal Styles */
 .question-reorder-modal-overlay {
   position: fixed;
@@ -196,7 +198,8 @@
 
 .number-badge {
   background: rgba(255, 255, 255, 0.2);
-  color: white;
+  /* Use shared utility class - see shared-utilities.css for .checkmark-circle */
+  color: var(--checkmark-color);
   width: 24px;
   height: 24px;
   border-radius: 50%;

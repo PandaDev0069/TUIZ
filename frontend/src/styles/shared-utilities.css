@@ -1,0 +1,239 @@
+/* Shared CSS Utilities to eliminate code duplication */
+
+:root {
+  /* Checkmark indicator variables */
+  --checkmark-bg: #10b981;
+  --checkmark-color: white;
+  --checkmark-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --checkmark-shadow-large: 0 2px 6px rgba(0, 0, 0, 0.3);
+  
+  /* Answer letter variables */
+  --answer-letter-bg: rgba(52, 73, 93, 0.1);
+  --answer-letter-color: #34495e;
+  --answer-letter-hover-bg: rgba(52, 73, 93, 0.2);
+  --answer-letter-hover-color: #2c3e50;
+  
+  /* Answer gradients */
+  --answer-gradient-1: linear-gradient(135deg, #45b7d1 0%, #2196f3 100%);
+  --answer-gradient-2: linear-gradient(135deg, #4ecdc4 0%, #26a69a 100%);
+  --answer-gradient-3: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+  --answer-gradient-4: linear-gradient(135deg, #96ceb4 0%, #4caf50 100%);
+  --answer-gradient-5: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+  --answer-gradient-6: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+  
+  /* Form styling variables */
+  --form-border: 2px solid rgba(255, 255, 255, 0.2);
+  --form-border-radius: 12px;
+  --form-bg: rgba(255, 255, 255, 0.1);
+  --form-text-color: white;
+  --form-font-size: 1rem;
+  
+  /* Button styling variables */
+  --button-border: 2px solid rgba(255, 255, 255, 0.3);
+  --button-transition: all 0.2s ease;
+  
+  /* Section divider variables */
+  --section-margin-top: 2rem;
+  --section-padding-top: 2rem;
+  --section-border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Base checkmark style */
+.checkmark-base::before {
+  content: '✓';
+  position: absolute;
+  background: var(--checkmark-bg);
+  color: var(--checkmark-color);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  z-index: 10;
+  box-shadow: var(--checkmark-shadow);
+}
+
+/* Checkmark variants */
+.checkmark-small::before {
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 24px;
+  height: 24px;
+  font-size: 0.9rem;
+}
+
+.checkmark-large::before {
+  top: 1rem;
+  right: 1rem;
+  width: 28px;
+  height: 28px;
+  font-size: 1rem;
+  box-shadow: var(--checkmark-shadow-large);
+}
+
+.checkmark-centered::before {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Answer letter circles */
+.answer-letter-circle {
+  width: 32px;
+  height: 32px;
+  background: var(--answer-letter-bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--answer-letter-color);
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.answer-letter-circle:hover {
+  background: var(--answer-letter-hover-bg);
+  color: var(--answer-letter-hover-color);
+}
+
+/* Input hints */
+.input-hint {
+  display: block;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 0.5rem;
+}
+
+/* Large button styling for true/false questions */
+.large-button-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+/* Answer option gradients - shared utility classes */
+.answer-option-gradient-1 {
+  background: var(--answer-gradient-1);
+}
+
+.answer-option-gradient-2 {
+  background: var(--answer-gradient-2);
+}
+
+.answer-option-gradient-3 {
+  background: var(--answer-gradient-3);
+}
+
+.answer-option-gradient-4 {
+  background: var(--answer-gradient-4);
+}
+
+.answer-option-gradient-5 {
+  background: var(--answer-gradient-5);
+}
+
+.answer-option-gradient-6 {
+  background: var(--answer-gradient-6);
+}
+
+/* Legacy gradient classes for backward compatibility */
+.answer-gradient--blue {
+  background: var(--answer-gradient-1);
+}
+
+.answer-gradient--red {
+  background: var(--answer-gradient-3);
+}
+
+.answer-gradient--green {
+  background: var(--answer-gradient-4);
+}
+
+.answer-gradient--orange {
+  background: var(--answer-gradient-5);
+}
+
+/* Form input styling - shared utility */
+.form-input-base {
+  border: var(--form-border);
+  border-radius: var(--form-border-radius);
+  background: var(--form-bg);
+  color: var(--form-text-color);
+  font-size: var(--form-font-size);
+}
+
+/* Large button layout for true/false and large options */
+.large-button-layout {
+  flex: 1;
+  max-width: 350px;
+  min-height: 150px;
+  padding: 0;
+  border: var(--button-border);
+}
+
+/* File input overlay - common pattern */
+.file-input-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Section divider styling */
+.section-divider {
+  margin-top: var(--section-margin-top);
+  padding-top: var(--section-padding-top);
+  border-top: var(--section-border-top);
+}
+
+/* Checkbox styling */
+.checkbox-input-hidden {
+  display: none;
+}
+
+.checkbox-custom-base {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Checkmark circle styling */
+.checkmark-circle {
+  color: var(--checkmark-color);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: bold;
+  z-index: 10;
+}
+
+/* Answer option base styling */
+.answer-option-base {
+  padding: 0;
+  border: var(--button-border);
+  border-radius: var(--form-border-radius);
+  cursor: pointer;
+  transition: var(--button-transition);
+}

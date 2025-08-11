@@ -1,4 +1,6 @@
 /* Metadata Form Styles */
+@import '../styles/shared-utilities.css';
+
 .metadata-form {
   padding: 0;
 }
@@ -26,7 +28,6 @@
 .form-header {
   padding: 2rem 2rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
 }
 
 .form-title {
@@ -133,11 +134,11 @@
 .form-textarea {
   width: 100%;
   padding: 0.75rem 1rem;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 1rem;
+  border: var(--form-border);
+  border-radius: var(--form-border-radius);
+  background: var(--form-bg);
+  color: var(--form-text-color);
+  font-size: var(--form-font-size);
   font-family: inherit;
   resize: vertical;
   min-height: 100px;
@@ -178,12 +179,7 @@
   font-size: 0.9rem;
 }
 
-.input-hint {
-  display: block;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin-top: 0.5rem;
-}
+/* Input hints use shared utility class from shared-utilities.css */
 
 .field-error {
   display: block;
@@ -257,6 +253,7 @@
 }
 
 .file-input {
+  /* Use shared utility class - see shared-utilities.css for .file-input-overlay */
   position: absolute;
   top: 0;
   left: 0;
@@ -509,7 +506,7 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: white;
+  color: var(--checkmark-color);
   font-size: 12px;
   font-weight: bold;
 }
