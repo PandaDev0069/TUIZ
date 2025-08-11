@@ -496,3 +496,73 @@
     border-color: white;
   }
 }
+
+/* React Icons Styling */
+.error-icon {
+  color: #ff6b6b;
+  margin-right: 8px;
+  font-size: 16px;
+  filter: drop-shadow(0 2px 4px rgba(255, 107, 107, 0.3));
+  animation: warningPulse 2s ease-in-out infinite;
+}
+
+.validation-icon.success {
+  color: #51cf66;
+  margin-left: 8px;
+  font-size: 16px;
+  filter: drop-shadow(0 2px 4px rgba(81, 207, 102, 0.3));
+  animation: successPulse 1.5s ease-in-out;
+}
+
+.password-toggle {
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.3s ease;
+}
+
+.password-toggle:hover {
+  color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.password-toggle:active {
+  color: #a855f7;
+  transform: translateY(-50%) scale(0.95);
+}
+
+/* Icon Animations */
+@keyframes warningPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes successPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Colorful gradient effects for form states */
+.auth-input.success {
+  border-color: #51cf66;
+  box-shadow: 0 0 0 3px rgba(81, 207, 102, 0.1);
+}
+
+.auth-input.error {
+  border-color: #ff6b6b;
+  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+}

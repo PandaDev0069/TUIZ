@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { 
+  FaTrophy, 
+  FaMedal, 
+  FaArrowUp, 
+  FaArrowDown, 
+  FaMinus, 
+  FaStar, 
+  FaChartBar, 
+  FaRocket,
+  FaGift
+} from 'react-icons/fa';
 import { useManagedTimeout } from '../utils/timerManager';
 import socket from '../socket';
 import './scoreboard.css';
@@ -65,21 +76,21 @@ function Scoreboard() {
     }
   };
 
-  const getMedalEmoji = (position) => {
+  const getMedalIcon = (position) => {
     switch (position) {
-      case 0: return '🥇';
-      case 1: return '🥈';
-      case 2: return '🥉';
-      default: return '🏅';
+      case 0: return <FaTrophy className="medal-icon gold" />;
+      case 1: return <FaTrophy className="medal-icon silver" />;
+      case 2: return <FaTrophy className="medal-icon bronze" />;
+      default: return <FaMedal className="medal-icon default" />;
     }
   };
 
   const getRankChangeIcon = (change) => {
     switch (change) {
-      case 'up': return '⬆️';
-      case 'down': return '⬇️';
-      case 'same': return '➖';
-      default: return '🆕';
+      case 'up': return <FaArrowUp className="rank-change-icon up" />;
+      case 'down': return <FaArrowDown className="rank-change-icon down" />;
+      case 'same': return <FaMinus className="rank-change-icon same" />;
+      default: return <FaStar className="rank-change-icon new" />;
     }
   };
 
@@ -127,7 +138,10 @@ function Scoreboard() {
       
       <div className="scoreboard-container">
         <h1 className="title">ゲーム終了！</h1>
-        <p className="subtitle">最終結果発表 🎉</p>
+        <p className="subtitle">
+          最終結果発表 
+          <FaGift className="celebration-icon" />
+        </p>
 
         {/* Podium for top 3 */}
         <div className="podium-container">
@@ -137,7 +151,7 @@ function Scoreboard() {
               className={`podium-place place-${index + 1}`}
             >
               <div className="player-info">
-                <span className="player-medal">{getMedalEmoji(index)}</span>
+                <span className="player-medal">{getMedalIcon(index)}</span>
                 <span className="player-name">
                   {player.name}
                 </span>
@@ -170,7 +184,7 @@ function Scoreboard() {
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <span className="position">#{index + 4}</span>
-                <span className="medal">{getMedalEmoji(index + 3)}</span>
+                <span className="medal">{getMedalIcon(index + 3)}</span>
                 <span className="name">
                   {player.name}
                 </span>
@@ -184,7 +198,17 @@ function Scoreboard() {
         )}
 
         <button className="restart-button" onClick={handleRestart}>
-          {isHost ? '📊 ダッシュボードに戻る' : '🚀 別のクイズに参加'}
+          {isHost ? (
+            <>
+              <FaChartBar className="button-icon" />
+              ダッシュボードに戻る
+            </>
+          ) : (
+            <>
+              <FaRocket className="button-icon" />
+              別のクイズに参加
+            </>
+          )}
         </button>
       </div>
     </div>
