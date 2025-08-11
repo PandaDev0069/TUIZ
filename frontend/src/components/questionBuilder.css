@@ -1,3 +1,5 @@
+@import '../styles/shared-utilities.css';
+
 /* Question Builder Styles */
 .question-builder {
   background: rgba(255, 255, 255, 0.05);
@@ -162,11 +164,11 @@
 .question-textarea {
   width: 100%;
   padding: 1rem 1.5rem !important;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 1rem;
+  border: var(--form-border);
+  border-radius: var(--form-border-radius);
+  background: var(--form-bg);
+  color: var(--form-text-color);
+  font-size: var(--form-font-size);
   font-family: inherit;
   resize: vertical;
   transition: all 0.3s ease;
@@ -189,12 +191,7 @@
   background: rgba(239, 68, 68, 0.1);
 }
 
-.question-builder .input-hint {
-  display: block;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin-top: 0.5rem;
-}
+.question-builder /* Input hints use shared utility class from shared-utilities.css */
 
 .field-error {
   display: block;
@@ -242,6 +239,7 @@
 }
 
 .file-input {
+  /* Use shared utility class - see shared-utilities.css for .file-input-overlay */
   position: absolute;
   top: 0;
   left: 0;
@@ -657,10 +655,12 @@
 }
 
 .correct-checkbox input[type="checkbox"] {
+  /* Use shared utility class - see shared-utilities.css for .checkbox-input-hidden */
   display: none;
 }
 
 .checkbox-custom {
+  /* Use shared utility class - see shared-utilities.css for .checkbox-custom-base */
   width: 18px;
   height: 18px;
   border: 2px solid rgba(255, 255, 255, 0.5);
@@ -732,6 +732,7 @@
 }
 
 .answer-image-upload .file-input {
+  /* Use shared utility class - see shared-utilities.css for .file-input-overlay */
   position: absolute;
   top: 0;
   left: 0;
@@ -815,9 +816,10 @@
 
 /* Question Preview */
 .question-preview {
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  /* Use shared utility class - see shared-utilities.css for .section-divider */
+  margin-top: var(--section-margin-top);
+  padding-top: var(--section-padding-top);
+  border-top: var(--section-border-top);
 }
 
 .preview-title {
@@ -921,27 +923,27 @@
 
 /* Match quiz option colors exactly */
 .preview-answer-option:nth-child(1) {
-  background: linear-gradient(135deg, #45b7d1 0%, #2196f3 100%);
+  background: var(--answer-gradient-1);
 }
 
 .preview-answer-option:nth-child(2) {
-  background: linear-gradient(135deg, #4ecdc4 0%, #26a69a 100%);
+  background: var(--answer-gradient-2);
 }
 
 .preview-answer-option:nth-child(3) {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+  background: var(--answer-gradient-3);
 }
 
 .preview-answer-option:nth-child(4) {
-  background: linear-gradient(135deg, #96ceb4 0%, #4caf50 100%);
+  background: var(--answer-gradient-4);
 }
 
 .preview-answer-option:nth-child(5) {
-  background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+  background: var(--answer-gradient-5);
 }
 
 .preview-answer-option:nth-child(6) {
-  background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+  background: var(--answer-gradient-6);
 }
 
 .preview-answer-option:hover {
@@ -967,8 +969,8 @@
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;
-  background: #10b981;
-  color: white;
+  background: var(--checkmark-bg);
+  color: var(--checkmark-color);
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -978,16 +980,17 @@
   font-size: 0.9rem;
   font-weight: bold;
   z-index: 10;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--checkmark-shadow);
 }
 
 /* Large buttons layout for true/false - match TrueFalseQuestion.css */
 .preview-answers.large-buttons .preview-answer-option {
+  /* Use shared utility class - see shared-utilities.css for .large-button-layout */
   flex: 1;
   max-width: 350px;
   min-height: 150px;
   padding: 0;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: var(--button-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1032,8 +1035,8 @@
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: #10b981;
-  color: white;
+  background: var(--checkmark-bg);
+  color: var(--checkmark-color);
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -1043,7 +1046,7 @@
   font-size: 1rem;
   font-weight: bold;
   z-index: 10;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--checkmark-shadow-large);
 }
 
 .answer-content-wrapper {
@@ -1058,24 +1061,26 @@
   text-align: center;
 }
 
+/* Answer letters use shared utility class .answer-letter-circle from shared-utilities.css */
+
 .answer-letter {
   width: 32px;
   height: 32px;
-  background: rgba(52, 73, 93, 0.1);
+  background: var(--answer-letter-bg);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
   font-size: 1rem;
-  color: #34495e;
+  color: var(--answer-letter-color);
   flex-shrink: 0;
   transition: all 0.3s ease;
 }
 
 .preview-answer-option:hover .answer-letter {
-  background: rgba(52, 73, 93, 0.2);
-  color: #2c3e50;
+  background: var(--answer-letter-hover-bg);
+  color: var(--answer-letter-hover-color);
 }
 
 .preview-answer-option.correct .answer-letter {
@@ -1286,11 +1291,12 @@
   width: 100%;
   min-height: 80px;
   margin-bottom: 0;
+  /* Use shared utility class - see shared-utilities.css for .answer-option-base */
   padding: 0;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 12px;
+  border: var(--button-border);
+  border-radius: var(--form-border-radius);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--button-transition);
   overflow: hidden;
   list-style: none;
 }

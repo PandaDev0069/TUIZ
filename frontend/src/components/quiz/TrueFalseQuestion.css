@@ -1,3 +1,5 @@
+@import '../../styles/shared-utilities.css';
+
 /* True/False Question Styles */
 .quiz-true-false-question {
   display: flex;
@@ -143,11 +145,8 @@
   box-shadow: 0 0 30px rgba(239, 68, 68, 0.4);
 }
 
-/* VS Divider */
+/* VS Divider - uses shared utility pattern */
 .quiz-vs-divider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 60px;
   height: 60px;
   background: linear-gradient(135deg, #6366f1, #a855f7);
@@ -160,6 +159,10 @@
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
   animation: pulse 2s ease-in-out infinite;
+  /* Shared properties with .large-button-option */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @keyframes pulse {
