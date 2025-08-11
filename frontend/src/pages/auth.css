@@ -125,13 +125,15 @@
 }
 
 .auth-input.error {
-  border-color: #ef4444;
+  border-color: #ff6b6b;
   background: rgba(239, 68, 68, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
 }
 
 .auth-input.success {
-  border-color: #10b981;
+  border-color: #51cf66;
   background: rgba(16, 185, 129, 0.1);
+  box-shadow: 0 0 0 3px rgba(81, 207, 102, 0.1);
 }
 
 .input-icon {
@@ -153,7 +155,11 @@
 }
 
 .validation-icon.success {
-  color: #10b981;
+  color: #51cf66;
+  margin-left: 8px;
+  font-size: 16px;
+  filter: drop-shadow(0 2px 4px rgba(81, 207, 102, 0.3));
+  animation: successPulse 1.5s ease-in-out;
 }
 
 .password-toggle {
@@ -173,7 +179,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.3s ease;
   /* Override any global button styles */
   margin: 0 !important;
   min-height: auto !important;
@@ -182,12 +189,14 @@
 
 /* Override global button hover styles */
 .password-toggle:hover {
-  transform: translateY(-50%) !important;
+  color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-50%) scale(1.1) !important;
   box-shadow: none !important;
 }
 
 .password-toggle:active {
-  transform: translateY(-50%) !important;
+  color: #a855f7;
+  transform: translateY(-50%) scale(1.1) !important;
 }
 
 .password-toggle:disabled {
@@ -209,7 +218,11 @@
 }
 
 .error-icon {
+  color: #ff6b6b;
+  margin-right: 8px;
   font-size: 1.2rem;
+  filter: drop-shadow(0 2px 4px rgba(255, 107, 107, 0.3));
+  animation: warningPulse 2s ease-in-out infinite;
 }
 
 .field-error {
@@ -497,38 +510,6 @@
   }
 }
 
-/* React Icons Styling */
-.error-icon {
-  color: #ff6b6b;
-  margin-right: 8px;
-  font-size: 16px;
-  filter: drop-shadow(0 2px 4px rgba(255, 107, 107, 0.3));
-  animation: warningPulse 2s ease-in-out infinite;
-}
-
-.validation-icon.success {
-  color: #51cf66;
-  margin-left: 8px;
-  font-size: 16px;
-  filter: drop-shadow(0 2px 4px rgba(81, 207, 102, 0.3));
-  animation: successPulse 1.5s ease-in-out;
-}
-
-.password-toggle {
-  color: rgba(255, 255, 255, 0.7);
-  transition: all 0.3s ease;
-}
-
-.password-toggle:hover {
-  color: rgba(255, 255, 255, 0.9);
-  transform: translateY(-50%) scale(1.1); /* Combine centering and scaling */
-}
-
-.password-toggle:active {
-  color: #a855f7;
-  transform: translateY(-50%) scale(1.1);
-}
-
 /* Icon Animations */
 @keyframes warningPulse {
   0%, 100% {
@@ -554,15 +535,4 @@
     opacity: 1;
     transform: scale(1);
   }
-}
-
-/* Colorful gradient effects for form states */
-.auth-input.success {
-  border-color: #51cf66;
-  box-shadow: 0 0 0 3px rgba(81, 207, 102, 0.1);
-}
-
-.auth-input.error {
-  border-color: #ff6b6b;
-  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
 }
