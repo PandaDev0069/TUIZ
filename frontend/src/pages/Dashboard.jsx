@@ -7,7 +7,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import { useConfirmation } from '../hooks/useConfirmation';
 import { showError, showSuccess } from '../utils/toast';
 import socket from '../socket';
-import './Dashboard.css';
+import './dashboard.css';
 
 // Lucide Icons
 import { 
