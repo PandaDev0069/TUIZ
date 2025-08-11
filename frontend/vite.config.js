@@ -9,4 +9,7 @@ export default defineConfig({
     port: 5173, // Default Vite port
     strictPort: true, // Exit if port is already in use
   },
+  build: {
+    chunkSizeWarningLimit: 1000, // Increase chunk size warning limit to 1000kb
+  },
 })
