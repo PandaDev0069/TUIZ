@@ -849,7 +849,7 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
           .from(bucketName)
           .upload(newFilePath, originalImageData, {
             contentType: originalImageData.type,
-            upsert: false
+            upsert: true
           });
           
         if (uploadError) {
