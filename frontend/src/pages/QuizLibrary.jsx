@@ -6,7 +6,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useConfirmation } from '../hooks/useConfirmation';
 import './QuizLibrary.css';
-import './Dashboard.css'; // Import Dashboard styles for My Library cards
+import './dashboard.css'; // Import Dashboard styles for My Library cards
 
 // Lucide Icons
 import { 
