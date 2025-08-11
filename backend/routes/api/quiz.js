@@ -814,6 +814,66 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
     console.log('✅ Public quiz found:', publicQuiz.title);
     console.log('📝 Creating clone...');
 
+    // Function to copy image to new location for the cloned quiz
+    const copyImageToNewLocation = async (originalImageUrl, imageType = 'thumbnail') => {
+      if (!originalImageUrl) return null;
+      
+      try {
+        // Extract the original file info
+        const urlParts = originalImageUrl.split('/');
+        const bucketIndex = urlParts.findIndex(part => part === 'public');
+        if (bucketIndex === -1) return originalImageUrl; // Not a storage URL
+        
+        const bucketName = urlParts[bucketIndex + 1];
+        const originalFilePath = urlParts.slice(bucketIndex + 2).join('/');
+        
+        // Generate new file path for the clone
+        const fileExtension = originalFilePath.split('.').pop();
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(2, 15);
+        const newFileName = `${imageType}_${timestamp}_${randomId}.${fileExtension}`;
+        const newFilePath = `${userId}/${newFileName}`;
+        
+        // Download the original image
+        const { data: originalImageData, error: downloadError } = await adminSupabase.storage
+          .from(bucketName)
+          .download(originalFilePath);
+          
+        if (downloadError) {
+          console.warn('⚠️ Failed to download original image for cloning:', downloadError.message);
+          return null; // Return null to indicate failure to clone image
+        }
+        
+        // Upload to new location
+        const { data: uploadData, error: uploadError } = await adminSupabase.storage
+          .from(bucketName)
+          .upload(newFilePath, originalImageData, {
+            contentType: originalImageData.type,
+            upsert: true
+          });
+          
+        if (uploadError) {
+          console.warn('⚠️ Failed to upload cloned image:', uploadError.message);
+          return originalImageUrl; // Return original URL as fallback
+        }
+        
+        // Get the public URL for the new image
+        const { data: { publicUrl } } = adminSupabase.storage
+          .from(bucketName)
+          .getPublicUrl(newFilePath);
+          
+        console.log('✅ Image cloned successfully:', newFilePath);
+        return publicUrl;
+        
+      } catch (error) {
+        console.warn('⚠️ Error cloning image:', error.message);
+        return originalImageUrl; // Return original URL as fallback
+      }
+    };
+
+    // Clone the thumbnail if it exists
+    const clonedThumbnailUrl = await copyImageToNewLocation(publicQuiz.thumbnail_url, 'thumbnail');
+
     // Create the cloned quiz using admin client to bypass RLS
     let insertData = {
       title: `${publicQuiz.title} (クローン)`,
@@ -822,7 +882,7 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
       difficulty_level: publicQuiz.difficulty_level,
       estimated_duration: publicQuiz.estimated_duration,
       total_questions: publicQuiz.total_questions || 0,
-      thumbnail_url: publicQuiz.thumbnail_url,
+      thumbnail_url: clonedThumbnailUrl,
       is_public: false,
       status: 'draft',
       user_id: userId, // Explicitly set the user_id
@@ -864,19 +924,23 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
       for (let i = 0; i < publicQuiz.questions.length; i++) {
         const originalQuestion = publicQuiz.questions[i];
         
+        // Clone question image and explanation image
+        const clonedQuestionImageUrl = await copyImageToNewLocation(originalQuestion.image_url, 'question');
+        const clonedExplanationImageUrl = await copyImageToNewLocation(originalQuestion.explanation_image_url, 'explanation');
+        
         // Create question with correct schema
         const questionData = {
           question_set_id: clonedQuiz.id,
           question_text: originalQuestion.question_text,
           question_type: originalQuestion.question_type,
-          image_url: originalQuestion.image_url,
+          image_url: clonedQuestionImageUrl,
           time_limit: originalQuestion.time_limit || 30,
           points: originalQuestion.points || 100,
           difficulty: originalQuestion.difficulty || 'medium',
           order_index: i,
           explanation_title: originalQuestion.explanation_title,
           explanation_text: originalQuestion.explanation_text,
-          explanation_image_url: originalQuestion.explanation_image_url,
+          explanation_image_url: clonedExplanationImageUrl,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
@@ -896,16 +960,25 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
 
         // Clone answers for this question (if they exist in the original)
         if (originalQuestion.answers && originalQuestion.answers.length > 0) {
-          const answersData = originalQuestion.answers.map((answer, answerIndex) => ({
-            question_id: clonedQuestion.id,
-            answer_text: answer.answer_text,
-            is_correct: answer.is_correct,
-            order_index: answerIndex,
-            image_url: answer.image_url,
-            answer_explanation: answer.answer_explanation,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }));
+          const answersData = [];
+          
+          for (let answerIndex = 0; answerIndex < originalQuestion.answers.length; answerIndex++) {
+            const answer = originalQuestion.answers[answerIndex];
+            
+            // Clone answer image if it exists
+            const clonedAnswerImageUrl = await copyImageToNewLocation(answer.image_url, 'answer');
+            
+            answersData.push({
+              question_id: clonedQuestion.id,
+              answer_text: answer.answer_text,
+              is_correct: answer.is_correct,
+              order_index: answerIndex,
+              image_url: clonedAnswerImageUrl,
+              answer_explanation: answer.answer_explanation,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+          }
 
           const { error: answersError } = await adminSupabase
             .from('answers')
