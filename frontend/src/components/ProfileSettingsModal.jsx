@@ -4,6 +4,17 @@ import { useConfirmation } from '../hooks/useConfirmation';
 import ConfirmationModal from './ConfirmationModal';
 import { apiConfig } from '../utils/apiConfig';
 import { useTimerManager } from '../utils/timerManager';
+import { 
+  Check, 
+  X, 
+  Info, 
+  User, 
+  FolderOpen, 
+  Save, 
+  Trash2, 
+  Clock,
+  Upload 
+} from 'lucide-react';
 import './profileSettingsModal.css';
 
 const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
@@ -240,7 +251,7 @@ const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
         {message.text && (
           <div className={`message-banner ${message.type}`}>
             <span className="message-icon">
-              {message.type === 'success' ? '✅' : message.type === 'error' ? '❌' : 'ℹ️'}
+              {message.type === 'success' ? <Check size={16} /> : message.type === 'error' ? <X size={16} /> : <Info size={16} />}
             </span>
             <span className="message-text">{message.text}</span>
             <button 
@@ -262,7 +273,7 @@ const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
                   <img src={preview} alt="プロフィール画像" className="avatar-image" />
                 ) : (
                   <div className="avatar-placeholder">
-                    <span className="avatar-icon">👤</span>
+                    <User size={48} className="avatar-icon" />
                   </div>
                 )}
               </div>
@@ -277,7 +288,7 @@ const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
                   id="avatar-upload"
                 />
                 <label htmlFor="avatar-upload" className="upload-button">
-                  📁 画像を選択
+                  <FolderOpen size={16} /> 画像を選択
                 </label>
                 
                 {selectedFile && (
@@ -287,7 +298,7 @@ const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
                     disabled={uploadingImage}
                     className="upload-confirm-button"
                   >
-                    {uploadingImage ? '⏳ アップロード中...' : '💾 アップロード'}
+                    {uploadingImage ? <><Clock size={16} /> アップロード中...</> : <><Upload size={16} /> アップロード</>}
                   </button>
                 )}
                 
@@ -298,7 +309,7 @@ const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
                     disabled={uploadingImage}
                     className="remove-button"
                   >
-                    {uploadingImage ? '⏳ 削除中...' : '🗑️ 削除'}
+                    {uploadingImage ? <><Clock size={16} /> 削除中...</> : <><Trash2 size={16} /> 削除</>}
                   </button>
                 )}
               </div>
@@ -377,7 +388,7 @@ const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
               className="save-button"
               disabled={loading}
             >
-              {loading ? '⏳ 保存中...' : '💾 保存'}
+              {loading ? <><Clock size={16} /> 保存中...</> : <><Save size={16} /> 保存</>}
             </button>
           </div>
         </form>
