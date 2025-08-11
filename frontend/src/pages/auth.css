@@ -521,12 +521,12 @@
 
 .password-toggle:hover {
   color: rgba(255, 255, 255, 0.9);
-  transform: translateY(-50%) scale(1.1);
+  transform: translateY(-50%) scale(1.1); /* Combine centering and scaling */
 }
 
 .password-toggle:active {
   color: #a855f7;
-  transform: translateY(-50%) scale(0.95);
+  transform: translateY(-50%) scale(1.1);
 }
 
 /* Icon Animations */
