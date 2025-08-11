@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { showError, showSuccess } from '../utils/toast';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -24,7 +24,8 @@ import {
   X,
   Book,
   FolderOpen,
-  SearchX
+  SearchX,
+  PenTool
 } from 'lucide-react';
 
 // Helper Components
@@ -318,7 +319,7 @@ function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, onEdit, onDelet
   );
 }
 
-function EmptyState({ tab, query }) {
+function EmptyState({ tab, query, filterMode }) {
   const getEmptyContent = () => {
     if (query) {
       return {
@@ -336,9 +337,25 @@ function EmptyState({ tab, query }) {
       };
     }
     
+    if (filterMode === "drafts") {
+      return {
+        title: "下書きがありません",
+        description: "新しいクイズを作成して下書きに保存してみましょう。",
+        icon: <PenTool size={48} />
+      };
+    }
+    
+    if (filterMode === "published") {
+      return {
+        title: "公開済みクイズがありません",
+        description: "下書きを完成させて公開してみましょう。",
+        icon: <Globe size={48} />
+      };
+    }
+    
     return {
       title: "マイライブラリにクイズがありません",
-      description: "公開クイズをライブラリに追加してみましょう。",
+      description: "公開クイズをライブラリに追加するか、新しいクイズを作成してみましょう。",
       icon: <Book size={48} />
     };
   };
@@ -358,10 +375,16 @@ const QuizLibrary = () => {
   const { apiCall } = useAuth();
   const { showConfirmation, confirmationProps } = useConfirmation();
   const navigate = useNavigate();
+  const location = useLocation();
   const searchRef = useRef(null);
+
+  // Check URL parameters for initial view
+  const urlParams = new URLSearchParams(location.search);
+  const initialView = urlParams.get('view');
 
   // State
   const [tab, setTab] = useState("library"); // library | public
+  const [filterMode, setFilterMode] = useState(initialView === 'drafts' ? 'drafts' : 'all'); // all | drafts | published
   const [view, setView] = useState("grid"); // grid | list
   const [loading, setLoading] = useState(false);
   const [quizzes, setQuizzes] = useState([]);
@@ -406,10 +429,10 @@ const QuizLibrary = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Fetch quizzes when tab, filters, or sort changes
+  // Fetch quizzes when tab, filters, sort, or filterMode changes
   useEffect(() => {
     fetchQuizzes();
-  }, [tab, filters, sort, query]);
+  }, [tab, filters, sort, query, filterMode]);
 
   const fetchQuizzes = async () => {
     try {
@@ -432,8 +455,16 @@ const QuizLibrary = () => {
         const response = await apiCall('/quiz/my-quizzes');
         const allQuizzes = response.quizzes || [];
         
-        // Show all user's quizzes (not just cloned ones)
+        // Apply filter mode (drafts vs published vs all)
         let libraryQuizzes = allQuizzes;
+        if (filterMode === 'drafts') {
+          libraryQuizzes = allQuizzes.filter(quiz => 
+            quiz.status === 'draft' || quiz.status === 'creating'
+          );
+        } else if (filterMode === 'published') {
+          libraryQuizzes = allQuizzes.filter(quiz => quiz.status === 'published');
+        }
+        // If filterMode === 'all', show all quizzes (no filtering)
         
         // Apply search
         if (query.trim()) {
@@ -647,6 +678,30 @@ const QuizLibrary = () => {
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
+
+            {/* Filter buttons for library tab */}
+            {tab === "library" && (
+              <div className="quiz-library__filter-tabs">
+                <button 
+                  className={`quiz-library__filter-tab ${filterMode === "all" ? "quiz-library__filter-tab--active" : ""}`}
+                  onClick={() => setFilterMode("all")}
+                >
+                  すべて
+                </button>
+                <button 
+                  className={`quiz-library__filter-tab ${filterMode === "published" ? "quiz-library__filter-tab--active" : ""}`}
+                  onClick={() => setFilterMode("published")}
+                >
+                  公開済み
+                </button>
+                <button 
+                  className={`quiz-library__filter-tab ${filterMode === "drafts" ? "quiz-library__filter-tab--active" : ""}`}
+                  onClick={() => setFilterMode("drafts")}
+                >
+                  下書き
+                </button>
+              </div>
+            )}
             
             <select
               className="quiz-library__select"
@@ -697,7 +752,7 @@ const QuizLibrary = () => {
             <LoadingSkeleton type="text" count={3} />
           </div>
         ) : filteredQuizzes.length === 0 ? (
-          <EmptyState tab={tab} query={query} />
+          <EmptyState tab={tab} query={query} filterMode={filterMode} />
         ) : (
           <div className={`quiz-library__content ${view === "list" ? "quiz-library__content--list" : ""}`}>
             {tab === "library" ? (
@@ -827,7 +882,7 @@ const QuizLibrary = () => {
                 )}
 
                 {groupedQuizzes.published.length === 0 && groupedQuizzes.draft.length === 0 && (
-                  <EmptyState tab={tab} query={query} />
+                  <EmptyState tab={tab} query={query} filterMode={filterMode} />
                 )}
               </div>
             ) : (

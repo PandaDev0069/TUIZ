@@ -500,7 +500,7 @@ const Dashboard = () => {
             <section className="dashboard__drafts">
               <div className="dashboard__section-header">
                 <h2 className="dashboard__section-title">下書きを続ける</h2>
-                <button className="dashboard__section-link" onClick={() => alert("すべての下書きを表示")}>
+                <button className="dashboard__section-link" onClick={() => navigate('/quiz-library?view=drafts')}>
                   すべて表示
                 </button>
               </div>
