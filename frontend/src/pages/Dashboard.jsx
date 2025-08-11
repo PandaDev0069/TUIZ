@@ -463,12 +463,11 @@ const Dashboard = () => {
                 <div className="dashboard__action-badge dashboard__action-badge--coming-soon">準備中</div>
               </div>
 
-              <div className="dashboard__action-card dashboard__action-card--disabled">
+              <div className="dashboard__action-card" onClick={() => navigate('/quiz-library')}>
                 <div className="dashboard__action-icon">
                   <FolderOpen size={32} color="#fff" />
                 </div>
                 <h3 className="dashboard__action-title">クイズライブラリ</h3>
-                <div className="dashboard__action-badge dashboard__action-badge--coming-soon">準備中</div>
               </div>
             </div>
           </section>
@@ -524,7 +523,10 @@ const Dashboard = () => {
           <section className="dashboard__quizzes">
             <div className="dashboard__section-header">
               <h2 className="dashboard__section-title">公開済みクイズセット</h2>
-              <button className="dashboard__section-link" onClick={() => alert("クイズライブラリへ")}>
+              <button 
+                className="dashboard__section-link" 
+                onClick={() => navigate('/quiz-library')}
+              >
                 クイズライブラリへ
               </button>
             </div>
