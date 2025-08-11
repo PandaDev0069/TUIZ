@@ -540,7 +540,7 @@ router.post('/check-availability', RateLimitMiddleware.createGeneralLimit(), asy
     };
 
     if (email) {
-      const { data: emailData } = await db.supabase
+      const { data: emailData } = await supabase
         .from('users')
         .select('id')
         .eq('email', email);
@@ -548,7 +548,7 @@ router.post('/check-availability', RateLimitMiddleware.createGeneralLimit(), asy
     }
 
     if (name) {
-      const { data: nameData } = await db.supabase
+      const { data: nameData } = await supabase
         .from('users')
         .select('id')
         .eq('name', name);

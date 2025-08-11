@@ -11,9 +11,9 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
-import NewDashboard from './pages/NewDashboard'
 import CreateQuiz from './pages/CreateQuiz'
 import QuizPreview from './pages/QuizPreview'
+import QuizLibrary from './pages/QuizLibrary'
 import Join from './pages/Join'
 import WaitingRoom from './pages/WaitingRoom'
 import Host from './pages/Host'
@@ -48,7 +48,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/new-dashboard" element={<NewDashboard />} />
+        <Route path="/quiz-library" element={<QuizLibrary />} />
         <Route path="/create-quiz" element={<CreateQuiz />} />
         <Route path="/preview" element={<QuizPreview />} />
         <Route path="/host" element={<Host/>} />

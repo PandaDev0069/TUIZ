@@ -585,10 +585,13 @@ router.post('/create', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.aut
 // Get user's quizzes
 router.get('/my-quizzes', RateLimitMiddleware.createReadLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
+    // Get user ID from authenticated request
+    const userId = req.user.id;
+    
     // Create user-scoped Supabase client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
-  const { data: quizzes, error } = await userSupabase
+    const { data: quizzes, error } = await userSupabase
       .from('question_sets')
       .select(`
         id,
@@ -609,6 +612,7 @@ router.get('/my-quizzes', RateLimitMiddleware.createReadLimit(), AuthMiddleware.
         created_at,
         updated_at
       `)
+      .eq('user_id', userId) // Explicitly filter by user ID
       .order('updated_at', { ascending: false });
 
     if (error) {
@@ -627,6 +631,349 @@ router.get('/my-quizzes', RateLimitMiddleware.createReadLimit(), AuthMiddleware.
 
   } catch (error) {
     console.error('Error fetching quizzes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
+// Get public quizzes (no authentication required for browsing public content)
+router.get('/public/browse', RateLimitMiddleware.createReadLimit(), async (req, res) => {
+  try {
+    const { 
+      category = '', 
+      difficulty = '', 
+      search = '', 
+      sort = 'updated_desc',
+      limit = 20,
+      offset = 0 
+    } = req.query;
+
+    // Use admin Supabase client for public data access (bypasses RLS)
+    const DatabaseManager = require('../../config/database');
+    const db = new DatabaseManager();
+    const supabase = db.supabaseAdmin || db.supabase; // Use admin client if available
+
+    let query = supabase
+      .from('question_sets')
+      .select(`
+        id,
+        title,
+        description,
+        category,
+        difficulty_level,
+        thumbnail_url,
+        total_questions,
+        times_played,
+        created_at,
+        updated_at,
+        is_public,
+        user_id,
+        users!inner(id, name)
+      `)
+      .eq('status', 'published')
+      .eq('is_public', true);
+
+    // Apply filters
+    if (category) {
+      query = query.eq('category', category);
+    }
+
+    if (difficulty) {
+      query = query.eq('difficulty_level', difficulty);
+    }
+
+    if (search) {
+      query = query.or(`title.ilike.%${search}%, description.ilike.%${search}%, category.ilike.%${search}%`);
+    }
+
+    // Apply sorting
+    switch (sort) {
+      case 'created_desc':
+        query = query.order('created_at', { ascending: false });
+        break;
+      case 'plays_desc':
+        query = query.order('times_played', { ascending: false });
+        break;
+      case 'questions_desc':
+        query = query.order('total_questions', { ascending: false });
+        break;
+      case 'title_asc':
+        query = query.order('title', { ascending: true });
+        break;
+      case 'updated_desc':
+      default:
+        query = query.order('updated_at', { ascending: false });
+        break;
+    }
+
+    // Apply pagination
+    query = query.range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+
+    const { data: quizzes, error } = await query;
+
+    if (error) {
+      console.error('Error fetching public quizzes:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error fetching public quizzes',
+        error: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      quizzes: quizzes || [],
+      pagination: {
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        hasMore: quizzes && quizzes.length === parseInt(limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching public quizzes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
+// Clone public quiz to user's library
+router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const publicQuizId = req.params.id;
+    const userId = req.user.id; // Use req.user.id instead of req.userId
+
+    console.log('🔄 Clone request started');
+    console.log('📋 Quiz ID:', publicQuizId);
+    console.log('👤 User ID:', userId);
+    console.log('🔐 User token present:', !!req.userToken);
+
+    // Create user-scoped Supabase client for reading public data
+    const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
+    
+    // Get admin client for write operations to bypass RLS
+    const DatabaseManager = require('../../config/database');
+    const db = new DatabaseManager();
+    const adminSupabase = db.supabaseAdmin || db.supabase;
+
+    console.log('📖 Fetching public quiz...');
+    // First, get the public quiz using user-scoped client for RLS compliance
+    const { data: publicQuiz, error: fetchError } = await userSupabase
+      .from('question_sets')
+      .select(`
+        *,
+        questions (
+          *,
+          answers (*)
+        )
+      `)
+      .eq('id', publicQuizId)
+      .eq('is_public', true)
+      .eq('status', 'published')
+      .single();
+
+    console.log('📊 Fetch result:', { found: !!publicQuiz, error: fetchError });
+
+    if (fetchError || !publicQuiz) {
+      console.log('❌ Public quiz not found');
+      return res.status(404).json({
+        success: false,
+        message: 'Public quiz not found'
+      });
+    }
+
+    console.log('✅ Public quiz found:', publicQuiz.title);
+    console.log('📊 Questions count:', publicQuiz.questions?.length || 0);
+    console.log('📊 Sample question answers:', publicQuiz.questions?.[0]?.answers?.length || 0);
+
+    // Check if user already has this quiz cloned (skip if cloned_from field doesn't exist yet)
+    try {
+      const { data: existingClone } = await userSupabase
+        .from('question_sets')
+        .select('id')
+        .eq('cloned_from', publicQuizId)
+        .single();
+
+      if (existingClone) {
+        return res.status(400).json({
+          success: false,
+          message: 'You have already cloned this quiz'
+        });
+      }
+    } catch (cloneCheckError) {
+      // If cloned_from field doesn't exist, continue with cloning
+      console.log('Clone check skipped (cloned_from field may not exist):', cloneCheckError.message);
+    }
+
+    console.log('✅ Public quiz found:', publicQuiz.title);
+    console.log('📝 Creating clone...');
+
+    // Create the cloned quiz using admin client to bypass RLS
+    let insertData = {
+      title: `${publicQuiz.title} (クローン)`,
+      description: publicQuiz.description,
+      category: publicQuiz.category,
+      difficulty_level: publicQuiz.difficulty_level,
+      estimated_duration: publicQuiz.estimated_duration,
+      total_questions: publicQuiz.total_questions || 0,
+      thumbnail_url: publicQuiz.thumbnail_url,
+      is_public: false,
+      status: 'draft',
+      user_id: userId, // Explicitly set the user_id
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // Add cloned_from field if it exists in the schema
+    try {
+      insertData.cloned_from = publicQuizId;
+    } catch (error) {
+      console.log('⚠️ cloned_from field may not exist yet');
+    }
+
+    console.log('📋 Insert data:', insertData);
+
+    const { data: clonedQuiz, error: cloneError } = await adminSupabase
+      .from('question_sets')
+      .insert(insertData)
+      .select()
+      .single();
+
+    console.log('📊 Clone result:', { success: !!clonedQuiz, error: cloneError });
+
+    if (cloneError) {
+      console.error('❌ Error cloning quiz:', cloneError);
+      console.error('📋 Insert data:', insertData);
+      return res.status(500).json({
+        success: false,
+        message: 'Error cloning quiz',
+        error: cloneError.message
+      });
+    }
+
+    // Clone questions and their answers
+    if (publicQuiz.questions && publicQuiz.questions.length > 0) {
+      console.log('🔄 Cloning', publicQuiz.questions.length, 'questions...');
+      
+      for (let i = 0; i < publicQuiz.questions.length; i++) {
+        const originalQuestion = publicQuiz.questions[i];
+        
+        // Create question with correct schema
+        const questionData = {
+          question_set_id: clonedQuiz.id,
+          question_text: originalQuestion.question_text,
+          question_type: originalQuestion.question_type,
+          image_url: originalQuestion.image_url,
+          time_limit: originalQuestion.time_limit || 30,
+          points: originalQuestion.points || 100,
+          difficulty: originalQuestion.difficulty || 'medium',
+          order_index: i,
+          explanation_title: originalQuestion.explanation_title,
+          explanation_text: originalQuestion.explanation_text,
+          explanation_image_url: originalQuestion.explanation_image_url,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        const { data: clonedQuestion, error: questionError } = await adminSupabase
+          .from('questions')
+          .insert(questionData)
+          .select()
+          .single();
+
+        if (questionError) {
+          console.error('❌ Error cloning question:', questionError);
+          continue; // Skip this question but continue with others
+        }
+
+        console.log('✅ Question cloned:', clonedQuestion.id);
+
+        // Clone answers for this question (if they exist in the original)
+        if (originalQuestion.answers && originalQuestion.answers.length > 0) {
+          const answersData = originalQuestion.answers.map((answer, answerIndex) => ({
+            question_id: clonedQuestion.id,
+            answer_text: answer.answer_text,
+            is_correct: answer.is_correct,
+            order_index: answerIndex,
+            image_url: answer.image_url,
+            answer_explanation: answer.answer_explanation,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }));
+
+          const { error: answersError } = await adminSupabase
+            .from('answers')
+            .insert(answersData);
+
+          if (answersError) {
+            console.error('❌ Error cloning answers for question:', answersError);
+          } else {
+            console.log('✅ Answers cloned for question:', clonedQuestion.id);
+          }
+        } else {
+          // Handle old-style questions with correct_answers/incorrect_answers arrays
+          const answers = [];
+          
+          if (originalQuestion.correct_answers) {
+            originalQuestion.correct_answers.forEach((answer, idx) => {
+              answers.push({
+                question_id: clonedQuestion.id,
+                answer_text: answer,
+                is_correct: true,
+                order_index: answers.length,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+            });
+          }
+          
+          if (originalQuestion.incorrect_answers) {
+            originalQuestion.incorrect_answers.forEach((answer, idx) => {
+              answers.push({
+                question_id: clonedQuestion.id,
+                answer_text: answer,
+                is_correct: false,
+                order_index: answers.length,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+            });
+          }
+
+          if (answers.length > 0) {
+            const { error: answersError } = await adminSupabase
+              .from('answers')
+              .insert(answers);
+
+            if (answersError) {
+              console.error('❌ Error cloning legacy answers:', answersError);
+            } else {
+              console.log('✅ Legacy answers cloned for question:', clonedQuestion.id);
+            }
+          }
+        }
+      }
+      
+      console.log('✅ All questions cloned successfully');
+    }
+
+    res.json({
+      success: true,
+      message: 'Quiz successfully cloned to your library',
+      clonedQuiz: {
+        id: clonedQuiz.id,
+        title: clonedQuiz.title
+      }
+    });
+
+  } catch (error) {
+    console.error('Error cloning public quiz:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
