@@ -841,7 +841,7 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
           
         if (downloadError) {
           console.warn('⚠️ Failed to download original image for cloning:', downloadError.message);
-          return originalImageUrl; // Return original URL as fallback
+          return null; // Return null to indicate failure to clone image
         }
         
         // Upload to new location
