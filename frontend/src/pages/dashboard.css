@@ -540,12 +540,34 @@
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
+  overflow: hidden;
 }
 
 .dashboard__draft-card:hover {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.15);
+}
+
+.dashboard__draft-card-thumbnail {
+  width: 100%;
+  height: 120px;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dashboard__draft-card-thumbnail-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.dashboard__draft-card:hover .dashboard__draft-card-thumbnail-image {
+  transform: scale(1.05);
 }
 
 .dashboard__draft-card-header {
@@ -607,12 +629,34 @@
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
+  overflow: hidden;
 }
 
 .dashboard__quiz-card:hover {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.15);
+}
+
+.dashboard__quiz-card-thumbnail {
+  width: 100%;
+  height: 160px;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dashboard__quiz-card-thumbnail-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.dashboard__quiz-card:hover .dashboard__quiz-card-thumbnail-image {
+  transform: scale(1.05);
 }
 
 .dashboard__quiz-card-header {
@@ -930,8 +974,16 @@
     grid-template-columns: 1fr;
   }
 
+  .dashboard__quiz-card-thumbnail {
+    height: 140px;
+  }
+
   .dashboard__draft-card {
     min-width: 240px;
+  }
+
+  .dashboard__draft-card-thumbnail {
+    height: 100px;
   }
 }
 
@@ -999,6 +1051,14 @@
   .dashboard__stats--footer .dashboard__stats-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
+  }
+
+  .dashboard__quiz-card-thumbnail {
+    height: 120px;
+  }
+
+  .dashboard__draft-card-thumbnail {
+    height: 80px;
   }
 
   .dashboard__quiz-card-actions,

@@ -43,6 +43,8 @@ function Badge({ tone = "slate", children }) {
 }
 
 function QuizCard({ quiz, onEdit, onStart, onDelete }) {
+  const [thumbnailError, setThumbnailError] = useState(false);
+
   const getDifficultyLabel = (difficulty) => {
     switch (difficulty) {
       case 'easy': return '簡単';
@@ -53,8 +55,27 @@ function QuizCard({ quiz, onEdit, onStart, onDelete }) {
     }
   };
 
+  const handleThumbnailError = () => {
+    setThumbnailError(true);
+  };
+
+  const handleThumbnailLoad = () => {
+    setThumbnailError(false);
+  };
+
   return (
     <div className="dashboard__quiz-card">
+      {quiz.thumbnail_url && !thumbnailError && (
+        <div className="dashboard__quiz-card-thumbnail">
+          <img 
+            src={quiz.thumbnail_url} 
+            alt={`${quiz.title} thumbnail`}
+            className="dashboard__quiz-card-thumbnail-image"
+            onError={handleThumbnailError}
+            onLoad={handleThumbnailLoad}
+          />
+        </div>
+      )}
       <div className="dashboard__quiz-card-header">
         <div className={`dashboard__quiz-card-visibility ${quiz.is_public ? 'dashboard__quiz-card-visibility--public' : 'dashboard__quiz-card-visibility--private'}`}>
           {quiz.is_public ? <Globe size={14} /> : <GlobeLock size={14} />}
@@ -88,8 +109,29 @@ function QuizCard({ quiz, onEdit, onStart, onDelete }) {
 }
 
 function DraftCard({ draft, onEdit, onDelete }) {
+  const [thumbnailError, setThumbnailError] = useState(false);
+
+  const handleThumbnailError = () => {
+    setThumbnailError(true);
+  };
+
+  const handleThumbnailLoad = () => {
+    setThumbnailError(false);
+  };
+
   return (
     <div className="dashboard__draft-card">
+      {draft.thumbnail_url && !thumbnailError && (
+        <div className="dashboard__draft-card-thumbnail">
+          <img 
+            src={draft.thumbnail_url} 
+            alt={`${draft.title} thumbnail`}
+            className="dashboard__draft-card-thumbnail-image"
+            onError={handleThumbnailError}
+            onLoad={handleThumbnailLoad}
+          />
+        </div>
+      )}
       <div className="dashboard__draft-card-header">
         <div className="dashboard__draft-card-date">最終更新 {new Date(draft.updated_at).toLocaleDateString()}</div>
         <h3 className="dashboard__draft-card-title">{draft.title}</h3>
