@@ -6,8 +6,7 @@
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
   color: white;
   font-family: 'Poppins', sans-serif;
-}hboard.css */
-
+}
 
 /* Header */
 .dashboard__header {
@@ -503,6 +502,9 @@
 /* Draft Section */
 .dashboard__drafts {
   margin-bottom: 2rem;
+  width: 95%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .dashboard__horizontal-scroll {

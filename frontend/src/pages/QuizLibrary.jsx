@@ -6,6 +6,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useConfirmation } from '../hooks/useConfirmation';
 import './QuizLibrary.css';
+import './Dashboard.css'; // Import Dashboard styles for My Library cards
 
 // Lucide Icons
 import { 
@@ -14,17 +15,26 @@ import {
   List, 
   Globe,
   GlobeLock,
-  Plus,
   Eye,
   Download,
   Play,
-  Filter,
-  SortAsc,
-  ArrowLeft
+  ArrowLeft,
+  Edit,
+  Trash2,
+  X,
+  Book,
+  FolderOpen,
+  SearchX
 } from 'lucide-react';
 
 // Helper Components
-function Badge({ tone = "slate", children }) {
+function Badge({ tone = "slate", children, useDashboardStyle = false }) {
+  if (useDashboardStyle) {
+    // Use Dashboard badge styling
+    return <span className={`dashboard__badge dashboard__badge--${tone}`}>{children}</span>;
+  }
+  
+  // Use Quiz Library badge styling
   const toneClasses = {
     slate: "quiz-library__badge--slate",
     green: "quiz-library__badge--green",
@@ -59,7 +69,7 @@ function DifficultyBadge({ difficulty }) {
 function StatusBadge({ status }) {
   const getStatusLabel = (s) => {
     switch (s) {
-      case 'published': return { label: '公開', tone: 'green' };
+      case 'published': return { label: '公開済み', tone: 'green' };
       case 'draft': return { label: '下書き', tone: 'slate' };
       case 'creating': return { label: '作成中', tone: 'amber' };
       default: return { label: '—', tone: 'slate' };
@@ -70,7 +80,7 @@ function StatusBadge({ status }) {
   return <Badge tone={tone}>{label}</Badge>;
 }
 
-function QuizCard({ quiz, tab, onPreview, onClone, onStart }) {
+function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete }) {
   const [thumbnailError, setThumbnailError] = useState(false);
 
   const handleThumbnailError = () => {
@@ -81,6 +91,69 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart }) {
     setThumbnailError(false);
   };
 
+  const getDifficultyLabel = (difficulty) => {
+    switch (difficulty) {
+      case 'easy': return '簡単';
+      case 'medium': return '普通';
+      case 'hard': return '難しい';
+      case 'expert': return '上級';
+      default: return '普通';
+    }
+  };
+
+  // Use Dashboard-style design for "My Library" tab
+  if (tab === "library") {
+    return (
+      <div className="dashboard__quiz-card">
+        {quiz.thumbnail_url && !thumbnailError && (
+          <div className="dashboard__quiz-card-thumbnail">
+            <img 
+              src={quiz.thumbnail_url} 
+              alt={`${quiz.title} thumbnail`}
+              className="dashboard__quiz-card-thumbnail-image"
+              onError={handleThumbnailError}
+              onLoad={handleThumbnailLoad}
+            />
+          </div>
+        )}
+        <div className="dashboard__quiz-card-header">
+          <div className={`dashboard__quiz-card-visibility ${quiz.is_public ? 'dashboard__quiz-card-visibility--public' : 'dashboard__quiz-card-visibility--private'}`}>
+            {quiz.is_public ? <Globe size={14} /> : <GlobeLock size={14} />}
+            <span>{quiz.is_public ? '公開' : '非公開'}</span>
+          </div>
+          <div className="dashboard__quiz-card-meta">
+            <div className="dashboard__quiz-card-category">{quiz.category || "未分類"}</div>
+            <div className="dashboard__quiz-card-date">作成日 {quiz.created_at ? new Date(quiz.created_at).toLocaleDateString('ja-JP') : '不明'}</div>
+            <h3 className="dashboard__quiz-card-title">{quiz.title}</h3>
+            <p className="dashboard__quiz-card-description">{quiz.description || "説明なし"}</p>
+            <div className="dashboard__quiz-card-badges">
+              <Badge tone="blue" useDashboardStyle={true}>{getDifficultyLabel(quiz.difficulty_level)}</Badge>
+              <Badge tone="green" useDashboardStyle={true}>{quiz.total_questions || 0} 問</Badge>
+              <span className="dashboard__quiz-card-plays">プレイ {quiz.times_played || 0}</span>
+            </div>
+          </div>
+        </div>
+        <div className="dashboard__quiz-card-actions">
+          <button 
+            className="dashboard__button dashboard__button--primary" 
+            onClick={() => onPreview(quiz)}
+          >
+            <Eye size={16} /> 詳細
+          </button>
+          {quiz.status === 'published' && (
+            <button 
+              className="dashboard__button dashboard__button--secondary" 
+              onClick={() => onStart(quiz)}
+            >
+              <Play size={16} /> ゲーム開始
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Original Quiz Library design for "Public Browse" tab
   return (
     <div className="quiz-library__card">
       {quiz.thumbnail_url && !thumbnailError && (
@@ -108,7 +181,6 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart }) {
 
         <div className="quiz-library__card-meta">
           <div className="quiz-library__card-badges">
-            <StatusBadge status={quiz.status} />
             <DifficultyBadge difficulty={quiz.difficulty_level} />
             {quiz.is_public ? (
               <Badge tone="blue"><Globe size={12} /> 公開</Badge>
@@ -140,28 +212,19 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart }) {
             <Eye size={16} /> 詳細
           </button>
           
-          {tab === "public" ? (
-            <button 
-              className="quiz-library__button quiz-library__button--primary"
-              onClick={() => onClone(quiz)}
-            >
-              <Download size={16} /> ライブラリに追加
-            </button>
-          ) : (
-            <button 
-              className="quiz-library__button quiz-library__button--primary"
-              onClick={() => onStart(quiz)}
-            >
-              <Play size={16} /> ゲーム開始
-            </button>
-          )}
+          <button 
+            className="quiz-library__button quiz-library__button--primary"
+            onClick={() => onClone(quiz)}
+          >
+            <Download size={16} /> ライブラリに追加
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, tab }) {
+function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, onEdit, onDelete, tab }) {
   if (!isOpen || !quiz) return null;
 
   return (
@@ -171,7 +234,7 @@ function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, tab }) {
           <div>
             <h3 className="quiz-library__modal-title">{quiz.title}</h3>
             <div className="quiz-library__modal-meta">
-              <StatusBadge status={quiz.status} />
+              {tab === "library" && <StatusBadge status={quiz.status} />}
               <DifficultyBadge difficulty={quiz.difficulty_level} />
               {quiz.is_public ? (
                 <Badge tone="blue"><Globe size={12} /> 公開</Badge>
@@ -187,7 +250,7 @@ function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, tab }) {
             className="quiz-library__modal-close"
             onClick={onClose}
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
 
@@ -227,12 +290,28 @@ function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, tab }) {
               <Download size={16} /> ライブラリに追加
             </button>
           )}
-          <button 
-            className="quiz-library__button quiz-library__button--primary"
-            onClick={() => onStart(quiz)}
-          >
-            <Play size={16} /> ゲーム開始
-          </button>
+          {tab === "library" && (
+            <>
+              <button 
+                className="quiz-library__button quiz-library__button--secondary"
+                onClick={() => onEdit(quiz)}
+              >
+                <Edit size={16} /> 編集
+              </button>
+              <button 
+                className="quiz-library__button quiz-library__button--danger"
+                onClick={() => onDelete(quiz)}
+              >
+                <Trash2 size={16} /> 削除
+              </button>
+              <button 
+                className="quiz-library__button quiz-library__button--primary"
+                onClick={() => onStart(quiz)}
+              >
+                <Play size={16} /> ゲーム開始
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -245,7 +324,7 @@ function EmptyState({ tab, query }) {
       return {
         title: "検索結果が見つかりません",
         description: "検索条件を変更してもう一度お試しください。",
-        emoji: "🔍"
+        icon: <SearchX size={48} />
       };
     }
     
@@ -253,22 +332,22 @@ function EmptyState({ tab, query }) {
       return {
         title: "公開クイズが見つかりません",
         description: "フィルターを調整してもう一度お試しください。",
-        emoji: "🌐"
+        icon: <Globe size={48} />
       };
     }
     
     return {
       title: "マイライブラリにクイズがありません",
       description: "公開クイズをライブラリに追加してみましょう。",
-      emoji: "📚"
+      icon: <Book size={48} />
     };
   };
 
-  const { title, description, emoji } = getEmptyContent();
+  const { title, description, icon } = getEmptyContent();
 
   return (
     <div className="quiz-library__empty">
-      <div className="quiz-library__empty-icon">{emoji}</div>
+      <div className="quiz-library__empty-icon">{icon}</div>
       <h3 className="quiz-library__empty-title">{title}</h3>
       <p className="quiz-library__empty-description">{description}</p>
     </div>
@@ -282,7 +361,7 @@ const QuizLibrary = () => {
   const searchRef = useRef(null);
 
   // State
-  const [tab, setTab] = useState("public"); // public | library
+  const [tab, setTab] = useState("library"); // library | public
   const [view, setView] = useState("grid"); // grid | list
   const [loading, setLoading] = useState(false);
   const [quizzes, setQuizzes] = useState([]);
@@ -416,6 +495,52 @@ const QuizLibrary = () => {
     alert(`ゲーム開始: ${quiz.title}`);
   };
 
+  const handleEditQuiz = async (quiz) => {
+    try {
+      await apiCall(`/quiz/${quiz.id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ 
+          status: 'draft',
+          was_published: true
+        })
+      });
+      
+      showSuccess('クイズが編集モードになりました。');
+      
+      navigate('/create-quiz', { 
+        state: { 
+          editMode: true, 
+          questionSetId: quiz.id,
+          wasPublished: quiz.status === 'published'
+        } 
+      });
+    } catch (error) {
+      console.error('Error setting quiz to draft mode:', error);
+      showError('編集モードへの変更に失敗しました: ' + error.message);
+    }
+  };
+
+  const handleDeleteQuiz = async (quiz) => {
+    try {
+      const confirmed = await showConfirmation({
+        title: 'クイズセットを削除',
+        message: `"${quiz.title}" を削除しますか？この操作は取り消せません。`,
+        confirmText: '削除する',
+        cancelText: 'キャンセル',
+        type: 'danger'
+      });
+
+      if (!confirmed) return;
+      
+      await apiCall(`/quiz/${quiz.id}`, { method: 'DELETE' });
+      showSuccess('クイズセットが削除されました。');
+      fetchQuizzes(); // Refresh the quiz list
+    } catch (error) {
+      console.error('Error deleting quiz set:', error);
+      showError('削除に失敗しました: ' + error.message);
+    }
+  };
+
   const filteredQuizzes = useMemo(() => {
     if (tab === "public") {
       return quizzes; // Already filtered on server
@@ -451,22 +576,39 @@ const QuizLibrary = () => {
     return filtered;
   }, [quizzes, sort, tab]);
 
+  // Separate quizzes by status for My Library
+  const groupedQuizzes = useMemo(() => {
+    if (tab !== "library") {
+      return { published: filteredQuizzes, draft: [] };
+    }
+
+    const published = filteredQuizzes.filter(quiz => quiz.status === 'published');
+    const draft = filteredQuizzes.filter(quiz => quiz.status === 'draft' || quiz.status === 'creating');
+
+    return { published, draft };
+  }, [filteredQuizzes, tab]);
+
   return (
     <div className="quiz-library">
+      {/* Back Button */}
+      <button 
+        className="quiz-library__back-button"
+        onClick={() => navigate('/dashboard')}
+        title="ダッシュボードに戻る"
+      >
+        <ArrowLeft size={20} />
+        <span>ダッシュボード</span>
+      </button>
+
       {/* Header */}
       <header className="quiz-library__header">
         <div className="quiz-library__header-content">
           <div className="quiz-library__header-left">
-            <button 
-              className="quiz-library__back-btn"
-              onClick={() => navigate('/dashboard')}
-              title="ダッシュボードに戻る"
-            >
-              <ArrowLeft size={16} />
-              ダッシュボード
-            </button>
             <div className="quiz-library__title-section">
-              <h1 className="quiz-library__title">📚 クイズライブラリ</h1>
+              <h1 className="quiz-library__title">
+                <FolderOpen size={24} style={{ display: 'inline', marginRight: '8px' }} />
+                クイズライブラリ
+              </h1>
               <p className="quiz-library__subtitle">
                 公開クイズを探索してライブラリに追加
               </p>
@@ -475,16 +617,16 @@ const QuizLibrary = () => {
           
           <div className="quiz-library__tabs">
             <button 
-              className={`quiz-library__tab ${tab === "public" ? "quiz-library__tab--active" : ""}`}
-              onClick={() => setTab("public")}
-            >
-              公開クイズを探す
-            </button>
-            <button 
               className={`quiz-library__tab ${tab === "library" ? "quiz-library__tab--active" : ""}`}
               onClick={() => setTab("library")}
             >
               マイライブラリ
+            </button>
+            <button 
+              className={`quiz-library__tab ${tab === "public" ? "quiz-library__tab--active" : ""}`}
+              onClick={() => setTab("public")}
+            >
+              公開クイズを探す
             </button>
           </div>
         </div>
@@ -558,72 +700,199 @@ const QuizLibrary = () => {
           <EmptyState tab={tab} query={query} />
         ) : (
           <div className={`quiz-library__content ${view === "list" ? "quiz-library__content--list" : ""}`}>
-            {view === "grid" ? (
-              <div className="quiz-library__grid">
-                {filteredQuizzes.map(quiz => (
-                  <QuizCard
-                    key={quiz.id}
-                    quiz={quiz}
-                    tab={tab}
-                    onPreview={(quiz) => setPreview({ open: true, quiz })}
-                    onClone={handleCloneQuiz}
-                    onStart={handleStartQuiz}
-                  />
-                ))}
+            {tab === "library" ? (
+              // Grouped view for My Library
+              <div>
+                {groupedQuizzes.published.length > 0 && (
+                  <div className="quiz-library__section">
+                    <h2 className="quiz-library__section-title">公開済みクイズ ({groupedQuizzes.published.length})</h2>
+                    {view === "grid" ? (
+                      <div className="quiz-library__grid">
+                        {groupedQuizzes.published.map(quiz => (
+                          <QuizCard
+                            key={quiz.id}
+                            quiz={quiz}
+                            tab={tab}
+                            onPreview={(quiz) => setPreview({ open: true, quiz })}
+                            onClone={handleCloneQuiz}
+                            onStart={handleStartQuiz}
+                            onEdit={handleEditQuiz}
+                            onDelete={handleDeleteQuiz}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="quiz-library__list">
+                        <div className="quiz-library__list-header">
+                          <div className="quiz-library__list-column">タイトル</div>
+                          <div className="quiz-library__list-column">難易度</div>
+                          <div className="quiz-library__list-column">問題数</div>
+                          <div className="quiz-library__list-column">プレイ</div>
+                          <div className="quiz-library__list-column">更新日</div>
+                          <div className="quiz-library__list-column">操作</div>
+                        </div>
+                        {groupedQuizzes.published.map(quiz => (
+                          <div key={quiz.id} className="quiz-library__list-row">
+                            <div className="quiz-library__list-cell">
+                              <div className="quiz-library__list-title">{quiz.title}</div>
+                            </div>
+                            <div className="quiz-library__list-cell">
+                              <DifficultyBadge difficulty={quiz.difficulty_level} />
+                            </div>
+                            <div className="quiz-library__list-cell">{quiz.total_questions || 0}</div>
+                            <div className="quiz-library__list-cell">{quiz.times_played || 0}</div>
+                            <div className="quiz-library__list-cell">
+                              {new Date(quiz.updated_at).toLocaleDateString('ja-JP')}
+                            </div>
+                            <div className="quiz-library__list-cell">
+                              <div className="quiz-library__list-actions">
+                                <button 
+                                  className="quiz-library__button quiz-library__button--small"
+                                  onClick={() => setPreview({ open: true, quiz })}
+                                >
+                                  詳細
+                                </button>
+                                <button 
+                                  className="quiz-library__button quiz-library__button--small quiz-library__button--primary"
+                                  onClick={() => handleStartQuiz(quiz)}
+                                >
+                                  開始
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {groupedQuizzes.draft.length > 0 && (
+                  <div className="quiz-library__section">
+                    <h2 className="quiz-library__section-title">下書き ({groupedQuizzes.draft.length})</h2>
+                    {view === "grid" ? (
+                      <div className="quiz-library__grid">
+                        {groupedQuizzes.draft.map(quiz => (
+                          <QuizCard
+                            key={quiz.id}
+                            quiz={quiz}
+                            tab={tab}
+                            onPreview={(quiz) => setPreview({ open: true, quiz })}
+                            onClone={handleCloneQuiz}
+                            onStart={handleStartQuiz}
+                            onEdit={handleEditQuiz}
+                            onDelete={handleDeleteQuiz}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="quiz-library__list">
+                        <div className="quiz-library__list-header">
+                          <div className="quiz-library__list-column">タイトル</div>
+                          <div className="quiz-library__list-column">難易度</div>
+                          <div className="quiz-library__list-column">問題数</div>
+                          <div className="quiz-library__list-column">プレイ</div>
+                          <div className="quiz-library__list-column">更新日</div>
+                          <div className="quiz-library__list-column">操作</div>
+                        </div>
+                        {groupedQuizzes.draft.map(quiz => (
+                          <div key={quiz.id} className="quiz-library__list-row">
+                            <div className="quiz-library__list-cell">
+                              <div className="quiz-library__list-title">{quiz.title}</div>
+                            </div>
+                            <div className="quiz-library__list-cell">
+                              <DifficultyBadge difficulty={quiz.difficulty_level} />
+                            </div>
+                            <div className="quiz-library__list-cell">{quiz.total_questions || 0}</div>
+                            <div className="quiz-library__list-cell">{quiz.times_played || 0}</div>
+                            <div className="quiz-library__list-cell">
+                              {new Date(quiz.updated_at).toLocaleDateString('ja-JP')}
+                            </div>
+                            <div className="quiz-library__list-cell">
+                              <div className="quiz-library__list-actions">
+                                <button 
+                                  className="quiz-library__button quiz-library__button--small"
+                                  onClick={() => setPreview({ open: true, quiz })}
+                                >
+                                  詳細
+                                </button>
+                                {/* No start button for drafts */}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {groupedQuizzes.published.length === 0 && groupedQuizzes.draft.length === 0 && (
+                  <EmptyState tab={tab} query={query} />
+                )}
               </div>
             ) : (
-              <div className="quiz-library__list">
-                {/* List view implementation */}
-                <div className="quiz-library__list-header">
-                  <div className="quiz-library__list-column">タイトル</div>
-                  <div className="quiz-library__list-column">難易度</div>
-                  <div className="quiz-library__list-column">問題数</div>
-                  <div className="quiz-library__list-column">プレイ</div>
-                  <div className="quiz-library__list-column">更新日</div>
-                  <div className="quiz-library__list-column">操作</div>
-                </div>
-                {filteredQuizzes.map(quiz => (
-                  <div key={quiz.id} className="quiz-library__list-row">
-                    <div className="quiz-library__list-cell">
-                      <div className="quiz-library__list-title">{quiz.title}</div>
-                      <div className="quiz-library__list-description">{quiz.description}</div>
-                    </div>
-                    <div className="quiz-library__list-cell">
-                      <DifficultyBadge difficulty={quiz.difficulty_level} />
-                    </div>
-                    <div className="quiz-library__list-cell">{quiz.total_questions || 0}</div>
-                    <div className="quiz-library__list-cell">{quiz.times_played || 0}</div>
-                    <div className="quiz-library__list-cell">
-                      {new Date(quiz.updated_at).toLocaleDateString('ja-JP')}
-                    </div>
-                    <div className="quiz-library__list-cell">
-                      <div className="quiz-library__list-actions">
-                        <button 
-                          className="quiz-library__button quiz-library__button--small"
-                          onClick={() => setPreview({ open: true, quiz })}
-                        >
-                          詳細
-                        </button>
-                        {tab === "public" ? (
-                          <button 
-                            className="quiz-library__button quiz-library__button--small quiz-library__button--primary"
-                            onClick={() => handleCloneQuiz(quiz)}
-                          >
-                            追加
-                          </button>
-                        ) : (
-                          <button 
-                            className="quiz-library__button quiz-library__button--small quiz-library__button--primary"
-                            onClick={() => handleStartQuiz(quiz)}
-                          >
-                            開始
-                          </button>
-                        )}
-                      </div>
-                    </div>
+              // Original view for Public Browse
+              <>
+                {view === "grid" ? (
+                  <div className="quiz-library__grid">
+                    {filteredQuizzes.map(quiz => (
+                      <QuizCard
+                        key={quiz.id}
+                        quiz={quiz}
+                        tab={tab}
+                        onPreview={(quiz) => setPreview({ open: true, quiz })}
+                        onClone={handleCloneQuiz}
+                        onStart={handleStartQuiz}
+                        onEdit={handleEditQuiz}
+                        onDelete={handleDeleteQuiz}
+                      />
+                    ))}
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div className="quiz-library__list">
+                    {/* List view implementation */}
+                    <div className="quiz-library__list-header">
+                      <div className="quiz-library__list-column">タイトル</div>
+                      <div className="quiz-library__list-column">難易度</div>
+                      <div className="quiz-library__list-column">問題数</div>
+                      <div className="quiz-library__list-column">プレイ</div>
+                      <div className="quiz-library__list-column">更新日</div>
+                      <div className="quiz-library__list-column">操作</div>
+                    </div>
+                    {filteredQuizzes.map(quiz => (
+                      <div key={quiz.id} className="quiz-library__list-row">
+                        <div className="quiz-library__list-cell">
+                          <div className="quiz-library__list-title">{quiz.title}</div>
+                        </div>
+                        <div className="quiz-library__list-cell">
+                          <DifficultyBadge difficulty={quiz.difficulty_level} />
+                        </div>
+                        <div className="quiz-library__list-cell">{quiz.total_questions || 0}</div>
+                        <div className="quiz-library__list-cell">{quiz.times_played || 0}</div>
+                        <div className="quiz-library__list-cell">
+                          {new Date(quiz.updated_at).toLocaleDateString('ja-JP')}
+                        </div>
+                        <div className="quiz-library__list-cell">
+                          <div className="quiz-library__list-actions">
+                            <button 
+                              className="quiz-library__button quiz-library__button--small"
+                              onClick={() => setPreview({ open: true, quiz })}
+                            >
+                              詳細
+                            </button>
+                            <button 
+                              className="quiz-library__button quiz-library__button--small quiz-library__button--primary"
+                              onClick={() => handleCloneQuiz(quiz)}
+                            >
+                              追加
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -636,6 +905,8 @@ const QuizLibrary = () => {
         onClose={() => setPreview({ open: false, quiz: null })}
         onClone={handleCloneQuiz}
         onStart={handleStartQuiz}
+        onEdit={handleEditQuiz}
+        onDelete={handleDeleteQuiz}
         tab={tab}
       />
 
