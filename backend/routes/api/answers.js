@@ -7,6 +7,7 @@ const AuthMiddleware = require('../../middleware/auth');
 // Initialize database
 const db = new DatabaseManager();
 const OrderManager = require('../../utils/OrderManager');
+const logger = require('./utils/logger');
 
 // Initialize order manager
 const orderManager = new OrderManager();
@@ -119,7 +120,7 @@ router.delete('/question/:id', AuthMiddleware.authenticateToken, async (req, res
       .select();
     
     if (deleteError) {
-      console.error('Error deleting answers:', deleteError);
+      logger.error('Error deleting answers:', deleteError);
       return res.status(500).json({ 
         success: false,
         error: 'Failed to delete answers' 
@@ -132,7 +133,7 @@ router.delete('/question/:id', AuthMiddleware.authenticateToken, async (req, res
       message: `Deleted ${deletedAnswers ? deletedAnswers.length : 0} answers for question ${questionId}`
     });
   } catch (error) {
-    console.error('Error in bulk delete answers:', error);
+    logger.error('Error in bulk delete answers:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -152,7 +153,7 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
       answer_explanation
     } = req.body;
     
-    console.log('Creating answer with data:', { question_id, answer_text, is_correct, order_index });
+    logger.debug('Creating answer with data:', { question_id, answer_text, is_correct, order_index });
     
     // Validate required fields
     if (!question_id || !answer_text) {
@@ -180,20 +181,20 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
       .single();
     
     if (error) {
-      console.error('Error creating answer:', error);
+      logger.error('Error creating answer:', error);
       return res.status(500).json({ 
         success: false,
         error: error.message 
       });
     }
     
-    console.log('Answer created:', answer.id, 'for question:', question_id);
+    logger.debug('Answer created:', answer.id, 'for question:', question_id);
     res.status(201).json({
       success: true,
       answer: answer
     });
   } catch (error) {
-    console.error('Error in answer creation:', error);
+    logger.error('Error in answer creation:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -246,20 +247,20 @@ router.put('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
       .single();
     
     if (error) {
-      console.error('Error updating answer:', error);
+      logger.error('Error updating answer:', error);
       return res.status(500).json({ 
         success: false,
         error: error.message 
       });
     }
     
-    console.log('Answer updated:', updatedAnswer.id);
+    logger.debug('Answer updated:', updatedAnswer.id);
     res.json({
       success: true,
       answer: updatedAnswer
     });
   } catch (error) {
-    console.error('Error in answer update:', error);
+    logger.error('Error in answer update:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -296,20 +297,20 @@ router.delete('/:id', AuthMiddleware.authenticateToken, async (req, res) => {
       .eq('id', id);
     
     if (error) {
-      console.error('Error deleting answer:', error);
+      logger.error('Error deleting answer:', error);
       return res.status(500).json({ 
         success: false,
         error: error.message 
       });
     }
     
-    console.log('Answer deleted:', id);
+    logger.debug('Answer deleted:', id);
     res.json({ 
       success: true,
       message: 'Answer deleted successfully' 
     });
   } catch (error) {
-    console.error('Error in answer deletion:', error);
+    logger.error('Error in answer deletion:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -364,14 +365,14 @@ router.post('/bulk', async (req, res) => {
       .select();
     
     if (error) {
-      console.error('Error bulk creating answers:', error);
+      logger.error('Error bulk creating answers:', error);
       return res.status(500).json({ error: error.message });
     }
     
-    console.log(`Bulk created ${insertedAnswers.length} answers for question:`, question_id);
+    logger.debug(`Bulk created ${insertedAnswers.length} answers for question:`, question_id);
     res.status(201).json({ answers: insertedAnswers });
   } catch (error) {
-    console.error('Error in bulk answer creation:', error);
+    logger.error('Error in bulk answer creation:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -381,7 +382,7 @@ router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single
   try {
     const { id } = req.params;
     
-    console.log('Uploading answer image for answer:', id);
+    logger.debug('Uploading answer image for answer:', id);
     
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
@@ -409,7 +410,7 @@ router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single
     const fileName = `answer_${id}_${Date.now()}.${fileExtension}`;
     const filePath = `${userId}/${fileName}`;
     
-    console.log('Uploading answer image to storage:', filePath);
+    logger.debug('Uploading answer image to storage:', filePath);
     
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await db.supabaseAdmin.storage
@@ -421,7 +422,7 @@ router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single
       });
     
     if (uploadError) {
-      console.error('Storage upload error:', uploadError);
+      logger.error('Storage upload error:', uploadError);
       return res.status(500).json({ error: 'Failed to upload image' });
     }
     
@@ -430,7 +431,7 @@ router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single
       .from(process.env.STORAGE_BUCKET_ANSWER_IMAGES || 'answer-images')
       .getPublicUrl(filePath);
     
-    console.log('Generated answer image public URL:', publicUrl);
+    logger.debug('Generated answer image public URL:', publicUrl);
     
     // Update answer with image URL using user-scoped client
     const { data: updatedAnswer, error: updateError } = await userSupabase
@@ -443,11 +444,11 @@ router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single
       .single();
     
     if (updateError) {
-      console.error('Error updating answer with image URL:', updateError);
+      logger.error('Error updating answer with image URL:', updateError);
       return res.status(500).json({ error: updateError.message });
     }
     
-    console.log('Answer image uploaded successfully:', publicUrl);
+    logger.debug('Answer image uploaded successfully:', publicUrl);
     
     res.json({
       answer: updatedAnswer,
@@ -455,7 +456,7 @@ router.post('/:id/upload-image', AuthMiddleware.authenticateToken, upload.single
     });
     
   } catch (error) {
-    console.error('Error uploading answer image:', error);
+    logger.error('Error uploading answer image:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -505,7 +506,7 @@ router.delete('/:id/image', AuthMiddleware.authenticateToken, async (req, res) =
           .remove([filePath]);
         
         if (deleteError) {
-          console.error('Storage delete error:', deleteError);
+          logger.error('Storage delete error:', deleteError);
         }
       }
     }
@@ -521,7 +522,7 @@ router.delete('/:id/image', AuthMiddleware.authenticateToken, async (req, res) =
       .single();
     
     if (updateError) {
-      console.error('Error removing answer image references:', updateError);
+      logger.error('Error removing answer image references:', updateError);
       return res.status(500).json({ 
         success: false,
         error: updateError.message 
@@ -534,7 +535,7 @@ router.delete('/:id/image', AuthMiddleware.authenticateToken, async (req, res) =
     });
     
   } catch (error) {
-    console.error('Error deleting answer image:', error);
+    logger.error('Error deleting answer image:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -600,7 +601,7 @@ router.put('/question/:id/reorder', async (req, res) => {
     }
     
   } catch (error) {
-    console.error('Error reordering answers:', error);
+    logger.error('Error reordering answers:', error);
     res.status(500).json({ error: error.message });
   }
 });

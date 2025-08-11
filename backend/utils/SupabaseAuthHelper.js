@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const logger = require('./logger');
 
 class SupabaseAuthHelper {
   constructor(supabaseAdmin) {
@@ -24,8 +25,8 @@ class SupabaseAuthHelper {
       throw new Error('Invalid token: Token is empty, undefined, or null');
     }
     
-    console.log('🔐 Verifying token:', token.substring(0, 20) + '...');
-    console.log('🔐 Token length:', token.length);
+    logger.debug('🔐 Verifying token:', token.substring(0, 20) + '...');
+    logger.debug('🔐 Token length:', token.length);
     
     try {
       // Primary method: Use Supabase's built-in getUser method
@@ -33,7 +34,7 @@ class SupabaseAuthHelper {
       const { data: { user }, error } = await this.supabaseAdmin.auth.getUser(token);
       
       if (error) {
-        console.error('❌ Supabase token verification error:', error);
+        logger.error('❌ Supabase token verification error:', error);
         
         // Provide specific error messages based on error type
         if (error.message.includes('invalid_token') || error.message.includes('jwt')) {
@@ -53,7 +54,7 @@ class SupabaseAuthHelper {
         throw new Error('No user found for this token. The token may be invalid or the user may have been deleted.');
       }
       
-      console.log('✅ Token verified for user:', user.id, user.email);
+      logger.debug('✅ Token verified for user:', user.id, user.email);
       
       // Get user profile from database using adminClient to bypass RLS
       const { data: userProfile, error: profileError } = await this.supabaseAdmin
@@ -63,11 +64,11 @@ class SupabaseAuthHelper {
         .single();
       
       if (profileError) {
-        console.error('❌ Profile fetch error:', profileError);
+        logger.error('❌ Profile fetch error:', profileError);
         
         // If user profile doesn't exist, create it
         if (profileError.code === 'PGRST116') { // No rows returned
-          console.log('🆕 Creating user profile for:', user.email);
+          logger.debug('🆕 Creating user profile for:', user.email);
           const { data: newProfile, error: createError } = await this.supabaseAdmin
             .from('users')
             .insert({
@@ -79,11 +80,11 @@ class SupabaseAuthHelper {
             .single();
           
           if (createError) {
-            console.error('❌ Failed to create user profile:', createError);
+            logger.error('❌ Failed to create user profile:', createError);
             throw new Error('Failed to create user profile: ' + createError.message);
           }
           
-          console.log('✅ User profile created:', newProfile.name, newProfile.email);
+          logger.debug('✅ User profile created:', newProfile.name, newProfile.email);
           return newProfile;
         } else {
           throw new Error('User profile fetch failed: ' + profileError.message);
@@ -94,15 +95,15 @@ class SupabaseAuthHelper {
         throw new Error('User profile not found in database');
       }
       
-      console.log('✅ User profile found:', userProfile.name, userProfile.email);
+      logger.debug('✅ User profile found:', userProfile.name, userProfile.email);
       return userProfile;
       
     } catch (error) {
-      console.error('❌ Authentication error details:', error);
+      logger.error('❌ Authentication error details:', error);
       
       // If Supabase method fails, try manual JWT verification as fallback
       if (this.jwtSecret && error.message.includes('Token verification failed')) {
-        console.log('🔄 Attempting manual JWT verification as fallback...');
+        logger.debug('🔄 Attempting manual JWT verification as fallback...');
         return await this.manualJwtVerification(token);
       }
       
@@ -122,7 +123,7 @@ class SupabaseAuthHelper {
     
     try {
       const decoded = jwt.verify(token, this.jwtSecret);
-      console.log('✅ Manual JWT verification successful for user:', decoded.sub);
+      logger.debug('✅ Manual JWT verification successful for user:', decoded.sub);
       
       // Get user profile from database
       const { data: userProfile, error: profileError } = await this.supabaseAdmin
@@ -157,7 +158,7 @@ class SupabaseAuthHelper {
       return userProfile;
       
     } catch (jwtError) {
-      console.error('❌ Manual JWT verification failed:', jwtError);
+      logger.error('❌ Manual JWT verification failed:', jwtError);
       
       if (jwtError.name === 'TokenExpiredError') {
         throw new Error('Token has expired. Please log in again.');

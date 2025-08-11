@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const AuthMiddleware = require('../middleware/auth');
 const RateLimitMiddleware = require('../middleware/rateLimiter');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -107,7 +108,7 @@ router.post('/register', RateLimitMiddleware.createAuthLimit(), AuthMiddleware.l
     });
 
     if (error) {
-      console.error('Supabase registration error:', error);
+      logger.error('Supabase registration error:', error);
       
       if (error.message.includes('already registered')) {
         return res.status(400).json({
@@ -132,7 +133,7 @@ router.post('/register', RateLimitMiddleware.createAuthLimit(), AuthMiddleware.l
       });
 
     if (profileError) {
-      console.error('Profile creation error:', profileError);
+      logger.error('Profile creation error:', profileError);
       // Don't fail registration if profile creation fails
     }
 
@@ -143,7 +144,7 @@ router.post('/register', RateLimitMiddleware.createAuthLimit(), AuthMiddleware.l
     });
 
     if (sessionError) {
-      console.error('Session creation error:', sessionError);
+      logger.error('Session creation error:', sessionError);
       return res.status(201).json({
         success: true,
         message: 'アカウントが作成されました。ログインしてください。',
@@ -166,10 +167,10 @@ router.post('/register', RateLimitMiddleware.createAuthLimit(), AuthMiddleware.l
       token: sessionData.session.access_token
     });
 
-    console.log(`✅ New user registered: ${name} (${email})`);
+    logger.info(`✅ New user registered: ${name} (${email})`);
 
   } catch (error) {
-    console.error('Registration error:', error);
+    logger.error('Registration error:', error);
     
     if (error.message === 'Email already exists') {
       return res.status(400).json({
@@ -226,7 +227,7 @@ router.post('/login', RateLimitMiddleware.createAuthLimit(), AuthMiddleware.logi
     });
 
     if (error) {
-      console.error('Supabase login error:', error);
+      logger.error('Supabase login error:', error);
       return res.status(401).json({
         success: false,
         message: 'メールアドレス/名前またはパスワードが正しくありません。'
@@ -241,7 +242,7 @@ router.post('/login', RateLimitMiddleware.createAuthLimit(), AuthMiddleware.logi
       .single();
 
     if (profileError || !userProfile) {
-      console.error('Profile fetch error:', profileError);
+      logger.error('Profile fetch error:', profileError);
       return res.status(500).json({
         success: false,
         message: 'ユーザープロフィールの取得に失敗しました。'
@@ -260,10 +261,10 @@ router.post('/login', RateLimitMiddleware.createAuthLimit(), AuthMiddleware.logi
       token: data.session.access_token
     });
 
-    console.log(`✅ User logged in: ${userProfile.name} (${userProfile.email})`);
+    logger.debug(`✅ User logged in: ${userProfile.name} (${userProfile.email})`);
 
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     
     res.status(500).json({
       success: false,
@@ -325,7 +326,7 @@ router.post('/upload-avatar', RateLimitMiddleware.createUploadLimit(), AuthMiddl
       });
 
     if (uploadError) {
-      console.error('Storage upload error:', uploadError);
+      logger.error('Storage upload error:', uploadError);
       return res.status(500).json({
         success: false,
         message: 'ファイルのアップロードに失敗しました。'
@@ -348,7 +349,7 @@ router.post('/upload-avatar', RateLimitMiddleware.createUploadLimit(), AuthMiddl
       .single();
 
     if (updateError) {
-      console.error('Database update error:', updateError);
+      logger.error('Database update error:', updateError);
       
       // Clean up uploaded file
       await supabaseAdmin.storage
@@ -369,7 +370,7 @@ router.post('/upload-avatar', RateLimitMiddleware.createUploadLimit(), AuthMiddl
     });
 
   } catch (error) {
-    console.error('Avatar upload error:', error);
+    logger.error('Avatar upload error:', error);
     
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
@@ -440,7 +441,7 @@ router.put('/update-profile', RateLimitMiddleware.createModerateLimit(), AuthMid
       .single();
 
     if (updateError) {
-      console.error('Profile update error:', updateError);
+      logger.error('Profile update error:', updateError);
       return res.status(500).json({
         success: false,
         message: 'プロフィールの更新に失敗しました。'
@@ -454,7 +455,7 @@ router.put('/update-profile', RateLimitMiddleware.createModerateLimit(), AuthMid
     });
 
   } catch (error) {
-    console.error('Profile update error:', error);
+    logger.error('Profile update error:', error);
     res.status(500).json({
       success: false,
       message: 'プロフィールの更新中にエラーが発生しました。'
@@ -494,7 +495,7 @@ router.delete('/delete-avatar', RateLimitMiddleware.createModerateLimit(), AuthM
       .remove([filePath]);
 
     if (deleteError) {
-      console.error('Storage delete error:', deleteError);
+      logger.error('Storage delete error:', deleteError);
       // Continue anyway, as the file might not exist
     }
 
@@ -507,7 +508,7 @@ router.delete('/delete-avatar', RateLimitMiddleware.createModerateLimit(), AuthM
       .single();
 
     if (updateError) {
-      console.error('Database update error:', updateError);
+      logger.error('Database update error:', updateError);
       return res.status(500).json({
         success: false,
         message: 'プロフィールの更新に失敗しました。'
@@ -521,7 +522,7 @@ router.delete('/delete-avatar', RateLimitMiddleware.createModerateLimit(), AuthM
     });
 
   } catch (error) {
-    console.error('Avatar delete error:', error);
+    logger.error('Avatar delete error:', error);
     res.status(500).json({
       success: false,
       message: 'プロフィール画像の削除中にエラーが発生しました。'
@@ -561,7 +562,7 @@ router.post('/check-availability', RateLimitMiddleware.createGeneralLimit(), asy
     });
 
   } catch (error) {
-    console.error('Availability check error:', error);
+    logger.error('Availability check error:', error);
     res.status(500).json({
       success: false,
       message: 'チェック中にエラーが発生しました。'

@@ -102,7 +102,7 @@ app.use(express.urlencoded({
 app.use((error, req, res, next) => {
   if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
     if (isDevelopment || isLocalhost) {
-      console.error('Bad JSON body:', error.message);
+      logger.error('Bad JSON body:', error.message);
     }
     return res.status(400).json({ 
       error: 'Invalid JSON format',
@@ -112,7 +112,7 @@ app.use((error, req, res, next) => {
   
   if (error.type === 'entity.too.large') {
     if (isDevelopment || isLocalhost) {
-      console.error('Payload too large:', error.message);
+      logger.error('Payload too large:', error.message);
     }
     return res.status(413).json({ 
       error: 'Payload too large',
@@ -399,11 +399,11 @@ app.get('/api/cleanup/status', async (req, res) => {
         stats = statsResult.stats;
       } else {
         error = statsResult.error;
-        console.warn('⚠️ Cleanup stats function not available:', statsResult.error);
+        logger.warn('⚠️ Cleanup stats function not available:', statsResult.error);
       }
     } catch (statsError) {
       error = 'Cleanup stats function not available in database';
-      console.warn('⚠️ Cleanup stats error:', statsError.message);
+      logger.warn('⚠️ Cleanup stats error:', statsError.message);
     }
     
     res.json({
@@ -413,7 +413,7 @@ app.get('/api/cleanup/status', async (req, res) => {
       message: error ? 'Some cleanup features may not be available until database functions are deployed' : null
     });
   } catch (error) {
-    console.error('❌ Cleanup status endpoint error:', error);
+    logger.error('❌ Cleanup status endpoint error:', error);
     res.status(500).json({ 
       error: error.message,
       scheduler: cleanupScheduler ? cleanupScheduler.getStatus() : null
@@ -482,7 +482,7 @@ app.use('/api/game-settings', gameSettingsRoutes);
 
 // Global error handler - must be after all routes
 app.use((error, req, res, next) => {
-  console.error('Global error handler:', error.message);
+  logger.error('Global error handler:', error.message);
   
   // Handle specific error types
   if (error.type === 'entity.too.large') {
@@ -803,7 +803,7 @@ const proceedToNextQuestion = async (gameCode) => {
   // Prevent double question sending
   if (activeGame.questionInProgress) {
     if (isDevelopment || isLocalhost) {
-      console.log(`⚠️ Question transition already in progress for game ${gameCode}`);
+      logger.debug(`⚠️ Question transition already in progress for game ${gameCode}`);
     }
     return;
   }
@@ -930,7 +930,7 @@ const endGame = async (gameCode) => {
           logger.database(`✅ Updated database game status to 'finished' for game ${activeGame.id}`);
         }
       } else {
-        console.error(`❌ Failed to update database game status: ${statusResult.error}`);
+        logger.error(`❌ Failed to update database game status: ${statusResult.error}`);
       }
 
       // Increment times_played for the question set if this game was based on a question set
@@ -948,14 +948,14 @@ const endGame = async (gameCode) => {
               }
             }
           } else {
-            console.error(`❌ Failed to increment times_played: ${incrementResult.error}`);
+            logger.error(`❌ Failed to increment times_played: ${incrementResult.error}`);
           }
         } catch (incrementError) {
-          console.error('❌ Error incrementing times_played:', incrementError);
+          logger.error('❌ Error incrementing times_played:', incrementError);
         }
       }
     } catch (dbError) {
-      console.error('❌ Database error updating game status:', dbError);
+      logger.error('❌ Database error updating game status:', dbError);
     }
   }
 
@@ -1038,12 +1038,12 @@ io.on('connection', (socket) => {
             }
           } else {
             if (isDevelopment) {
-              console.warn(`⚠️ Could not fetch question set: ${qsError?.message || 'Not found'}`);
+              logger.warn(`⚠️ Could not fetch question set: ${qsError?.message || 'Not found'}`);
             }
             gameTitle = gameTitle || 'クイズゲーム'; // Default fallback title
           }
         } catch (fetchError) {
-          console.error('❌ Error fetching question set:', fetchError);
+          logger.error('❌ Error fetching question set:', fetchError);
           gameTitle = gameTitle || 'クイズゲーム'; // Default fallback title
         }
       }
@@ -1123,7 +1123,7 @@ io.on('connection', (socket) => {
         room.roomCode = gameCode; // Keep room code reference
       } else {
         if (isDevelopment) {
-          console.error(`❌ Could not find room ${gameCode} in RoomManager to update gameId`);
+          logger.error(`❌ Could not find room ${gameCode} in RoomManager to update gameId`);
         }
       }
       
@@ -1168,7 +1168,7 @@ io.on('connection', (socket) => {
       });
       
     } catch (error) {
-      console.error('❌ Error creating game:', error);
+      logger.error('❌ Error creating game:', error);
       socket.emit('error', { message: 'Failed to create game', error: error.message });
     }
   });
@@ -1201,7 +1201,7 @@ io.on('connection', (socket) => {
       const room = roomManager.getRoom(gameCode);
       if (room && room._pendingPlayersCap !== undefined) {
         if (isDevelopment) {
-          console.log(`🔄 Applying pending maxPlayers update: ${activeGame.game_settings?.maxPlayers} → ${room._pendingPlayersCap}`);
+          logger.debug(`🔄 Applying pending maxPlayers update: ${activeGame.game_settings?.maxPlayers} → ${room._pendingPlayersCap}`);
         }
         if (!activeGame.game_settings) activeGame.game_settings = {};
         activeGame.game_settings.maxPlayers = room._pendingPlayersCap;
@@ -1213,13 +1213,13 @@ io.on('connection', (socket) => {
       
       // Debug logging for game capacity check
       if (isDevelopment) {
-        console.log(`🔍 Game capacity check - Current players: ${activeGame.players.size}, Max players: ${maxPlayers}, Room pending cap: ${room?._pendingPlayersCap}`);
+        logger.debug(`🔍 Game capacity check - Current players: ${activeGame.players.size}, Max players: ${maxPlayers}, Room pending cap: ${room?._pendingPlayersCap}`);
       }
       
       // Check if game is full
       if (activeGame.players.size >= maxPlayers) {
         if (isDevelopment) {
-          console.log(`❌ Game ${gameCode} is full: ${activeGame.players.size}/${maxPlayers}`);
+          logger.debug(`❌ Game ${gameCode} is full: ${activeGame.players.size}/${maxPlayers}`);
         }
         socket.emit('error', { message: 'Game is full' });
         return;
@@ -1246,7 +1246,7 @@ io.on('connection', (socket) => {
           // Use the database UUID directly (no need to look up again)
           const gameUUID = activeGame.id;
           if (isDevelopment) {
-            console.log(`🔄 Adding player to database game ${gameUUID}...`);
+            logger.debug(`🔄 Adding player to database game ${gameUUID}...`);
           }
           
           const playerData = {
@@ -1257,7 +1257,7 @@ io.on('connection', (socket) => {
           
           if (playerData.is_host) {
             if (isDevelopment) {
-              console.log(`👑 Host ${playerName} is joining their own game`);
+              logger.debug(`👑 Host ${playerName} is joining their own game`);
             }
           }
           
@@ -1268,7 +1268,7 @@ io.on('connection', (socket) => {
             playerUUID = dbGamePlayer.player_id;
             
             if (isDevelopment || isLocalhost) {
-              console.log(`✅ Player ${playerName} added to database:
+              logger.debug(`✅ Player ${playerName} added to database:
               - Game ID: ${gameUUID}
               - Player UUID: ${playerUUID}
               - Type: ${dbGamePlayer.is_guest ? 'Guest' : 'User'}
@@ -1290,17 +1290,17 @@ io.on('connection', (socket) => {
             if (result.isReturningPlayer) {
               player.score = dbGamePlayer.current_score || 0;
               if (isDevelopment || isLocalhost) {
-                console.log(`♻️ Restored returning player score: ${player.score}`);
+                logger.debug(`♻️ Restored returning player score: ${player.score}`);
               }
             }
           } else {
             if (isDevelopment || isLocalhost) {
-              console.warn(`⚠️ Failed to add player to database: ${result.error}`);
+              logger.warn(`⚠️ Failed to add player to database: ${result.error}`);
             }
           }
         } catch (dbError) {
           if (isDevelopment || isLocalhost) {
-            console.error('❌ Database error while adding player:', dbError);
+            logger.error('❌ Database error while adding player:', dbError);
           }
         }
       }
@@ -1320,7 +1320,7 @@ io.on('connection', (socket) => {
         'Joined (Memory Only)';
       
       if (isDevelopment || isLocalhost) {
-        console.log(`✅ Player ${playerName} ${statusMsg.toLowerCase()} game ${gameCode} 
+        logger.debug(`✅ Player ${playerName} ${statusMsg.toLowerCase()} game ${gameCode} 
         - Socket ID: ${socket.id}
         - Player UUID: ${playerUUID || 'None'}
         - Score: ${player.score}`);
@@ -1340,7 +1340,7 @@ io.on('connection', (socket) => {
           }
         });
       } catch (emitError) {
-        console.error(`❌ Error sending joinedGame event to ${playerName}:`, emitError);
+        logger.error(`❌ Error sending joinedGame event to ${playerName}:`, emitError);
       }
       
       // Wait a brief moment to ensure the new player's frontend is ready to receive events
@@ -1370,7 +1370,7 @@ io.on('connection', (socket) => {
       }, 50); // Small delay to ensure frontend is ready
       
     } catch (error) {
-      console.error('Error joining game:', error);
+      logger.error('Error joining game:', error);
       socket.emit('error', { message: 'Failed to join game', error: error.message });
     }
   });
@@ -1398,7 +1398,7 @@ io.on('connection', (socket) => {
       socket.emit('playerList', { players });
       
     } catch (error) {
-      console.error('Error getting player list:', error);
+      logger.error('Error getting player list:', error);
       socket.emit('error', { message: 'Failed to get player list', error: error.message });
     }
   });
@@ -1407,7 +1407,7 @@ io.on('connection', (socket) => {
   socket.on('startGame', async ({ gameCode }) => {
     try {
       if (isDevelopment) {
-        console.log(`🚀 Start Game Request for: ${gameCode}`);
+        logger.debug(`🚀 Start Game Request for: ${gameCode}`);
       }
       
       const activeGame = activeGames.get(gameCode);
@@ -1430,13 +1430,13 @@ io.on('connection', (socket) => {
       
       // Load questions from database using QuestionService
       if (isDevelopment) {
-        console.log(`📚 Loading questions from database for question set: ${activeGame.question_set_id}`);
+        logger.debug(`📚 Loading questions from database for question set: ${activeGame.question_set_id}`);
       }
       
       const questionResult = await questionService.getQuestionSetForGame(activeGame.question_set_id);
       
       if (!questionResult.success || questionResult.questions.length === 0) {
-        console.error(`❌ Failed to load questions: ${questionResult.error}`);
+        logger.error(`❌ Failed to load questions: ${questionResult.error}`);
         socket.emit('error', { 
           message: 'Failed to load questions for this game',
           details: questionResult.error 
@@ -1446,17 +1446,17 @@ io.on('connection', (socket) => {
       
       const dbQuestions = questionResult.questions;
       if (isDevelopment) {
-        console.log(`📝 Successfully loaded ${dbQuestions.length} questions from database`);
+        logger.debug(`📝 Successfully loaded ${dbQuestions.length} questions from database`);
       }
       
       // Transform questions using QuestionFormatAdapter
       if (isDevelopment) {
-        console.log(`🔄 Transforming questions with game settings...`);
+        logger.debug(`🔄 Transforming questions with game settings...`);
       }
       const transformResult = questionAdapter.transformMultipleQuestions(dbQuestions, activeGame.game_settings);
       
       if (!transformResult.success || transformResult.questions.length === 0) {
-        console.error(`❌ Failed to transform questions: ${transformResult.error}`);
+        logger.error(`❌ Failed to transform questions: ${transformResult.error}`);
         socket.emit('error', { 
           message: 'Failed to process questions for this game',
           details: transformResult.error 
@@ -1467,19 +1467,19 @@ io.on('connection', (socket) => {
       const questions = transformResult.questions;
       
       if (isDevelopment) {
-        console.log(`� Transformed ${questions.length} questions to game format`);
+        logger.debug(`� Transformed ${questions.length} questions to game format`);
       }
       
       // Log question types for debugging
       const questionTypes = questions.map(q => q.type);
       if (isDevelopment) {
-        console.log(`✅ Successfully transformed ${questions.length} questions to game format`);
+        logger.debug(`✅ Successfully transformed ${questions.length} questions to game format`);
       }
       
       // Log transformation summary
       if (transformResult.errors.length > 0) {
         if (isDevelopment) {
-          console.warn(`⚠️ ${transformResult.errors.length} questions had transformation errors:`, 
+          logger.warn(`⚠️ ${transformResult.errors.length} questions had transformation errors:`, 
             transformResult.errors.map(e => `Q${e.index}: ${e.error}`).join(', '));
         }
       }
@@ -1491,7 +1491,7 @@ io.on('connection', (socket) => {
       }
       // Validate we have valid questions
       if (questions.length === 0) {
-        console.error('❌ No valid questions after transformation');
+        logger.error('❌ No valid questions after transformation');
         socket.emit('error', { 
           message: 'No valid questions available for this game',
           details: 'All questions failed validation during transformation' 
@@ -1501,14 +1501,14 @@ io.on('connection', (socket) => {
       
       // Apply game settings to questions using GameSettingsService
       if (isDevelopment) {
-        console.log(`🎯 Applying game settings to gameplay...`);
+        logger.debug(`🎯 Applying game settings to gameplay...`);
       }
       const settingsResult = GameSettingsService.applySettingsToGame(activeGame.game_settings, questions);
       
       if (!settingsResult.success) {
-        console.error(`❌ Failed to apply game settings: ${settingsResult.error}`);
+        logger.error(`❌ Failed to apply game settings: ${settingsResult.error}`);
         if (isDevelopment) {
-          console.warn(`⚠️ Falling back to questions without enhanced settings`);
+          logger.warn(`⚠️ Falling back to questions without enhanced settings`);
         }
       }
       
@@ -1516,12 +1516,12 @@ io.on('connection', (socket) => {
       const gameFlowConfig = settingsResult.gameFlowConfig;
       
       if (isDevelopment) {
-        console.log(`🎮 Game flow configured:`, GameSettingsService.getSettingsSummary(settingsResult.gameSettings || activeGame.game_settings));
+        logger.debug(`🎮 Game flow configured:`, GameSettingsService.getSettingsSummary(settingsResult.gameSettings || activeGame.game_settings));
       }
       
       // Final validation
       if (finalQuestions.length === 0) {
-        console.error('❌ No valid questions after settings application');
+        logger.error('❌ No valid questions after settings application');
         socket.emit('error', { 
           message: 'No valid questions available for this game',
           details: 'All questions failed validation during settings application' 
@@ -1549,15 +1549,15 @@ io.on('connection', (socket) => {
               logger.database(`✅ Updated database game status to 'active' for game ${activeGame.id}`);
             }
           } else {
-            console.error(`❌ Failed to update database game status: ${statusResult.error}`);
+            logger.error(`❌ Failed to update database game status: ${statusResult.error}`);
           }
         } catch (dbError) {
-          console.error('❌ Database error updating game status:', dbError);
+          logger.error('❌ Database error updating game status:', dbError);
         }
       }
       
       if (isDevelopment) {
-        console.log(`✅ Game ${gameCode} started with ${activeGame.players.size} players`);
+        logger.debug(`✅ Game ${gameCode} started with ${activeGame.players.size} players`);
       }
       
       // Notify all players that the game has started
@@ -1573,7 +1573,7 @@ io.on('connection', (socket) => {
       }, 3000);
       
     } catch (error) {
-      console.error('Error starting game:', error);
+      logger.error('Error starting game:', error);
       socket.emit('error', { message: 'Failed to start game', error: error.message });
     }
   });
@@ -1581,7 +1581,7 @@ io.on('connection', (socket) => {
   // Handle next question request (from host)
   socket.on('next_question', async ({ room }) => {
     if (isDevelopment || isLocalhost) {
-      console.log(`⏭️ Next question requested for room: ${room}`);
+      logger.debug(`⏭️ Next question requested for room: ${room}`);
     }
     
     const activeGame = activeGames.get(room);
@@ -1612,7 +1612,7 @@ io.on('connection', (socket) => {
   socket.on('answer', ({ gameCode, questionId, selectedOption, timeTaken }) => {
     try {
       if (isDevelopment || isLocalhost) {
-        console.log(`💭 Answer received:
+        logger.debug(`💭 Answer received:
         Game: ${gameCode}
         Player: ${socket.playerName}
         Question: ${questionId}
@@ -1668,7 +1668,7 @@ io.on('connection', (socket) => {
         // Log detailed breakdown for debugging
         if (scoreResult.breakdown && (isDevelopment || isLocalhost)) {
           const breakdown = scoreResult.breakdown;
-          console.log(`✅ ${player.name}: Correct! Score breakdown:`, {
+          logger.debug(`✅ ${player.name}: Correct! Score breakdown:`, {
             base: breakdown.basePoints,
             streak: breakdown.streakBonus,
             time: breakdown.timeBonus,
@@ -1680,7 +1680,7 @@ io.on('connection', (socket) => {
         // Reset streak on wrong answer
         player.streak = 0;
         if (isDevelopment || isLocalhost) {
-          console.log(`❌ ${player.name}: Wrong answer - streak reset`);
+          logger.debug(`❌ ${player.name}: Wrong answer - streak reset`);
         }
       }
       
@@ -1727,7 +1727,7 @@ io.on('connection', (socket) => {
       checkForQuestionCompletion(gameCode);
       
     } catch (error) {
-      console.error('Error handling answer:', error);
+      logger.error('Error handling answer:', error);
       socket.emit('error', { message: 'Failed to process answer', error: error.message });
     }
   });
@@ -1736,7 +1736,7 @@ io.on('connection', (socket) => {
   socket.on('preloadQuestions', async ({ gameCode }) => {
     try {
       if (isDevelopment || isLocalhost) {
-        console.log(`⏳ Preload request for game: ${gameCode}`);
+        logger.debug(`⏳ Preload request for game: ${gameCode}`);
       }
       
       const activeGame = activeGames.get(gameCode);
@@ -1753,20 +1753,20 @@ io.on('connection', (socket) => {
       }
       
       if (isDevelopment || isLocalhost) {
-        console.log(`📚 Preloading questions for question set: ${questionSetId}`);
+        logger.debug(`📚 Preloading questions for question set: ${questionSetId}`);
       }
       
       // Use QuestionService to get preload data
       const preloadResult = await questionService.preloadQuestionsForWaiting(questionSetId);
       
       if (!preloadResult.success) {
-        console.error(`❌ Failed to preload questions: ${preloadResult.error}`);
+        logger.error(`❌ Failed to preload questions: ${preloadResult.error}`);
         socket.emit('preloadError', { message: preloadResult.error });
         return;
       }
       
       if (isDevelopment || isLocalhost) {
-        console.log(`✅ Sending preload data: ${preloadResult.questions.length} questions, ${preloadResult.imageUrls.length} images`);
+        logger.debug(`✅ Sending preload data: ${preloadResult.questions.length} questions, ${preloadResult.imageUrls.length} images`);
       }
       
       // Send preload data to the client
@@ -1778,7 +1778,7 @@ io.on('connection', (socket) => {
       });
       
     } catch (error) {
-      console.error('❌ Error handling preload request:', error);
+      logger.error('❌ Error handling preload request:', error);
       socket.emit('preloadError', { message: 'Failed to preload questions' });
     }
   });
@@ -1861,10 +1861,10 @@ process.on('SIGTERM', () => {
 });
 
 process.on('SIGINT', () => {
-  console.log('🛑 SIGINT received, shutting down gracefully...');
+  logger.debug('🛑 SIGINT received, shutting down gracefully...');
   cleanupScheduler.stop();
   server.close(() => {
-    console.log('✅ Server closed');
+    logger.debug('✅ Server closed');
     process.exit(0);
   });
 });

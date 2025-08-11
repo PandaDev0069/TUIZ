@@ -5,6 +5,7 @@ const path = require('path');
 const DatabaseManager = require('../../config/database');
 const AuthMiddleware = require('../../middleware/auth');
 const SecurityUtils = require('../../utils/SecurityUtils');
+const logger = require('./utils/logger');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -52,7 +53,7 @@ router.get('/public', async (req, res) => {
       res.json({ questionSets: [defaultQuestionSet] });
     }
   } catch (error) {
-    console.error('Error fetching question sets:', error);
+    logger.error('Error fetching question sets:', error);
     // Return default question set on error
     const defaultQuestionSet = {
       id: 'default-questions',
@@ -161,7 +162,7 @@ router.post('/:id/upload-thumbnail', AuthMiddleware.authenticateToken, upload.si
       });
 
     if (uploadError) {
-      console.error('Storage upload error:', uploadError);
+      logger.error('Storage upload error:', uploadError);
       return res.status(500).json({
         success: false,
         message: 'サムネイル画像のアップロードに失敗しました。'
@@ -187,7 +188,7 @@ router.post('/:id/upload-thumbnail', AuthMiddleware.authenticateToken, upload.si
       .single();
 
     if (updateError) {
-      console.error('Database update error:', updateError);
+      logger.error('Database update error:', updateError);
       
       // Clean up uploaded file
       await db.supabaseAdmin.storage
@@ -213,7 +214,7 @@ router.post('/:id/upload-thumbnail', AuthMiddleware.authenticateToken, upload.si
     });
 
   } catch (error) {
-    console.error('Thumbnail upload error:', error);
+    logger.error('Thumbnail upload error:', error);
     
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
@@ -273,7 +274,7 @@ router.delete('/:id/thumbnail', AuthMiddleware.authenticateToken, async (req, re
       .single();
 
     if (updateError) {
-      console.error('Database update error:', updateError);
+      logger.error('Database update error:', updateError);
       return res.status(500).json({
         success: false,
         message: 'データベースの更新に失敗しました。'
@@ -287,7 +288,7 @@ router.delete('/:id/thumbnail', AuthMiddleware.authenticateToken, async (req, re
           .from('quiz-thumbnails')
           .remove([filePath.split('/')[1]]); // Just the filename part
       } catch (storageError) {
-        console.warn('Storage deletion warning:', storageError);
+        logger.warn('Storage deletion warning:', storageError);
         // Don't fail the request if storage deletion fails
       }
     }
@@ -304,7 +305,7 @@ router.delete('/:id/thumbnail', AuthMiddleware.authenticateToken, async (req, re
     });
 
   } catch (error) {
-    console.error('Thumbnail deletion error:', error);
+    logger.error('Thumbnail deletion error:', error);
     res.status(500).json({
       success: false,
       message: 'サムネイル画像の削除中にエラーが発生しました。'
@@ -315,7 +316,7 @@ router.delete('/:id/thumbnail', AuthMiddleware.authenticateToken, async (req, re
 // Create question set metadata only
 router.post('/metadata', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
-    console.log('Creating question set metadata:', req.body);
+    logger.debug('Creating question set metadata:', req.body);
     
     const { title, description, category, difficulty_level, is_public, estimated_duration, thumbnail_url, tags, status } = req.body;
     
@@ -327,20 +328,20 @@ router.post('/metadata', AuthMiddleware.authenticateToken, async (req, res) => {
       });
     }
     
-    console.log('Authenticated user:', req.user.id, req.user.name);
+    logger.debug('Authenticated user:', req.user.id, req.user.name);
     
     // DEBUG: Add comprehensive logging
-    console.log('=== QUIZ CREATION DEBUG ===');
-    console.log('1. Request Headers:', {
+    logger.debug('=== QUIZ CREATION DEBUG ===');
+    logger.debug('1. Request Headers:', {
       authorization: req.headers.authorization?.substring(0, 50) + '...',
       'content-type': req.headers['content-type']
     });
-    console.log('2. Authenticated User (req.user):', {
+    logger.debug('2. Authenticated User (req.user):', {
       id: req.user?.id,
       email: req.user?.email,
       name: req.user?.name
     });
-    console.log('3. User Token (req.userToken):', {
+    logger.debug('3. User Token (req.userToken):', {
       tokenExists: !!req.userToken,
       tokenLength: req.userToken?.length,
       tokenStart: req.userToken?.substring(0, 50) + '...'
@@ -349,7 +350,7 @@ router.post('/metadata', AuthMiddleware.authenticateToken, async (req, res) => {
     // Create user-scoped Supabase client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
-    console.log('4. User Supabase Client Created:', {
+    logger.debug('4. User Supabase Client Created:', {
       clientExists: !!userSupabase,
       hasAuth: !!userSupabase.auth
     });
@@ -369,8 +370,8 @@ router.post('/metadata', AuthMiddleware.authenticateToken, async (req, res) => {
       status: status || 'draft'
     };
 
-    console.log('5. Question Set Data to Insert:', questionSetData);
-    console.log('6. About to INSERT with user-scoped client...');
+    logger.debug('5. Question Set Data to Insert:', questionSetData);
+    logger.debug('6. About to INSERT with user-scoped client...');
 
     const { data: questionSet, error } = await userSupabase
       .from('question_sets')
@@ -379,33 +380,33 @@ router.post('/metadata', AuthMiddleware.authenticateToken, async (req, res) => {
       .single();
     
     if (error) {
-      console.error('7. INSERT ERROR:', {
+      logger.error('7. INSERT ERROR:', {
         code: error.code,
         message: error.message,
         details: error.details,
         hint: error.hint,
         fullError: error
       });
-      console.log('=== END DEBUG (ERROR) ===');
+      logger.debug('=== END DEBUG (ERROR) ===');
       return res.status(500).json({ 
         success: false,
         error: error.message 
       });
     }
     
-    console.log('7. INSERT SUCCESS:', {
+    logger.debug('7. INSERT SUCCESS:', {
       questionSetId: questionSet?.id,
       userId: questionSet?.user_id
     });
-    console.log('=== END DEBUG (SUCCESS) ===');
+    logger.debug('=== END DEBUG (SUCCESS) ===');
     
-    console.log('Question set metadata created:', questionSet.id, 'by user:', req.user.name);
+    logger.debug('Question set metadata created:', questionSet.id, 'by user:', req.user.name);
     res.json({
       success: true,
       questionSet: questionSet
     });
   } catch (error) {
-    console.error('Error in question set metadata creation:', error);
+    logger.error('Error in question set metadata creation:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -465,20 +466,20 @@ router.patch('/:id/metadata', AuthMiddleware.authenticateToken, async (req, res)
       .single();
     
     if (error) {
-      console.error('Error updating question set metadata:', error);
+      logger.error('Error updating question set metadata:', error);
       return res.status(500).json({ 
         success: false,
         error: error.message 
       });
     }
     
-    console.log('Question set metadata updated:', updatedQuestionSet.id, 'by user:', req.user.name);
+    logger.debug('Question set metadata updated:', updatedQuestionSet.id, 'by user:', req.user.name);
     res.json({
       success: true,
       questionSet: updatedQuestionSet
     });
   } catch (error) {
-    console.error('Error in question set metadata update:', error);
+    logger.error('Error in question set metadata update:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -526,20 +527,20 @@ router.patch('/:id/finalize', AuthMiddleware.authenticateToken, async (req, res)
       .single();
     
     if (error) {
-      console.error('Error finalizing question set:', error);
+      logger.error('Error finalizing question set:', error);
       return res.status(500).json({ 
         success: false,
         error: error.message 
       });
     }
     
-    console.log('Question set finalized:', updatedQuestionSet.id, 'by user:', req.user.name);
+    logger.debug('Question set finalized:', updatedQuestionSet.id, 'by user:', req.user.name);
     res.json({
       success: true,
       questionSet: updatedQuestionSet
     });
   } catch (error) {
-    console.error('Error in question set finalization:', error);
+    logger.error('Error in question set finalization:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -560,7 +561,7 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
       questions 
     } = req.body;
     
-    console.log('Creating question set for authenticated user:', req.user.id, req.user.name);
+    logger.debug('Creating question set for authenticated user:', req.user.id, req.user.name);
     
     const questionSetData = {
       title,
@@ -573,8 +574,8 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
       total_questions: questions ? questions.length : 0
     };
     
-    console.log('Creating question set with data:', questionSetData);
-    console.log('Questions:', questions?.length || 0, 'questions');
+    logger.debug('Creating question set with data:', questionSetData);
+    logger.debug('Questions:', questions?.length || 0, 'questions');
     
     const result = await db.createQuestionSet(questionSetData, questions || []);
     

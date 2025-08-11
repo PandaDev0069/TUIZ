@@ -5,6 +5,7 @@ const AuthMiddleware = require('../../middleware/auth');
 const SecurityUtils = require('../../utils/SecurityUtils');
 const roomManager = require('../../utils/RoomManager');
 const activeGameUpdater = require('../../utils/ActiveGameUpdater');
+const logger = require('./utils/logger');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -70,7 +71,7 @@ const DEFAULT_SETTINGS = {
 router.get('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { questionSetId } = req.params;
-    console.log('GET /api/game-settings/:questionSetId called with:', questionSetId);
+    logger.debug('GET /api/game-settings/:questionSetId called with:', questionSetId);
 
     // Create user-scoped Supabase client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
@@ -83,14 +84,14 @@ router.get('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
       .single();
 
     if (error || !questionSet) {
-      console.error('Question set not found or access denied:', error);
+      logger.error('Question set not found or access denied:', error);
       return res.status(404).json({
         success: false,
         error: 'Question set not found or access denied'
       });
     }
 
-    console.log('Question set found:', questionSet.title, 'with settings:', questionSet.play_settings);
+    logger.debug('Question set found:', questionSet.title, 'with settings:', questionSet.play_settings);
 
     // Parse and clean settings from play_settings JSON
     const rawSettings = questionSet.play_settings || {};
@@ -123,7 +124,7 @@ router.get('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
     });
 
   } catch (error) {
-    console.error('Error fetching game settings:', error);
+    logger.error('Error fetching game settings:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -237,7 +238,7 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
       .single();
 
     if (updateError) {
-      console.error('Error updating question set settings:', updateError);
+      logger.error('Error updating question set settings:', updateError);
       return res.status(500).json({
         success: false,
         error: 'Failed to update settings'
@@ -248,14 +249,14 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
     if (gameId) {
       try {
         // Find the room by database gameId (UUID)
-        console.log(`🔍 Searching for gameId ${gameId} in RoomManager...`);
-        console.log(`🏠 Total rooms in RoomManager: ${roomManager.getAllRoomsMap().size}`);
+        logger.debug(`🔍 Searching for gameId ${gameId} in RoomManager...`);
+        logger.debug(`🏠 Total rooms in RoomManager: ${roomManager.getAllRoomsMap().size}`);
         
         const roomResult = roomManager.findRoomByGameId(gameId);
         
         if (roomResult) {
           const { roomCode, room } = roomResult;
-          console.log(`✅ Found matching room: ${roomCode}`);
+          logger.debug(`✅ Found matching room: ${roomCode}`);
           
           // Merge with current room settings
           const mergedRoomSettings = {
@@ -263,7 +264,7 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
             ...validatedSettings
           };
           room.gameSettings = mergedRoomSettings;
-          console.log(`🔄 Updated active game settings for room ${roomCode} (gameId: ${gameId})`);
+          logger.debug(`🔄 Updated active game settings for room ${roomCode} (gameId: ${gameId})`);
           
           // If maxPlayers was updated, schedule update for activeGame
           if (validatedSettings.maxPlayers !== undefined) {
@@ -280,13 +281,13 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
             .eq('id', gameId);
 
           if (gameUpdateError) {
-            console.warn('⚠️ Failed to update game table settings:', gameUpdateError);
+            logger.warn('⚠️ Failed to update game table settings:', gameUpdateError);
           } else {
-            console.log(`✅ Synced complete settings to games table for game ${gameId}`);
-            console.log('Complete synced settings:', mergedRoomSettings);
+            logger.debug(`✅ Synced complete settings to games table for game ${gameId}`);
+            logger.debug('Complete synced settings:', mergedRoomSettings);
           }
         } else {
-          console.warn(`⚠️ Room not found for gameId ${gameId} in RoomManager`);
+          logger.warn(`⚠️ Room not found for gameId ${gameId} in RoomManager`);
           // Update database directly since room not found in memory
           const { error: gameUpdateError } = await db.supabaseAdmin
             .from('games')
@@ -299,15 +300,15 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
             .eq('id', gameId);
 
           if (!gameUpdateError) {
-            console.log(`✅ Updated games table directly for game ${gameId}`);
+            logger.debug(`✅ Updated games table directly for game ${gameId}`);
           }
         }
       } catch (syncError) {
-        console.warn('⚠️ Failed to sync active game settings:', syncError);
+        logger.warn('⚠️ Failed to sync active game settings:', syncError);
       }
     }
 
-    console.log('Settings updated for question set %s:', questionSetId, validatedSettings);
+    logger.debug('Settings updated for question set %s:', questionSetId, validatedSettings);
 
     res.json({
       success: true,
@@ -317,7 +318,7 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
     });
 
   } catch (error) {
-    console.error('Error updating game settings:', error);
+    logger.error('Error updating game settings:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -360,7 +361,7 @@ router.put('/:questionSetId/reset', AuthMiddleware.authenticateToken, async (req
       .single();
 
     if (updateError) {
-      console.error('Error resetting question set settings:', updateError);
+      logger.error('Error resetting question set settings:', updateError);
       return res.status(500).json({
         success: false,
         error: 'Failed to reset settings'
@@ -379,7 +380,7 @@ router.put('/:questionSetId/reset', AuthMiddleware.authenticateToken, async (req
     });
 
   } catch (error) {
-    console.error('Error resetting game settings:', error);
+    logger.error('Error resetting game settings:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -392,13 +393,13 @@ router.put('/:questionSetId/reset', AuthMiddleware.authenticateToken, async (req
 router.get('/game/:gameId', async (req, res) => {
   try {
     const { gameId } = req.params;
-    console.log(`🔍 Looking for room with database gameId: ${gameId}`);
+    logger.debug(`🔍 Looking for room with database gameId: ${gameId}`);
 
     // Get game room data by database gameId (not room code)
     const roomInfo = roomManager.findRoomByGameId(gameId);
     
     if (!roomInfo) {
-      console.log(`❌ No room found with gameId: ${gameId}`);
+      logger.debug(`❌ No room found with gameId: ${gameId}`);
       return res.status(404).json({
         success: false,
         error: 'Game not found'
@@ -406,7 +407,7 @@ router.get('/game/:gameId', async (req, res) => {
     }
 
     const { roomCode, room } = roomInfo;
-    console.log(`✅ Found room ${roomCode} with gameId ${gameId}`);
+    logger.debug(`✅ Found room ${roomCode} with gameId ${gameId}`);
 
     // Return current game settings
     res.json({
@@ -418,7 +419,7 @@ router.get('/game/:gameId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching active game settings:', error);
+    logger.error('Error fetching active game settings:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -432,7 +433,7 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
   try {
     const { gameId } = req.params;
     const { settings } = req.body;
-    console.log('🔄 Updating settings for gameId: %s', gameId, settings);
+    logger.debug('🔄 Updating settings for gameId: %s', gameId, settings);
 
     if (!settings || typeof settings !== 'object') {
       return res.status(400).json({
@@ -445,7 +446,7 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
     const roomInfo = roomManager.findRoomByGameId(gameId);
     
     if (!roomInfo) {
-      console.log(`❌ No room found with gameId: ${gameId}`);
+      logger.debug(`❌ No room found with gameId: ${gameId}`);
       return res.status(404).json({
         success: false,
         error: 'Game not found'
@@ -453,7 +454,7 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
     }
 
     const { roomCode, room } = roomInfo;
-    console.log(`✅ Found room ${roomCode} to update settings`);
+    logger.debug(`✅ Found room ${roomCode} to update settings`);
 
     // Only allow settings changes during lobby phase
     if (room.status !== 'waiting') {
@@ -504,7 +505,7 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
         .eq('id', gameId);
         
       if (dbError) {
-        console.error('⚠️ Failed to update database game settings:', dbError);
+        logger.error('⚠️ Failed to update database game settings:', dbError);
       } else {
         SecurityUtils.safeLog('info', 'Database updated for game', {
           gameId: gameId,
@@ -512,7 +513,7 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
         });
       }
     } catch (dbUpdateError) {
-      console.error('⚠️ Database update error:', dbUpdateError);
+      logger.error('⚠️ Database update error:', dbUpdateError);
     }
 
     SecurityUtils.safeLog('info', 'Active game settings updated', {
@@ -528,7 +529,7 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
     });
 
   } catch (error) {
-    console.error('Error updating active game settings:', error);
+    logger.error('Error updating active game settings:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -567,7 +568,7 @@ router.put('/room/:roomCode', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error updating room settings:', error);
+    logger.error('Error updating room settings:', error);
     res.status(500).json({
       success: false,
       error: error.message

@@ -2,6 +2,7 @@
 // These utilities help maintain proper order indices for questions and answers
 
 const DatabaseManager = require('../config/database');
+const logger = require('./utils/logger');
 
 class OrderManager {
   constructor() {
@@ -30,7 +31,7 @@ class OrderManager {
       // Check if all updates succeeded
       return results.every(result => !result.error);
     } catch (error) {
-      console.error('Error updating question order:', error);
+      logger.error('Error updating question order:', error);
       return false;
     }
   }
@@ -89,7 +90,7 @@ class OrderManager {
         data: { message: 'Questions reordered successfully' }
       };
     } catch (error) {
-      console.error('Error in batch reorder questions:', error);
+      logger.error('Error in batch reorder questions:', error);
       return {
         success: false,
         error: error.message
@@ -119,7 +120,7 @@ class OrderManager {
       // Check if all updates succeeded
       return results.every(result => !result.error);
     } catch (error) {
-      console.error('Error updating answer order:', error);
+      logger.error('Error updating answer order:', error);
       return false;
     }
   }
@@ -140,7 +141,7 @@ class OrderManager {
         .order('order_index', { ascending: true });
 
       if (fetchError) {
-        console.error('Error fetching questions for normalization:', fetchError);
+        logger.error('Error fetching questions for normalization:', fetchError);
         return false;
       }
 
@@ -148,7 +149,7 @@ class OrderManager {
       const questionOrder = questions.map(q => q.id);
       return await this.updateQuestionOrder(questionSetId, questionOrder);
     } catch (error) {
-      console.error('Error normalizing question order:', error);
+      logger.error('Error normalizing question order:', error);
       return false;
     }
   }
@@ -169,7 +170,7 @@ class OrderManager {
         .order('order_index', { ascending: true });
 
       if (fetchError) {
-        console.error('Error fetching answers for normalization:', fetchError);
+        logger.error('Error fetching answers for normalization:', fetchError);
         return false;
       }
 
@@ -177,7 +178,7 @@ class OrderManager {
       const answerOrder = answers.map(a => a.id);
       return await this.updateAnswerOrder(questionId, answerOrder);
     } catch (error) {
-      console.error('Error normalizing answer order:', error);
+      logger.error('Error normalizing answer order:', error);
       return false;
     }
   }
@@ -218,13 +219,13 @@ class OrderManager {
         .limit(1);
 
       if (error) {
-        console.error('Error getting next question order index:', error);
+        logger.error('Error getting next question order index:', error);
         return 0;
       }
 
       return questions.length > 0 ? questions[0].order_index + 1 : 0;
     } catch (error) {
-      console.error('Error getting next question order index:', error);
+      logger.error('Error getting next question order index:', error);
       return 0;
     }
   }
@@ -244,13 +245,13 @@ class OrderManager {
         .limit(1);
 
       if (error) {
-        console.error('Error getting next answer order index:', error);
+        logger.error('Error getting next answer order index:', error);
         return 0;
       }
 
       return answers.length > 0 ? answers[0].order_index + 1 : 0;
     } catch (error) {
-      console.error('Error getting next answer order index:', error);
+      logger.error('Error getting next answer order index:', error);
       return 0;
     }
   }

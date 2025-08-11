@@ -1,4 +1,5 @@
 const DatabaseManager = require('../config/database');
+const logger = require('../utils/logger');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -20,10 +21,8 @@ const getAuthenticatedUser = async (authHeader) => {
     throw new Error('Invalid token: Token is empty, undefined, or null');
   }
   
-  if (isDevelopment || isLocalhost) {
-    console.log('🔐 Verifying Supabase JWT token:', token.substring(0, 20) + '...');
-    console.log('🔐 Token length:', token.length);
-  }
+  logger.debug('🔐 Verifying Supabase JWT token:', token.substring(0, 20) + '...');
+  logger.debug('🔐 Token length:', token.length);
   
   try {
     // Use Supabase admin client to verify the token
@@ -31,7 +30,7 @@ const getAuthenticatedUser = async (authHeader) => {
     
     if (error) {
       // Always log authentication errors as they're security-related
-      console.error('❌ Supabase token verification error:', error);
+      logger.error('❌ Supabase token verification error:', error);
       
       if (error.message.includes('invalid_token') || error.message.includes('jwt')) {
         throw new Error('Invalid JWT token format or signature. Please check if you are sending the correct access_token.');
@@ -50,9 +49,7 @@ const getAuthenticatedUser = async (authHeader) => {
       throw new Error('No user found for this token. The token may be invalid or the user may have been deleted.');
     }
     
-    if (isDevelopment || isLocalhost) {
-      console.log('✅ Supabase token verified for user:', user.id, user.email);
-    }
+    logger.debug('✅ Supabase token verified for user:', user.id, user.email);
     
     // Get user profile from database using adminClient to bypass RLS
     const { data: userProfile, error: profileError } = await db.supabaseAdmin
@@ -63,13 +60,11 @@ const getAuthenticatedUser = async (authHeader) => {
     
     if (profileError) {
       // Always log profile errors as they're critical
-      console.error('❌ Profile fetch error:', profileError);
+      logger.error('❌ Profile fetch error:', profileError);
       
       // If user profile doesn't exist, create it
       if (profileError.code === 'PGRST116') { // No rows returned
-        if (isDevelopment || isLocalhost) {
-          console.log('🆕 Creating user profile for:', user.email);
-        }
+        logger.debug('🆕 Creating user profile for:', user.email);
         const { data: newProfile, error: createError } = await db.supabaseAdmin
           .from('users')
           .insert({
@@ -82,13 +77,11 @@ const getAuthenticatedUser = async (authHeader) => {
         
         if (createError) {
           // Always log creation errors as they're critical
-          console.error('❌ Failed to create user profile:', createError);
+          logger.error('❌ Failed to create user profile:', createError);
           throw new Error('Failed to create user profile: ' + createError.message);
         }
         
-        if (isDevelopment || isLocalhost) {
-          console.log('✅ User profile created:', newProfile.name, newProfile.email);
-        }
+        logger.debug('✅ User profile created:', newProfile.name, newProfile.email);
         return newProfile;
       } else {
         throw new Error('User profile fetch failed: ' + profileError.message);
@@ -99,14 +92,12 @@ const getAuthenticatedUser = async (authHeader) => {
       throw new Error('User profile not found in database');
     }
     
-    if (isDevelopment || isLocalhost) {
-      console.log('✅ User profile found:', userProfile.name, userProfile.email);
-    }
+    logger.debug('✅ User profile found:', userProfile.name, userProfile.email);
     return userProfile;
     
   } catch (error) {
     // Always log authentication errors as they're security-related
-    console.error('❌ Authentication error details:', error);
+    logger.error('❌ Authentication error details:', error);
     throw error;
   }
 };
