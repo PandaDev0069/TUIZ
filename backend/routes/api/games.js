@@ -4,6 +4,7 @@ const roomManager = require('../../utils/RoomManager');
 const { getAuthenticatedUser } = require('../../helpers/authHelper');
 const DatabaseManager = require('../../config/database');
 const RateLimitMiddleware = require('../../middleware/rateLimiter');
+const logger = require('./utils/logger');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -94,7 +95,7 @@ router.post('/create', async (req, res) => {
       return res.status(500).json({ error: 'Failed to create game room' });
     }
     
-    console.log(`Game created: ${gameId} by ${authenticatedUser.name}`);
+    logger.debug(`Game created: ${gameId} by ${authenticatedUser.name}`);
     
     res.json({ 
       gameId,
@@ -102,7 +103,7 @@ router.post('/create', async (req, res) => {
       hostName: authenticatedUser.name || 'Host'
     });
   } catch (error) {
-    console.error('Error creating game:', error);
+    logger.error('Error creating game:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -133,11 +134,11 @@ router.post('/:gameId/end', async (req, res) => {
     // End the game
     roomManager.removeRoom(gameId);
     
-    console.log(`Game ended: ${gameId} by ${authenticatedUser.name}`);
+    logger.debug(`Game ended: ${gameId} by ${authenticatedUser.name}`);
     
     res.json({ message: 'Game ended successfully' });
   } catch (error) {
-    console.error('Error ending game:', error);
+    logger.error('Error ending game:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -189,7 +190,7 @@ router.get('/player/stats', async (req, res) => {
       res.status(500).json({ error: result.error });
     }
   } catch (error) {
-    console.error('Error getting player stats:', error);
+    logger.error('Error getting player stats:', error);
     res.status(500).json({ error: error.message });
   }
 });

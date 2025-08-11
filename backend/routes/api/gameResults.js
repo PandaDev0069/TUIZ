@@ -4,6 +4,7 @@ const DatabaseManager = require('../../config/database');
 const { createClient } = require('@supabase/supabase-js');
 const AuthMiddleware = require('../../middleware/auth');
 const RateLimitMiddleware = require('../../middleware/rateLimiter');
+const logger = require('./utils/logger');
 
 // Auth middleware shorthand
 const auth = AuthMiddleware.authenticateToken;
@@ -30,7 +31,7 @@ router.get('/game/:gameId', async (req, res) => {
       leaderboard: result.leaderboard
     });
   } catch (error) {
-    console.error('❌ Get game results API error:', error);
+    logger.error('❌ Get game results API error:', error);
     res.status(500).json({ error: 'Failed to get game results' });
   }
 });
@@ -56,7 +57,7 @@ router.post('/create/:gameId', auth, async (req, res) => {
       results: result.results
     });
   } catch (error) {
-    console.error('❌ Create game results API error:', error);
+    logger.error('❌ Create game results API error:', error);
     res.status(500).json({ error: 'Failed to create game results' });
   }
 });
@@ -94,7 +95,7 @@ router.post('/finish/:gameId', auth, async (req, res) => {
       resultsCount: result.resultsCount
     });
   } catch (error) {
-    console.error('❌ Finish game API error:', error);
+    logger.error('❌ Finish game API error:', error);
     res.status(500).json({ error: 'Failed to finish game' });
   }
 });
@@ -128,7 +129,7 @@ router.get('/player/history', auth, async (req, res) => {
       history: result.history
     });
   } catch (error) {
-    console.error('❌ Get player history API error:', error);
+    logger.error('❌ Get player history API error:', error);
     res.status(500).json({ error: 'Failed to get player history' });
   }
 });
@@ -147,7 +148,7 @@ router.get('/player/stats', auth, async (req, res) => {
       stats: result.stats
     });
   } catch (error) {
-    console.error('❌ Get user stats API error:', error);
+    logger.error('❌ Get user stats API error:', error);
     res.status(500).json({ error: 'Failed to get user stats' });
   }
 });
@@ -238,7 +239,7 @@ router.get('/host/summary/:gameId', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Get host game summary API error:', error);
+    logger.error('❌ Get host game summary API error:', error);
     res.status(500).json({ error: 'Failed to get game summary' });
   }
 });
@@ -269,7 +270,7 @@ router.get('/leaderboard/global', async (req, res) => {
       leaderboard: data || []
     });
   } catch (error) {
-    console.error('❌ Get global leaderboard API error:', error);
+    logger.error('❌ Get global leaderboard API error:', error);
     res.status(500).json({ error: 'Failed to get global leaderboard' });
   }
 });

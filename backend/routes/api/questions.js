@@ -11,6 +11,7 @@ const SecurityUtils = require('../../utils/SecurityUtils');
 // Initialize database
 const db = new DatabaseManager();
 const OrderManager = require('../../utils/OrderManager');
+const logger = require('./utils/logger');
 
 // Initialize order manager
 const orderManager = new OrderManager();
@@ -94,9 +95,9 @@ router.get('/set/:id', RateLimitMiddleware.createReadLimit(), AuthMiddleware.aut
 // Bulk upload images for questions and answers (to be called before bulk save)
 router.post('/bulk-upload-images', RateLimitMiddleware.createUploadLimit(), AuthMiddleware.authenticateToken, upload.array('images', 50), async (req, res) => {
   try {
-    console.log('🖼️ BULK IMAGE UPLOAD ENDPOINT HIT');
-    console.log('Files received:', req.files?.length || 0);
-    console.log('Body data:', JSON.stringify(req.body, null, 2));
+    logger.debug('🖼️ BULK IMAGE UPLOAD ENDPOINT HIT');
+    logger.debug('Files received:', req.files?.length || 0);
+    logger.debug('Body data:', JSON.stringify(req.body, null, 2));
     
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ 
@@ -158,7 +159,7 @@ router.post('/bulk-upload-images', RateLimitMiddleware.createUploadLimit(), Auth
       const mapping = mappings[i];
       
       if (!mapping) {
-        console.error('No mapping found for file index:', i);
+        logger.error('No mapping found for file index:', i);
         continue;
       }
       
@@ -175,7 +176,7 @@ router.post('/bulk-upload-images', RateLimitMiddleware.createUploadLimit(), Auth
           fileName = `answer_temp_${timestamp}_${i}.${fileExtension}`;
           bucketName = process.env.STORAGE_BUCKET_ANSWER_IMAGES || 'answer-images';
         } else {
-          console.error('Unknown image type:', mapping.type);
+          logger.error('Unknown image type:', mapping.type);
           continue;
         }
         
@@ -196,7 +197,7 @@ router.post('/bulk-upload-images', RateLimitMiddleware.createUploadLimit(), Auth
           });
         
         if (uploadError) {
-          console.error('Storage upload error:', uploadError);
+          logger.error('Storage upload error:', uploadError);
           uploadResults.push({
             index: i,
             mapping: mapping,
@@ -248,7 +249,7 @@ router.post('/bulk-upload-images', RateLimitMiddleware.createUploadLimit(), Auth
     });
     
   } catch (error) {
-    console.error('Error in bulk image upload:', error);
+    logger.error('Error in bulk image upload:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -307,20 +308,20 @@ router.post('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authe
       .select();
     
     if (error) {
-      console.error('Error bulk creating questions:', error);
+      logger.error('Error bulk creating questions:', error);
       return res.status(500).json({ 
         success: false,
         error: error.message 
       });
     }
     
-    console.log(`Bulk created ${insertedQuestions.length} questions for question set:`, question_set_id);
+    logger.debug(`Bulk created ${insertedQuestions.length} questions for question set:`, question_set_id);
     res.status(201).json({ 
       success: true,
       questions: insertedQuestions 
     });
   } catch (error) {
-    console.error('Error in bulk question creation:', error);
+    logger.error('Error in bulk question creation:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -362,7 +363,7 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
       .single();
     
     if (verifyError || !questionSet) {
-      console.error('Question set verification failed:', {
+      logger.error('Question set verification failed:', {
         question_set_id,
         verifyError: verifyError?.message || verifyError,
         questionSet
@@ -399,7 +400,7 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
       .eq('question_set_id', question_set_id);
     
     if (getExistingError) {
-      console.error('Error fetching existing questions:', getExistingError);
+      logger.error('Error fetching existing questions:', getExistingError);
       return res.status(500).json({
         success: false,
         error: `Failed to fetch existing questions: ${getExistingError.message}`
@@ -407,11 +408,11 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
     }
     
     const existingDbQuestionIds = (existingDbQuestions || []).map(q => q.id);
-    console.log('Existing questions in database:', existingDbQuestionIds);
+    logger.debug('Existing questions in database:', existingDbQuestionIds);
     
     // Only set temporary indices for questions that actually exist in the database
     if (existingDbQuestionIds.length > 0) {
-      console.log('Temporarily setting high order indices for existing questions to avoid conflicts...');
+      logger.debug('Temporarily setting high order indices for existing questions to avoid conflicts...');
       
       for (let i = 0; i < existingDbQuestionIds.length; i++) {
         const tempOrderIndex = 10000 + i; // Use large positive numbers to avoid conflicts (well above normal range)
@@ -422,16 +423,16 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
           .eq('id', existingDbQuestionIds[i]);
         
         if (tempOrderError) {
-          console.error('Error setting temporary order index:', tempOrderError);
+          logger.error('Error setting temporary order index:', tempOrderError);
           return res.status(500).json({
             success: false,
             error: `Failed to prepare questions for reordering: ${tempOrderError.message}`
           });
         }
       }
-      console.log(`Set temporary high indices for ${existingDbQuestionIds.length} existing questions`);
+      logger.debug(`Set temporary high indices for ${existingDbQuestionIds.length} existing questions`);
     } else {
-      console.log('No existing questions found in database, skipping temporary index step');
+      logger.debug('No existing questions found in database, skipping temporary index step');
     }
     
     // STEP 2: Process each question
@@ -443,7 +444,7 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
         const backendId = question.backend_id || question.id;
         const isNewQuestion = !backendId || !isValidUUID(backendId) || String(backendId).startsWith('temp_');
         
-        console.log(`Processing question ${i}: ID=${backendId}, isNew=${isNewQuestion}, targetQuestionSet=${question_set_id}`);
+        logger.debug(`Processing question ${i}: ID=${backendId}, isNew=${isNewQuestion}, targetQuestionSet=${question_set_id}`);
         
         if (isNewQuestion) {
           // Create new question
@@ -463,11 +464,11 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
           
           // Filter out blob URLs from question image
           if (questionData.image_url && (questionData.image_url.startsWith('blob:') || questionData.image_url.includes('localhost'))) {
-            console.log('Filtering out blob URL from question image:', questionData.image_url);
+            logger.debug('Filtering out blob URL from question image:', questionData.image_url);
             questionData.image_url = null;
           }
           
-          console.log('Creating question with data:', questionData);
+          logger.debug('Creating question with data:', questionData);
           
           const { data: newQuestion, error: createError } = await userSupabase
             .from('questions')
@@ -476,12 +477,12 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
             .single();
           
           if (createError) {
-            console.error('Error creating question:', createError);
+            logger.error('Error creating question:', createError);
             errors.push({ index: i, error: createError.message });
             continue;
           }
           
-          console.log('Question created:', newQuestion.id, 'for question set:', question_set_id);
+          logger.debug('Question created:', newQuestion.id, 'for question set:', question_set_id);
           createdQuestions.push(newQuestion);
           
           // Handle answers for new question
@@ -499,7 +500,7 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
                                      (answer.image && !isBlobUrl(answer.image)) ? answer.image : null;
               
               if (originalImageUrl && filteredImageUrl === null) {
-                console.log(`🚫 Filtered out blob URL from answer ${j}:`, originalImageUrl);
+                logger.debug(`🚫 Filtered out blob URL from answer ${j}:`, originalImageUrl);
               }
               
               const answerData = {
@@ -512,7 +513,7 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
                 image_url: filteredImageUrl
               };
               
-              console.log('Creating answer with data:', answerData);
+              logger.debug('Creating answer with data:', answerData);
               
               const { data: newAnswer, error: answerError } = await userSupabase
                 .from('answers')
@@ -521,10 +522,10 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
                 .single();
               
               if (answerError) {
-                console.error('Error creating answer:', answerError);
+                logger.error('Error creating answer:', answerError);
                 errors.push({ index: i, answerIndex: j, error: answerError.message });
               } else {
-                console.log('Answer created:', newAnswer.id, 'for question:', newQuestion.id);
+                logger.debug('Answer created:', newAnswer.id, 'for question:', newQuestion.id);
               }
             }
           }
@@ -541,15 +542,15 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
             .single();
           
           if (verifyError || !existingQuestion) {
-            console.error(`❌ Question ${questionId} not found or unauthorized`);
+            logger.error(`❌ Question ${questionId} not found or unauthorized`);
             errors.push({ index: i, error: `Question ${questionId} not found or unauthorized` });
             continue;
           }
           
           // Check if question belongs to the target question set
           if (existingQuestion.question_set_id !== question_set_id) {
-            console.error(`❌ CRITICAL: Question ${questionId} belongs to question set ${existingQuestion.question_set_id}, not ${question_set_id}`);
-            console.error(`🚨 This prevents cross-question-set updates and data corruption`);
+            logger.error(`❌ CRITICAL: Question ${questionId} belongs to question set ${existingQuestion.question_set_id}, not ${question_set_id}`);
+            logger.error(`🚨 This prevents cross-question-set updates and data corruption`);
             errors.push({ 
               index: i, 
               error: `Question ${questionId} belongs to a different question set. Cannot update across question sets.` 
@@ -557,7 +558,7 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
             continue;
           }
           
-          console.log(`✅ Question ${questionId} ownership verified for question set ${question_set_id}`);
+          logger.debug(`✅ Question ${questionId} ownership verified for question set ${question_set_id}`);
           
           const questionData = {
             question_text: question.text?.trim() || question.question_text?.trim(),
@@ -574,11 +575,11 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
           
           // Filter out blob URLs from question image
           if (questionData.image_url && (questionData.image_url.startsWith('blob:') || questionData.image_url.includes('localhost'))) {
-            console.log('Filtering out blob URL from question image:', questionData.image_url);
+            logger.debug('Filtering out blob URL from question image:', questionData.image_url);
             questionData.image_url = null;
           }
           
-          console.log('Updating question:', questionId, 'with data:', questionData);
+          logger.debug('Updating question:', questionId, 'with data:', questionData);
           
           const { data: updatedQuestion, error: updateError } = await userSupabase
             .from('questions')
@@ -588,12 +589,12 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
             .single();
           
           if (updateError) {
-            console.error('Error updating question:', updateError);
+            logger.error('Error updating question:', updateError);
             errors.push({ index: i, error: updateError.message });
             continue;
           }
           
-          console.log('Question updated:', updatedQuestion.id);
+          logger.debug('Question updated:', updatedQuestion.id);
           updatedQuestions.push(updatedQuestion);
           
           // Handle answers for existing question - smart update instead of delete/recreate
@@ -606,7 +607,7 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
               .order('order_index', { ascending: true });
             
             if (getAnswersError) {
-              console.error('Error fetching existing answers:', getAnswersError);
+              logger.error('Error fetching existing answers:', getAnswersError);
               errors.push({ index: i, error: `Failed to fetch existing answers: ${getAnswersError.message}` });
               continue;
             }
@@ -615,13 +616,13 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
             if (existingAnswers) {
               const orphanedAnswers = existingAnswers.filter(ans => ans.question_id !== questionId);
               if (orphanedAnswers.length > 0) {
-                console.error(`❌ Found ${orphanedAnswers.length} orphaned answers not belonging to question ${questionId}`);
+                logger.error(`❌ Found ${orphanedAnswers.length} orphaned answers not belonging to question ${questionId}`);
                 errors.push({ index: i, error: `Data integrity issue: orphaned answers detected` });
                 continue;
               }
             }
             
-            console.log(`📋 Found ${existingAnswers?.length || 0} existing answers for question: ${questionId}`);
+            logger.debug(`📋 Found ${existingAnswers?.length || 0} existing answers for question: ${questionId}`);
             
             const newAnswers = question.answers;
             const toUpdate = [];
@@ -664,9 +665,9 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
                     data: answerData,
                     index: j
                   });
-                  console.log(`🔄 Answer ${j} needs update for question: ${questionId}`);
+                  logger.debug(`🔄 Answer ${j} needs update for question: ${questionId}`);
                 } else {
-                  console.log(`✅ Answer ${j} unchanged for question: ${questionId}`);
+                  logger.debug(`✅ Answer ${j} unchanged for question: ${questionId}`);
                 }
               } else {
                 // New answer to create
@@ -674,7 +675,7 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
                   data: { ...answerData, question_id: questionId },
                   index: j
                 });
-                console.log(`➕ New answer ${j} to create for question: ${questionId}`);
+                logger.debug(`➕ New answer ${j} to create for question: ${questionId}`);
               }
             }
             
@@ -682,29 +683,29 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
             if (existingAnswers && existingAnswers.length > newAnswers.length) {
               for (let k = newAnswers.length; k < existingAnswers.length; k++) {
                 toDelete.push(existingAnswers[k].id);
-                console.log(`🗑️ Extra answer ${k} to delete for question: ${questionId}`);
+                logger.debug(`🗑️ Extra answer ${k} to delete for question: ${questionId}`);
               }
             }
             
             // Execute updates
             for (const update of toUpdate) {
-              console.log(`🔄 Updating answer ${update.index} for question: ${questionId}`);
+              logger.debug(`🔄 Updating answer ${update.index} for question: ${questionId}`);
               const { error: updateError } = await userSupabase
                 .from('answers')
                 .update(update.data)
                 .eq('id', update.id);
               
               if (updateError) {
-                console.error('❌ Error updating answer:', updateError);
+                logger.error('❌ Error updating answer:', updateError);
                 errors.push({ index: i, answerIndex: update.index, error: updateError.message });
               } else {
-                console.log(`✅ Answer ${update.index} updated successfully`);
+                logger.debug(`✅ Answer ${update.index} updated successfully`);
               }
             }
             
             // Execute creations
             for (const creation of toCreate) {
-              console.log(`➕ Creating answer ${creation.index} for question: ${questionId}`);
+              logger.debug(`➕ Creating answer ${creation.index} for question: ${questionId}`);
               const { data: newAnswer, error: createError } = await userSupabase
                 .from('answers')
                 .insert(creation.data)
@@ -712,23 +713,23 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
                 .single();
               
               if (createError) {
-                console.error('❌ Error creating answer:', createError);
+                logger.error('❌ Error creating answer:', createError);
                 errors.push({ index: i, answerIndex: creation.index, error: createError.message });
               } else {
-                console.log(`✅ Answer created: ${newAnswer.id} for question: ${questionId}`);
+                logger.debug(`✅ Answer created: ${newAnswer.id} for question: ${questionId}`);
               }
             }
             
             // Execute deletions
             for (const deleteId of toDelete) {
-              console.log(`🗑️ Deleting extra answer: ${deleteId}`);
+              logger.debug(`🗑️ Deleting extra answer: ${deleteId}`);
               const { error: deleteError } = await userSupabase
                 .from('answers')
                 .delete()
                 .eq('id', deleteId);
               
               if (deleteError) {
-                console.error('❌ Error deleting answer:', deleteError);
+                logger.error('❌ Error deleting answer:', deleteError);
                 // Try with admin client as fallback
                 const { error: adminDeleteError } = await db.supabaseAdmin
                   .from('answers')
@@ -736,28 +737,28 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
                   .eq('id', deleteId);
                 
                 if (adminDeleteError) {
-                  console.error('❌ Admin deletion also failed:', adminDeleteError);
+                  logger.error('❌ Admin deletion also failed:', adminDeleteError);
                   errors.push({ index: i, error: `Failed to delete answer: ${deleteError.message}` });
                 } else {
-                  console.log(`✅ Answer deleted successfully using admin client: ${deleteId}`);
+                  logger.debug(`✅ Answer deleted successfully using admin client: ${deleteId}`);
                 }
               } else {
-                console.log(`✅ Answer deleted successfully: ${deleteId}`);
+                logger.debug(`✅ Answer deleted successfully: ${deleteId}`);
               }
             }
             
-            console.log(`🎯 Answer operation summary for question ${questionId}: ${toUpdate.length} updated, ${toCreate.length} created, ${toDelete.length} deleted`);
+            logger.debug(`🎯 Answer operation summary for question ${questionId}: ${toUpdate.length} updated, ${toCreate.length} created, ${toDelete.length} deleted`);
           }
         }
       } catch (questionError) {
-        console.error(`Error processing question ${i}:`, questionError);
+        logger.error(`Error processing question ${i}:`, questionError);
         errors.push({ index: i, error: questionError.message });
       }
     }
     
     // STEP 3: Final pass to ensure all questions have correct sequential order indices
     // This handles any remaining order conflicts and ensures clean sequential ordering
-    console.log('Performing final order index cleanup...');
+    logger.debug('Performing final order index cleanup...');
     
     // Get all questions in the set (including newly created ones)
     const { data: allQuestionsInSet, error: getAllError } = await userSupabase
@@ -767,7 +768,7 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
       .order('order_index', { ascending: true });
     
     if (getAllError) {
-      console.error('Error getting all questions for final ordering:', getAllError);
+      logger.error('Error getting all questions for final ordering:', getAllError);
       // Continue anyway, don't fail the entire operation
     } else {
       // Update each question with sequential order starting from 0
@@ -778,20 +779,20 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
           .eq('id', allQuestionsInSet[i].id);
         
         if (finalOrderError) {
-          console.error(`Error setting final order ${i} for question ${allQuestionsInSet[i].id}:`, finalOrderError);
+          logger.error(`Error setting final order ${i} for question ${allQuestionsInSet[i].id}:`, finalOrderError);
           // Continue with other questions
         }
       }
-      console.log(`Final order cleanup completed for ${allQuestionsInSet.length} questions`);
+      logger.debug(`Final order cleanup completed for ${allQuestionsInSet.length} questions`);
     }
     
     // Return results
     const allQuestions = [...updatedQuestions, ...createdQuestions];
     
-    console.log(`Bulk update completed: ${createdQuestions.length} created, ${updatedQuestions.length} updated, ${errors.length} errors`);
+    logger.debug(`Bulk update completed: ${createdQuestions.length} created, ${updatedQuestions.length} updated, ${errors.length} errors`);
     
     if (errors.length > 0) {
-      console.error('Bulk update errors:', errors);
+      logger.error('Bulk update errors:', errors);
       return res.status(207).json({ // 207 Multi-Status for partial success
         success: false,
         questions: allQuestions,
@@ -808,7 +809,7 @@ router.put('/bulk', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authen
     });
     
   } catch (error) {
-    console.error('Error in bulk question update:', error);
+    logger.error('Error in bulk question update:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -884,7 +885,7 @@ router.put('/set/:id/reorder', RateLimitMiddleware.createModerateLimit(), AuthMi
     });
     
   } catch (error) {
-    console.error('Error reordering questions:', error);
+    logger.error('Error reordering questions:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -912,7 +913,7 @@ router.post('/', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authentic
       order_index 
     } = req.body;
     
-    console.log('Creating question with data:', { 
+    logger.debug('Creating question with data:', { 
       question_text, 
       question_type, 
       order_index, 
@@ -966,20 +967,20 @@ router.post('/', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authentic
       .single();
     
     if (error) {
-      console.error('Error creating question:', error);
+      logger.error('Error creating question:', error);
       return res.status(500).json({ 
         success: false,
         error: error.message 
       });
     }
     
-    console.log('Question created:', question.id, 'for question set:', question_set_id);
+    logger.debug('Question created:', question.id, 'for question set:', question_set_id);
     res.status(201).json({
       success: true,
       question: question
     });
   } catch (error) {
-    console.error('Error in question creation:', error);
+    logger.error('Error in question creation:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -1045,20 +1046,20 @@ router.put('/:id', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authent
       .single();
     
     if (error) {
-      console.error('Error updating question:', error);
+      logger.error('Error updating question:', error);
       return res.status(500).json({ 
         success: false,
         error: error.message 
       });
     }
     
-    console.log('Question updated:', updatedQuestion.id);
+    logger.debug('Question updated:', updatedQuestion.id);
     res.json({
       success: true,
       question: updatedQuestion
     });
   } catch (error) {
-    console.error('Error in question update:', error);
+    logger.error('Error in question update:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -1095,20 +1096,20 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
       .eq('id', id);
     
     if (error) {
-      console.error('Error deleting question:', error);
+      logger.error('Error deleting question:', error);
       return res.status(500).json({ 
         success: false,
         error: error.message 
       });
     }
     
-    console.log('Question deleted:', id);
+    logger.debug('Question deleted:', id);
     res.json({ 
       success: true,
       message: 'Question deleted successfully' 
     });
   } catch (error) {
-    console.error('Error in question deletion:', error);
+    logger.error('Error in question deletion:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -1121,7 +1122,7 @@ router.post('/:id/upload-image', RateLimitMiddleware.createUploadLimit(), AuthMi
   try {
     const { id } = req.params;
     
-    console.log('Uploading question image for question:', id);
+    logger.debug('Uploading question image for question:', id);
     
     if (!req.file) {
       return res.status(400).json({ 
@@ -1155,7 +1156,7 @@ router.post('/:id/upload-image', RateLimitMiddleware.createUploadLimit(), AuthMi
     const fileName = `question_${id}_${Date.now()}.${fileExtension}`;
     const filePath = `${userId}/${fileName}`;
     
-    console.log('Uploading to storage:', filePath);
+    logger.debug('Uploading to storage:', filePath);
     
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await db.supabaseAdmin.storage
@@ -1167,7 +1168,7 @@ router.post('/:id/upload-image', RateLimitMiddleware.createUploadLimit(), AuthMi
       });
     
     if (uploadError) {
-      console.error('Storage upload error:', uploadError);
+      logger.error('Storage upload error:', uploadError);
       return res.status(500).json({ 
         success: false,
         error: 'Failed to upload image' 
@@ -1179,7 +1180,7 @@ router.post('/:id/upload-image', RateLimitMiddleware.createUploadLimit(), AuthMi
       .from(process.env.STORAGE_BUCKET_QUESTION_IMAGES || 'question-images')
       .getPublicUrl(filePath);
     
-    console.log('Generated public URL:', publicUrl);
+    logger.debug('Generated public URL:', publicUrl);
     
     // Update question with image URL using user-scoped client
     const { data: updatedQuestion, error: updateError } = await userSupabase
@@ -1192,14 +1193,14 @@ router.post('/:id/upload-image', RateLimitMiddleware.createUploadLimit(), AuthMi
       .single();
     
     if (updateError) {
-      console.error('Error updating question with image URL:', updateError);
+      logger.error('Error updating question with image URL:', updateError);
       return res.status(500).json({ 
         success: false,
         error: updateError.message 
       });
     }
     
-    console.log('Question image uploaded successfully:', publicUrl);
+    logger.debug('Question image uploaded successfully:', publicUrl);
     
     res.json({
       success: true,
@@ -1208,7 +1209,7 @@ router.post('/:id/upload-image', RateLimitMiddleware.createUploadLimit(), AuthMi
     });
     
   } catch (error) {
-    console.error('Error uploading question image:', error);
+    logger.error('Error uploading question image:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -1254,7 +1255,7 @@ router.delete('/:id/image', RateLimitMiddleware.createModerateLimit(), AuthMiddl
           .remove([filePath]);
         
         if (deleteError) {
-          console.error('Storage delete error:', deleteError);
+          logger.error('Storage delete error:', deleteError);
         }
       }
     }
@@ -1270,7 +1271,7 @@ router.delete('/:id/image', RateLimitMiddleware.createModerateLimit(), AuthMiddl
       .single();
     
     if (updateError) {
-      console.error('Error removing question image references:', updateError);
+      logger.error('Error removing question image references:', updateError);
       return res.status(500).json({ 
         success: false,
         error: updateError.message 
@@ -1283,7 +1284,7 @@ router.delete('/:id/image', RateLimitMiddleware.createModerateLimit(), AuthMiddl
     });
     
   } catch (error) {
-    console.error('Error deleting question image:', error);
+    logger.error('Error deleting question image:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -1329,7 +1330,7 @@ router.delete('/:id/explanation-image', RateLimitMiddleware.createModerateLimit(
           .remove([filePath]);
         
         if (deleteError) {
-          console.error('Storage delete error:', deleteError);
+          logger.error('Storage delete error:', deleteError);
         }
       }
     }
@@ -1345,7 +1346,7 @@ router.delete('/:id/explanation-image', RateLimitMiddleware.createModerateLimit(
       .single();
     
     if (updateError) {
-      console.error('Error removing question explanation image references:', updateError);
+      logger.error('Error removing question explanation image references:', updateError);
       return res.status(500).json({ 
         success: false,
         error: updateError.message 
@@ -1358,7 +1359,7 @@ router.delete('/:id/explanation-image', RateLimitMiddleware.createModerateLimit(
     });
     
   } catch (error) {
-    console.error('Error deleting question explanation image:', error);
+    logger.error('Error deleting question explanation image:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 

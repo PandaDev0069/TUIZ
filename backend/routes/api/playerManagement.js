@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('./utils/logger');
 const router = express.Router();
 
 module.exports = (dbManager) => {
@@ -14,7 +15,7 @@ module.exports = (dbManager) => {
         });
       }
 
-      console.log(`🧪 Testing player UUID for user: ${userId}, name: ${playerName}`);
+      logger.debug(`🧪 Testing player UUID for user: ${userId}, name: ${playerName}`);
       
       const result = await dbManager.getOrCreatePlayerUUID(userId, playerName);
       
@@ -36,7 +37,7 @@ module.exports = (dbManager) => {
       }
 
     } catch (error) {
-      console.error('❌ Test player UUID error:', error);
+      logger.error('❌ Test player UUID error:', error);
       res.status(500).json({
         success: false,
         error: error.message
@@ -47,7 +48,7 @@ module.exports = (dbManager) => {
   // Test endpoint for guest UUID
   router.post('/test-guest-uuid', async (req, res) => {
     try {
-      console.log('🧪 Testing guest UUID creation');
+      logger.debug('🧪 Testing guest UUID creation');
       
       const result = await dbManager.createGuestPlayerUUID();
       
@@ -69,7 +70,7 @@ module.exports = (dbManager) => {
       }
 
     } catch (error) {
-      console.error('❌ Test guest UUID error:', error);
+      logger.error('❌ Test guest UUID error:', error);
       res.status(500).json({
         success: false,
         error: error.message
@@ -80,7 +81,7 @@ module.exports = (dbManager) => {
   // Database migration endpoint
   router.post('/migrate-schema', async (req, res) => {
     try {
-      console.log('🔄 Running database schema migration...');
+      logger.debug('🔄 Running database schema migration...');
       
       const result = await dbManager.addGamePlayerUUIDToUsers();
       
@@ -97,7 +98,7 @@ module.exports = (dbManager) => {
       }
 
     } catch (error) {
-      console.error('❌ Migration error:', error);
+      logger.error('❌ Migration error:', error);
       res.status(500).json({
         success: false,
         error: error.message
@@ -110,7 +111,7 @@ module.exports = (dbManager) => {
     try {
       const { playerUuid } = req.params;
       
-      console.log(`📊 Getting stats for player UUID: ${playerUuid}`);
+      logger.debug(`📊 Getting stats for player UUID: ${playerUuid}`);
       
       const stats = await dbManager.getPlayerStats(playerUuid);
       
@@ -120,7 +121,7 @@ module.exports = (dbManager) => {
       });
 
     } catch (error) {
-      console.error('❌ Get player stats error:', error);
+      logger.error('❌ Get player stats error:', error);
       res.status(500).json({
         success: false,
         error: error.message

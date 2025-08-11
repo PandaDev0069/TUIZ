@@ -1,5 +1,6 @@
 const path = require('path');
 const crypto = require('crypto');
+const logger = require('./utils/logger');
 
 /**
  * Security utilities for safe file and path handling
@@ -170,19 +171,19 @@ class SecurityUtils {
     
     switch (level) {
       case 'error':
-        console.error(logEntry, safeData);
+        logger.error(logEntry, safeData);
         break;
       case 'warn':
-        console.warn(logEntry, safeData);
+        logger.warn(logEntry, safeData);
         break;
       case 'info':
         console.info(logEntry, safeData);
         break;
       case 'debug':
-        console.log(logEntry, safeData);
+        logger.debug(logEntry, safeData);
         break;
       default:
-        console.log(logEntry, safeData);
+        logger.debug(logEntry, safeData);
     }
   }
 

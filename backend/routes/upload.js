@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const AuthMiddleware = require('../middleware/auth');
 const DatabaseManager = require('../config/database');
+const logger = require('./utils/logger');
 
 const router = express.Router();
 const db = new DatabaseManager();
@@ -66,7 +67,7 @@ router.post('/image', AuthMiddleware.authenticateToken, upload.single('image'), 
       });
 
     if (error) {
-      console.error('Supabase storage error:', error);
+      logger.error('Supabase storage error:', error);
       return res.status(500).json({ 
         error: 'Failed to upload image',
         details: error.message 
@@ -79,7 +80,7 @@ router.post('/image', AuthMiddleware.authenticateToken, upload.single('image'), 
       .getPublicUrl(filePath);
 
     if (!publicUrlData?.publicUrl) {
-      console.error('Failed to get public URL for uploaded file');
+      logger.error('Failed to get public URL for uploaded file');
       return res.status(500).json({ error: 'Failed to get image URL' });
     }
 
@@ -94,7 +95,7 @@ router.post('/image', AuthMiddleware.authenticateToken, upload.single('image'), 
     });
 
   } catch (error) {
-    console.error('Error uploading image:', error);
+    logger.error('Error uploading image:', error);
     res.status(500).json({ 
       error: 'Failed to upload image',
       details: error.message 
@@ -143,7 +144,7 @@ router.delete('/image', AuthMiddleware.authenticateToken, async (req, res) => {
       .remove([filePath]);
 
     if (error) {
-      console.error('Supabase storage deletion error:', error);
+      logger.error('Supabase storage deletion error:', error);
       return res.status(500).json({ 
         error: 'Failed to delete image',
         details: error.message 
@@ -157,7 +158,7 @@ router.delete('/image', AuthMiddleware.authenticateToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error deleting image:', error);
+    logger.error('Error deleting image:', error);
     res.status(500).json({ 
       error: 'Failed to delete image',
       details: error.message 

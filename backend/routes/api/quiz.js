@@ -6,6 +6,7 @@ const DatabaseManager = require('../../config/database');
 const AuthMiddleware = require('../../middleware/auth');
 const SecurityUtils = require('../../utils/SecurityUtils');
 const RateLimitMiddleware = require('../../middleware/rateLimiter');
+const logger = require('../../utils/logger');
 
 // Initialize database manager
 const dbManager = new DatabaseManager();
@@ -29,7 +30,7 @@ const storage = multer.diskStorage({
       const secureFilename = SecurityUtils.generateSecureFilename(file.originalname, 'thumbnail');
       cb(null, secureFilename);
     } catch (error) {
-      console.error('Filename generation error:', error.message);
+      logger.error('Filename generation error:', error.message);
       cb(error, null);
     }
   }
@@ -89,7 +90,7 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
       });
 
     if (uploadError) {
-      console.error('Supabase upload error:', uploadError);
+      logger.error('Supabase upload error:', uploadError);
       // Clean up local file
       try {
         fs.unlinkSync(normalizedSafePath); // normalizedSafePath is validated
@@ -122,7 +123,7 @@ router.post('/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), AuthMi
     });
 
   } catch (error) {
-    console.error('Thumbnail upload error:', error);
+    logger.error('Thumbnail upload error:', error);
     
     // Clean up local file if it exists
     if (req.file && req.file.filename) {
@@ -155,8 +156,8 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
   try {
     const quizId = req.params.id;
     
-    console.log('🖼️ Thumbnail upload started for quiz:', quizId);
-    console.log('📊 Upload details:', {
+    logger.info('🖼️ Thumbnail upload started for quiz:', quizId);
+    logger.debug('📊 Upload details:', {
       hasFile: !!req.file,
       fileName: req.file?.filename,
       fileSize: req.file?.size,
@@ -165,7 +166,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
     });
     
     if (!req.file) {
-      console.error('❌ No file uploaded for quiz:', quizId);
+      logger.warn('❌ No file uploaded for quiz:', quizId);
       return res.status(400).json({ 
         success: false, 
         message: 'No file uploaded' 
@@ -183,7 +184,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
       .single();
 
     if (verifyError) {
-      console.error('❌ Quiz verification error for quiz', quizId, ':', verifyError.message);
+      logger.error('❌ Quiz verification error for quiz', quizId, ':', verifyError.message);
       return res.status(404).json({
         success: false,
         message: 'Quiz not found or access denied',
@@ -192,14 +193,14 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
     }
 
     if (!existingQuiz) {
-      console.error('❌ Quiz not found:', quizId);
+      logger.warn('❌ Quiz not found:', quizId);
       return res.status(404).json({
         success: false,
         message: 'Quiz not found'
       });
     }
 
-    console.log('✅ Quiz verification successful:', existingQuiz.title);
+    logger.debug('✅ Quiz verification successful:', existingQuiz.title);
 
     // Read the uploaded file with secure path construction and validation
     const uploadsDir = path.join(__dirname, '../uploads/thumbnails');
@@ -216,7 +217,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
     
     const fileBuffer = fs.readFileSync(normalizedSafePath);
 
-    console.log('📤 Uploading to Supabase storage:', secureFileName);
+    logger.debug('📤 Uploading to Supabase storage:', secureFileName);
 
     // Upload to Supabase Storage using user-scoped client
     const { data: uploadData, error: uploadError } = await userSupabase.storage
@@ -227,7 +228,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
       });
 
     if (uploadError) {
-      console.error('❌ Supabase upload error:', uploadError);
+      logger.error('❌ Supabase upload error:', uploadError);
       // Clean up local file
       try {
         fs.unlinkSync(normalizedSafePath); // normalizedSafePath is already secure
@@ -242,7 +243,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
         message: 'Failed to upload to storage',
         error: uploadError.message
       });
-    }    console.log('✅ File uploaded to storage successfully');
+    }    logger.debug('✅ File uploaded to storage successfully');
 
     // Get public URL using user-scoped client
     const { data: urlData } = userSupabase.storage
@@ -250,10 +251,10 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
       .getPublicUrl(`${req.user.id}/${secureFileName}`);
 
     const thumbnailUrl = urlData.publicUrl;
-    console.log('🔗 Generated thumbnail URL:', thumbnailUrl);
+    logger.debug('🔗 Generated thumbnail URL:', thumbnailUrl);
 
     // Update quiz thumbnail_url in database using user-scoped client
-    console.log('💾 Updating database with thumbnail URL for quiz:', quizId);
+    logger.debug('💾 Updating database with thumbnail URL for quiz:', quizId);
     const { data: updateData, error: updateError } = await userSupabase
       .from('question_sets')
       .update({ 
@@ -264,17 +265,17 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
       .single();
 
     if (updateError) {
-      console.error('❌ Database update error for quiz', quizId, ':', updateError.message);
-      console.error('❌ Update error details:', updateError);
+      logger.error('❌ Database update error for quiz', quizId, ':', updateError.message);
+      logger.debug('❌ Update error details:', updateError);
       
       // Clean up uploaded file from storage
       try {
         await userSupabase.storage
           .from('quiz-thumbnails')
           .remove([`${req.user.id}/${secureFileName}`]);
-        console.log('🧹 Cleaned up storage file after DB error');
+        logger.debug('🧹 Cleaned up storage file after DB error');
       } catch (cleanupError) {
-        console.warn('⚠️ Storage cleanup warning:', cleanupError);
+        logger.warn('⚠️ Storage cleanup warning:', cleanupError);
       }
 
       // Clean up local file
@@ -294,11 +295,11 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
       });
     }
 
-    console.log('✅ Database updated successfully');
-    console.log('📋 Updated quiz data:', updateData);
+    logger.info('✅ Database updated successfully');
+    logger.debug('📋 Updated quiz data:', updateData);
 
     // Double-check that the update actually persisted by reading it back
-    console.log('🔍 Verifying database update persistence...');
+    logger.debug('🔍 Verifying database update persistence...');
     const { data: verifyData, error: readVerifyError } = await userSupabase
       .from('question_sets')
       .select('id, title, thumbnail_url')
@@ -306,9 +307,9 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
       .single();
 
     if (readVerifyError) {
-      console.error('❌ Verification read failed:', readVerifyError);
+      logger.error('❌ Verification read failed:', readVerifyError);
     } else {
-      console.log('🔍 Verification result:', {
+      logger.debug('🔍 Verification result:', {
         id: verifyData.id,
         title: verifyData.title,
         thumbnail_url: verifyData.thumbnail_url,
@@ -316,10 +317,10 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
       });
       
       if (verifyData.thumbnail_url !== thumbnailUrl) {
-        console.error('❌ CRITICAL: Database update did not persist! Expected:', thumbnailUrl, 'Got:', verifyData.thumbnail_url);
+        logger.error('❌ CRITICAL: Database update did not persist! Expected:', thumbnailUrl, 'Got:', verifyData.thumbnail_url);
         
         // Try to update again with explicit transaction
-        console.log('🔄 Attempting database update retry...');
+        logger.debug('🔄 Attempting database update retry...');
         const { data: retryData, error: retryError } = await userSupabase
           .from('question_sets')
           .update({ thumbnail_url: thumbnailUrl })
@@ -328,9 +329,9 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
           .single();
           
         if (retryError) {
-          console.error('❌ Retry failed:', retryError);
+          logger.error('❌ Retry failed:', retryError);
         } else {
-          console.log('✅ Retry successful:', retryData);
+          logger.debug('✅ Retry successful:', retryData);
         }
       }
     }
@@ -358,7 +359,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
     });
 
   } catch (error) {
-    console.error('❌ Thumbnail upload error:', error);
+    logger.error('❌ Thumbnail upload error:', error);
     
     // Clean up local file if it exists
     if (req.file && req.file.filename) {
@@ -372,7 +373,7 @@ router.post('/:id/upload-thumbnail', RateLimitMiddleware.createUploadLimit(), Au
           throw new Error('Path traversal attempt detected in cleanup');
         }
         fs.unlinkSync(normalizedSafePath);
-        console.log('🧹 Cleaned up local file after error');
+        logger.debug('🧹 Cleaned up local file after error');
       } catch (cleanupError) {
         SecurityUtils.safeLog('error', 'File cleanup error', {
           filePath: path.basename(req.file.filename),
@@ -432,7 +433,7 @@ router.delete('/:id/thumbnail', RateLimitMiddleware.createModerateLimit(), AuthM
       .single();
 
     if (updateError) {
-      console.error('Database update error:', updateError);
+      logger.error('Database update error:', updateError);
       return res.status(500).json({
         success: false,
         message: 'データベースの更新に失敗しました。'
@@ -446,7 +447,7 @@ router.delete('/:id/thumbnail', RateLimitMiddleware.createModerateLimit(), AuthM
           .from('quiz-thumbnails')
           .remove([filePath]);
       } catch (storageError) {
-        console.warn('Storage deletion warning:', storageError);
+        logger.warn('Storage deletion warning:', storageError);
         // Don't fail the request if storage deletion fails
       }
     }
@@ -463,7 +464,7 @@ router.delete('/:id/thumbnail', RateLimitMiddleware.createModerateLimit(), AuthM
     });
 
   } catch (error) {
-    console.error('Thumbnail deletion error:', error);
+    logger.error('Thumbnail deletion error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'サムネイル画像の削除中にエラーが発生しました。'
@@ -558,7 +559,7 @@ router.post('/create', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.aut
       .single();
 
     if (quizError) {
-      console.error('Quiz creation error:', quizError);
+      logger.error('Quiz creation error:', quizError);
       return res.status(500).json({
         success: false,
         message: 'Failed to create quiz',
@@ -573,7 +574,7 @@ router.post('/create', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.aut
     });
 
   } catch (error) {
-    console.error('Quiz creation error:', error);
+    logger.error('Quiz creation error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -616,7 +617,7 @@ router.get('/my-quizzes', RateLimitMiddleware.createReadLimit(), AuthMiddleware.
       .order('updated_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching quizzes:', error);
+      logger.error('Error fetching quizzes:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to fetch quizzes',
@@ -630,7 +631,7 @@ router.get('/my-quizzes', RateLimitMiddleware.createReadLimit(), AuthMiddleware.
     });
 
   } catch (error) {
-    console.error('Error fetching quizzes:', error);
+    logger.error('Error fetching quizzes:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -715,7 +716,7 @@ router.get('/public/browse', RateLimitMiddleware.createReadLimit(), async (req, 
     const { data: quizzes, error } = await query;
 
     if (error) {
-      console.error('Error fetching public quizzes:', error);
+      logger.error('Error fetching public quizzes:', error);
       return res.status(500).json({
         success: false,
         message: 'Error fetching public quizzes',
@@ -734,7 +735,7 @@ router.get('/public/browse', RateLimitMiddleware.createReadLimit(), async (req, 
     });
 
   } catch (error) {
-    console.error('Error fetching public quizzes:', error);
+    logger.error('Error fetching public quizzes:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -749,20 +750,20 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
     const publicQuizId = req.params.id;
     const userId = req.user.id; // Use req.user.id instead of req.userId
 
-    console.log('🔄 Clone request started');
-    console.log('📋 Quiz ID:', publicQuizId);
-    console.log('👤 User ID:', userId);
-    console.log('🔐 User token present:', !!req.userToken);
+    logger.info('🔄 Clone request started for quiz:', publicQuizId);
+    logger.debug('👤 User ID:', userId);
+    logger.debug('🔐 User token present:', !!req.userToken);
 
     // Create user-scoped Supabase client for reading public data
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
     // Get admin client for write operations to bypass RLS
     const DatabaseManager = require('../../config/database');
+const logger = require('./utils/logger');
     const db = new DatabaseManager();
     const adminSupabase = db.supabaseAdmin || db.supabase;
 
-    console.log('📖 Fetching public quiz...');
+    logger.debug('📖 Fetching public quiz...');
     // First, get the public quiz using user-scoped client for RLS compliance
     const { data: publicQuiz, error: fetchError } = await userSupabase
       .from('question_sets')
@@ -778,19 +779,18 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
       .eq('status', 'published')
       .single();
 
-    console.log('📊 Fetch result:', { found: !!publicQuiz, error: fetchError });
+    logger.debug('📊 Fetch result:', { found: !!publicQuiz, error: fetchError });
 
     if (fetchError || !publicQuiz) {
-      console.log('❌ Public quiz not found');
+      logger.warn('❌ Public quiz not found:', publicQuizId);
       return res.status(404).json({
         success: false,
         message: 'Public quiz not found'
       });
     }
 
-    console.log('✅ Public quiz found:', publicQuiz.title);
-    console.log('📊 Questions count:', publicQuiz.questions?.length || 0);
-    console.log('📊 Sample question answers:', publicQuiz.questions?.[0]?.answers?.length || 0);
+    logger.info('✅ Quiz clone initiated:', publicQuiz.title);
+    logger.debug('📊 Questions count:', publicQuiz.questions?.length || 0);
 
     // Check if user already has this quiz cloned (skip if cloned_from field doesn't exist yet)
     try {
@@ -808,11 +808,11 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
       }
     } catch (cloneCheckError) {
       // If cloned_from field doesn't exist, continue with cloning
-      console.log('Clone check skipped (cloned_from field may not exist):', cloneCheckError.message);
+      logger.debug('Clone check skipped (cloned_from field may not exist):', cloneCheckError.message);
     }
 
-    console.log('✅ Public quiz found:', publicQuiz.title);
-    console.log('📝 Creating clone...');
+    logger.info('✅ Public quiz found:', publicQuiz.title);
+    logger.debug('📝 Creating clone...');
 
     // Function to copy image to new location for the cloned quiz
     const copyImageToNewLocation = async (originalImageUrl, imageType = 'thumbnail') => {
@@ -840,7 +840,7 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
           .download(originalFilePath);
           
         if (downloadError) {
-          console.warn('⚠️ Failed to download original image for cloning:', downloadError.message);
+          logger.warn('⚠️ Failed to download original image for cloning:', downloadError.message);
           return null; // Return null to indicate failure to clone image
         }
         
@@ -853,7 +853,7 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
           });
           
         if (uploadError) {
-          console.warn('⚠️ Failed to upload cloned image:', uploadError.message);
+          logger.warn('⚠️ Failed to upload cloned image:', uploadError.message);
           return originalImageUrl; // Return original URL as fallback
         }
         
@@ -862,11 +862,11 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
           .from(bucketName)
           .getPublicUrl(newFilePath);
           
-        console.log('✅ Image cloned successfully:', newFilePath);
+        logger.debug('✅ Image cloned successfully:', newFilePath);
         return publicUrl;
         
       } catch (error) {
-        console.warn('⚠️ Error cloning image:', error.message);
+        logger.warn('⚠️ Error cloning image:', error.message);
         return originalImageUrl; // Return original URL as fallback
       }
     };
@@ -894,10 +894,10 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
     try {
       insertData.cloned_from = publicQuizId;
     } catch (error) {
-      console.log('⚠️ cloned_from field may not exist yet');
+      logger.debug('⚠️ cloned_from field may not exist yet');
     }
 
-    console.log('📋 Insert data:', insertData);
+    logger.debug('📋 Insert data prepared:', { title: insertData.title, userId: insertData.user_id });
 
     const { data: clonedQuiz, error: cloneError } = await adminSupabase
       .from('question_sets')
@@ -905,11 +905,11 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
       .select()
       .single();
 
-    console.log('📊 Clone result:', { success: !!clonedQuiz, error: cloneError });
+    logger.debug('📊 Clone result:', { success: !!clonedQuiz, error: cloneError });
 
     if (cloneError) {
-      console.error('❌ Error cloning quiz:', cloneError);
-      console.error('📋 Insert data:', insertData);
+      logger.error('❌ Error cloning quiz:', cloneError);
+      logger.debug('📋 Insert data:', insertData);
       return res.status(500).json({
         success: false,
         message: 'Error cloning quiz',
@@ -919,7 +919,7 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
 
     // Clone questions and their answers
     if (publicQuiz.questions && publicQuiz.questions.length > 0) {
-      console.log('🔄 Cloning', publicQuiz.questions.length, 'questions...');
+      logger.info('🔄 Cloning questions:', publicQuiz.questions.length);
       
       for (let i = 0; i < publicQuiz.questions.length; i++) {
         const originalQuestion = publicQuiz.questions[i];
@@ -952,11 +952,11 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
           .single();
 
         if (questionError) {
-          console.error('❌ Error cloning question:', questionError);
+          logger.error('❌ Error cloning question:', questionError);
           continue; // Skip this question but continue with others
         }
 
-        console.log('✅ Question cloned:', clonedQuestion.id);
+        logger.debug('✅ Question cloned:', clonedQuestion.id);
 
         // Clone answers for this question (if they exist in the original)
         if (originalQuestion.answers && originalQuestion.answers.length > 0) {
@@ -985,9 +985,9 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
             .insert(answersData);
 
           if (answersError) {
-            console.error('❌ Error cloning answers for question:', answersError);
+            logger.error('❌ Error cloning answers for question:', answersError);
           } else {
-            console.log('✅ Answers cloned for question:', clonedQuestion.id);
+            logger.debug('✅ Answers cloned for question:', clonedQuestion.id);
           }
         } else {
           // Handle old-style questions with correct_answers/incorrect_answers arrays
@@ -1025,15 +1025,15 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
               .insert(answers);
 
             if (answersError) {
-              console.error('❌ Error cloning legacy answers:', answersError);
+              logger.error('❌ Error cloning legacy answers:', answersError);
             } else {
-              console.log('✅ Legacy answers cloned for question:', clonedQuestion.id);
+              logger.debug('✅ Legacy answers cloned for question:', clonedQuestion.id);
             }
           }
         }
       }
       
-      console.log('✅ All questions cloned successfully');
+      logger.info('✅ All questions cloned successfully');
     }
 
     res.json({
@@ -1046,7 +1046,7 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
     });
 
   } catch (error) {
-    console.error('Error cloning public quiz:', error);
+    logger.error('Error cloning public quiz:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -1088,7 +1088,7 @@ router.get('/:id', RateLimitMiddleware.createReadLimit(), AuthMiddleware.authent
       .single();
 
     if (error) {
-      console.error('Error fetching quiz:', error);
+      logger.error('Error fetching quiz:', error);
       return res.status(404).json({
         success: false,
         message: 'Quiz not found'
@@ -1101,7 +1101,7 @@ router.get('/:id', RateLimitMiddleware.createReadLimit(), AuthMiddleware.authent
     });
 
   } catch (error) {
-    console.error('Error fetching quiz:', error);
+    logger.error('Error fetching quiz:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -1233,7 +1233,7 @@ router.put('/:id', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authent
       .single();
 
     if (verifyError) {
-      console.error('Quiz verification error for quiz', quizId, ':', verifyError.message);
+      logger.error('Quiz verification error for quiz', quizId, ':', verifyError.message);
       return res.status(404).json({
         success: false,
         message: 'Quiz not found or access denied',
@@ -1262,7 +1262,7 @@ router.put('/:id', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authent
       .single();
 
     if (error) {
-      console.error('Error updating quiz', quizId, ':', error.message);
+      logger.error('Error updating quiz', quizId, ':', error.message);
       return res.status(500).json({
         success: false,
         message: 'Failed to update quiz',
@@ -1277,7 +1277,7 @@ router.put('/:id', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authent
     });
 
   } catch (error) {
-    console.error('Error updating quiz:', error);
+    logger.error('Error updating quiz:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -1292,7 +1292,7 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
     const quizId = req.params.id;
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
 
-    console.log('🗑️ Starting quiz deletion for:', quizId);
+    logger.info('🗑️ Starting quiz deletion for:', quizId);
 
     // First, get the quiz data to check for thumbnail
     const { data: quizData, error: fetchError } = await userSupabase
@@ -1302,7 +1302,7 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
       .single();
 
     if (fetchError) {
-      console.error('❌ Error fetching quiz for deletion:', fetchError);
+      logger.error('❌ Error fetching quiz for deletion:', fetchError);
       return res.status(404).json({
         success: false,
         message: 'Quiz not found or access denied',
@@ -1317,12 +1317,12 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
       });
     }
 
-    console.log('✅ Quiz found for deletion:', quizData.title);
+    logger.debug('✅ Quiz found for deletion:', quizData.title);
 
     // Delete thumbnail from storage if it exists
     if (quizData.thumbnail_url) {
       try {
-        console.log('🖼️ Deleting thumbnail from storage:', quizData.thumbnail_url);
+        logger.debug('🖼️ Deleting thumbnail from storage:', quizData.thumbnail_url);
         
         // Extract filename from URL
         const urlParts = quizData.thumbnail_url.split('/');
@@ -1334,17 +1334,17 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
           .remove([filePath]);
 
         if (storageError) {
-          console.warn('⚠️ Thumbnail deletion warning:', storageError);
+          logger.warn('⚠️ Thumbnail deletion warning:', storageError);
           // Don't fail the entire deletion if thumbnail cleanup fails
         } else {
-          console.log('✅ Thumbnail deleted from storage successfully');
+          logger.debug('✅ Thumbnail deleted from storage successfully');
         }
       } catch (thumbnailError) {
-        console.warn('⚠️ Thumbnail cleanup error:', thumbnailError);
+        logger.warn('⚠️ Thumbnail cleanup error:', thumbnailError);
         // Continue with quiz deletion even if thumbnail cleanup fails
       }
     } else {
-      console.log('📝 No thumbnail to delete');
+      logger.debug('📝 No thumbnail to delete');
     }
 
     // First, get all question data with image URLs for cleanup
@@ -1354,7 +1354,7 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
       .eq('question_set_id', quizId);
 
     if (questionIdsError) {
-      console.warn('⚠️ Error fetching question data:', questionIdsError);
+      logger.warn('⚠️ Error fetching question data:', questionIdsError);
     }
 
     // Get all answer data with image URLs for cleanup
@@ -1367,7 +1367,7 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
         .in('question_id', questionIdArray);
       
       if (answerError) {
-        console.warn('⚠️ Error fetching answer data:', answerError);
+        logger.warn('⚠️ Error fetching answer data:', answerError);
       } else {
         answersWithImages = answerData || [];
       }
@@ -1437,13 +1437,13 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
         .in('question_id', questionIdArray);
 
       if (answersError) {
-        console.warn('⚠️ Error deleting answers:', answersError);
+        logger.warn('⚠️ Error deleting answers:', answersError);
         // Continue anyway - the questions deletion might cascade
       } else {
-        console.log('✅ Answers deleted successfully');
+        logger.debug('✅ Answers deleted successfully');
       }
     } else {
-      console.log('📝 No questions found, skipping answer deletion');
+      logger.debug('📝 No questions found, skipping answer deletion');
     }
 
     // Delete all questions associated with this quiz
@@ -1453,7 +1453,7 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
       .eq('question_set_id', quizId);
 
     if (questionsError) {
-      console.error('❌ Error deleting questions:', questionsError);
+      logger.error('❌ Error deleting questions:', questionsError);
       return res.status(500).json({
         success: false,
         message: 'Failed to delete quiz questions',
@@ -1461,7 +1461,7 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
       });
     }
 
-    console.log('✅ Questions deleted successfully');
+    logger.debug('✅ Questions deleted successfully');
 
     // Finally, delete the quiz itself
     const { error: quizError } = await userSupabase
@@ -1470,7 +1470,7 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
       .eq('id', quizId);
 
     if (quizError) {
-      console.error('❌ Error deleting quiz:', quizError);
+      logger.error('❌ Error deleting quiz:', quizError);
       return res.status(500).json({
         success: false,
         message: 'Failed to delete quiz',
@@ -1488,7 +1488,7 @@ router.delete('/:id', RateLimitMiddleware.createStrictLimit(), AuthMiddleware.au
     });
 
   } catch (error) {
-    console.error('❌ Error deleting quiz:', error);
+    logger.error('❌ Error deleting quiz:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -1522,7 +1522,7 @@ router.patch('/:id/status', AuthMiddleware.authenticateToken, async (req, res) =
       .single();
 
     if (fetchError) {
-      console.error('Error fetching current quiz:', fetchError);
+      logger.error('Error fetching current quiz:', fetchError);
       return res.status(404).json({
         success: false,
         message: 'Quiz not found or access denied'
@@ -1552,7 +1552,7 @@ router.patch('/:id/status', AuthMiddleware.authenticateToken, async (req, res) =
       .single();
 
     if (error) {
-      console.error('Status update error:', error);
+      logger.error('Status update error:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to update quiz status',
@@ -1574,7 +1574,7 @@ router.patch('/:id/status', AuthMiddleware.authenticateToken, async (req, res) =
     });
 
   } catch (error) {
-    console.error('Error updating quiz status:', error);
+    logger.error('Error updating quiz status:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -1634,7 +1634,7 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
       quizTitle: currentQuiz.title,
       questionCount: currentQuiz.questions?.length || 0
     });
-    console.log(`🔍 Quiz data structure:`, {
+    logger.debug(`🔍 Quiz data structure:`, {
       id: currentQuiz.id,
       title: currentQuiz.title,
       questionsArray: currentQuiz.questions,
@@ -1781,7 +1781,7 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
     });
 
   } catch (error) {
-    console.error('💥 Error publishing quiz:', error);
+    logger.error('💥 Error publishing quiz:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -1813,7 +1813,7 @@ router.patch('/:id/question-count', AuthMiddleware.authenticateToken, async (req
       .single();
 
     if (error) {
-      console.error('Question count update error:', error);
+      logger.error('Question count update error:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to update question count',
@@ -1835,7 +1835,7 @@ router.patch('/:id/question-count', AuthMiddleware.authenticateToken, async (req
     });
 
   } catch (error) {
-    console.error('Error updating question count:', error);
+    logger.error('Error updating question count:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -1902,7 +1902,7 @@ router.post('/:id/publish', RateLimitMiddleware.createQuizLimit(), AuthMiddlewar
       .single();
 
     if (publishError) {
-      console.error('Publish error:', publishError);
+      logger.error('Publish error:', publishError);
       return res.status(500).json({
         success: false,
         message: 'Failed to publish quiz',
@@ -1917,7 +1917,7 @@ router.post('/:id/publish', RateLimitMiddleware.createQuizLimit(), AuthMiddlewar
     });
 
   } catch (error) {
-    console.error('Error publishing quiz:', error);
+    logger.error('Error publishing quiz:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -1944,7 +1944,7 @@ router.get('/:id/questions', RateLimitMiddleware.createReadLimit(), AuthMiddlewa
       .order('order_index', { ascending: true });
 
     if (error) {
-      console.error('Questions fetch error:', error);
+      logger.error('Questions fetch error:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to fetch questions',
@@ -1958,7 +1958,7 @@ router.get('/:id/questions', RateLimitMiddleware.createReadLimit(), AuthMiddlewa
     });
 
   } catch (error) {
-    console.error('Error fetching questions:', error);
+    logger.error('Error fetching questions:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
