@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { showError, showSuccess } from '../utils/toast';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -18,7 +19,8 @@ import {
   Download,
   Play,
   Filter,
-  SortAsc
+  SortAsc,
+  ArrowLeft
 } from 'lucide-react';
 
 // Helper Components
@@ -276,6 +278,7 @@ function EmptyState({ tab, query }) {
 const QuizLibrary = () => {
   const { apiCall } = useAuth();
   const { showConfirmation, confirmationProps } = useConfirmation();
+  const navigate = useNavigate();
   const searchRef = useRef(null);
 
   // State
@@ -346,12 +349,12 @@ const QuizLibrary = () => {
         const response = await apiCall(`/quiz/public/browse?${params.toString()}`);
         setQuizzes(response.quizzes || []);
       } else {
-        // Fetch user's library (cloned quizzes)
+        // Fetch user's library (all user's quizzes, same as dashboard)
         const response = await apiCall('/quiz/my-quizzes');
         const allQuizzes = response.quizzes || [];
         
-        // Filter for cloned quizzes and apply local filters
-        let libraryQuizzes = allQuizzes.filter(quiz => quiz.cloned_from);
+        // Show all user's quizzes (not just cloned ones)
+        let libraryQuizzes = allQuizzes;
         
         // Apply search
         if (query.trim()) {
@@ -397,10 +400,11 @@ const QuizLibrary = () => {
 
       showSuccess('クイズがライブラリに追加されました！');
       
-      // Refresh if we're on library tab
-      if (tab === "library") {
-        fetchQuizzes();
-      }
+      // Redirect to dashboard after successful clone
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1000); // Wait 1 second to show the success message
+      
     } catch (error) {
       console.error('Error cloning quiz:', error);
       showError('クイズの追加に失敗しました: ' + error.message);
@@ -453,10 +457,20 @@ const QuizLibrary = () => {
       <header className="quiz-library__header">
         <div className="quiz-library__header-content">
           <div className="quiz-library__header-left">
-            <h1 className="quiz-library__title">📚 クイズライブラリ</h1>
-            <p className="quiz-library__subtitle">
-              公開クイズを探索してライブラリに追加
-            </p>
+            <button 
+              className="quiz-library__back-btn"
+              onClick={() => navigate('/dashboard')}
+              title="ダッシュボードに戻る"
+            >
+              <ArrowLeft size={16} />
+              ダッシュボード
+            </button>
+            <div className="quiz-library__title-section">
+              <h1 className="quiz-library__title">📚 クイズライブラリ</h1>
+              <p className="quiz-library__subtitle">
+                公開クイズを探索してライブラリに追加
+              </p>
+            </div>
           </div>
           
           <div className="quiz-library__tabs">

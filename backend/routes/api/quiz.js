@@ -585,10 +585,13 @@ router.post('/create', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.aut
 // Get user's quizzes
 router.get('/my-quizzes', RateLimitMiddleware.createReadLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
   try {
+    // Get user ID from authenticated request
+    const userId = req.user.id;
+    
     // Create user-scoped Supabase client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
     
-  const { data: quizzes, error } = await userSupabase
+    const { data: quizzes, error } = await userSupabase
       .from('question_sets')
       .select(`
         id,
@@ -609,6 +612,7 @@ router.get('/my-quizzes', RateLimitMiddleware.createReadLimit(), AuthMiddleware.
         created_at,
         updated_at
       `)
+      .eq('user_id', userId) // Explicitly filter by user ID
       .order('updated_at', { ascending: false });
 
     if (error) {
