@@ -81,7 +81,7 @@ function StatusBadge({ status }) {
   return <Badge tone={tone}>{label}</Badge>;
 }
 
-function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete }) {
+function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete, isCloning = false, cloningQuizId, isDeleting = false, deletingQuizId }) {
   const [thumbnailError, setThumbnailError] = useState(false);
 
   const handleThumbnailError = () => {
@@ -101,6 +101,10 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete }) 
       default: return '普通';
     }
   };
+
+  const isThisQuizCloning = cloningQuizId === quiz.id;
+  const isThisQuizDeleting = deletingQuizId === quiz.id;
+  const isLoading = isCloning || isDeleting;
 
   // Use Dashboard-style design for "My Library" tab
   if (tab === "library") {
@@ -138,6 +142,7 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete }) 
           <button 
             className="dashboard__button dashboard__button--primary" 
             onClick={() => onPreview(quiz)}
+            disabled={isLoading}
           >
             <Eye size={16} /> 詳細
           </button>
@@ -145,6 +150,7 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete }) 
             <button 
               className="dashboard__button dashboard__button--secondary" 
               onClick={() => onStart(quiz)}
+              disabled={isLoading}
             >
               <Play size={16} /> ゲーム開始
             </button>
@@ -209,15 +215,26 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete }) 
           <button 
             className="quiz-library__button quiz-library__button--secondary"
             onClick={() => onPreview(quiz)}
+            disabled={isLoading}
           >
             <Eye size={16} /> 詳細
           </button>
           
           <button 
-            className="quiz-library__button quiz-library__button--primary"
+            className={`quiz-library__button quiz-library__button--primary ${isThisQuizCloning ? 'quiz-library__button--loading' : ''}`}
             onClick={() => onClone(quiz)}
+            disabled={isLoading}
           >
-            <Download size={16} /> ライブラリに追加
+            {isThisQuizCloning ? (
+              <>
+                <div className="quiz-library__loading-spinner"></div>
+                追加中...
+              </>
+            ) : (
+              <>
+                <Download size={16} /> ライブラリに追加
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -225,8 +242,12 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete }) 
   );
 }
 
-function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, onEdit, onDelete, tab }) {
+function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, onEdit, onDelete, tab, isCloning = false, cloningQuizId, isDeleting = false, deletingQuizId }) {
   if (!isOpen || !quiz) return null;
+
+  const isThisQuizCloning = cloningQuizId === quiz.id;
+  const isThisQuizDeleting = deletingQuizId === quiz.id;
+  const isLoading = isCloning || isDeleting;
 
   return (
     <div className="quiz-library__modal-overlay">
@@ -285,10 +306,20 @@ function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, onEdit, onDelet
         <div className="quiz-library__modal-actions">
           {tab === "public" && (
             <button 
-              className="quiz-library__button quiz-library__button--secondary"
+              className={`quiz-library__button quiz-library__button--secondary ${isThisQuizCloning ? 'quiz-library__button--loading' : ''}`}
               onClick={() => onClone(quiz)}
+              disabled={isLoading}
             >
-              <Download size={16} /> ライブラリに追加
+              {isThisQuizCloning ? (
+                <>
+                  <div className="quiz-library__loading-spinner"></div>
+                  追加中...
+                </>
+              ) : (
+                <>
+                  <Download size={16} /> ライブラリに追加
+                </>
+              )}
             </button>
           )}
           {tab === "library" && (
@@ -296,18 +327,30 @@ function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, onEdit, onDelet
               <button 
                 className="quiz-library__button quiz-library__button--secondary"
                 onClick={() => onEdit(quiz)}
+                disabled={isLoading}
               >
                 <Edit size={16} /> 編集
               </button>
               <button 
-                className="quiz-library__button quiz-library__button--danger"
+                className={`quiz-library__button quiz-library__button--danger ${isThisQuizDeleting ? 'quiz-library__button--loading' : ''}`}
                 onClick={() => onDelete(quiz)}
+                disabled={isLoading}
               >
-                <Trash2 size={16} /> 削除
+                {isThisQuizDeleting ? (
+                  <>
+                    <div className="quiz-library__loading-spinner"></div>
+                    削除中...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} /> 削除
+                  </>
+                )}
               </button>
               <button 
                 className="quiz-library__button quiz-library__button--primary"
                 onClick={() => onStart(quiz)}
+                disabled={isLoading}
               >
                 <Play size={16} /> ゲーム開始
               </button>
@@ -387,6 +430,10 @@ const QuizLibrary = () => {
   const [filterMode, setFilterMode] = useState(initialView === 'drafts' ? 'drafts' : 'all'); // all | drafts | published
   const [view, setView] = useState("grid"); // grid | list
   const [loading, setLoading] = useState(false);
+  const [cloning, setCloning] = useState(false); // Loading state for cloning
+  const [cloningQuizId, setCloningQuizId] = useState(null); // Track which quiz is being cloned
+  const [deleting, setDeleting] = useState(false); // Loading state for deleting
+  const [deletingQuizId, setDeletingQuizId] = useState(null); // Track which quiz is being deleted
   const [quizzes, setQuizzes] = useState([]);
   const [preview, setPreview] = useState({ open: false, quiz: null });
 
@@ -493,10 +540,15 @@ const QuizLibrary = () => {
   };
 
   const handleCloneQuiz = async (quiz) => {
+    // Prevent multiple clone requests
+    if (cloning || cloningQuizId === quiz.id) {
+      return;
+    }
+
     try {
       const confirmed = await showConfirmation({
         title: 'クイズをライブラリに追加',
-        message: `"${quiz.title}" をマイライブラリに追加しますか？`,
+        message: `"${quiz.title}" をマイライブラリに追加しますか？\n\n画像のコピーに数秒かかる場合があります。`,
         confirmText: '追加する',
         cancelText: 'キャンセル',
         type: 'info'
@@ -504,20 +556,28 @@ const QuizLibrary = () => {
 
       if (!confirmed) return;
 
+      setCloning(true);
+      setCloningQuizId(quiz.id);
+
+      showSuccess('クイズの追加を開始しました。画像をコピー中...');
+
       const response = await apiCall(`/quiz/public/clone/${quiz.id}`, {
         method: 'POST'
       });
 
-      showSuccess('クイズがライブラリに追加されました！');
+      showSuccess('クイズがライブラリに追加されました！ダッシュボードにリダイレクトしています...');
       
       // Redirect to dashboard after successful clone
       setTimeout(() => {
         navigate('/dashboard');
-      }, 1000); // Wait 1 second to show the success message
+      }, 1500); // Wait 1.5 seconds to show the success message
       
     } catch (error) {
       console.error('Error cloning quiz:', error);
       showError('クイズの追加に失敗しました: ' + error.message);
+    } finally {
+      setCloning(false);
+      setCloningQuizId(null);
     }
   };
 
@@ -552,6 +612,11 @@ const QuizLibrary = () => {
   };
 
   const handleDeleteQuiz = async (quiz) => {
+    // Prevent multiple delete requests
+    if (deleting || deletingQuizId === quiz.id) {
+      return;
+    }
+
     try {
       const confirmed = await showConfirmation({
         title: 'クイズセットを削除',
@@ -562,6 +627,9 @@ const QuizLibrary = () => {
       });
 
       if (!confirmed) return;
+
+      setDeleting(true);
+      setDeletingQuizId(quiz.id);
       
       await apiCall(`/quiz/${quiz.id}`, { method: 'DELETE' });
       showSuccess('クイズセットが削除されました。');
@@ -569,6 +637,9 @@ const QuizLibrary = () => {
     } catch (error) {
       console.error('Error deleting quiz set:', error);
       showError('削除に失敗しました: ' + error.message);
+    } finally {
+      setDeleting(false);
+      setDeletingQuizId(null);
     }
   };
 
@@ -773,6 +844,10 @@ const QuizLibrary = () => {
                             onStart={handleStartQuiz}
                             onEdit={handleEditQuiz}
                             onDelete={handleDeleteQuiz}
+                            isCloning={cloning}
+                            cloningQuizId={cloningQuizId}
+                            isDeleting={deleting}
+                            deletingQuizId={deletingQuizId}
                           />
                         ))}
                       </div>
@@ -837,6 +912,10 @@ const QuizLibrary = () => {
                             onStart={handleStartQuiz}
                             onEdit={handleEditQuiz}
                             onDelete={handleDeleteQuiz}
+                            isCloning={cloning}
+                            cloningQuizId={cloningQuizId}
+                            isDeleting={deleting}
+                            deletingQuizId={deletingQuizId}
                           />
                         ))}
                       </div>
@@ -900,6 +979,10 @@ const QuizLibrary = () => {
                         onStart={handleStartQuiz}
                         onEdit={handleEditQuiz}
                         onDelete={handleDeleteQuiz}
+                        isCloning={cloning}
+                        cloningQuizId={cloningQuizId}
+                        isDeleting={deleting}
+                        deletingQuizId={deletingQuizId}
                       />
                     ))}
                   </div>
@@ -963,6 +1046,10 @@ const QuizLibrary = () => {
         onEdit={handleEditQuiz}
         onDelete={handleDeleteQuiz}
         tab={tab}
+        isCloning={cloning}
+        cloningQuizId={cloningQuizId}
+        isDeleting={deleting}
+        deletingQuizId={deletingQuizId}
       />
 
       {/* Confirmation Modal */}
