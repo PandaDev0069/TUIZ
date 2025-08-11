@@ -5,7 +5,7 @@ const AuthMiddleware = require('../../middleware/auth');
 const SecurityUtils = require('../../utils/SecurityUtils');
 const roomManager = require('../../utils/RoomManager');
 const activeGameUpdater = require('../../utils/ActiveGameUpdater');
-const logger = require('./utils/logger');
+const logger = require('../../utils/logger');
 
 // Initialize database
 const db = new DatabaseManager();

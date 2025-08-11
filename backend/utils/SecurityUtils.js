@@ -1,6 +1,6 @@
 const path = require('path');
 const crypto = require('crypto');
-const logger = require('./utils/logger');
+const logger = require('./logger');
 
 /**
  * Security utilities for safe file and path handling

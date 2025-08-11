@@ -4,7 +4,7 @@ const roomManager = require('../../utils/RoomManager');
 const { getAuthenticatedUser } = require('../../helpers/authHelper');
 const DatabaseManager = require('../../config/database');
 const RateLimitMiddleware = require('../../middleware/rateLimiter');
-const logger = require('./utils/logger');
+const logger = require('../../utils/logger');
 
 // Initialize database
 const db = new DatabaseManager();

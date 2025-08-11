@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const AuthMiddleware = require('../middleware/auth');
 const DatabaseManager = require('../config/database');
-const logger = require('./utils/logger');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 const db = new DatabaseManager();

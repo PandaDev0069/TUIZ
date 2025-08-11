@@ -4,7 +4,7 @@ const DatabaseManager = require('../../config/database');
 const { createClient } = require('@supabase/supabase-js');
 const AuthMiddleware = require('../../middleware/auth');
 const RateLimitMiddleware = require('../../middleware/rateLimiter');
-const logger = require('./utils/logger');
+const logger = require('../../utils/logger');
 
 // Auth middleware shorthand
 const auth = AuthMiddleware.authenticateToken;

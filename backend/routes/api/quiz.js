@@ -759,7 +759,7 @@ router.post('/public/clone/:id', RateLimitMiddleware.createModerateLimit(), Auth
     
     // Get admin client for write operations to bypass RLS
     const DatabaseManager = require('../../config/database');
-const logger = require('./utils/logger');
+const logger = require('../../utils/logger');
     const db = new DatabaseManager();
     const adminSupabase = db.supabaseAdmin || db.supabase;
 

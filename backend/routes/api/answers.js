@@ -7,7 +7,7 @@ const AuthMiddleware = require('../../middleware/auth');
 // Initialize database
 const db = new DatabaseManager();
 const OrderManager = require('../../utils/OrderManager');
-const logger = require('./utils/logger');
+const logger = require('../../utils/logger');
 
 // Initialize order manager
 const orderManager = new OrderManager();

@@ -2,7 +2,7 @@
 // These utilities help maintain proper order indices for questions and answers
 
 const DatabaseManager = require('../config/database');
-const logger = require('./utils/logger');
+const logger = require('./logger');
 
 class OrderManager {
   constructor() {
