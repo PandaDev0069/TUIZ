@@ -714,4 +714,4 @@ export function DeviceInfoDisplay() {
   );
 }
 
-export default MobileOptimization;
+export default MobileOptimizationProvider;
