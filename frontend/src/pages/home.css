@@ -9,6 +9,7 @@
   font-family: var(--tuiz-font-family);
   color: var(--tuiz-white);
   overflow-x: hidden;
+  position: relative;
 }
 
 .home__container {
@@ -19,6 +20,7 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 /* ===== HEADER ELEMENT ===== */
@@ -74,7 +76,6 @@
 /* ===== CARD ELEMENT ===== */
 .home__card {
   background: var(--tuiz-glass-light);
-  backdrop-filter: var(--tuiz-blur-medium);
   border: 1px solid var(--tuiz-glass-border-light);
   border-radius: var(--tuiz-radius-3xl);
   padding: var(--tuiz-space-8);
@@ -349,8 +350,17 @@
 
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 768px) {
+  .home {
+    min-height: 100vh;
+    min-height: 100svh; /* Use small viewport height */
+    overflow-x: hidden;
+  }
+  
   .home__container {
     padding: var(--tuiz-space-2);
+    min-height: 100vh;
+    min-height: 100svh;
+    position: relative;
   }
 
   .home__header {
@@ -395,8 +405,19 @@
 }
 
 @media (max-width: 480px) {
+  .home {
+    min-height: 100vh;
+    min-height: 100svh;
+    width: 100vw;
+    overflow-x: hidden;
+  }
+  
   .home__container {
     padding: var(--tuiz-space-2);
+    min-height: 100vh;
+    min-height: 100svh;
+    width: 100%;
+    position: relative;
   }
 
   .home__title {
@@ -626,4 +647,15 @@
 .home__footer-link:focus-visible {
   outline: 2px solid var(--tuiz-white);
   outline-offset: 2px;
+}
+
+/* ===== iOS SPECIFIC FIXES ===== */
+@supports (-webkit-touch-callout: none) {
+  .home {
+    min-height: -webkit-fill-available;
+  }
+  
+  .home__container {
+    min-height: -webkit-fill-available;
+  }
 }

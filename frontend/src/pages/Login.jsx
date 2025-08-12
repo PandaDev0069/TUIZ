@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaExclamationTriangle, FaEye, FaEyeSlash, FaEnvelope, FaLock, FaArrowLeft } from 'react-icons/fa';
+import '../utils/AnimationController'; // Ensure AnimationController is loaded
 import './auth.css';
 
 function Login() {
@@ -27,6 +28,24 @@ function Login() {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
+
+  // Force animation initialization immediately
+  useEffect(() => {
+    // Ensure AnimationController is available and initialize animations
+    if (window.tuizAnimations) {
+      window.tuizAnimations.initializePageAnimations();
+    }
+    
+    // Add ready class after a brief delay to prevent flash
+    const timer = setTimeout(() => {
+      const authElement = document.querySelector('.auth');
+      if (authElement) {
+        authElement.classList.add('tuiz-animations-ready');
+      }
+    }, 50); // Very short delay to ensure CSS is loaded
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Mobile keyboard handling
   useEffect(() => {
@@ -152,23 +171,23 @@ function Login() {
   };
 
   return (
-    <div className="auth tuiz-animate-entrance">
-      <div className="auth__container tuiz-animate-entrance">
+    <div className="auth tuiz-animate-fade-in">
+      <div className="auth__container tuiz-animate-scale-in tuiz-animate-stagger-1">
         {/* Header */}
-        <div className="auth__header tuiz-animate-entrance">
-          <h1 className="auth__title tuiz-animate-continuous">TUIZ情報王</h1>
-          <h2 className="auth__subtitle">ホストログイン</h2>
-          <p className="auth__description">
+        <div className="auth__header tuiz-animate-fade-in-down tuiz-animate-stagger-2">
+          <h1 className="auth__title tuiz-animate-float">TUIZ情報王</h1>
+          <h2 className="auth__subtitle tuiz-animate-fade-in tuiz-animate-stagger-3">ホストログイン</h2>
+          <p className="auth__description tuiz-animate-fade-in tuiz-animate-stagger-4">
             クイズを作成・管理するためにログインしてください
           </p>
         </div>
 
         {/* Login Form */}
-        <form className="auth__form tuiz-animate-entrance" onSubmit={handleSubmit}>
+        <form className="auth__form tuiz-animate-fade-in-up tuiz-animate-stagger-5" onSubmit={handleSubmit}>
           {/* General Error */}
           {errors.general && (
-            <div className="auth__error-message tuiz-animate-entrance">
-              <span className="auth__error-icon tuiz-animate-continuous">
+            <div className="auth__error-message tuiz-animate-slide-in-up">
+              <span className="auth__error-icon tuiz-animate-pulse">
                 <FaExclamationTriangle />
               </span>
               {errors.general}
@@ -176,9 +195,9 @@ function Login() {
           )}
 
           {/* Email/Name Input */}
-          <div className="auth__input-group tuiz-animate-entrance">
+          <div className="auth__input-group tuiz-animate-slide-in-up tuiz-animate-stagger-1">
             <label htmlFor="emailOrName" className="auth__label">
-              <FaEnvelope className="auth__label-icon auth__label-icon--email tuiz-animate-continuous" />
+              <FaEnvelope className="auth__label-icon auth__label-icon--email tuiz-animate-breathe" />
               メールアドレス
             </label>
             <div className="auth__input-wrapper">
@@ -203,9 +222,9 @@ function Login() {
           </div>
 
           {/* Password Input */}
-          <div className="auth__input-group tuiz-animate-entrance" ref={passwordGroupRef}>
+          <div className="auth__input-group tuiz-animate-slide-in-up tuiz-animate-stagger-2" ref={passwordGroupRef}>
             <label htmlFor="password" className="auth__label">
-              <FaLock className="auth__label-icon auth__label-icon--lock tuiz-animate-continuous" />
+              <FaLock className="auth__label-icon auth__label-icon--lock tuiz-animate-breathe" />
               パスワード
             </label>
             <div className="auth__input-wrapper auth__input-wrapper--has-toggle">
@@ -243,12 +262,12 @@ function Login() {
           {/* Submit Button */}
           <button
             type="submit"
-            className={`auth__button auth__button--login ${loading ? 'auth__button--loading' : ''}`}
+            className={`auth__button auth__button--login tuiz-animate-scale-in tuiz-animate-stagger-3 tuiz-hover-lift ${loading ? 'auth__button--loading' : ''}`}
             disabled={loading}
           >
             {loading ? (
               <>
-                <span className="auth__loading-spinner"></span>
+                <span className="auth__loading-spinner tuiz-animate-spin"></span>
                 ログイン中...
               </>
             ) : (
@@ -257,10 +276,10 @@ function Login() {
           </button>
 
           {/* Register Link */}
-          <div className="auth__links">
+          <div className="auth__links tuiz-animate-fade-in tuiz-animate-stagger-4">
             <p className="auth__links-text">
               アカウントをお持ちでない方は{' '}
-              <Link to="/register" className="auth__link">
+              <Link to="/register" className="auth__link tuiz-animate-hover">
                 新規登録
               </Link>
             </p>
@@ -268,9 +287,9 @@ function Login() {
         </form>
 
         {/* Back to Home */}
-        <div className="auth__footer">
-          <Link to="/" className="auth__back-link">
-            <FaArrowLeft className="auth__back-icon" />
+        <div className="auth__footer tuiz-animate-fade-in tuiz-animate-stagger-5">
+          <Link to="/" className="auth__back-link tuiz-hover-lift">
+            <FaArrowLeft className="auth__back-icon tuiz-animate-float" />
             ホームに戻る
           </Link>
         </div>

@@ -14,6 +14,28 @@
   color: var(--tuiz-white);
   font-family: var(--tuiz-font-family);
   overflow-x: hidden;
+  /* Prevent flash - start invisible until animations are ready */
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Show auth page when animations are ready */
+.auth.tuiz-animations-ready {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease-out;
+}
+
+/* Fallback: show page after 200ms regardless of animation state */
+.auth {
+  animation: authFallbackShow 0.1s ease-out 0.2s both;
+}
+
+@keyframes authFallbackShow {
+  to {
+    opacity: 1;
+    visibility: visible;
+  }
 }
 
 
@@ -28,6 +50,9 @@
   border: 1px solid var(--tuiz-glass-border-light);
   position: relative;
   overflow: hidden;
+  /* Prevent flash - start invisible until animated */
+  opacity: 0;
+  transform: scale(0.95);
 }
 
 
@@ -47,6 +72,9 @@
 .auth__header {
   text-align: center;
   margin-bottom: var(--tuiz-space-10);
+  /* Prevent flash - start invisible until animated */
+  opacity: 0;
+  transform: translateY(-20px);
 }
 
 .auth__title {
@@ -78,6 +106,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--tuiz-space-6);
+  /* Prevent flash - start invisible until animated */
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 /* ===== INPUT GROUP ELEMENT ===== */
@@ -85,14 +116,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--tuiz-space-2);
+  /* Prevent flash - start invisible until animated */
+  opacity: 0;
+  transform: translateY(30px);
 }
 
 /* Input group delays will be handled by AnimationController */
-
-.auth__input-group:nth-child(5) {
-  animation-delay: 1.4s;
-  animation-fill-mode: both;
-}
 
 .auth__label {
   font-size: var(--tuiz-text-sm);
@@ -286,7 +315,9 @@
   font-family: var(--tuiz-font-family);
   position: relative;
   overflow: hidden;
-  animation: buttonSlideUp 0.6s ease-out 1.6s both;
+  /* Prevent flash - start invisible until animated */
+  opacity: 0;
+  transform: scale(0.95);
 }
 
 .auth__button::before {
@@ -355,6 +386,9 @@
 .auth__links {
   text-align: center;
   margin-top: var(--tuiz-space-4);
+  /* Prevent flash - start invisible until animated */
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 .auth__links-text {
@@ -396,7 +430,9 @@
   margin-top: var(--tuiz-space-8);
   padding-top: var(--tuiz-space-6);
   border-top: 1px solid var(--tuiz-glass-border-light);
-  animation: footerSlideUp 0.6s ease-out 2s both;
+  /* Prevent flash - start invisible until animated */
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 .auth__back-link {
@@ -502,188 +538,7 @@
   }
 }
 
-/* ===== ANIMATIONS (LEGACY - NOW HANDLED BY ANIMATION CONTROLLER) ===== */
-@keyframes authPageFadeIn {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes authContainerSlideUp {
-  0% {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes authHeaderFadeIn {
-  0% {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes authFormSlideIn {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes inputGroupFadeIn {
-  0% {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes buttonSlideUp {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes linksSlideUp {
-  0% {
-    opacity: 0;
-    transform: translateY(15px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes footerSlideUp {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes titleFloat {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-@keyframes iconBreathe {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 1;
-  }
-}
-
-@keyframes iconFloat {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-2px);
-  }
-}
-
-@keyframes arrowFloat {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  50% {
-    transform: translateX(-3px);
-  }
-}
-
-@keyframes shimmerMove {
-  0%, 100% {
-    transform: rotate(45deg) translateX(-100%);
-  }
-  50% {
-    transform: rotate(45deg) translateX(100%);
-  }
-}
-
-@keyframes errorPulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.1);
-  }
-}
-
-@keyframes validationPulse {
-  0% {
-    opacity: 0;
-    transform: scale(0.5);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.2);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes errorSlideIn {
-  0% {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fieldErrorSlide {
-  0% {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
+/* ===== ESSENTIAL CONTINUOUS ANIMATIONS ===== */
 @keyframes spin {
   0% { 
     transform: rotate(0deg); 

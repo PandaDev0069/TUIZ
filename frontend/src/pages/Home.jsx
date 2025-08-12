@@ -42,15 +42,15 @@ function Home() {
         {/* Header Section */}
         <header className="home__header tuiz-animate-entrance">
           <div className="home__logo">
-            <img src="/logo.png" alt="TUIZ Logo" className="home__logo-image tuiz-animate-continuous" />
+            <img src="/logo.png" alt="TUIZ Logo" className="home__logo-image tuiz-animate-float" />
           </div>
-          <h1 className="home__title">TUIZ情報王</h1>
+          <h1 className="home__title tuiz-animate-fade-in-down tuiz-animate-stagger-2">TUIZ情報王</h1>
         </header>
 
         {/* Main Action Section */}
-        <section className="home__actions tuiz-animate-entrance">
+        <section className="home__actions tuiz-animate-entrance tuiz-animate-stagger-3">
           <div className="home__cards">
-            <div className="home__card home__card--host tuiz-animate-hover" onClick={handleHostLogin}>
+            <div className="home__card home__card--host tuiz-animate-scale-in tuiz-animate-stagger-4 tuiz-hover-lift" onClick={handleHostLogin}>
               <div className="home__card-icon home__card-icon--host">
                 <FaBullseye size={60} />
               </div>
@@ -61,7 +61,7 @@ function Home() {
               </button>
             </div>
 
-            <div className="home__card home__card--player tuiz-animate-hover" onClick={handleJoinGame}>
+            <div className="home__card home__card--player tuiz-animate-scale-in tuiz-animate-stagger-5 tuiz-hover-lift" onClick={handleJoinGame}>
               <div className="home__card-icon home__card-icon--player">
                 <MdGames size={60} />
               </div>
@@ -75,24 +75,24 @@ function Home() {
         </section>
 
         {/* Features Section */}
-        <section className="home__features tuiz-animate-entrance">
+        <section className="home__features tuiz-animate-fade-in-up tuiz-animate-stagger-5">
           <div className="home__features-grid">
-            <div className="home__feature tuiz-animate-hover">
-              <div className="home__feature-icon home__feature-icon--lightning tuiz-animate-continuous">
+            <div className="home__feature tuiz-animate-slide-in-up tuiz-animate-stagger-1 tuiz-hover-scale">
+              <div className="home__feature-icon home__feature-icon--lightning tuiz-animate-pulse">
                 <FaBolt size={40} />
               </div>
               <h4 className="home__feature-title">リアルタイム</h4>
               <p className="home__feature-description">瞬時に同期</p>
             </div>
-            <div className="home__feature tuiz-animate-hover">
-              <div className="home__feature-icon home__feature-icon--education tuiz-animate-continuous">
+            <div className="home__feature tuiz-animate-slide-in-up tuiz-animate-stagger-2 tuiz-hover-scale">
+              <div className="home__feature-icon home__feature-icon--education tuiz-animate-pulse">
                 <MdSchool size={40} />
               </div>
               <h4 className="home__feature-title">教育的</h4>
               <p className="home__feature-description">学習に最適</p>
             </div>
-            <div className="home__feature tuiz-animate-hover">
-              <div className="home__feature-icon home__feature-icon--interactive tuiz-animate-continuous">
+            <div className="home__feature tuiz-animate-slide-in-up tuiz-animate-stagger-3 tuiz-hover-scale">
+              <div className="home__feature-icon home__feature-icon--interactive tuiz-animate-pulse">
                 <MdColorLens size={40} />
               </div>
               <h4 className="home__feature-title">インタラクティブ</h4>
@@ -102,12 +102,12 @@ function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="home__footer tuiz-animate-entrance">
+        <footer className="home__footer tuiz-animate-fade-in tuiz-animate-stagger-5">
           <div className="home__footer-content">
             <div className="home__footer-main">
               <p className="home__footer-copyright">&copy; 2025 TUIZ情報王. All rights reserved.</p>
               <p className="home__footer-tagline">
-                Developed with <FaHeart className="home__footer-heart tuiz-animate-continuous" /> for educational and entertainment purposes
+                Developed with <FaHeart className="home__footer-heart tuiz-animate-pulse" /> for educational and entertainment purposes
               </p>
             </div>
             <div className="home__footer-tech">
@@ -117,15 +117,15 @@ function Home() {
             </div>
             <div className="home__footer-license">
               <span><FaFileAlt className="home__footer-icon" /> Apache License 2.0</span> • 
-              <span><FaRocket className="home__footer-icon home__footer-icon--rocket tuiz-animate-continuous" /> Open Source</span> • 
-              <span><FaStar className="home__footer-icon home__footer-icon--star tuiz-animate-continuous" /> Built by PandaDev0069</span>
+              <span><FaRocket className="home__footer-icon home__footer-icon--rocket tuiz-animate-float" /> Open Source</span> • 
+              <span><FaStar className="home__footer-icon home__footer-icon--star tuiz-animate-breathe" /> Built by PandaDev0069</span>
             </div>
             <div className="home__footer-links">
-              <a href="https://github.com/PandaDev0069/TUIZ" target="_blank" rel="noopener noreferrer" className="home__footer-link tuiz-animate-hover">
+              <a href="https://github.com/PandaDev0069/TUIZ" target="_blank" rel="noopener noreferrer" className="home__footer-link tuiz-hover-glow">
                 GitHub
               </a>
               <span>•</span>
-              <a href="/license" className="home__footer-link tuiz-animate-hover">
+              <a href="/license" className="home__footer-link tuiz-hover-glow">
                 License
               </a>
               <span>•</span>

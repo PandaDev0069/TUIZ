@@ -44,6 +44,7 @@ class AnimationController {
       enable: () => this.enableAnimations(),
       disable: () => this.disableAnimations(),
       toggle: () => this.toggleAnimations(),
+      initializePageAnimations: () => this.initializePageAnimations(),
       controller: this
     };
 
@@ -303,6 +304,26 @@ class AnimationController {
       default:
         return baseMs;
     }
+  }
+
+  /**
+   * Force immediate initialization of page animations
+   * Useful for preventing white flash on page load
+   */
+  initializePageAnimations() {
+    // Force recalculation and immediate application
+    this.calculateAnimationLevel();
+    this.applyAnimationClasses();
+    
+    // Trigger any pending animation frames immediately
+    if (window.requestAnimationFrame) {
+      requestAnimationFrame(() => {
+        // Apply classes again after next paint
+        this.applyAnimationClasses();
+      });
+    }
+    
+    console.log('[TUIZ Animations] Page animations initialized immediately');
   }
 }
 

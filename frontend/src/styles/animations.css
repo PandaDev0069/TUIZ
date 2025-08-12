@@ -2,15 +2,15 @@
 
 /* ===== ANIMATION LEVEL CONTROLS ===== */
 
-/* Full animations (default) */
+/* Full animations (default) - Enhanced for better visibility */
 .tuiz-animations-full {
   --tuiz-animation-scale: 1;
-  --tuiz-animation-duration-fast: 150ms;
-  --tuiz-animation-duration-normal: 300ms;
-  --tuiz-animation-duration-slow: 600ms;
-  --tuiz-animation-delay-short: 100ms;
-  --tuiz-animation-delay-medium: 200ms;
-  --tuiz-animation-delay-long: 400ms;
+  --tuiz-animation-duration-fast: 200ms;
+  --tuiz-animation-duration-normal: 500ms;
+  --tuiz-animation-duration-slow: 800ms;
+  --tuiz-animation-delay-short: 150ms;
+  --tuiz-animation-delay-medium: 300ms;
+  --tuiz-animation-delay-long: 600ms;
 }
 
 /* Reduced animations */
@@ -53,7 +53,22 @@
 
 /* ===== ANIMATION CLASSES ===== */
 
+/* Initial states to prevent flash */
+.tuiz-animate-fade-in,
+.tuiz-animate-entrance,
+.tuiz-animate-fade-in-up,
+.tuiz-animate-fade-in-down,
+.tuiz-animate-fade-in-left,
+.tuiz-animate-slide-in-up,
+.tuiz-animate-scale-in {
+  opacity: 0;
+}
+
 /* Entrance Animations */
+.tuiz-animate-entrance {
+  animation: tuizFadeInUp calc(var(--tuiz-animation-duration-slow) * 1.2) ease-out var(--tuiz-animation-delay-medium) both;
+}
+
 .tuiz-animate-fade-in {
   animation: tuizFadeIn var(--tuiz-animation-duration-normal) ease-out var(--tuiz-animation-delay-short) both;
 }
@@ -79,6 +94,10 @@
 }
 
 /* Continuous Animations */
+.tuiz-animate-continuous {
+  animation: tuizFloatGentle calc(var(--tuiz-animation-duration-slow) * 6) ease-in-out infinite;
+}
+
 .tuiz-animate-float {
   animation: tuizFloat calc(var(--tuiz-animation-duration-slow) * 6) ease-in-out infinite;
 }
@@ -100,6 +119,15 @@
 }
 
 /* Hover/Interaction Animations */
+.tuiz-animate-hover {
+  transition: all var(--tuiz-animation-duration-normal) ease-out;
+}
+
+.tuiz-animate-hover:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
 .tuiz-hover-lift {
   transition: transform var(--tuiz-animation-duration-fast) ease-out;
 }
@@ -124,12 +152,12 @@
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
 }
 
-/* Stagger Delays */
-.tuiz-animate-stagger-1 { animation-delay: calc(var(--tuiz-animation-delay-short) * 1); }
-.tuiz-animate-stagger-2 { animation-delay: calc(var(--tuiz-animation-delay-short) * 2); }
-.tuiz-animate-stagger-3 { animation-delay: calc(var(--tuiz-animation-delay-short) * 3); }
-.tuiz-animate-stagger-4 { animation-delay: calc(var(--tuiz-animation-delay-short) * 4); }
-.tuiz-animate-stagger-5 { animation-delay: calc(var(--tuiz-animation-delay-short) * 5); }
+/* Stagger Delays - More noticeable spacing */
+.tuiz-animate-stagger-1 { animation-delay: calc(var(--tuiz-animation-delay-medium) * 1); }
+.tuiz-animate-stagger-2 { animation-delay: calc(var(--tuiz-animation-delay-medium) * 2); }
+.tuiz-animate-stagger-3 { animation-delay: calc(var(--tuiz-animation-delay-medium) * 3); }
+.tuiz-animate-stagger-4 { animation-delay: calc(var(--tuiz-animation-delay-medium) * 4); }
+.tuiz-animate-stagger-5 { animation-delay: calc(var(--tuiz-animation-delay-medium) * 5); }
 
 /* ===== KEYFRAMES ===== */
 
@@ -141,7 +169,7 @@
 @keyframes tuizFadeInUp {
   0% {
     opacity: 0;
-    transform: translateY(calc(30px * var(--tuiz-animation-scale)));
+    transform: translateY(calc(40px * var(--tuiz-animation-scale)));
   }
   100% {
     opacity: 1;
@@ -152,7 +180,7 @@
 @keyframes tuizFadeInDown {
   0% {
     opacity: 0;
-    transform: translateY(calc(-30px * var(--tuiz-animation-scale)));
+    transform: translateY(calc(-40px * var(--tuiz-animation-scale)));
   }
   100% {
     opacity: 1;
@@ -174,7 +202,7 @@
 @keyframes tuizSlideInUp {
   0% {
     opacity: 0;
-    transform: translateY(calc(40px * var(--tuiz-animation-scale)));
+    transform: translateY(calc(50px * var(--tuiz-animation-scale)));
   }
   100% {
     opacity: 1;
@@ -199,6 +227,15 @@
   }
   50% {
     transform: translateY(calc(-10px * var(--tuiz-animation-scale)));
+  }
+}
+
+@keyframes tuizFloatGentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(calc(-6px * var(--tuiz-animation-scale)));
   }
 }
 
@@ -259,6 +296,9 @@
 .tuiz-animations-none * {
   animation: none !important;
   transition: none !important;
+  /* Show elements immediately when animations are disabled */
+  opacity: 1 !important;
+  transform: none !important;
 }
 
 .tuiz-animations-none .tuiz-animate-float,
@@ -299,6 +339,7 @@
 
 /* Accessibility */
 @media (prefers-reduced-motion: reduce) {
+  /* Stop continuous animations */
   .tuiz-animate-float,
   .tuiz-animate-breathe,
   .tuiz-animate-pulse,
@@ -309,6 +350,19 @@
   .tuiz-hover-lift:hover,
   .tuiz-hover-scale:hover {
     transform: none !important;
+  }
+  
+  /* Prevent flash by immediately showing elements */
+  .tuiz-animate-fade-in,
+  .tuiz-animate-entrance,
+  .tuiz-animate-fade-in-up,
+  .tuiz-animate-fade-in-down,
+  .tuiz-animate-fade-in-left,
+  .tuiz-animate-slide-in-up,
+  .tuiz-animate-scale-in {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
   }
 }
 

@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/react'
 import socket from './socket'
 import { AuthProvider } from './contexts/AuthContext'
 import './utils/AnimationController' // Initialize animation controller
+import './utils/ViewportFix' // Initialize viewport fix for mobile
 import ToastContainer from './components/ToastContainer'
 import CleanupWarningHandler from './components/CleanupWarningHandler'
 import Home from './pages/Home'

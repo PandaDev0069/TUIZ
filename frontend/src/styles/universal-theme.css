@@ -15,6 +15,13 @@
 
 :root {
   /* ========================================
+     VIEWPORT CUSTOM PROPERTIES
+     ======================================== */
+  
+  /* Dynamic viewport height (set by ViewportFix.js) */
+  --vh: 1vh;
+  
+  /* ========================================
      PRIMARY GRADIENT SYSTEM
      ======================================== */
   
@@ -214,6 +221,50 @@
 }
 
 /* ========================================
+   GLOBAL MOBILE VIEWPORT FIXES
+   ======================================== */
+
+/* Fix mobile viewport height issues */
+html, body {
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* Re-enable scrolling on body */
+body {
+  position: relative;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent overscroll/bounce on iOS */
+html {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+body {
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  position: relative;
+}
+
+/* Fix mobile address bar height issues */
+@supports (-webkit-touch-callout: none) {
+  html, body {
+    min-height: -webkit-fill-available;
+    height: -webkit-fill-available;
+  }
+}
+
+/* ========================================
    GLOBAL SCROLLBAR STYLING
    ======================================== */
 
@@ -277,12 +328,38 @@ html {
 .tuiz-page-container {
   min-height: 100vh;
   min-height: 100dvh;
+  min-height: calc(var(--vh, 1vh) * 100); /* Use dynamic viewport height */
   width: 100%;
   background: var(--tuiz-gradient-primary);
   color: var(--tuiz-white);
   font-family: var(--tuiz-font-family);
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow-x: hidden;
+  /* Prevent white space below */
+  margin: 0;
+  padding: 0;
+}
+
+/* Mobile viewport fixes for page container */
+@supports (-webkit-touch-callout: none) {
+  .tuiz-page-container {
+    min-height: -webkit-fill-available;
+    height: -webkit-fill-available;
+  }
+}
+
+/* Universal mobile viewport fix for all full-height containers */
+.auth, .home, .dashboard, .quiz, .waiting-room, .host-lobby {
+  min-height: calc(var(--vh, 1vh) * 100) !important;
+}
+
+@media (max-width: 768px) {
+  .auth, .home, .dashboard, .quiz, .waiting-room, .host-lobby {
+    min-height: calc(var(--vh, 1vh) * 100) !important;
+    height: calc(var(--vh, 1vh) * 100) !important;
+  }
 }
 
 /* Glass Morphism Cards */
@@ -510,6 +587,49 @@ html {
 
 /* Responsive Utilities */
 @media (max-width: 768px) {
+  /* Aggressive mobile viewport and scrolling fixes */
+  html {
+    height: 100%;
+    min-height: 100vh;
+    min-height: 100svh; /* Small viewport height for mobile */
+    overflow-x: hidden;
+    position: fixed;
+    width: 100%;
+    touch-action: manipulation;
+  }
+  
+  body {
+    height: 100%;
+    min-height: 100vh;
+    min-height: 100svh;
+    overflow-x: hidden;
+    position: relative;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+    overscroll-behavior: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Page container mobile fixes */
+  .tuiz-page-container {
+    min-height: 100vh;
+    min-height: 100svh;
+    position: relative;
+    overflow-x: hidden;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Prevent iOS bounce/elastic scrolling */
+  html, body {
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  
   .tuiz-responsive-text {
     font-size: clamp(var(--tuiz-text-sm), 4vw, var(--tuiz-text-lg));
   }
@@ -525,6 +645,51 @@ html {
 }
 
 @media (max-width: 480px) {
+  /* Ultra-aggressive small mobile fixes */
+  html {
+    height: 100%;
+    min-height: 100vh;
+    min-height: 100svh;
+    overflow-x: hidden;
+    position: fixed;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    height: 100%;
+    min-height: 100vh;
+    min-height: 100svh;
+    overflow-x: hidden;
+    position: relative;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: manipulation;
+  }
+  
+  .tuiz-page-container {
+    min-height: 100vh;
+    min-height: 100svh;
+    width: 100%;
+    position: relative;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    /* Force no white space */
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Force all page children to fill available space */
+  .tuiz-page-container > * {
+    flex-shrink: 0;
+  }
+  
   .tuiz-responsive-padding {
     padding: var(--tuiz-space-2);
   }
