@@ -380,3 +380,15 @@
   transition: opacity var(--tuiz-animation-duration-normal) ease-out,
               transform var(--tuiz-animation-duration-normal) ease-out;
 }
+
+/* ===== DROPDOWN ANIMATIONS ===== */
+@keyframes tuiz-dropdown-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

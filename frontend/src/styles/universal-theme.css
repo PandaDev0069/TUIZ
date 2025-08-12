@@ -499,6 +499,155 @@ html {
   color: rgba(255, 255, 255, 0.4);
 }
 
+/* Custom Dropdown System */
+.tuiz-dropdown {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 200px;
+  min-width: 140px;
+}
+
+.tuiz-dropdown__trigger {
+  width: 100%;
+  padding: var(--tuiz-space-2) var(--tuiz-space-8) var(--tuiz-space-2) var(--tuiz-space-4);
+  border: 2px solid var(--tuiz-glass-border-light);
+  border-radius: var(--tuiz-radius-lg);
+  background: var(--tuiz-neutral-800);
+  background-color: var(--tuiz-neutral-800);
+  color: var(--tuiz-white);
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all var(--tuiz-duration-normal) var(--tuiz-ease-out);
+  user-select: none;
+  text-align: left;
+}
+
+.tuiz-dropdown__trigger:hover {
+  background: var(--tuiz-neutral-700);
+  background-color: var(--tuiz-neutral-700);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.tuiz-dropdown__trigger:focus,
+.tuiz-dropdown__trigger--active {
+  outline: none;
+  background: var(--tuiz-neutral-700);
+  background-color: var(--tuiz-neutral-700);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.tuiz-dropdown__icon {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: var(--tuiz-text-sm);
+  transition: all var(--tuiz-duration-fast) var(--tuiz-ease-out);
+  margin-left: var(--tuiz-space-2);
+}
+
+.tuiz-dropdown__trigger:hover .tuiz-dropdown__icon,
+.tuiz-dropdown__trigger--active .tuiz-dropdown__icon {
+  color: var(--tuiz-white);
+}
+
+.tuiz-dropdown__trigger--active .tuiz-dropdown__icon {
+  transform: rotate(180deg);
+}
+
+.tuiz-dropdown__trigger--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--tuiz-neutral-900);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tuiz-dropdown__trigger--disabled:hover {
+  background: var(--tuiz-neutral-900);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tuiz-dropdown__text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tuiz-dropdown__menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--tuiz-neutral-900);
+  background-color: var(--tuiz-neutral-900);
+  border: 2px solid var(--tuiz-glass-border-light);
+  border-radius: var(--tuiz-radius-lg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  margin-top: var(--tuiz-space-1);
+  max-height: 240px;
+  overflow-y: auto;
+  animation: tuiz-dropdown-appear var(--tuiz-duration-normal) var(--tuiz-ease-out);
+}
+
+.tuiz-dropdown__menu--hidden {
+  display: none;
+}
+
+.tuiz-dropdown__option {
+  padding: var(--tuiz-space-2) var(--tuiz-space-3);
+  color: var(--tuiz-white);
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-sm);
+  cursor: pointer;
+  transition: all var(--tuiz-duration-fast) var(--tuiz-ease-out);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tuiz-dropdown__option:last-child {
+  border-bottom: none;
+}
+
+.tuiz-dropdown__option:hover {
+  background: var(--tuiz-primary-600);
+  background-color: var(--tuiz-primary-600);
+}
+
+.tuiz-dropdown__option--selected {
+  background: var(--tuiz-primary-700);
+  background-color: var(--tuiz-primary-700);
+  font-weight: 600;
+}
+
+.tuiz-dropdown__option--selected:hover {
+  background: var(--tuiz-primary-600);
+  background-color: var(--tuiz-primary-600);
+}
+
+/* Scrollbar styling for dropdown */
+.tuiz-dropdown__menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tuiz-dropdown__menu::-webkit-scrollbar-track {
+  background: var(--tuiz-neutral-800);
+  border-radius: var(--tuiz-radius-sm);
+}
+
+.tuiz-dropdown__menu::-webkit-scrollbar-thumb {
+  background: var(--tuiz-primary-500);
+  border-radius: var(--tuiz-radius-sm);
+}
+
+.tuiz-dropdown__menu::-webkit-scrollbar-thumb:hover {
+  background: var(--tuiz-primary-400);
+}
+
 /* Typography Utilities */
 .tuiz-text-gradient {
   background: linear-gradient(45deg, var(--tuiz-white), #f0f9ff);
