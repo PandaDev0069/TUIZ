@@ -791,14 +791,14 @@ const QuizLibrary = () => {
         {/* Navigation Tabs */}
         <nav className="quiz-library__tabs">
           <button 
-            className={`quiz-library__tab ${tab === "library" ? "quiz-library__tab--active" : ""}`}
+            className={`quiz-library__tab quiz-library__tab--my-library ${tab === "library" ? "quiz-library__tab--active" : ""}`}
             onClick={() => setTab("library")}
           >
             <FaBook className="quiz-library__tab-icon" />
             <span>マイライブラリ</span>
           </button>
           <button 
-            className={`quiz-library__tab ${tab === "public" ? "quiz-library__tab--active" : ""}`}
+            className={`quiz-library__tab quiz-library__tab--public ${tab === "public" ? "quiz-library__tab--active" : ""}`}
             onClick={() => setTab("public")}
           >
             <FaGlobe className="quiz-library__tab-icon" />

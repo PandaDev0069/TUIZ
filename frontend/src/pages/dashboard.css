@@ -56,6 +56,7 @@
   background: var(--tuiz-glass-light);
   backdrop-filter: var(--tuiz-blur-medium);
   border-bottom: 1px solid var(--tuiz-glass-border-light);
+  border-radius: 0 0 var(--tuiz-radius-2xl) var(--tuiz-radius-2xl);
   position: relative;
   z-index: var(--tuiz-z-sticky);
   /* Prevent flash - start invisible until animated */
@@ -986,6 +987,7 @@
   margin-top: auto;
   padding: var(--tuiz-space-8) var(--tuiz-space-6) var(--tuiz-space-6);
   border-top: 1px solid var(--tuiz-glass-border-light);
+  border-radius: var(--tuiz-radius-2xl);
   background: var(--tuiz-glass-light);
   backdrop-filter: var(--tuiz-blur-medium);
   /* Prevent flash - start invisible until animated */
