@@ -8,7 +8,7 @@ class Logger {
     // Detect if running via nodemon (npm run dev) vs direct node (npm start)
     this.isRunningViaNodemon = process.env.npm_lifecycle_event === 'dev' || 
                                process.argv[0].includes('nodemon') ||
-                               process.env._.includes('nodemon') ||
+                               (process.env._ && process.env._.includes('nodemon')) ||
                                process.title.includes('nodemon');
     
     // Check if running via npm start specifically

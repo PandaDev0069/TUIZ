@@ -647,3 +647,159 @@
     flex-shrink: 0;
   }
 }
+
+/* ========================================
+   PHASE 1.3: MOBILE OPTIMIZATION
+   ======================================== */
+
+/* Enhanced Touch Targets for Mobile */
+@media (max-width: 767px) {
+  /* Ensure all interactive elements meet accessibility guidelines */
+  .host-button,
+  .host-input,
+  .host-select,
+  .host-checkbox,
+  .host-radio {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Safe areas for devices with notches */
+  .host-header {
+    padding-top: max(var(--host-space-4), env(safe-area-inset-top));
+  }
+  
+  .host-main {
+    padding-left: max(var(--host-space-4), env(safe-area-inset-left));
+    padding-right: max(var(--host-space-4), env(safe-area-inset-right));
+  }
+  
+  .host-footer {
+    padding-bottom: max(var(--host-space-4), env(safe-area-inset-bottom));
+  }
+  
+  /* Improved focus indicators for touch devices */
+  .host-button:focus-visible,
+  .host-input:focus-visible {
+    outline: 3px solid var(--host-primary);
+    outline-offset: 2px;
+  }
+  
+  /* Larger text for better readability on small screens */
+  .host-card__title {
+    font-size: var(--host-font-size-xl);
+  }
+  
+  .host-help__text {
+    font-size: var(--host-font-size-base);
+    line-height: var(--host-line-height-relaxed);
+  }
+  
+  /* Enhanced spacing for mobile */
+  .host-form__group {
+    margin-bottom: var(--host-space-6);
+  }
+  
+  .host-card {
+    padding: var(--host-space-5);
+    margin-bottom: var(--host-space-5);
+  }
+  
+  /* Sticky bottom actions for mobile */
+  .host-actions--sticky {
+    position: sticky;
+    bottom: 0;
+    background: var(--host-white);
+    padding: var(--host-space-4);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+  }
+  
+  /* Prevent zoom on input focus (iOS) */
+  .host-input {
+    font-size: max(16px, var(--host-font-size-base));
+  }
+  
+  /* Enhanced modal for mobile */
+  .host-modal {
+    margin: var(--host-space-2);
+    border-radius: var(--host-radius-xl);
+    max-height: calc(100vh - var(--host-space-4));
+    overflow-y: auto;
+  }
+  
+  /* Improved loading states for touch */
+  .host-button--loading {
+    position: relative;
+    color: transparent;
+  }
+  
+  .host-button--loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+  }
+}
+
+/* Landscape mobile optimizations */
+@media (max-width: 767px) and (orientation: landscape) {
+  .host-container {
+    padding: var(--host-space-2) var(--host-space-4);
+  }
+  
+  .host-header {
+    padding: var(--host-space-2) var(--host-space-4);
+  }
+  
+  /* Compact layout for landscape */
+  .host-card {
+    padding: var(--host-space-3);
+  }
+  
+  .host-form__group {
+    margin-bottom: var(--host-space-4);
+  }
+}
+
+/* High DPI mobile displays */
+@media (max-width: 767px) and (-webkit-min-device-pixel-ratio: 2) {
+  .host-icon {
+    transform: translateZ(0); /* Force hardware acceleration */
+  }
+  
+  .host-button {
+    transform: translateZ(0); /* Smoother animations on retina */
+  }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .host-button,
+  .host-card,
+  .host-input {
+    transition: none;
+  }
+  
+  .host-loading-spinner {
+    animation: none;
+  }
+}
+
+/* Dark mode mobile optimizations */
+@media (max-width: 767px) and (prefers-color-scheme: dark) {
+  .host-input {
+    background: var(--host-gray-800);
+    border-color: var(--host-gray-600);
+    color: var(--host-white);
+  }
+  
+  .host-card {
+    background: var(--host-gray-900);
+    border-color: var(--host-gray-700);
+  }
+}

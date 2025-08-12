@@ -36,9 +36,12 @@
   cursor: pointer;
   transition: all var(--host-transition-fast);
   user-select: none;
-  min-height: var(--host-button-height-md);
+  min-height: max(var(--host-button-height-md), 44px); /* Enhanced mobile touch target */
+  min-width: 44px; /* iOS minimum touch target */
   position: relative;
   overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .host-button:focus {
@@ -57,14 +60,16 @@
 .host-button--small {
   padding: var(--host-space-1_5) var(--host-space-3);
   font-size: var(--host-font-size-sm);
-  min-height: var(--host-button-height-sm);
+  min-height: max(var(--host-button-height-sm), 36px); /* Minimum touch target for small buttons */
+  min-width: 36px;
   gap: var(--host-space-1_5);
 }
 
 .host-button--large {
   padding: var(--host-space-3) var(--host-space-6);
   font-size: var(--host-font-size-lg);
-  min-height: var(--host-button-height-lg);
+  min-height: max(var(--host-button-height-lg), 48px); /* Enhanced large touch target */
+  min-width: 48px;
   gap: var(--host-space-3);
 }
 
@@ -280,7 +285,11 @@
   border: 1px solid var(--host-gray-300);
   border-radius: var(--host-radius-lg);
   transition: all var(--host-transition-fast);
-  min-height: var(--host-input-height-md);
+  min-height: max(var(--host-input-height-md), 44px); /* Enhanced mobile touch target */
+  -webkit-appearance: none; /* Remove default iOS styling */
+  appearance: none; /* Standard property for compatibility */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .host-input:focus {
@@ -664,4 +673,79 @@
 
 .host-animate-slide-out {
   animation: host-slide-out-right var(--host-transition-medium) var(--host-ease-in);
+}
+
+/* ========================================
+   REACT ICONS INTEGRATION (Phase 1.3)
+   ======================================== */
+
+/* React Icons styling for consistent appearance */
+.host-button__icon,
+.host-badge__icon,
+.host-help__icon,
+.host-help-card__icon {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em; /* Align with text baseline */
+}
+
+/* Size variants for React Icons */
+.host-icon--small {
+  width: 0.875em;
+  height: 0.875em;
+}
+
+.host-icon--large {
+  width: 1.25em;
+  height: 1.25em;
+}
+
+.host-icon--xl {
+  width: 1.5em;
+  height: 1.5em;
+}
+
+/* Color variants for React Icons */
+.host-icon--primary {
+  color: var(--host-primary);
+}
+
+.host-icon--success {
+  color: var(--host-success);
+}
+
+.host-icon--warning {
+  color: var(--host-warning);
+}
+
+.host-icon--danger {
+  color: var(--host-danger);
+}
+
+.host-icon--muted {
+  color: var(--host-gray-500);
+}
+
+/* Interactive icon states */
+.host-icon--interactive {
+  cursor: pointer;
+  transition: color var(--host-transition-fast);
+}
+
+.host-icon--interactive:hover {
+  color: var(--host-primary);
+}
+
+/* Mobile-specific icon optimizations */
+@media (max-width: 767px) {
+  .host-button__icon {
+    width: 1.125em;
+    height: 1.125em;
+  }
+  
+  .host-help-card__icon {
+    width: 1.25em;
+    height: 1.25em;
+  }
 }
