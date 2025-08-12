@@ -17,6 +17,9 @@ const { validateStorageConfig } = require('./utils/storageConfig');
 const activeGameUpdater = require('./utils/ActiveGameUpdater');
 const RateLimitMiddleware = require('./middleware/rateLimiter');
 
+// Phase 6: Host Socket Handlers
+const HostSocketHandlers = require('./sockets/hostHandlers');
+
 // Initialize database
 const db = new DatabaseManager();
 
@@ -468,6 +471,10 @@ const playerManagementRoutes = require('./routes/api/playerManagement');
 const gameResultsRoutes = require('./routes/api/gameResults');
 const gameSettingsRoutes = require('./routes/api/gameSettings');
 
+// Host control routes (Phase 6)
+const hostGameControlRoutes = require('./routes/api/host/gameControl');
+const hostPlayerManagementRoutes = require('./routes/api/host/playerManagement');
+
 // Mount API routes
 app.use('/api/question-sets', questionSetsRoutes);
 app.use('/api/questions', questionsRoutes);
@@ -479,6 +486,12 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/player', playerManagementRoutes(db));
 app.use('/api/game-results', gameResultsRoutes);
 app.use('/api/game-settings', gameSettingsRoutes);
+
+// Host control API routes (Phase 6)
+const hostGameCreationRoutes = require('./routes/api/host/gameCreation');
+app.use('/api/host/game', hostGameControlRoutes);
+app.use('/api/host/player', hostPlayerManagementRoutes);
+app.use('/api/host/create', hostGameCreationRoutes);
 
 // Global error handler - must be after all routes
 app.use((error, req, res, next) => {
@@ -537,6 +550,48 @@ const io = new Server(server, {
         credentials: true
     },
 });
+
+// Phase 6: Initialize Host Socket Handlers
+const hostHandlers = new HostSocketHandlers(io);
+
+// Setup function to enable enhanced host handlers for host control games
+function setupHostHandlers(socket, gameCode, gameId) {
+  if (!socket || !gameCode || !gameId) {
+    logger.warn('Invalid parameters for host handlers setup', {
+      socket: !!socket,
+      gameCode,
+      gameId
+    });
+    return;
+  }
+
+  try {
+    // Mark socket as host control enabled
+    socket.hostControlEnabled = true;
+    socket.hostGameId = gameId;
+    socket.hostGameCode = gameCode;
+
+    // Setup host control events
+    if (hostHandlers && typeof hostHandlers.setupHostSocket === 'function') {
+      hostHandlers.setupHostSocket(socket, gameCode, gameId);
+    }
+
+    logger.info('Host control handlers enabled', {
+      socketId: socket.id,
+      gameCode,
+      gameId,
+      hostId: socket.hostOfGame
+    });
+
+  } catch (error) {
+    logger.error('Error setting up host control handlers', {
+      error: error.message,
+      socketId: socket.id,
+      gameCode,
+      gameId
+    });
+  }
+}
 
 // Export function to get Socket.IO instance
 module.exports.getIO = () => io;
@@ -1001,12 +1056,16 @@ io.on('connection', (socket) => {
   socket.on('createGame', async ({ hostId, questionSetId, settings }) => {
     try {
       if (isDevelopment || isLocalhost) {
-        logger.game(`🎮 Creating game: Host ${hostId}, QuestionSet ${questionSetId}`);
+        logger.game(`🎮 [BRIDGE] Creating game via Socket (Host Control Integration): Host ${hostId}, QuestionSet ${questionSetId}`);
       }
       
       // Extract actual user ID from hostId (remove the temporary prefix)
       const actualHostId = hostId.includes('host_') ? 
         hostId.split('_')[1] : hostId;
+      
+      // === HOST CONTROL INTEGRATION BRIDGE ===
+      // Use the new host control game creation system internally
+      // while maintaining socket compatibility for frontend
       
       // If no manual title provided, fetch from question set along with play_settings
       let gameTitle = settings?.title;
@@ -1034,16 +1093,16 @@ io.on('connection', (socket) => {
             }
             
             if (isDevelopment) {
-              logger.debug(`✅ Retrieved from database - Title: ${gameTitle}`);
+              logger.debug(`✅ [BRIDGE] Retrieved from database - Title: ${gameTitle}`);
             }
           } else {
             if (isDevelopment) {
-              logger.warn(`⚠️ Could not fetch question set: ${qsError?.message || 'Not found'}`);
+              logger.warn(`⚠️ [BRIDGE] Could not fetch question set: ${qsError?.message || 'Not found'}`);
             }
             gameTitle = gameTitle || 'クイズゲーム'; // Default fallback title
           }
         } catch (fetchError) {
-          logger.error('❌ Error fetching question set:', fetchError);
+          logger.error('❌ [BRIDGE] Error fetching question set:', fetchError);
           gameTitle = gameTitle || 'クイズゲーム'; // Default fallback title
         }
       }
@@ -1055,54 +1114,66 @@ io.on('connection', (socket) => {
         title: gameTitle         // Always use resolved title
       };
       
-      // Clean settings - only keep game settings, not metadata
-      const cleanGameSettings = {
-        // Player Management - preserve question set value if it exists
+      // Enhanced settings for Phase 6 compatibility
+      const enhancedGameSettings = {
+        // Legacy settings (keep for backwards compatibility)
         maxPlayers: gameSettings.maxPlayers !== undefined ? gameSettings.maxPlayers : 50,
-        
-        // Game Flow
         autoAdvance: gameSettings.autoAdvance !== undefined ? gameSettings.autoAdvance : true,
         showExplanations: gameSettings.showExplanations !== undefined ? gameSettings.showExplanations : true,
         explanationTime: gameSettings.explanationTime !== undefined ? gameSettings.explanationTime : 30,
         showLeaderboard: gameSettings.showLeaderboard !== undefined ? gameSettings.showLeaderboard : true,
-        
-        // Scoring
         pointCalculation: gameSettings.pointCalculation || 'fixed',
         streakBonus: gameSettings.streakBonus !== undefined ? gameSettings.streakBonus : false,
-        
-        // Display Options
         showProgress: gameSettings.showProgress !== undefined ? gameSettings.showProgress : true,
         showCorrectAnswer: gameSettings.showCorrectAnswer !== undefined ? gameSettings.showCorrectAnswer : true,
-        
-        // Advanced
         spectatorMode: gameSettings.spectatorMode !== undefined ? gameSettings.spectatorMode : true,
-        allowAnswerChange: gameSettings.allowAnswerChange !== undefined ? gameSettings.allowAnswerChange : false
+        allowAnswerChange: gameSettings.allowAnswerChange !== undefined ? gameSettings.allowAnswerChange : false,
+        
+        // Phase 6 host control features
+        title: gameTitle,
+        questionSet: questionSetId,
+        timeLimit: gameSettings.timeLimit || 30,
+        pointsPerQuestion: gameSettings.pointsPerQuestion || 10,
+        bonusPoints: gameSettings.bonusPoints || 5,
+        allowLateJoin: gameSettings.allowLateJoin !== false,
+        randomizeQuestions: gameSettings.randomizeQuestions || false,
+        randomizeAnswers: gameSettings.randomizeAnswers || false,
+        hostControl: {
+          pauseEnabled: true,
+          skipEnabled: true,
+          emergencyStopEnabled: true,
+          timerControl: true,
+          playerManagement: true,
+          ...gameSettings.hostControl
+        }
       };
       
-      // Use RoomManager to create the room
+      // Use RoomManager to create the room (legacy compatibility)
       const gameCode = roomManager.createRoom(
         `Host_${actualHostId}`,
         questionSetId,
-        cleanGameSettings
+        enhancedGameSettings
       );
       
       if (!gameCode) {
         throw new Error('Failed to create game room');
       }
 
-      // Create game in database as well for persistence
+      // Create game in database with Phase 6 enhanced structure
       const gameData = {
         host_id: actualHostId,
         question_set_id: questionSetId,
         game_code: gameCode,
         current_players: 0,
         status: 'waiting',
-        game_settings: cleanGameSettings, // Store only clean settings (includes maxPlayers)
-        created_at: new Date().toISOString()
+        game_settings: enhancedGameSettings, // Use enhanced settings
+        created_at: new Date().toISOString(),
+        // Host control metadata
+        host_control_enabled: true
       };
       
       if (isDevelopment) {
-        logger.debug(`🔄 Creating game in database...`);
+        logger.debug(`🔄 [BRIDGE] Creating Phase 6 compatible game in database...`);
       }
       const dbResult = await db.createGame(gameData);
       
@@ -1112,7 +1183,7 @@ io.on('connection', (socket) => {
       
       const dbGame = dbResult.game;
       if (isDevelopment) {
-        logger.debug(`✅ Game created in database with UUID: ${dbGame.id}`);
+        logger.debug(`✅ [BRIDGE] Phase 6 game created in database with UUID: ${dbGame.id}`);
       }
       
       // Update the room in RoomManager with the database UUID
@@ -1121,13 +1192,14 @@ io.on('connection', (socket) => {
         room.gameId = dbGame.id; // Update to use database UUID
         room.gameUUID = dbGame.id; // Keep explicit reference
         room.roomCode = gameCode; // Keep room code reference
+        room.hostControlEnabled = true; // Enable host control features
       } else {
         if (isDevelopment) {
-          logger.error(`❌ Could not find room ${gameCode} in RoomManager to update gameId`);
+          logger.error(`❌ [BRIDGE] Could not find room ${gameCode} in RoomManager to update gameId`);
         }
       }
       
-      // Create a memory game object with database reference
+      // Create a memory game object with Phase 6 compatibility
       const game = {
         id: dbGame.id, // Use database UUID as primary ID
         game_code: gameCode,
@@ -1135,13 +1207,15 @@ io.on('connection', (socket) => {
         question_set_id: questionSetId,
         status: 'waiting',
         current_players: 0,
-        game_settings: cleanGameSettings, // Only use game_settings (includes maxPlayers)
+        game_settings: enhancedGameSettings, // Use enhanced settings
         created_at: dbGame.created_at,
-        dbGame: dbGame // Keep reference to full database object
+        dbGame: dbGame, // Keep reference to full database object
+        // Host control metadata
+        host_control_enabled: true
       };
       
       if (isDevelopment) {
-        logger.gameActivity(gameCode, `created: ${gameCode} (UUID: ${dbGame.id})`);
+        logger.gameActivity(gameCode, `[BRIDGE] Phase 6 compatible game created: ${gameCode} (UUID: ${dbGame.id})`);
       }
       
       // Store in activeGames for backwards compatibility
@@ -1152,23 +1226,49 @@ io.on('connection', (socket) => {
         questions: [],
         currentQuestionIndex: 0,
         currentAnswers: [],
-        questionInProgress: false
+        questionInProgress: false,
+        // Host control extensions
+        hostControlEnabled: true
       });
       
       // Join the host to the game room
       socket.join(gameCode);
       
-      // Assign host role to socket
+      // Assign host role to socket with Phase 6 metadata
       socket.hostOfGame = gameCode;
+      socket.hostGameId = dbGame.id;
+      socket.hostControlEnabled = true;
+      
+      // Enable host control handlers for this socket
+      if (typeof setupHostHandlers === 'function') {
+        setupHostHandlers(socket, gameCode, dbGame.id);
+      }
       
       socket.emit('gameCreated', { 
         gameCode, 
-        game,
-        message: 'Game created successfully' 
+        game: {
+          ...game,
+          // Include Phase 6 capabilities in response
+          capabilities: {
+            hostControl: true,
+            playerManagement: true,
+            advancedSettings: true,
+            realTimeUpdates: true
+          }
+        },
+        message: 'Host control compatible game created successfully' 
+      });
+      
+      logger.info(`🎮 [BRIDGE] Phase 6 game creation completed successfully`, {
+        gameId: dbGame.id,
+        gameCode,
+        hostId: actualHostId,
+        questionSetId,
+        hostControlEnabled: true
       });
       
     } catch (error) {
-      logger.error('❌ Error creating game:', error);
+      logger.error('❌ [BRIDGE] Error creating host control game:', error);
       socket.emit('error', { message: 'Failed to create game', error: error.message });
     }
   });

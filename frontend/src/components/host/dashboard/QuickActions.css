@@ -1,0 +1,534 @@
+/**
+ * QuickActions Component - Quick Action Panel with game controls
+ * Phase 2.1: Host Dashboard Component
+ * 
+ * BEM Naming Convention:
+ * - Block: quick-actions, quick-action-btn, timer-adjustment-panel
+ * - Elements: __header, __content, __controls, etc.
+ * - Modifiers: --primary, --warning, --active, etc.
+ */
+
+/* ========================================
+   QUICK ACTIONS CONTAINER
+   ======================================== */
+
+.quick-actions {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--host-space-3);
+}
+
+.quick-actions__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--host-space-2);
+}
+
+.quick-actions__title {
+  display: flex;
+  align-items: center;
+  gap: var(--host-space-2);
+  font-size: var(--host-font-size-base);
+  font-weight: var(--host-font-weight-semibold);
+  color: var(--host-white);
+  margin: 0;
+}
+
+.quick-actions__title-icon {
+  color: var(--host-warning);
+  animation: host-pulse 2s ease-in-out infinite;
+}
+
+.quick-actions__status {
+  display: flex;
+  align-items: center;
+}
+
+.quick-actions__indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: var(--host-font-size-xs);
+  animation: host-pulse 2s ease-in-out infinite;
+}
+
+.quick-actions__indicator--waiting {
+  background: var(--host-warning);
+  color: var(--host-gray-900);
+}
+
+.quick-actions__indicator--active {
+  background: var(--host-success);
+  color: var(--host-white);
+}
+
+.quick-actions__indicator--paused {
+  background: var(--host-warning);
+  color: var(--host-gray-900);
+}
+
+.quick-actions__indicator--finished {
+  background: var(--host-info);
+  color: var(--host-white);
+}
+
+.quick-actions__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--host-space-4);
+}
+
+/* ========================================
+   SECTIONS
+   ======================================== */
+
+.quick-actions__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--host-space-2);
+}
+
+.quick-actions__section-title {
+  font-size: var(--host-font-size-sm);
+  font-weight: var(--host-font-weight-medium);
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-bottom: var(--host-space-1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quick-actions__controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--host-space-2);
+}
+
+/* ========================================
+   QUICK ACTION BUTTONS
+   ======================================== */
+
+.quick-action-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--host-space-2);
+  padding: var(--host-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--host-radius-lg);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--host-white);
+  font-size: var(--host-font-size-sm);
+  font-weight: var(--host-font-weight-medium);
+  cursor: pointer;
+  transition: all var(--host-transition-fast);
+  text-align: left;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  min-height: 48px;
+}
+
+.quick-action-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left var(--host-transition-medium);
+}
+
+.quick-action-btn:hover::before {
+  left: 100%;
+}
+
+.quick-action-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+  box-shadow: var(--host-shadow-md);
+}
+
+.quick-action-btn:active {
+  transform: translateY(0);
+}
+
+.quick-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.quick-action-btn__icon {
+  font-size: var(--host-font-size-base);
+  flex-shrink: 0;
+}
+
+.quick-action-btn__text {
+  flex: 1;
+}
+
+/* Button Variants */
+.quick-action-btn--primary {
+  background: linear-gradient(135deg, var(--host-primary), var(--host-info));
+  border-color: var(--host-primary);
+}
+
+.quick-action-btn--primary:hover {
+  background: linear-gradient(135deg, var(--host-info), var(--host-primary));
+  box-shadow: 0 4px 15px rgba(66, 133, 244, 0.3);
+}
+
+.quick-action-btn--pause {
+  background: linear-gradient(135deg, var(--host-warning), #ff8c00);
+}
+
+.quick-action-btn--pause:hover {
+  background: linear-gradient(135deg, #ff8c00, var(--host-warning));
+  box-shadow: 0 4px 15px rgba(251, 188, 4, 0.3);
+}
+
+.quick-action-btn--resume {
+  background: linear-gradient(135deg, var(--host-success), #32cd32);
+}
+
+.quick-action-btn--resume:hover {
+  background: linear-gradient(135deg, #32cd32, var(--host-success));
+  box-shadow: 0 4px 15px rgba(52, 168, 83, 0.3);
+}
+
+.quick-action-btn--warning {
+  background: linear-gradient(135deg, var(--host-warning), #ffa500);
+  border-color: var(--host-warning);
+}
+
+.quick-action-btn--warning:hover {
+  background: linear-gradient(135deg, #ffa500, var(--host-warning));
+  box-shadow: 0 4px 15px rgba(251, 188, 4, 0.3);
+}
+
+.quick-action-btn--secondary {
+  background: linear-gradient(135deg, var(--host-gray-600), var(--host-gray-500));
+  border-color: var(--host-gray-500);
+}
+
+.quick-action-btn--secondary:hover {
+  background: linear-gradient(135deg, var(--host-gray-500), var(--host-gray-400));
+}
+
+.quick-action-btn--timer {
+  background: linear-gradient(135deg, var(--host-secondary), #20b2aa);
+  border-color: var(--host-secondary);
+}
+
+.quick-action-btn--timer:hover {
+  background: linear-gradient(135deg, #20b2aa, var(--host-secondary));
+  box-shadow: 0 4px 15px rgba(52, 168, 83, 0.3);
+}
+
+.quick-action-btn--info {
+  background: linear-gradient(135deg, var(--host-info), #4169e1);
+  border-color: var(--host-info);
+}
+
+.quick-action-btn--info:hover {
+  background: linear-gradient(135deg, #4169e1, var(--host-info));
+  box-shadow: 0 4px 15px rgba(66, 133, 244, 0.3);
+}
+
+.quick-action-btn--danger {
+  background: linear-gradient(135deg, var(--host-danger), #dc143c);
+  border-color: var(--host-danger);
+}
+
+.quick-action-btn--danger:hover {
+  background: linear-gradient(135deg, #dc143c, var(--host-danger));
+  box-shadow: 0 4px 15px rgba(234, 67, 53, 0.3);
+}
+
+.quick-action-btn--outline {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.quick-action-btn--outline:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: var(--host-white);
+}
+
+/* ========================================
+   TIMER ADJUSTMENT PANEL
+   ======================================== */
+
+.timer-adjustment-panel {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--host-radius-lg);
+  padding: var(--host-space-3);
+  margin-top: var(--host-space-2);
+  animation: host-slideInDown var(--host-transition-fast);
+}
+
+.timer-adjustment-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--host-space-2);
+  padding-bottom: var(--host-space-2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timer-adjustment-panel__title {
+  font-size: var(--host-font-size-sm);
+  font-weight: var(--host-font-weight-medium);
+  color: var(--host-white);
+}
+
+.timer-adjustment-panel__current {
+  font-size: var(--host-font-size-sm);
+  color: var(--host-warning);
+  font-family: 'Courier New', monospace;
+  font-weight: var(--host-font-weight-bold);
+}
+
+.timer-adjustment-panel__controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  gap: var(--host-space-2);
+}
+
+.timer-adjust-btn {
+  padding: var(--host-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--host-radius-md);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--host-white);
+  font-size: var(--host-font-size-xs);
+  font-weight: var(--host-font-weight-medium);
+  cursor: pointer;
+  transition: all var(--host-transition-fast);
+  text-align: center;
+}
+
+.timer-adjust-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.timer-adjust-btn--add {
+  border-color: rgba(52, 168, 83, 0.5);
+}
+
+.timer-adjust-btn--add:hover {
+  background: rgba(52, 168, 83, 0.2);
+  border-color: var(--host-success);
+  box-shadow: 0 2px 8px rgba(52, 168, 83, 0.2);
+}
+
+.timer-adjust-btn--subtract {
+  border-color: rgba(234, 67, 53, 0.5);
+}
+
+.timer-adjust-btn--subtract:hover {
+  background: rgba(234, 67, 53, 0.2);
+  border-color: var(--host-danger);
+  box-shadow: 0 2px 8px rgba(234, 67, 53, 0.2);
+}
+
+/* ========================================
+   GAME STATUS INFO
+   ======================================== */
+
+.quick-actions__info {
+  margin-top: auto;
+  padding-top: var(--host-space-3);
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.game-status-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--host-space-2);
+}
+
+.game-status-info__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--host-font-size-sm);
+}
+
+.game-status-info__label {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: var(--host-font-weight-medium);
+}
+
+.game-status-info__value {
+  color: var(--host-white);
+  font-weight: var(--host-font-weight-semibold);
+  font-family: 'Courier New', monospace;
+}
+
+.game-status-info__value--waiting {
+  color: var(--host-warning);
+}
+
+.game-status-info__value--active {
+  color: var(--host-success);
+}
+
+.game-status-info__value--paused {
+  color: var(--host-warning);
+}
+
+.game-status-info__value--finished {
+  color: var(--host-info);
+}
+
+.game-status-info__value--warning {
+  color: var(--host-danger);
+  animation: host-pulse 1s ease-in-out infinite;
+}
+
+/* ========================================
+   MODAL OVERLAY
+   ======================================== */
+
+.quick-actions-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: host-fadeIn var(--host-transition-medium) var(--host-ease-out);
+}
+
+.quick-actions-modal {
+  background: var(--host-white);
+  color: var(--host-gray-700);
+  border-radius: var(--host-radius-xl);
+  max-width: 400px;
+  width: 90vw;
+  box-shadow: var(--host-shadow-xl);
+  animation: host-scaleIn var(--host-transition-medium) var(--host-ease-out);
+}
+
+.quick-actions-modal__header {
+  display: flex;
+  align-items: center;
+  gap: var(--host-space-3);
+  padding: var(--host-space-4);
+  background: linear-gradient(135deg, var(--host-warning), #ffa500);
+  color: var(--host-white);
+  border-radius: var(--host-radius-xl) var(--host-radius-xl) 0 0;
+}
+
+.quick-actions-modal__icon {
+  font-size: var(--host-font-size-lg);
+  animation: host-pulse 1s ease-in-out infinite;
+}
+
+.quick-actions-modal__title {
+  font-size: var(--host-font-size-base);
+  font-weight: var(--host-font-weight-semibold);
+  margin: 0;
+}
+
+.quick-actions-modal__content {
+  padding: var(--host-space-4);
+  line-height: var(--host-line-height-relaxed);
+}
+
+.quick-actions-modal__content p {
+  margin: 0 0 var(--host-space-2);
+}
+
+.quick-actions-modal__content p:last-child {
+  margin-bottom: 0;
+}
+
+.quick-actions-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--host-space-3);
+  padding: var(--host-space-4);
+  border-top: 1px solid var(--host-gray-200);
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 768px) {
+  .quick-actions {
+    gap: var(--host-space-2);
+  }
+  
+  .quick-action-btn {
+    padding: var(--host-space-2);
+    min-height: 44px;
+  }
+  
+  .timer-adjustment-panel__controls {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .quick-actions-modal {
+    margin: var(--host-space-2);
+    width: calc(100vw - var(--host-space-4));
+  }
+}
+
+@media (max-width: 480px) {
+  .quick-action-btn {
+    font-size: var(--host-font-size-xs);
+  }
+  
+  .timer-adjustment-panel__controls {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .game-status-info__item {
+    font-size: var(--host-font-size-xs);
+  }
+}
+
+/* ========================================
+   ACCESSIBILITY
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-actions__title-icon,
+  .quick-actions__indicator,
+  .quick-actions-modal__icon {
+    animation: none;
+  }
+  
+  .game-status-info__value--warning {
+    animation: none;
+    font-weight: var(--host-font-weight-bold);
+  }
+  
+  .quick-action-btn::before {
+    display: none;
+  }
+  
+  .timer-adjustment-panel {
+    animation: none;
+  }
+}

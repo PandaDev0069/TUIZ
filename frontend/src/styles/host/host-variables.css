@@ -1,0 +1,287 @@
+/**
+ * TUIZ Host Control Panel Design System
+ * Phase 1.1: Design System Creation
+ * 
+ * Kahoot-inspired but TUIZ-branded design tokens
+ * Following BEM naming convention for CSS classes
+ */
+
+:root {
+  /* ========================================
+     HOST COLOR PALETTE - Kahoot-inspired
+     ======================================== */
+  
+  /* Primary Colors - Google Material inspired */
+  --host-primary: #4285f4;        /* Google Blue - Primary actions */
+  --host-primary-light: #6ba3f7;  /* Lighter variant */
+  --host-primary-dark: #2563eb;   /* Darker variant */
+  --host-primary-rgb: 66, 133, 244; /* RGB values for alpha */
+  
+  /* Secondary Colors */
+  --host-secondary: #34a853;      /* Google Green - Success states */
+  --host-secondary-light: #5cbf6a; /* Lighter variant */
+  --host-secondary-dark: #2d8f3f;  /* Darker variant */
+  
+  /* Semantic Colors */
+  --host-success: #34a853;        /* Success - Green */
+  --host-warning: #fbbc04;        /* Warning - Yellow */
+  --host-danger: #ea4335;         /* Danger/Error - Red */
+  --host-info: #4285f4;           /* Info - Blue */
+  
+  /* Neutral Colors */
+  --host-white: #ffffff;
+  --host-gray-50: #f8f9fa;        /* Very light gray */
+  --host-gray-100: #f1f3f4;       /* Light gray */
+  --host-gray-200: #e8eaed;       /* Border gray */
+  --host-gray-300: #dadce0;       /* Disabled gray */
+  --host-gray-400: #9aa0a6;       /* Secondary text */
+  --host-gray-500: #5f6368;       /* Primary text light */
+  --host-gray-600: #3c4043;       /* Primary text */
+  --host-gray-700: #202124;       /* Heading text */
+  --host-gray-800: #1a1a1a;       /* Strong text */
+  --host-gray-900: #0d1117;       /* Maximum contrast */
+  
+  /* Background Colors */
+  --host-bg-primary: #f8f9fa;     /* Main background */
+  --host-bg-secondary: #ffffff;   /* Card backgrounds */
+  --host-bg-tertiary: #f1f3f4;    /* Secondary panels */
+  --host-bg-overlay: rgba(0, 0, 0, 0.4); /* Modal overlays */
+  
+  /* Interactive Colors */
+  --host-hover-primary: rgba(66, 133, 244, 0.08);
+  --host-hover-secondary: rgba(52, 168, 83, 0.08);
+  --host-hover-danger: rgba(234, 67, 53, 0.08);
+  --host-focus-ring: rgba(66, 133, 244, 0.24);
+  
+  /* ========================================
+     TYPOGRAPHY SYSTEM
+     ======================================== */
+  
+  /* Font Family */
+  --host-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 
+                      'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  --host-font-family-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 
+                           'Source Code Pro', monospace;
+  
+  /* Font Sizes - Mobile-first approach */
+  --host-font-size-xs: 0.75rem;    /* 12px - Small labels */
+  --host-font-size-sm: 0.875rem;   /* 14px - Body text small */
+  --host-font-size-base: 1rem;     /* 16px - Base body text */
+  --host-font-size-md: 1rem;       /* 16px - Medium text */
+  --host-font-size-lg: 1.125rem;   /* 18px - Large text */
+  --host-font-size-xl: 1.25rem;    /* 20px - Subheadings */
+  --host-font-size-2xl: 1.5rem;    /* 24px - Headings */
+  --host-font-size-3xl: 1.875rem;  /* 30px - Large headings */
+  --host-font-size-4xl: 2.25rem;   /* 36px - Hero text */
+  
+  /* Font Weights */
+  --host-font-weight-normal: 400;
+  --host-font-weight-medium: 500;
+  --host-font-weight-semibold: 600;
+  --host-font-weight-bold: 700;
+  
+  /* Line Heights */
+  --host-line-height-tight: 1.25;   /* Tight spacing */
+  --host-line-height-normal: 1.5;   /* Normal spacing */
+  --host-line-height-relaxed: 1.75; /* Relaxed spacing */
+  
+  /* ========================================
+     SPACING SYSTEM - 8px base grid
+     ======================================== */
+  
+  --host-space-0: 0;               /* 0px */
+  --host-space-px: 1px;            /* 1px - Borders */
+  --host-space-0_5: 0.125rem;      /* 2px */
+  --host-space-1: 0.25rem;         /* 4px */
+  --host-space-1_5: 0.375rem;      /* 6px */
+  --host-space-2: 0.5rem;          /* 8px - Base unit */
+  --host-space-2_5: 0.625rem;      /* 10px */
+  --host-space-3: 0.75rem;         /* 12px */
+  --host-space-3_5: 0.875rem;      /* 14px */
+  --host-space-4: 1rem;            /* 16px - Common spacing */
+  --host-space-5: 1.25rem;         /* 20px */
+  --host-space-6: 1.5rem;          /* 24px */
+  --host-space-7: 1.75rem;         /* 28px */
+  --host-space-8: 2rem;            /* 32px */
+  --host-space-9: 2.25rem;         /* 36px */
+  --host-space-10: 2.5rem;         /* 40px */
+  --host-space-11: 2.75rem;        /* 44px */
+  --host-space-12: 3rem;           /* 48px */
+  --host-space-14: 3.5rem;         /* 56px */
+  --host-space-16: 4rem;           /* 64px */
+  --host-space-20: 5rem;           /* 80px */
+  --host-space-24: 6rem;           /* 96px */
+  --host-space-32: 8rem;           /* 128px */
+  
+  /* Semantic Spacing Aliases */
+  --host-space-xs: var(--host-space-1);    /* 4px */
+  --host-space-sm: var(--host-space-2);    /* 8px */
+  --host-space-md: var(--host-space-4);    /* 16px */
+  --host-space-lg: var(--host-space-6);    /* 24px */
+  --host-space-xl: var(--host-space-8);    /* 32px */
+  --host-space-2xl: var(--host-space-12);  /* 48px */
+  --host-space-3xl: var(--host-space-16);  /* 64px */
+  
+  /* ========================================
+     ANIMATION & TIMING
+     ======================================== */
+  
+  /* Transition Durations */
+  --host-duration-fast: 150ms;     /* Quick interactions */
+  --host-duration-medium: 300ms;   /* Standard transitions */
+  --host-duration-slow: 500ms;     /* Slow animations */
+  --host-duration-slower: 1000ms;  /* Very slow animations */
+  
+  /* Transition Timings */
+  --host-ease-linear: linear;
+  --host-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --host-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --host-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --host-ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Combined Transition Properties */
+  --host-transition-fast: var(--host-duration-fast) var(--host-ease-out);
+  --host-transition-medium: var(--host-duration-medium) var(--host-ease-in-out);
+  --host-transition-slow: var(--host-duration-slow) var(--host-ease-in-out);
+  --host-transition-bounce: var(--host-duration-medium) var(--host-ease-bounce);
+  
+  /* ========================================
+     SHADOWS & ELEVATION
+     ======================================== */
+  
+  /* Box Shadows - Material Design inspired */
+  --host-shadow-none: none;
+  --host-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --host-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --host-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --host-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --host-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --host-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  
+  /* Focus Shadows */
+  --host-shadow-focus: 0 0 0 3px var(--host-focus-ring);
+  --host-shadow-focus-danger: 0 0 0 3px rgba(234, 67, 53, 0.24);
+  --host-shadow-focus-success: 0 0 0 3px rgba(52, 168, 83, 0.24);
+  
+  /* ========================================
+     BORDER RADIUS
+     ======================================== */
+  
+  --host-radius-none: 0;
+  --host-radius-xs: 0.125rem;      /* 2px */
+  --host-radius-sm: 0.25rem;       /* 4px */
+  --host-radius-md: 0.375rem;      /* 6px */
+  --host-radius-lg: 0.5rem;        /* 8px */
+  --host-radius-xl: 0.75rem;       /* 12px */
+  --host-radius-2xl: 1rem;         /* 16px */
+  --host-radius-3xl: 1.5rem;       /* 24px */
+  --host-radius-full: 9999px;      /* Fully rounded */
+  
+  /* ========================================
+     Z-INDEX LAYERS
+     ======================================== */
+  
+  --host-z-auto: auto;
+  --host-z-0: 0;
+  --host-z-10: 10;     /* Dropdowns */
+  --host-z-20: 20;     /* Sticky elements */
+  --host-z-30: 30;     /* Fixed headers */
+  --host-z-40: 40;     /* Overlays */
+  --host-z-50: 50;     /* Modals */
+  --host-z-60: 60;     /* Tooltips */
+  --host-z-70: 70;     /* Notifications */
+  --host-z-80: 80;     /* Loading overlays */
+  --host-z-90: 90;     /* Critical alerts */
+  --host-z-100: 100;   /* Maximum priority */
+  
+  /* ========================================
+     BREAKPOINTS (for reference in calc())
+     ======================================== */
+  
+  --host-breakpoint-sm: 640px;     /* Small devices */
+  --host-breakpoint-md: 768px;     /* Medium devices */
+  --host-breakpoint-lg: 1024px;    /* Large devices */
+  --host-breakpoint-xl: 1280px;    /* Extra large devices */
+  --host-breakpoint-2xl: 1536px;   /* Ultra wide devices */
+  
+  /* ========================================
+     COMPONENT-SPECIFIC VARIABLES
+     ======================================== */
+  
+  /* Button Heights */
+  --host-button-height-sm: 2rem;    /* 32px */
+  --host-button-height-md: 2.5rem;  /* 40px */
+  --host-button-height-lg: 3rem;    /* 48px */
+  --host-button-height-xl: 3.5rem;  /* 56px */
+  
+  /* Input Heights */
+  --host-input-height-sm: 2rem;     /* 32px */
+  --host-input-height-md: 2.5rem;   /* 40px */
+  --host-input-height-lg: 3rem;     /* 48px */
+  
+  /* Card Padding */
+  --host-card-padding-sm: var(--host-space-3);  /* 12px */
+  --host-card-padding-md: var(--host-space-4);  /* 16px */
+  --host-card-padding-lg: var(--host-space-6);  /* 24px */
+  --host-card-padding-xl: var(--host-space-8);  /* 32px */
+  
+  /* Header Heights */
+  --host-header-height: 4rem;       /* 64px */
+  --host-navbar-height: 3.5rem;     /* 56px */
+  
+  /* Sidebar Widths */
+  --host-sidebar-width-sm: 16rem;   /* 256px */
+  --host-sidebar-width-md: 18rem;   /* 288px */
+  --host-sidebar-width-lg: 20rem;   /* 320px */
+  
+  /* Container Max Widths */
+  --host-container-sm: 640px;
+  --host-container-md: 768px;
+  --host-container-lg: 1024px;
+  --host-container-xl: 1280px;
+  --host-container-2xl: 1536px;
+}
+
+/* ========================================
+   DARK MODE SUPPORT (Future Enhancement)
+   ======================================== */
+
+/* 
+@media (prefers-color-scheme: dark) {
+  :root {
+    Dark mode color overrides would go here
+    Currently focusing on light mode only
+  }
+}
+*/
+
+/* ========================================
+   REDUCED MOTION SUPPORT
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --host-duration-fast: 0ms;
+    --host-duration-medium: 0ms;
+    --host-duration-slow: 0ms;
+    --host-duration-slower: 0ms;
+    --host-transition-fast: none;
+    --host-transition-medium: none;
+    --host-transition-slow: none;
+    --host-transition-bounce: none;
+  }
+}
+
+/* ========================================
+   HIGH CONTRAST SUPPORT
+   ======================================== */
+
+@media (prefers-contrast: high) {
+  :root {
+    --host-gray-300: #8e8e93;
+    --host-gray-400: #6d6d70;
+    --host-primary: #0066cc;
+    --host-danger: #d70015;
+    --host-success: #1d6f2e;
+  }
+}

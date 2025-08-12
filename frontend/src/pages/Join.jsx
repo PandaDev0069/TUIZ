@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
+import { FaUser, FaGamepad, FaArrowLeft, FaExclamationTriangle } from 'react-icons/fa';
 import socket from '../socket';
+import '../utils/AnimationController'; // Ensure AnimationController is loaded
+import '../utils/ViewportFix'; // Ensure ViewportFix is loaded for mobile viewport handling
 import './join.css';
 
 function Join() {
@@ -23,6 +26,24 @@ function Join() {
     }
   }, [isAuthenticated, user]);
 
+  // Force animation initialization immediately
+  useEffect(() => {
+    // Ensure AnimationController is available and initialize animations
+    if (window.tuizAnimations) {
+      window.tuizAnimations.initializePageAnimations();
+    }
+    
+    // Add ready class after a brief delay to prevent flash
+    const timer = setTimeout(() => {
+      const joinElement = document.querySelector('.join');
+      if (joinElement) {
+        joinElement.classList.add('tuiz-animations-ready');
+      }
+    }, 50); // Very short delay to ensure CSS is loaded
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     if (import.meta.env.DEV) {
       console.log('Socket connected:', socket.connected);
@@ -37,162 +58,6 @@ function Join() {
       socket.off('error');
     };
   }, []);
-
-  // Mobile keyboard handling
-  useEffect(() => {
-    let keyboardTimeout;
-    let initialViewportHeight = window.innerHeight;
-    
-    const handleResize = () => {
-      // Clear any existing timeout
-      if (keyboardTimeout) {
-        clearTimeout(keyboardTimeout);
-      }
-      
-      // Multiple detection methods for better browser compatibility
-      const currentHeight = window.innerHeight;
-      const heightDifference = initialViewportHeight - currentHeight;
-      
-      // Method 1: Viewport height decrease
-      const isKeyboardOpen1 = currentHeight < window.screen.height * 0.75;
-      
-      // Method 2: Significant height decrease (more reliable)
-      const isKeyboardOpen2 = heightDifference > 150;
-      
-      // Method 3: Visual viewport API (modern browsers)
-      const isKeyboardOpen3 = window.visualViewport ? 
-        window.visualViewport.height < initialViewportHeight * 0.75 : false;
-      
-      const isKeyboardOpen = isKeyboardOpen1 || isKeyboardOpen2 || isKeyboardOpen3;
-      
-      if (import.meta.env.DEV) {
-        console.log(`📏 Resize - Initial: ${initialViewportHeight}, Current: ${currentHeight}, Diff: ${heightDifference}, Keyboard: ${isKeyboardOpen}`);
-      }
-      
-      if (isKeyboardOpen) {
-        // Delay to ensure the keyboard is fully shown and DOM is updated
-        keyboardTimeout = setTimeout(() => {
-          const activeElement = document.activeElement;
-          const isRoomInput = activeElement === roomInputRef.current;
-          const isNameInput = activeElement === nameInputRef.current;
-          
-          if (import.meta.env.DEV) {
-            console.log(`⌨️ Keyboard open - Active element: ${isRoomInput ? 'Room Code' : isNameInput ? 'Name' : 'Other'}`);
-          }
-          
-          if (activeElement && (isNameInput || isRoomInput)) {
-            // Method 1: Standard scrollIntoView
-            activeElement.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center',
-              inline: 'nearest'
-            });
-            
-            // Method 2: Manual scroll calculation (more reliable for room input)
-            setTimeout(() => {
-              if (isRoomInput) {
-                if (import.meta.env.DEV) {
-                  console.log(`🎯 Extra scroll for room code input`);
-                }
-                const rect = activeElement.getBoundingClientRect();
-                const absoluteElementTop = rect.top + window.pageYOffset;
-                const targetPosition = absoluteElementTop - (window.innerHeight * 0.4);
-                
-                window.scrollTo({
-                  top: Math.max(0, targetPosition),
-                  behavior: 'smooth'
-                });
-              }
-            }, 150);
-          }
-        }, 250); // Slightly longer delay for better reliability
-      } else {
-        // Update initial height when keyboard closes
-        initialViewportHeight = currentHeight;
-      }
-    };
-
-    // Store initial height
-    initialViewportHeight = window.innerHeight;
-
-    // Listen for viewport changes
-    window.addEventListener('resize', handleResize);
-    
-    // Visual Viewport API support (modern browsers)
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleResize);
-    }
-    
-    // Also handle orientationchange for mobile devices
-    window.addEventListener('orientationchange', () => {
-      setTimeout(() => {
-        initialViewportHeight = window.innerHeight;
-        handleResize();
-      }, 700); // Longer delay for orientation change
-    });
-
-    return () => {
-      if (keyboardTimeout) {
-        clearTimeout(keyboardTimeout);
-      }
-      window.removeEventListener('resize', handleResize);
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleResize);
-      }
-      window.removeEventListener('orientationchange', handleResize);
-    };
-  }, []);
-
-  // Handle input focus for mobile keyboard
-  const handleInputFocus = (inputRef) => {
-    // For mobile devices, scroll the input into view when focused
-    if (window.innerWidth <= 768) {
-      const isRoomInput = inputRef === roomInputRef;
-      if (import.meta.env.DEV) {
-        console.log(`📱 Mobile input focus: ${isRoomInput ? 'Room Code' : 'Name'} input`);
-      }
-      
-      // Immediate scroll for better responsiveness
-      if (inputRef.current) {
-        inputRef.current.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'nearest'
-        });
-      }
-      
-      // Additional delayed scroll to handle keyboard opening
-      setTimeout(() => {
-        if (inputRef.current) {
-          if (import.meta.env.DEV) {
-            console.log(`🔄 Delayed scroll for ${isRoomInput ? 'Room Code' : 'Name'} input`);
-          }
-          
-          if (isRoomInput) {
-            // Special handling for room code input - scroll more aggressively
-            const elementRect = inputRef.current.getBoundingClientRect();
-            const targetScrollTop = window.pageYOffset + elementRect.top - window.innerHeight * 0.35;
-            
-            if (import.meta.env.DEV) {
-              console.log(`📍 Room code scroll target: ${targetScrollTop}, current: ${window.pageYOffset}`);
-            }
-            
-            window.scrollTo({
-              top: Math.max(0, targetScrollTop),
-              behavior: 'smooth'
-            });
-          } else {
-            // Standard scroll for name input
-            inputRef.current.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center',
-              inline: 'nearest'
-            });
-          }
-        }
-      }, 350); // Longer delay to ensure keyboard is open
-    }
-  };
 
   const handleJoin = () => {
     if (!name || !room) {
@@ -249,40 +114,98 @@ function Join() {
   };
 
   return (
-    <div className="page-container">
-      <div className="card" ref={cardRef}>
-        <h1>TUIZ情報王</h1>
-        <p>名前とルームコードを入力ください。</p>
+    <div className="join tuiz-animate-fade-in">
+      <div className="join__wrapper">
+        <div className="join__main">
+          <div className="join__container tuiz-animate-scale-in tuiz-animate-stagger-1">
+            {/* Header */}
+            <div className="join__header tuiz-animate-fade-in-down tuiz-animate-stagger-2">
+              <h1 className="join__title tuiz-animate-float">TUIZ情報王</h1>
+              <h2 className="join__subtitle tuiz-animate-fade-in tuiz-animate-stagger-3">ゲームに参加</h2>
+              <p className="join__description tuiz-animate-fade-in tuiz-animate-stagger-4">
+                名前とルームコードを入力してください
+              </p>
+            </div>
 
-        <div className="input-group">
-          <input
-            ref={nameInputRef}
-            className="input"
-            type="text"
-            placeholder="名前"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyPress={handleKeyPress}
-            onFocus={() => handleInputFocus(nameInputRef)}
-            maxLength={20}
-          />
+            {/* Join Form */}
+            <div className="join__form tuiz-animate-fade-in-up tuiz-animate-stagger-5">
+              {/* Error Message */}
+              {error && (
+                <div className="join__error-message tuiz-animate-slide-in-up">
+                  <span className="join__error-icon tuiz-animate-pulse">
+                    <FaExclamationTriangle />
+                  </span>
+                  {error}
+                </div>
+              )}
 
-          <input
-            ref={roomInputRef}
-            className="input"
-            type="text"
-            placeholder="ルームコード"
-            value={room}
-            onChange={(e) => setRoom(e.target.value.toUpperCase())}
-            onKeyPress={handleKeyPress}
-            onFocus={() => handleInputFocus(roomInputRef)}
-            maxLength={6}
-          />
+              {/* Name Input */}
+              <div className="join__input-group tuiz-animate-slide-in-up tuiz-animate-stagger-1">
+                <label htmlFor="playerName" className="join__label">
+                  <FaUser className="join__label-icon join__label-icon--user tuiz-animate-breathe" />
+                  プレイヤー名
+                </label>
+                <div className="join__input-wrapper">
+                  <input
+                    ref={nameInputRef}
+                    type="text"
+                    id="playerName"
+                    name="playerName"
+                    className="join__input"
+                    placeholder="あなたの名前を入力"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    maxLength={20}
+                    autoComplete="username"
+                  />
+                </div>
+              </div>
+
+              {/* Room Code Input */}
+              <div className="join__input-group tuiz-animate-slide-in-up tuiz-animate-stagger-2">
+                <label htmlFor="roomCode" className="join__label">
+                  <FaGamepad className="join__label-icon join__label-icon--room tuiz-animate-breathe" />
+                  ルームコード
+                </label>
+                <div className="join__input-wrapper">
+                  <input
+                    ref={roomInputRef}
+                    type="text"
+                    id="roomCode"
+                    name="roomCode"
+                    className="join__input join__input--room-code"
+                    placeholder="6桁のコード"
+                    value={room}
+                    onChange={(e) => setRoom(e.target.value.toUpperCase())}
+                    onKeyPress={handleKeyPress}
+                    maxLength={6}
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+
+              {/* Join Button */}
+              <button
+                type="button"
+                className="join__button tuiz-animate-scale-in tuiz-animate-stagger-3 tuiz-hover-lift"
+                onClick={handleJoin}
+                disabled={!name || !room}
+              >
+                <FaGamepad className="join__button-icon" />
+                ゲームに参加する
+              </button>
+            </div>
+          </div>
         </div>
 
-        {error && <div className="error">{error}</div>}
-
-        <button className="button" onClick={handleJoin}>参加する</button>
+        {/* Back to Home */}
+        <div className="join__footer tuiz-animate-fade-in tuiz-animate-stagger-5">
+          <Link to="/" className="join__back-link tuiz-hover-lift">
+            <FaArrowLeft className="join__back-icon tuiz-animate-float" />
+            ホームに戻る
+          </Link>
+        </div>
       </div>
     </div>
   );

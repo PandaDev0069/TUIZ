@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   FaBullseye, 
   FaGamepad, 
@@ -19,9 +20,16 @@ import './home.css';
 
 function Home() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleHostLogin = () => {
-    navigate('/login');
+    if (user) {
+      // If user is already authenticated, go directly to dashboard
+      navigate('/dashboard');
+    } else {
+      // If not authenticated, go to login
+      navigate('/login');
+    }
   };
 
   const handleJoinGame = () => {
@@ -29,37 +37,37 @@ function Home() {
   };
 
   return (
-    <div className="home-container">
-      <div className="home-content">
+    <div className="home">
+      <div className="home__container">
         {/* Header Section */}
-        <header className="home-header">
-          <div className="logo-container">
-            <img src="/logo.png" alt="TUIZ Logo" className="app-logo" />
+        <header className="home__header tuiz-animate-entrance">
+          <div className="home__logo">
+            <img src="/logo.png" alt="TUIZ Logo" className="home__logo-image tuiz-animate-float" />
           </div>
-          <h1 className="app-title">TUIZ情報王</h1>
+          <h1 className="home__title tuiz-animate-fade-in-down tuiz-animate-stagger-2">TUIZ情報王</h1>
         </header>
 
         {/* Main Action Section */}
-        <section className="main-actions">
-          <div className="action-cards">
-            <div className="action-card host-card" onClick={handleHostLogin}>
-              <div className="card-icon host-icon">
+        <section className="home__actions tuiz-animate-entrance tuiz-animate-stagger-3">
+          <div className="home__cards">
+            <div className="home__card home__card--host tuiz-animate-scale-in tuiz-animate-stagger-4 tuiz-hover-lift" onClick={handleHostLogin}>
+              <div className="home__card-icon home__card-icon--host">
                 <FaBullseye size={60} />
               </div>
-              <h3>ホストとしてログイン</h3>
-              <p>クイズを作成・管理し、クイズを開始、ホスト</p>
-              <button className="action-button host-button">
+              <h3 className="home__card-title">ホストとしてログイン</h3>
+              <p className="home__card-description">クイズを作成・管理し、クイズを開始、ホスト</p>
+              <button className="home__button home__button--host">
                 ログイン
               </button>
             </div>
 
-            <div className="action-card player-card" onClick={handleJoinGame}>
-              <div className="card-icon player-icon">
+            <div className="home__card home__card--player tuiz-animate-scale-in tuiz-animate-stagger-5 tuiz-hover-lift" onClick={handleJoinGame}>
+              <div className="home__card-icon home__card-icon--player">
                 <MdGames size={60} />
               </div>
-              <h3>ゲームに参加</h3>
-              <p>ルームコードを入力してクイズゲームに参加</p>
-              <button className="action-button player-button">
+              <h3 className="home__card-title">ゲームに参加</h3>
+              <p className="home__card-description">ルームコードを入力してクイズゲームに参加</p>
+              <button className="home__button home__button--player">
                 ゲーム参加
               </button>
             </div>
@@ -67,59 +75,61 @@ function Home() {
         </section>
 
         {/* Features Section */}
-        <section className="features-section">
-          <div className="features-grid">
-            <div className="feature-item">
-              <div className="feature-icon lightning-icon">
+        <section className="home__features tuiz-animate-fade-in-up tuiz-animate-stagger-5">
+          <div className="home__features-grid">
+            <div className="home__feature tuiz-animate-slide-in-up tuiz-animate-stagger-1 tuiz-hover-scale">
+              <div className="home__feature-icon home__feature-icon--lightning tuiz-animate-pulse">
                 <FaBolt size={40} />
               </div>
-              <h4>リアルタイム</h4>
-              <p>瞬時に同期</p>
+              <h4 className="home__feature-title">リアルタイム</h4>
+              <p className="home__feature-description">瞬時に同期</p>
             </div>
-            <div className="feature-item">
-              <div className="feature-icon education-icon">
+            <div className="home__feature tuiz-animate-slide-in-up tuiz-animate-stagger-2 tuiz-hover-scale">
+              <div className="home__feature-icon home__feature-icon--education tuiz-animate-pulse">
                 <MdSchool size={40} />
               </div>
-              <h4>教育的</h4>
-              <p>学習に最適</p>
+              <h4 className="home__feature-title">教育的</h4>
+              <p className="home__feature-description">学習に最適</p>
             </div>
-            <div className="feature-item">
-              <div className="feature-icon interactive-icon">
+            <div className="home__feature tuiz-animate-slide-in-up tuiz-animate-stagger-3 tuiz-hover-scale">
+              <div className="home__feature-icon home__feature-icon--interactive tuiz-animate-pulse">
                 <MdColorLens size={40} />
               </div>
-              <h4>インタラクティブ</h4>
-              <p>魅力的な体験</p>
+              <h4 className="home__feature-title">インタラクティブ</h4>
+              <p className="home__feature-description">魅力的な体験</p>
             </div>
           </div>
         </section>
 
         {/* Footer */}
-        <footer className="home-footer">
-          <div className="footer-content">
-            <div className="footer-main">
-              <p>&copy; 2025 TUIZ情報王. All rights reserved.</p>
-              <p>Developed with <FaHeart className="inline-heart-icon" /> for educational and entertainment purposes</p>
+        <footer className="home__footer tuiz-animate-fade-in tuiz-animate-stagger-5">
+          <div className="home__footer-content">
+            <div className="home__footer-main">
+              <p className="home__footer-copyright">&copy; 2025 TUIZ情報王. All rights reserved.</p>
+              <p className="home__footer-tagline">
+                Developed with <FaHeart className="home__footer-heart tuiz-animate-pulse" /> for educational and entertainment purposes
+              </p>
             </div>
-            <div className="footer-tech">
+            <div className="home__footer-tech">
               <span>v1.0.0</span> • 
               <span>React + Socket.IO</span> • 
               <span>Real-time Quiz Platform</span>
             </div>
-            <div className="footer-license">
-              <span><FaFileAlt className="inline-footer-icon" /> Apache License 2.0</span> • 
-              <span><FaRocket className="inline-footer-icon rocket-icon" /> Open Source</span> • 
-              <span><FaStar className="inline-footer-icon star-icon" /> Built by PandaDev0069</span>
+            <div className="home__footer-license">
+              <span><FaFileAlt className="home__footer-icon" /> Apache License 2.0</span> • 
+              <span><FaRocket className="home__footer-icon home__footer-icon--rocket tuiz-animate-float" /> Open Source</span> • 
+              <span><FaStar className="home__footer-icon home__footer-icon--star tuiz-animate-breathe" /> Built by PandaDev0069</span>
             </div>
-            <div className="footer-links">
-              <a href="https://github.com/PandaDev0069/TUIZ" target="_blank" rel="noopener noreferrer" className="footer-link">
+            <div className="home__footer-links">
+              <a href="https://github.com/PandaDev0069/TUIZ" target="_blank" rel="noopener noreferrer" className="home__footer-link tuiz-hover-glow">
                 GitHub
               </a>
               <span>•</span>
-              <a href="/license" className="footer-link">
+              <a href="/license" className="home__footer-link tuiz-hover-glow">
                 License
               </a>
               <span>•</span>
-              <a href="/privacy" className="footer-link">Privacy</a>
+              <a href="/privacy" className="home__footer-link tuiz-animate-hover">Privacy</a>
             </div>
           </div>
         </footer>

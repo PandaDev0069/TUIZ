@@ -1223,6 +1223,273 @@ class DatabaseManager {
     return gameCode;
   }
 
+  // ================================
+  // HOST CONTROL METHODS (Phase 6)
+  // ================================
+  
+  async logHostAction(gameId, hostId, actionType, actionData = {}, targetPlayerId = null) {
+    try {
+      const { data, error } = await this.supabaseAdmin
+        .rpc('log_host_action', {
+          p_game_id: gameId,
+          p_host_id: hostId,
+          p_action_type: actionType,
+          p_action_data: actionData,
+          p_target_player_id: targetPlayerId
+        });
+
+      if (error) {
+        logger.error('❌ Failed to log host action:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, actionId: data };
+    } catch (error) {
+      logger.error('❌ Host action logging error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async createAnalyticsSnapshot(gameId, snapshotType, questionNumber = null, snapshotData = {}) {
+    try {
+      const { data, error } = await this.supabaseAdmin
+        .rpc('create_analytics_snapshot', {
+          p_game_id: gameId,
+          p_snapshot_type: snapshotType,
+          p_question_number: questionNumber,
+          p_snapshot_data: snapshotData
+        });
+
+      if (error) {
+        logger.error('❌ Failed to create analytics snapshot:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, snapshotId: data };
+    } catch (error) {
+      logger.error('❌ Analytics snapshot error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async updateGameHostControl(gameId, hostControlData) {
+    try {
+      const updateData = {};
+      
+      // Map host control fields
+      if (hostControlData.pausedAt !== undefined) updateData.paused_at = hostControlData.pausedAt;
+      if (hostControlData.pauseReason !== undefined) updateData.pause_reason = hostControlData.pauseReason;
+      if (hostControlData.pausedDuration !== undefined) updateData.paused_duration = hostControlData.pausedDuration;
+      if (hostControlData.stoppedAt !== undefined) updateData.stopped_at = hostControlData.stoppedAt;
+      if (hostControlData.stopReason !== undefined) updateData.stop_reason = hostControlData.stopReason;
+      if (hostControlData.emergencyStop !== undefined) updateData.emergency_stop = hostControlData.emergencyStop;
+      if (hostControlData.skippedQuestions !== undefined) updateData.skipped_questions = hostControlData.skippedQuestions;
+      if (hostControlData.hostActions !== undefined) updateData.host_actions = hostControlData.hostActions;
+      if (hostControlData.hostTransferHistory !== undefined) updateData.host_transfer_history = hostControlData.hostTransferHistory;
+
+      const { data, error } = await this.supabaseAdmin
+        .from('games')
+        .update(updateData)
+        .eq('id', gameId)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Failed to update game host control data:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, game: data };
+    } catch (error) {
+      logger.error('❌ Game host control update error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getPlayerActions(gameId, playerId = null, actionType = null) {
+    try {
+      let query = this.supabaseAdmin
+        .from('player_actions')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('performed_at', { ascending: false });
+
+      if (playerId) {
+        query = query.eq('player_id', playerId);
+      }
+
+      if (actionType) {
+        query = query.eq('action_type', actionType);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        logger.error('❌ Failed to get player actions:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, actions: data };
+    } catch (error) {
+      logger.error('❌ Player actions query error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getGameAnalyticsSnapshots(gameId, snapshotType = null, questionNumber = null) {
+    try {
+      let query = this.supabaseAdmin
+        .from('game_analytics_snapshots')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('created_at', { ascending: false });
+
+      if (snapshotType) {
+        query = query.eq('snapshot_type', snapshotType);
+      }
+
+      if (questionNumber !== null) {
+        query = query.eq('question_number', questionNumber);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        logger.error('❌ Failed to get analytics snapshots:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, snapshots: data };
+    } catch (error) {
+      logger.error('❌ Analytics snapshots query error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async createHostSession(gameId, hostUserId, sessionData = {}) {
+    try {
+      const { data, error } = await this.supabaseAdmin
+        .from('host_sessions')
+        .insert({
+          game_id: gameId,
+          host_user_id: hostUserId,
+          session_data: sessionData,
+          session_start: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Failed to create host session:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, session: data };
+    } catch (error) {
+      logger.error('❌ Host session creation error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async updateHostSession(sessionId, sessionData) {
+    try {
+      const updateData = {
+        last_action_at: new Date().toISOString()
+      };
+
+      if (sessionData.actionsCount !== undefined) {
+        updateData.actions_count = sessionData.actionsCount;
+      }
+      if (sessionData.sessionEnd !== undefined) {
+        updateData.session_end = sessionData.sessionEnd;
+      }
+      if (sessionData.sessionData !== undefined) {
+        updateData.session_data = sessionData.sessionData;
+      }
+
+      const { data, error } = await this.supabaseAdmin
+        .from('host_sessions')
+        .update(updateData)
+        .eq('id', sessionId)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Failed to update host session:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, session: data };
+    } catch (error) {
+      logger.error('❌ Host session update error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getHostGameStats(hostId, gameId = null) {
+    try {
+      let query = this.supabaseAdmin
+        .from('host_game_stats')
+        .select('*');
+
+      if (gameId) {
+        query = query.eq('game_id', gameId);
+      }
+
+      // Note: RLS policy will automatically filter by host_id = auth.uid()
+      const { data, error } = await query;
+
+      if (error) {
+        logger.error('❌ Failed to get host game stats:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, stats: data };
+    } catch (error) {
+      logger.error('❌ Host game stats query error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async cleanupExpiredPlayerActions() {
+    try {
+      const { data, error } = await this.supabaseAdmin
+        .rpc('cleanup_expired_player_actions');
+
+      if (error) {
+        logger.error('❌ Failed to cleanup expired player actions:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, cleanedCount: data };
+    } catch (error) {
+      logger.error('❌ Player actions cleanup error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getActivePlayerActions(gameId, actionTypes = ['muted', 'kicked']) {
+    try {
+      const { data, error } = await this.supabaseAdmin
+        .from('player_actions')
+        .select('*')
+        .eq('game_id', gameId)
+        .eq('is_active', true)
+        .in('action_type', actionTypes)
+        .order('performed_at', { ascending: false });
+
+      if (error) {
+        logger.error('❌ Failed to get active player actions:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, actions: data };
+    } catch (error) {
+      logger.error('❌ Active player actions query error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // Close connection (for graceful shutdown)
   async close() {
     // Supabase client doesn't need explicit closing

@@ -1,0 +1,791 @@
+/**
+ * TUIZ Host Control Panel - Animations & Effects
+ * Phase 1.1: Design System Creation
+ * 
+ * Smooth transitions, micro-interactions, and engaging animations
+ * Optimized for Kahoot-style quiz hosting experience
+ */
+
+/* ========================================
+   IMPORT DESIGN TOKENS
+   ======================================== */
+
+@import './host-variables.css';
+
+/* ========================================
+   CORE ANIMATION KEYFRAMES
+   ======================================== */
+
+/* Entrance Animations */
+@keyframes host-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes host-slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes host-slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes host-slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes host-slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes host-scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes host-zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Exit Animations */
+@keyframes host-fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes host-slideOutUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes host-slideOutDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+@keyframes host-slideOutLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+@keyframes host-slideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+@keyframes host-scaleOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+@keyframes host-zoomOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+/* Attention Animations */
+@keyframes host-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes host-heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.1);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.1);
+  }
+  70% {
+    transform: scale(1);
+  }
+}
+
+@keyframes host-bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  40%, 43% {
+    transform: translate3d(0, -8px, 0);
+  }
+  70% {
+    transform: translate3d(0, -4px, 0);
+  }
+  90% {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+@keyframes host-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-4px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes host-wobble {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(-5deg);
+  }
+  30% {
+    transform: rotate(4deg);
+  }
+  45% {
+    transform: rotate(-3deg);
+  }
+  60% {
+    transform: rotate(2deg);
+  }
+  75% {
+    transform: rotate(-1deg);
+  }
+}
+
+/* Loading Animations */
+@keyframes host-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes host-spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes host-dots {
+  0%, 20% {
+    color: var(--host-primary);
+    transform: scale(1);
+  }
+  50% {
+    color: var(--host-primary-light);
+    transform: scale(1.2);
+  }
+  100% {
+    color: var(--host-primary);
+    transform: scale(1);
+  }
+}
+
+@keyframes host-progress {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+/* Quiz-specific Animations */
+@keyframes host-countdown {
+  0% {
+    transform: scale(1);
+    color: var(--host-primary);
+  }
+  50% {
+    transform: scale(1.2);
+    color: var(--host-warning);
+  }
+  100% {
+    transform: scale(1);
+    color: var(--host-danger);
+  }
+}
+
+@keyframes host-correctAnswer {
+  0% {
+    background-color: var(--host-bg-secondary);
+    border-color: var(--host-gray-200);
+  }
+  50% {
+    background-color: rgba(52, 168, 83, 0.2);
+    border-color: var(--host-success);
+    transform: scale(1.02);
+  }
+  100% {
+    background-color: rgba(52, 168, 83, 0.1);
+    border-color: var(--host-success);
+    transform: scale(1);
+  }
+}
+
+@keyframes host-wrongAnswer {
+  0% {
+    background-color: var(--host-bg-secondary);
+    border-color: var(--host-gray-200);
+  }
+  25% {
+    transform: translateX(-4px);
+    background-color: rgba(234, 67, 53, 0.2);
+    border-color: var(--host-danger);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+  100% {
+    transform: translateX(0);
+    background-color: rgba(234, 67, 53, 0.1);
+    border-color: var(--host-danger);
+  }
+}
+
+@keyframes host-playerJoin {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes host-notification {
+  0% {
+    opacity: 0;
+    transform: translateX(100%) scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: translateX(-10px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* ========================================
+   ANIMATION UTILITY CLASSES
+   ======================================== */
+
+/* Entrance Animations */
+.host-animate-fadeIn {
+  animation: host-fadeIn var(--host-transition-medium) var(--host-ease-out);
+}
+
+.host-animate-slideInUp {
+  animation: host-slideInUp var(--host-transition-medium) var(--host-ease-out);
+}
+
+.host-animate-slideInDown {
+  animation: host-slideInDown var(--host-transition-medium) var(--host-ease-out);
+}
+
+.host-animate-slideInLeft {
+  animation: host-slideInLeft var(--host-transition-medium) var(--host-ease-out);
+}
+
+.host-animate-slideInRight {
+  animation: host-slideInRight var(--host-transition-medium) var(--host-ease-out);
+}
+
+.host-animate-scaleIn {
+  animation: host-scaleIn var(--host-transition-medium) var(--host-ease-out);
+}
+
+.host-animate-zoomIn {
+  animation: host-zoomIn var(--host-transition-medium) var(--host-ease-out);
+}
+
+/* Exit Animations */
+.host-animate-fadeOut {
+  animation: host-fadeOut var(--host-transition-medium) var(--host-ease-in);
+}
+
+.host-animate-slideOutUp {
+  animation: host-slideOutUp var(--host-transition-medium) var(--host-ease-in);
+}
+
+.host-animate-slideOutDown {
+  animation: host-slideOutDown var(--host-transition-medium) var(--host-ease-in);
+}
+
+.host-animate-slideOutLeft {
+  animation: host-slideOutLeft var(--host-transition-medium) var(--host-ease-in);
+}
+
+.host-animate-slideOutRight {
+  animation: host-slideOutRight var(--host-transition-medium) var(--host-ease-in);
+}
+
+.host-animate-scaleOut {
+  animation: host-scaleOut var(--host-transition-medium) var(--host-ease-in);
+}
+
+.host-animate-zoomOut {
+  animation: host-zoomOut var(--host-transition-medium) var(--host-ease-in);
+}
+
+/* Attention Animations */
+.host-animate-pulse {
+  animation: host-pulse 2s ease-in-out infinite;
+}
+
+.host-animate-heartbeat {
+  animation: host-heartbeat 1.5s ease-in-out infinite;
+}
+
+.host-animate-bounce {
+  animation: host-bounce 1s infinite;
+}
+
+.host-animate-shake {
+  animation: host-shake 0.5s ease-in-out;
+}
+
+.host-animate-wobble {
+  animation: host-wobble 1s ease-in-out;
+}
+
+/* Loading Animations */
+.host-animate-spin {
+  animation: host-spin 1s linear infinite;
+}
+
+.host-animate-spinSlow {
+  animation: host-spinSlow 3s linear infinite;
+}
+
+.host-animate-dots {
+  animation: host-dots 1.5s ease-in-out infinite;
+}
+
+.host-animate-progress {
+  animation: host-progress var(--host-transition-slow) ease-out;
+}
+
+/* Quiz-specific Animations */
+.host-animate-countdown {
+  animation: host-countdown 1s ease-in-out;
+}
+
+.host-animate-correctAnswer {
+  animation: host-correctAnswer 0.8s ease-out;
+}
+
+.host-animate-wrongAnswer {
+  animation: host-wrongAnswer 0.6s ease-out;
+}
+
+.host-animate-playerJoin {
+  animation: host-playerJoin 0.6s ease-out;
+}
+
+.host-animate-notification {
+  animation: host-notification 0.5s ease-out;
+}
+
+/* ========================================
+   STAGGERED ANIMATIONS
+   ======================================== */
+
+/* Stagger children animation delays */
+.host-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.host-stagger > *:nth-child(2) { animation-delay: 100ms; }
+.host-stagger > *:nth-child(3) { animation-delay: 200ms; }
+.host-stagger > *:nth-child(4) { animation-delay: 300ms; }
+.host-stagger > *:nth-child(5) { animation-delay: 400ms; }
+.host-stagger > *:nth-child(6) { animation-delay: 500ms; }
+.host-stagger > *:nth-child(7) { animation-delay: 600ms; }
+.host-stagger > *:nth-child(8) { animation-delay: 700ms; }
+.host-stagger > *:nth-child(9) { animation-delay: 800ms; }
+.host-stagger > *:nth-child(10) { animation-delay: 900ms; }
+
+/* Fast stagger for quick reveals */
+.host-stagger--fast > *:nth-child(1) { animation-delay: 0ms; }
+.host-stagger--fast > *:nth-child(2) { animation-delay: 50ms; }
+.host-stagger--fast > *:nth-child(3) { animation-delay: 100ms; }
+.host-stagger--fast > *:nth-child(4) { animation-delay: 150ms; }
+.host-stagger--fast > *:nth-child(5) { animation-delay: 200ms; }
+.host-stagger--fast > *:nth-child(6) { animation-delay: 250ms; }
+.host-stagger--fast > *:nth-child(7) { animation-delay: 300ms; }
+.host-stagger--fast > *:nth-child(8) { animation-delay: 350ms; }
+
+/* Slow stagger for dramatic effect */
+.host-stagger--slow > *:nth-child(1) { animation-delay: 0ms; }
+.host-stagger--slow > *:nth-child(2) { animation-delay: 200ms; }
+.host-stagger--slow > *:nth-child(3) { animation-delay: 400ms; }
+.host-stagger--slow > *:nth-child(4) { animation-delay: 600ms; }
+.host-stagger--slow > *:nth-child(5) { animation-delay: 800ms; }
+.host-stagger--slow > *:nth-child(6) { animation-delay: 1000ms; }
+
+/* ========================================
+   MICRO-INTERACTIONS
+   ======================================== */
+
+/* Button Interactions */
+.host-button--interactive {
+  position: relative;
+  overflow: hidden;
+  transition: all var(--host-transition-fast);
+}
+
+.host-button--interactive:hover {
+  transform: translateY(-1px);
+}
+
+.host-button--interactive:active {
+  transform: translateY(0);
+}
+
+.host-button--interactive::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width var(--host-transition-fast), height var(--host-transition-fast);
+}
+
+.host-button--interactive:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Card Interactions */
+.host-card--interactive {
+  transition: all var(--host-transition-medium);
+  cursor: pointer;
+}
+
+.host-card--interactive:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--host-shadow-lg);
+}
+
+.host-card--interactive:active {
+  transform: translateY(-2px);
+  box-shadow: var(--host-shadow-md);
+}
+
+/* Input Interactions */
+.host-input--animated {
+  transition: all var(--host-transition-fast);
+  position: relative;
+}
+
+.host-input--animated:focus {
+  transform: scale(1.02);
+}
+
+.host-input--animated::placeholder {
+  transition: opacity var(--host-transition-fast);
+}
+
+.host-input--animated:focus::placeholder {
+  opacity: 0.5;
+}
+
+/* Badge Interactions */
+.host-badge--interactive {
+  transition: all var(--host-transition-fast);
+  cursor: pointer;
+}
+
+.host-badge--interactive:hover {
+  transform: scale(1.05);
+  box-shadow: var(--host-shadow-sm);
+}
+
+.host-badge--interactive:active {
+  transform: scale(0.98);
+}
+
+/* ========================================
+   SCROLL ANIMATIONS
+   ======================================== */
+
+/* Scroll-triggered animations */
+.host-scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all var(--host-transition-slow);
+}
+
+.host-scroll-reveal--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.host-scroll-reveal--left {
+  transform: translateX(-20px);
+}
+
+.host-scroll-reveal--left.host-scroll-reveal--visible {
+  transform: translateX(0);
+}
+
+.host-scroll-reveal--right {
+  transform: translateX(20px);
+}
+
+.host-scroll-reveal--right.host-scroll-reveal--visible {
+  transform: translateX(0);
+}
+
+.host-scroll-reveal--scale {
+  transform: scale(0.9);
+}
+
+.host-scroll-reveal--scale.host-scroll-reveal--visible {
+  transform: scale(1);
+}
+
+/* ========================================
+   GAME STATE ANIMATIONS
+   ======================================== */
+
+/* Waiting State */
+.host-waiting {
+  animation: host-pulse 2s ease-in-out infinite;
+}
+
+/* Active State */
+.host-active {
+  position: relative;
+}
+
+.host-active::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, var(--host-primary), var(--host-secondary), var(--host-primary));
+  border-radius: inherit;
+  z-index: -1;
+  animation: host-spinSlow 3s linear infinite;
+}
+
+/* Success State */
+.host-success-state {
+  animation: host-correctAnswer 0.8s ease-out;
+}
+
+/* Error State */
+.host-error-state {
+  animation: host-wrongAnswer 0.6s ease-out;
+}
+
+/* ========================================
+   RESPONSIVE ANIMATION CONTROLS
+   ======================================== */
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .host-animate-spin,
+  .host-animate-spinSlow,
+  .host-animate-pulse,
+  .host-animate-heartbeat,
+  .host-animate-bounce {
+    animation: none;
+  }
+}
+
+/* Disable complex animations on mobile for performance */
+@media (max-width: 767px) {
+  .host-animate-notification,
+  .host-animate-playerJoin,
+  .host-stagger,
+  .host-stagger--fast,
+  .host-stagger--slow {
+    animation-duration: var(--host-transition-fast);
+    animation-delay: 0ms !important;
+  }
+  
+  .host-card--interactive:hover {
+    transform: none;
+  }
+  
+  .host-button--interactive:hover {
+    transform: none;
+  }
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  .host-button--interactive::before {
+    background: rgba(0, 0, 0, 0.3);
+  }
+  
+  .host-active::before {
+    background: var(--host-primary);
+    animation: none;
+  }
+}
+
+/* ========================================
+   ANIMATION UTILITIES
+   ======================================== */
+
+/* Animation control classes */
+.host-animate-paused {
+  animation-play-state: paused;
+}
+
+.host-animate-running {
+  animation-play-state: running;
+}
+
+.host-animate-infinite {
+  animation-iteration-count: infinite;
+}
+
+.host-animate-once {
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
+/* Animation speed modifiers */
+.host-animate-fast {
+  animation-duration: var(--host-transition-fast) !important;
+}
+
+.host-animate-medium {
+  animation-duration: var(--host-transition-medium) !important;
+}
+
+.host-animate-slow {
+  animation-duration: var(--host-transition-slow) !important;
+}
+
+/* Animation delay utilities */
+.host-animate-delay-0 { animation-delay: 0ms; }
+.host-animate-delay-100 { animation-delay: 100ms; }
+.host-animate-delay-200 { animation-delay: 200ms; }
+.host-animate-delay-300 { animation-delay: 300ms; }
+.host-animate-delay-500 { animation-delay: 500ms; }
+.host-animate-delay-700 { animation-delay: 700ms; }
+.host-animate-delay-1000 { animation-delay: 1000ms; }

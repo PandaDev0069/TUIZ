@@ -1,0 +1,756 @@
+/* MobileOptimization.css - Advanced Mobile Experience Styling */
+/* Phase 5: Enhanced UX & Polish Implementation */
+
+@import '../../../styles/host/host-variables.css';
+@import '../../../styles/host/host-components.css';
+@import '../../../styles/host/host-responsive.css';
+
+/* ==========================================================================
+   Mobile Optimization Provider
+   ========================================================================== */
+
+.mobile-optimization-provider {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Performance mode adjustments */
+.mobile-optimization--battery * {
+  animation-duration: 0.1s !important;
+  transition-duration: 0.1s !important;
+}
+
+.mobile-optimization--battery .complex-animation,
+.mobile-optimization--battery .heavy-effect {
+  display: none !important;
+}
+
+.mobile-optimization--balanced {
+  /* Default optimizations */
+  animation-duration: 0.3s;
+  transition-duration: 0.3s;
+}
+
+.mobile-optimization--performance {
+  /* Enhanced animations and effects */
+  animation-duration: 0.5s;
+  transition-duration: 0.5s;
+}
+
+/* ==========================================================================
+   Touch Gesture Handler
+   ========================================================================== */
+
+.touch-gesture-handler {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.touch-gesture-handler--disabled {
+  pointer-events: none;
+  touch-action: auto;
+}
+
+/* Touch feedback for better user experience */
+.touch-gesture-handler:active {
+  background: rgba(var(--color-accent-rgb, 69, 183, 209), 0.1);
+  transition: background 0.1s ease-out;
+}
+
+/* ==========================================================================
+   Pull to Refresh
+   ========================================================================== */
+
+.pull-to-refresh {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
+}
+
+.pull-to-refresh--pulling {
+  overflow-y: hidden;
+}
+
+.pull-refresh-indicator {
+  position: absolute;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: var(--color-background-primary);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  min-width: 120px;
+  text-align: center;
+}
+
+.pull-refresh-indicator--ready {
+  background: var(--color-success-light);
+  border: 2px solid var(--color-success);
+}
+
+.pull-refresh-indicator--refreshing {
+  background: var(--color-accent-light);
+  border: 2px solid var(--color-accent);
+}
+
+.refresh-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--color-accent);
+  font-size: var(--font-size-lg);
+  transition: color 0.2s ease-out;
+}
+
+.refresh-icon--spinning {
+  animation: refresh-spin 1s linear infinite;
+}
+
+@keyframes refresh-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.pull-refresh-indicator--ready .refresh-icon {
+  color: var(--color-success);
+}
+
+.refresh-text {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.pull-refresh-indicator--ready .refresh-text {
+  color: var(--color-success-dark);
+}
+
+.pull-refresh-indicator--refreshing .refresh-text {
+  color: var(--color-accent-dark);
+}
+
+/* ==========================================================================
+   Bottom Sheet
+   ========================================================================== */
+
+.bottom-sheet-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+}
+
+.bottom-sheet-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  animation: backdrop-fade-in 0.3s ease-out;
+}
+
+@keyframes backdrop-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.bottom-sheet {
+  position: relative;
+  width: 100%;
+  max-height: 90vh;
+  background: var(--color-background-primary);
+  border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0;
+  box-shadow: var(--shadow-xxl);
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  z-index: 1;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.bottom-sheet--dragging {
+  transition: none;
+}
+
+.bottom-sheet-handle {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-sm);
+  cursor: grab;
+  touch-action: none;
+}
+
+.bottom-sheet-handle:active {
+  cursor: grabbing;
+}
+
+.sheet-handle-bar {
+  width: 40px;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  transition: background 0.2s ease-out;
+}
+
+.bottom-sheet-handle:hover .sheet-handle-bar,
+.bottom-sheet-handle:active .sheet-handle-bar {
+  background: var(--color-accent);
+}
+
+.bottom-sheet-content {
+  padding: 0 var(--spacing-lg) var(--spacing-lg);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: calc(90vh - 60px);
+}
+
+/* Snap point indicators */
+.bottom-sheet::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    var(--color-accent) 20%, 
+    var(--color-accent) 80%, 
+    transparent 100%
+  );
+  opacity: 0.3;
+}
+
+/* ==========================================================================
+   Floating Action Button
+   ========================================================================== */
+
+.fab-container {
+  position: fixed;
+  z-index: 9998;
+  pointer-events: none;
+}
+
+.fab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--font-size-md);
+  position: relative;
+  pointer-events: auto;
+  transform: scale(1);
+  will-change: transform;
+}
+
+.fab:hover:not(.fab--disabled) {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-xl);
+}
+
+.fab:active:not(.fab--disabled) {
+  transform: scale(0.95);
+  transition-duration: 0.1s;
+}
+
+.fab--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Sizes */
+.fab--small {
+  width: 40px;
+  height: 40px;
+  font-size: var(--font-size-sm);
+}
+
+.fab--medium {
+  width: 56px;
+  height: 56px;
+  font-size: var(--font-size-md);
+}
+
+.fab--large {
+  width: 72px;
+  height: 72px;
+  font-size: var(--font-size-lg);
+}
+
+/* Colors */
+.fab--primary {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.fab--primary:hover:not(.fab--disabled) {
+  background: var(--color-accent-dark);
+}
+
+.fab--secondary {
+  background: var(--color-text-secondary);
+  color: var(--color-background-primary);
+}
+
+.fab--secondary:hover:not(.fab--disabled) {
+  background: var(--color-text-primary);
+}
+
+.fab--success {
+  background: var(--color-success);
+  color: var(--color-success-contrast);
+}
+
+.fab--success:hover:not(.fab--disabled) {
+  background: var(--color-success-dark);
+}
+
+.fab--warning {
+  background: var(--color-warning);
+  color: var(--color-warning-contrast);
+}
+
+.fab--warning:hover:not(.fab--disabled) {
+  background: var(--color-warning-dark);
+}
+
+.fab--danger {
+  background: var(--color-danger);
+  color: var(--color-danger-contrast);
+}
+
+.fab--danger:hover:not(.fab--disabled) {
+  background: var(--color-danger-dark);
+}
+
+/* Positions */
+.fab--top-left {
+  top: var(--spacing-xl);
+  left: var(--spacing-xl);
+}
+
+.fab--top-right {
+  top: var(--spacing-xl);
+  right: var(--spacing-xl);
+}
+
+.fab--bottom-left {
+  bottom: var(--spacing-xl);
+  left: var(--spacing-xl);
+}
+
+.fab--bottom-right {
+  bottom: var(--spacing-xl);
+  right: var(--spacing-xl);
+}
+
+/* Tooltip */
+.fab-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--border-radius-sm);
+  white-space: nowrap;
+  animation: fab-tooltip-fade-in 0.2s ease-out;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.fab-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.8);
+}
+
+@keyframes fab-tooltip-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* FAB entrance animation */
+.fab {
+  animation: fab-slide-in 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+@keyframes fab-slide-in {
+  from {
+    transform: scale(0) translateY(100px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   Device Info Display (Development Only)
+   ========================================================================== */
+
+.device-info-display {
+  position: fixed;
+  top: var(--spacing-sm);
+  left: var(--spacing-sm);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-xs);
+  font-family: 'Courier New', monospace;
+  z-index: 10000;
+  max-width: 200px;
+  backdrop-filter: blur(10px);
+}
+
+.device-info-display h4 {
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-accent);
+}
+
+.device-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.info-label {
+  opacity: 0.7;
+  min-width: 60px;
+}
+
+.info-value {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-weight: bold;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.info-value svg {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+/* ==========================================================================
+   Mobile-Specific Touch Targets
+   ========================================================================== */
+
+/* Ensure touch targets are at least 44px for accessibility */
+@media (max-width: 768px) {
+  button,
+  .clickable,
+  .touchable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Adjust FAB positions for mobile */
+  .fab--top-left,
+  .fab--top-right {
+    top: var(--spacing-md);
+  }
+  
+  .fab--top-left,
+  .fab--bottom-left {
+    left: var(--spacing-md);
+  }
+  
+  .fab--top-right,
+  .fab--bottom-right {
+    right: var(--spacing-md);
+  }
+  
+  .fab--bottom-left,
+  .fab--bottom-right {
+    bottom: var(--spacing-md);
+  }
+  
+  /* Adjust bottom sheet for mobile */
+  .bottom-sheet {
+    max-height: 95vh;
+  }
+  
+  .bottom-sheet-content {
+    max-height: calc(95vh - 60px);
+  }
+  
+  /* Adjust pull-to-refresh for mobile */
+  .pull-refresh-indicator {
+    top: -60px;
+    min-width: 100px;
+    padding: var(--spacing-sm);
+  }
+  
+  .refresh-icon {
+    width: 24px;
+    height: 24px;
+    font-size: var(--font-size-md);
+  }
+  
+  .refresh-text {
+    font-size: 10px;
+  }
+}
+
+/* ==========================================================================
+   Landscape Orientation Adjustments
+   ========================================================================== */
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .fab--top-left,
+  .fab--top-right {
+    top: var(--spacing-sm);
+  }
+  
+  .fab--bottom-left,
+  .fab--bottom-right {
+    bottom: var(--spacing-sm);
+  }
+  
+  .bottom-sheet {
+    max-height: 80vh;
+  }
+  
+  .bottom-sheet-content {
+    max-height: calc(80vh - 50px);
+  }
+  
+  .device-info-display {
+    top: var(--spacing-xs);
+    left: var(--spacing-xs);
+    padding: var(--spacing-xs);
+    max-width: 180px;
+  }
+}
+
+/* ==========================================================================
+   High DPI / Retina Display Optimizations
+   ========================================================================== */
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .fab {
+    box-shadow: var(--shadow-lg), 0 0 1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .bottom-sheet {
+    box-shadow: var(--shadow-xxl), 0 0 1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .sheet-handle-bar {
+    height: 3px;
+  }
+}
+
+/* ==========================================================================
+   Touch Feedback and Haptic Support
+   ========================================================================== */
+
+/* Visual feedback for touch interactions */
+.touch-feedback {
+  position: relative;
+  overflow: hidden;
+}
+
+.touch-feedback::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s ease-out, height 0.3s ease-out;
+  pointer-events: none;
+}
+
+.touch-feedback:active::before {
+  width: 200px;
+  height: 200px;
+}
+
+/* Prevent text selection during touch interactions */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* ==========================================================================
+   Reduced Motion Support
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .fab,
+  .bottom-sheet,
+  .pull-refresh-indicator,
+  .fab-tooltip {
+    animation: none;
+    transition: none;
+  }
+  
+  .refresh-icon--spinning {
+    animation: none;
+  }
+  
+  .touch-gesture-handler:active {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   Dark Mode Adjustments
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  .bottom-sheet-backdrop {
+    background: rgba(0, 0, 0, 0.7);
+  }
+  
+  .pull-refresh-indicator {
+    background: var(--color-background-secondary);
+    border-color: var(--color-border);
+  }
+  
+  .pull-refresh-indicator--ready {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: var(--color-success);
+  }
+  
+  .pull-refresh-indicator--refreshing {
+    background: rgba(69, 183, 209, 0.2);
+    border-color: var(--color-accent);
+  }
+  
+  .device-info-display {
+    background: rgba(0, 0, 0, 0.95);
+  }
+}
+
+/* ==========================================================================
+   Performance Optimizations
+   ========================================================================== */
+
+/* Hardware acceleration for smooth animations */
+.fab,
+.bottom-sheet,
+.pull-refresh-indicator {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* Optimize scrolling performance */
+.bottom-sheet-content,
+.pull-to-refresh {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Contain layout shifts */
+.touch-gesture-handler,
+.mobile-optimization-provider {
+  contain: layout style paint;
+}
+
+/* ==========================================================================
+   PWA Specific Styles
+   ========================================================================== */
+
+/* Safe area support for devices with notches */
+@supports (padding: max(0px)) {
+  .fab--top-left,
+  .fab--top-right {
+    top: max(var(--spacing-xl), env(safe-area-inset-top));
+  }
+  
+  .fab--bottom-left,
+  .fab--bottom-right {
+    bottom: max(var(--spacing-xl), env(safe-area-inset-bottom));
+  }
+  
+  .fab--top-left,
+  .fab--bottom-left {
+    left: max(var(--spacing-xl), env(safe-area-inset-left));
+  }
+  
+  .fab--top-right,
+  .fab--bottom-right {
+    right: max(var(--spacing-xl), env(safe-area-inset-right));
+  }
+  
+  .bottom-sheet-content {
+    padding-left: max(var(--spacing-lg), env(safe-area-inset-left));
+    padding-right: max(var(--spacing-lg), env(safe-area-inset-right));
+    padding-bottom: max(var(--spacing-lg), env(safe-area-inset-bottom));
+  }
+}
+
+/* Display mode specific styles */
+@media (display-mode: standalone) {
+  .fab {
+    /* Enhance FAB appearance in PWA mode */
+    box-shadow: var(--shadow-xl), 0 0 20px rgba(var(--color-accent-rgb), 0.3);
+  }
+}

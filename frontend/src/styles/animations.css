@@ -1,0 +1,382 @@
+/* Universal Animation System with Controller Integration */
+
+/* ===== ANIMATION LEVEL CONTROLS ===== */
+
+/* Full animations (default) - Enhanced for better visibility */
+.tuiz-animations-full {
+  --tuiz-animation-scale: 1;
+  --tuiz-animation-duration-fast: 200ms;
+  --tuiz-animation-duration-normal: 500ms;
+  --tuiz-animation-duration-slow: 800ms;
+  --tuiz-animation-delay-short: 150ms;
+  --tuiz-animation-delay-medium: 300ms;
+  --tuiz-animation-delay-long: 600ms;
+}
+
+/* Reduced animations */
+.tuiz-animations-reduced {
+  --tuiz-animation-scale: 0.7;
+  --tuiz-animation-duration-fast: 100ms;
+  --tuiz-animation-duration-normal: 200ms;
+  --tuiz-animation-duration-slow: 400ms;
+  --tuiz-animation-delay-short: 50ms;
+  --tuiz-animation-delay-medium: 100ms;
+  --tuiz-animation-delay-long: 200ms;
+}
+
+/* Minimal animations */
+.tuiz-animations-minimal {
+  --tuiz-animation-scale: 0.5;
+  --tuiz-animation-duration-fast: 50ms;
+  --tuiz-animation-duration-normal: 100ms;
+  --tuiz-animation-duration-slow: 200ms;
+  --tuiz-animation-delay-short: 0ms;
+  --tuiz-animation-delay-medium: 0ms;
+  --tuiz-animation-delay-long: 0ms;
+}
+
+/* No animations */
+.tuiz-animations-none {
+  --tuiz-animation-scale: 0;
+  --tuiz-animation-duration-fast: 0ms;
+  --tuiz-animation-duration-normal: 0ms;
+  --tuiz-animation-duration-slow: 0ms;
+  --tuiz-animation-delay-short: 0ms;
+  --tuiz-animation-delay-medium: 0ms;
+  --tuiz-animation-delay-long: 0ms;
+}
+
+/* Paused animations (when tab not visible) */
+.tuiz-animations-paused * {
+  animation-play-state: paused !important;
+}
+
+/* ===== ANIMATION CLASSES ===== */
+
+/* Initial states to prevent flash */
+.tuiz-animate-fade-in,
+.tuiz-animate-entrance,
+.tuiz-animate-fade-in-up,
+.tuiz-animate-fade-in-down,
+.tuiz-animate-fade-in-left,
+.tuiz-animate-slide-in-up,
+.tuiz-animate-scale-in {
+  opacity: 0;
+}
+
+/* Entrance Animations */
+.tuiz-animate-entrance {
+  animation: tuizFadeInUp calc(var(--tuiz-animation-duration-slow) * 1.2) ease-out var(--tuiz-animation-delay-medium) both;
+}
+
+.tuiz-animate-fade-in {
+  animation: tuizFadeIn var(--tuiz-animation-duration-normal) ease-out var(--tuiz-animation-delay-short) both;
+}
+
+.tuiz-animate-fade-in-up {
+  animation: tuizFadeInUp var(--tuiz-animation-duration-normal) ease-out var(--tuiz-animation-delay-short) both;
+}
+
+.tuiz-animate-fade-in-down {
+  animation: tuizFadeInDown var(--tuiz-animation-duration-normal) ease-out var(--tuiz-animation-delay-short) both;
+}
+
+.tuiz-animate-fade-in-left {
+  animation: tuizFadeInLeft var(--tuiz-animation-duration-normal) ease-out var(--tuiz-animation-delay-short) both;
+}
+
+.tuiz-animate-slide-in-up {
+  animation: tuizSlideInUp var(--tuiz-animation-duration-normal) ease-out var(--tuiz-animation-delay-short) both;
+}
+
+.tuiz-animate-scale-in {
+  animation: tuizScaleIn var(--tuiz-animation-duration-normal) ease-out var(--tuiz-animation-delay-short) both;
+}
+
+/* Continuous Animations */
+.tuiz-animate-continuous {
+  animation: tuizFloatGentle calc(var(--tuiz-animation-duration-slow) * 6) ease-in-out infinite;
+}
+
+.tuiz-animate-float {
+  animation: tuizFloat calc(var(--tuiz-animation-duration-slow) * 6) ease-in-out infinite;
+}
+
+.tuiz-animate-breathe {
+  animation: tuizBreathe calc(var(--tuiz-animation-duration-slow) * 5) ease-in-out infinite;
+}
+
+.tuiz-animate-pulse {
+  animation: tuizPulse calc(var(--tuiz-animation-duration-slow) * 3) ease-in-out infinite;
+}
+
+.tuiz-animate-shimmer {
+  animation: tuizShimmer calc(var(--tuiz-animation-duration-slow) * 4) ease-in-out infinite;
+}
+
+.tuiz-animate-spin {
+  animation: tuizSpin var(--tuiz-animation-duration-normal) linear infinite;
+}
+
+/* Hover/Interaction Animations */
+.tuiz-animate-hover {
+  transition: all var(--tuiz-animation-duration-normal) ease-out;
+}
+
+.tuiz-animate-hover:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.tuiz-hover-lift {
+  transition: transform var(--tuiz-animation-duration-fast) ease-out;
+}
+
+.tuiz-hover-lift:hover {
+  transform: translateY(-4px) scale(1.02);
+}
+
+.tuiz-hover-scale {
+  transition: transform var(--tuiz-animation-duration-fast) ease-out;
+}
+
+.tuiz-hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.tuiz-hover-glow {
+  transition: box-shadow var(--tuiz-animation-duration-fast) ease-out;
+}
+
+.tuiz-hover-glow:hover {
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+/* Stagger Delays - More noticeable spacing */
+.tuiz-animate-stagger-1 { animation-delay: calc(var(--tuiz-animation-delay-medium) * 1); }
+.tuiz-animate-stagger-2 { animation-delay: calc(var(--tuiz-animation-delay-medium) * 2); }
+.tuiz-animate-stagger-3 { animation-delay: calc(var(--tuiz-animation-delay-medium) * 3); }
+.tuiz-animate-stagger-4 { animation-delay: calc(var(--tuiz-animation-delay-medium) * 4); }
+.tuiz-animate-stagger-5 { animation-delay: calc(var(--tuiz-animation-delay-medium) * 5); }
+
+/* ===== KEYFRAMES ===== */
+
+@keyframes tuizFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes tuizFadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(40px * var(--tuiz-animation-scale)));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tuizFadeInDown {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(-40px * var(--tuiz-animation-scale)));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tuizFadeInLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(calc(-30px * var(--tuiz-animation-scale)));
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes tuizSlideInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(50px * var(--tuiz-animation-scale)));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tuizScaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(calc(0.8 + (0.2 * (1 - var(--tuiz-animation-scale)))));
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes tuizFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(calc(-10px * var(--tuiz-animation-scale)));
+  }
+}
+
+@keyframes tuizFloatGentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(calc(-6px * var(--tuiz-animation-scale)));
+  }
+}
+
+@keyframes tuizBreathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(calc(1 + (0.1 * var(--tuiz-animation-scale))));
+    opacity: 1;
+  }
+}
+
+@keyframes tuizPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(calc(1 + (0.1 * var(--tuiz-animation-scale))));
+  }
+}
+
+@keyframes tuizShimmer {
+  0%, 100% {
+    transform: translateX(calc(-100% * var(--tuiz-animation-scale)));
+  }
+  50% {
+    transform: translateX(calc(100% * var(--tuiz-animation-scale)));
+  }
+}
+
+@keyframes tuizSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ===== PERFORMANCE OPTIMIZATIONS ===== */
+
+/* GPU acceleration for animated elements */
+.tuiz-animate-fade-in,
+.tuiz-animate-fade-in-up,
+.tuiz-animate-fade-in-down,
+.tuiz-animate-fade-in-left,
+.tuiz-animate-slide-in-up,
+.tuiz-animate-scale-in,
+.tuiz-animate-float,
+.tuiz-animate-breathe,
+.tuiz-animate-pulse,
+.tuiz-hover-lift,
+.tuiz-hover-scale {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Disable animations entirely for none level */
+.tuiz-animations-none * {
+  animation: none !important;
+  transition: none !important;
+  /* Show elements immediately when animations are disabled */
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.tuiz-animations-none .tuiz-animate-float,
+.tuiz-animations-none .tuiz-animate-breathe,
+.tuiz-animations-none .tuiz-animate-pulse,
+.tuiz-animations-none .tuiz-animate-shimmer,
+.tuiz-animations-none .tuiz-animate-spin {
+  animation: none !important;
+}
+
+/* Disable continuous animations for minimal level */
+.tuiz-animations-minimal .tuiz-animate-float,
+.tuiz-animations-minimal .tuiz-animate-breathe,
+.tuiz-animations-minimal .tuiz-animate-pulse,
+.tuiz-animations-minimal .tuiz-animate-shimmer {
+  animation: none !important;
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+/* Quick animation controls */
+.tuiz-no-animate {
+  animation: none !important;
+  transition: none !important;
+}
+
+.tuiz-fast-animate {
+  animation-duration: var(--tuiz-animation-duration-fast) !important;
+}
+
+.tuiz-slow-animate {
+  animation-duration: var(--tuiz-animation-duration-slow) !important;
+}
+
+.tuiz-no-delay {
+  animation-delay: 0ms !important;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  /* Stop continuous animations */
+  .tuiz-animate-float,
+  .tuiz-animate-breathe,
+  .tuiz-animate-pulse,
+  .tuiz-animate-shimmer {
+    animation: none !important;
+  }
+  
+  .tuiz-hover-lift:hover,
+  .tuiz-hover-scale:hover {
+    transform: none !important;
+  }
+  
+  /* Prevent flash by immediately showing elements */
+  .tuiz-animate-fade-in,
+  .tuiz-animate-entrance,
+  .tuiz-animate-fade-in-up,
+  .tuiz-animate-fade-in-down,
+  .tuiz-animate-fade-in-left,
+  .tuiz-animate-slide-in-up,
+  .tuiz-animate-scale-in {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+}
+
+/* ===== JAVASCRIPT HELPERS ===== */
+
+/* Classes for dynamic animation control */
+.tuiz-animation-ready {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.tuiz-animation-trigger {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--tuiz-animation-duration-normal) ease-out,
+              transform var(--tuiz-animation-duration-normal) ease-out;
+}

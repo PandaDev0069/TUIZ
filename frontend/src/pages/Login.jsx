@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { FaExclamationTriangle, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaExclamationTriangle, FaEye, FaEyeSlash, FaEnvelope, FaLock, FaArrowLeft } from 'react-icons/fa';
+import '../utils/AnimationController'; // Ensure AnimationController is loaded
 import './auth.css';
 
 function Login() {
@@ -16,10 +17,9 @@ function Login() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   
-  // Refs for input elements for mobile keyboard handling
+  // Refs for input elements
   const emailInputRef = useRef(null);
   const passwordInputRef = useRef(null);
-  const passwordGroupRef = useRef(null); // Target the entire input-group instead
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -28,61 +28,23 @@ function Login() {
     }
   }, [isAuthenticated, navigate]);
 
-  // Mobile keyboard handling
+  // Force animation initialization immediately
   useEffect(() => {
-    const handleResize = () => {
-      const isKeyboardOpen = window.innerHeight < window.screen.height * 0.75;
-      
-      if (isKeyboardOpen) {
-        setTimeout(() => {
-          const activeElement = document.activeElement;
-          if (activeElement && activeElement === emailInputRef.current) {
-            activeElement.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center',
-              inline: 'nearest'
-            });
-          } else if (activeElement && activeElement === passwordInputRef.current) {
-            // For password field, scroll the entire input group
-            if (passwordGroupRef.current) {
-              passwordGroupRef.current.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center',
-                inline: 'nearest'
-              });
-            }
-          }
-        }, 100);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', () => {
-      setTimeout(handleResize, 500);
-    });
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
-  }, []);
-
-  // Handle input focus for mobile keyboard
-  const handleInputFocus = (inputRef, groupRef = null) => {
-    if (window.innerWidth <= 768) {
-      setTimeout(() => {
-        // For password field, scroll the entire input group; for others, scroll the input
-        const targetElement = groupRef ? groupRef.current : inputRef.current;
-        if (targetElement) {
-          targetElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'nearest'
-          });
-        }
-      }, 300);
+    // Ensure AnimationController is available and initialize animations
+    if (window.tuizAnimations) {
+      window.tuizAnimations.initializePageAnimations();
     }
-  };
+    
+    // Add ready class after a brief delay to prevent flash
+    const timer = setTimeout(() => {
+      const authElement = document.querySelector('.auth');
+      if (authElement) {
+        authElement.classList.add('tuiz-animations-ready');
+      }
+    }, 50); // Very short delay to ensure CSS is loaded
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -141,7 +103,7 @@ function Login() {
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
-      // Close mobile keyboard and scroll to button
+      // Close mobile keyboard
       e.target.blur();
       
       // Small delay to allow keyboard to close
@@ -152,23 +114,23 @@ function Login() {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-content">
+    <div className="auth tuiz-animate-fade-in">
+      <div className="auth__container tuiz-animate-scale-in tuiz-animate-stagger-1">
         {/* Header */}
-        <div className="auth-header">
-          <h1 className="auth-title">TUIZ情報王</h1>
-          <h2 className="auth-subtitle">ホストログイン</h2>
-          <p className="auth-description">
+        <div className="auth__header tuiz-animate-fade-in-down tuiz-animate-stagger-2">
+          <h1 className="auth__title tuiz-animate-float">TUIZ情報王</h1>
+          <h2 className="auth__subtitle tuiz-animate-fade-in tuiz-animate-stagger-3">ホストログイン</h2>
+          <p className="auth__description tuiz-animate-fade-in tuiz-animate-stagger-4">
             クイズを作成・管理するためにログインしてください
           </p>
         </div>
 
         {/* Login Form */}
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form className="auth__form tuiz-animate-fade-in-up tuiz-animate-stagger-5" onSubmit={handleSubmit}>
           {/* General Error */}
           {errors.general && (
-            <div className="error-message">
-              <span className="error-icon">
+            <div className="auth__error-message tuiz-animate-slide-in-up">
+              <span className="auth__error-icon tuiz-animate-pulse">
                 <FaExclamationTriangle />
               </span>
               {errors.general}
@@ -176,75 +138,77 @@ function Login() {
           )}
 
           {/* Email/Name Input */}
-          <div className="input-group">
-            <label htmlFor="emailOrName" className="input-label">
-              メールアドレス(例: TUIZ@example.com)
+          <div className="auth__input-group tuiz-animate-slide-in-up tuiz-animate-stagger-1">
+            <label htmlFor="emailOrName" className="auth__label">
+              <FaEnvelope className="auth__label-icon auth__label-icon--email tuiz-animate-breathe" />
+              メールアドレス
             </label>
-            <div className="input-wrapper">
+            <div className="auth__input-wrapper">
               <input
                 ref={emailInputRef}
                 type="text"
                 id="emailOrName"
                 name="emailOrName"
-                className={`auth-input ${errors.emailOrName ? 'error' : ''}`}
+                className={`auth__input ${errors.emailOrName ? 'auth__input--error' : ''}`}
                 placeholder="example@email.com"
                 value={formData.emailOrName}
                 onChange={handleChange}
                 onKeyPress={handleKeyPress}
-                onFocus={() => handleInputFocus(emailInputRef)}
                 disabled={loading}
                 autoComplete="username"
               />
             </div>
             {errors.emailOrName && (
-              <span className="field-error">{errors.emailOrName}</span>
+              <span className="auth__field-error">{errors.emailOrName}</span>
             )}
           </div>
 
           {/* Password Input */}
-          <div className="input-group" ref={passwordGroupRef}>
-            <label htmlFor="password" className="input-label">
+          <div className="auth__input-group tuiz-animate-slide-in-up tuiz-animate-stagger-2">
+            <label htmlFor="password" className="auth__label">
+              <FaLock className="auth__label-icon auth__label-icon--lock tuiz-animate-breathe" />
               パスワード
             </label>
-            <div className="input-wrapper has-toggle">
+            <div className="auth__input-wrapper auth__input-wrapper--has-toggle">
               <input
                 ref={passwordInputRef}
                 type={showPassword ? 'text' : 'password'}
                 id="password"
                 name="password"
-                className={`auth-input ${errors.password ? 'error' : ''}`}
+                className={`auth__input ${errors.password ? 'auth__input--error' : ''}`}
                 placeholder="パスワードを入力"
                 value={formData.password}
                 onChange={handleChange}
                 onKeyPress={handleKeyPress}
-                onFocus={() => handleInputFocus(passwordInputRef, passwordGroupRef)}
                 disabled={loading}
                 autoComplete="current-password"
               />
               <button
                 type="button"
-                className="password-toggle"
+                className="auth__password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={loading}
                 title={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
               >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                <span className="auth__password-toggle-icon">
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </span>
               </button>
             </div>
             {errors.password && (
-              <span className="field-error">{errors.password}</span>
+              <span className="auth__field-error">{errors.password}</span>
             )}
           </div>
 
           {/* Submit Button */}
           <button
             type="submit"
-            className={`auth-button login-button ${loading ? 'loading' : ''}`}
+            className={`auth__button auth__button--login tuiz-animate-scale-in tuiz-animate-stagger-3 tuiz-hover-lift ${loading ? 'auth__button--loading' : ''}`}
             disabled={loading}
           >
             {loading ? (
               <>
-                <span className="loading-spinner"></span>
+                <span className="auth__loading-spinner tuiz-animate-spin"></span>
                 ログイン中...
               </>
             ) : (
@@ -253,10 +217,10 @@ function Login() {
           </button>
 
           {/* Register Link */}
-          <div className="auth-links">
-            <p>
+          <div className="auth__links tuiz-animate-fade-in tuiz-animate-stagger-4">
+            <p className="auth__links-text">
               アカウントをお持ちでない方は{' '}
-              <Link to="/register" className="auth-link">
+              <Link to="/register" className="auth__link tuiz-animate-hover">
                 新規登録
               </Link>
             </p>
@@ -264,9 +228,10 @@ function Login() {
         </form>
 
         {/* Back to Home */}
-        <div className="auth-footer">
-          <Link to="/" className="back-link">
-            ← ホームに戻る
+        <div className="auth__footer tuiz-animate-fade-in tuiz-animate-stagger-5">
+          <Link to="/" className="auth__back-link tuiz-hover-lift">
+            <FaArrowLeft className="auth__back-icon tuiz-animate-float" />
+            ホームに戻る
           </Link>
         </div>
       </div>
