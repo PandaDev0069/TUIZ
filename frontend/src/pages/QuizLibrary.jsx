@@ -5,48 +5,46 @@ import { showError, showSuccess } from '../utils/toast';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useConfirmation } from '../hooks/useConfirmation';
-import './QuizLibrary.css';
-import './dashboard.css'; // Import Dashboard styles for My Library cards
+import '../utils/AnimationController'; // Ensure AnimationController is loaded
+import '../utils/ViewportFix'; // Ensure ViewportFix is loaded for mobile viewport handling
+import './Quizlibrary.css';
 
-// Lucide Icons
+// React Icons (FA Icons)
 import { 
-  Search, 
-  Grid3X3, 
-  List, 
-  Globe,
-  GlobeLock,
-  Eye,
-  Download,
-  Play,
-  ArrowLeft,
-  Edit,
-  Trash2,
-  X,
-  Book,
-  FolderOpen,
-  SearchX,
-  PenTool
-} from 'lucide-react';
+  FaSearch, 
+  FaTh, 
+  FaList, 
+  FaGlobe,
+  FaLock,
+  FaEye,
+  FaDownload,
+  FaPlay,
+  FaArrowLeft,
+  FaEdit,
+  FaTrash,
+  FaTimes,
+  FaBook,
+  FaFolderOpen,
+  FaSearchMinus,
+  FaPen,
+  FaClock,
+  FaCalendarAlt,
+  FaFire,
+  FaUser,
+  FaStar,
+  FaPlus
+} from 'react-icons/fa';
 
 // Helper Components
 function Badge({ tone = "slate", children, useDashboardStyle = false }) {
   if (useDashboardStyle) {
-    // Use Dashboard badge styling
+    // Use Dashboard badge styling for consistency
     return <span className={`dashboard__badge dashboard__badge--${tone}`}>{children}</span>;
   }
   
   // Use Quiz Library badge styling
-  const toneClasses = {
-    slate: "quiz-library__badge--slate",
-    green: "quiz-library__badge--green",
-    amber: "quiz-library__badge--amber",
-    blue: "quiz-library__badge--blue",
-    rose: "quiz-library__badge--rose",
-    violet: "quiz-library__badge--violet",
-  };
-  
   return (
-    <span className={`quiz-library__badge ${toneClasses[tone]}`}>
+    <span className={`quiz-library__badge quiz-library__badge--${tone}`}>
       {children}
     </span>
   );
@@ -123,18 +121,26 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete, is
         )}
         <div className="dashboard__quiz-card-header">
           <div className={`dashboard__quiz-card-visibility ${quiz.is_public ? 'dashboard__quiz-card-visibility--public' : 'dashboard__quiz-card-visibility--private'}`}>
-            {quiz.is_public ? <Globe size={14} /> : <GlobeLock size={14} />}
+            <div className="dashboard__quiz-card-visibility-icon">
+              {quiz.is_public ? <FaGlobe /> : <FaLock />}
+            </div>
             <span>{quiz.is_public ? '公開' : '非公開'}</span>
           </div>
           <div className="dashboard__quiz-card-meta">
             <div className="dashboard__quiz-card-category">{quiz.category || "未分類"}</div>
-            <div className="dashboard__quiz-card-date">作成日 {quiz.created_at ? new Date(quiz.created_at).toLocaleDateString('ja-JP') : '不明'}</div>
+            <div className="dashboard__quiz-card-date">
+              <FaCalendarAlt className="dashboard__quiz-card-date-icon" />
+              作成日 {quiz.created_at ? new Date(quiz.created_at).toLocaleDateString('ja-JP') : '不明'}
+            </div>
             <h3 className="dashboard__quiz-card-title">{quiz.title}</h3>
             <p className="dashboard__quiz-card-description">{quiz.description || "説明なし"}</p>
             <div className="dashboard__quiz-card-badges">
               <Badge tone="blue" useDashboardStyle={true}>{getDifficultyLabel(quiz.difficulty_level)}</Badge>
               <Badge tone="green" useDashboardStyle={true}>{quiz.total_questions || 0} 問</Badge>
-              <span className="dashboard__quiz-card-plays">プレイ {quiz.times_played || 0}</span>
+              <span className="dashboard__quiz-card-plays">
+                <FaFire className="dashboard__quiz-card-plays-icon" />
+                プレイ {quiz.times_played || 0}
+              </span>
             </div>
           </div>
         </div>
@@ -144,7 +150,7 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete, is
             onClick={() => onPreview(quiz)}
             disabled={isLoading}
           >
-            <Eye size={16} /> 詳細
+            <FaEye className="dashboard__button-icon" /> 詳細
           </button>
           {quiz.status === 'published' && (
             <button 
@@ -152,7 +158,7 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete, is
               onClick={() => onStart(quiz)}
               disabled={isLoading}
             >
-              <Play size={16} /> ゲーム開始
+              <FaPlay className="dashboard__button-icon" /> ゲーム開始
             </button>
           )}
         </div>
@@ -190,9 +196,13 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete, is
           <div className="quiz-library__card-badges">
             <DifficultyBadge difficulty={quiz.difficulty_level} />
             {quiz.is_public ? (
-              <Badge tone="blue"><Globe size={12} /> 公開</Badge>
+              <Badge tone="blue">
+                <FaGlobe className="quiz-library__badge-icon" /> 公開
+              </Badge>
             ) : (
-              <Badge tone="slate"><GlobeLock size={12} /> 非公開</Badge>
+              <Badge tone="slate">
+                <FaLock className="quiz-library__badge-icon" /> 非公開
+              </Badge>
             )}
           </div>
           
@@ -201,10 +211,12 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete, is
               問題数: {quiz.total_questions || 0}
             </span>
             <span className="quiz-library__card-stat">
+              <FaFire className="quiz-library__card-stat-icon" />
               プレイ: {quiz.times_played || 0}
             </span>
             {quiz.users && (
               <span className="quiz-library__card-author">
+                <FaUser className="quiz-library__card-author-icon" />
                 作成者: {quiz.users.name}
               </span>
             )}
@@ -217,7 +229,7 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete, is
             onClick={() => onPreview(quiz)}
             disabled={isLoading}
           >
-            <Eye size={16} /> 詳細
+            <FaEye className="quiz-library__button-icon" /> 詳細
           </button>
           
           <button 
@@ -232,7 +244,7 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete, is
               </>
             ) : (
               <>
-                <Download size={16} /> ライブラリに追加
+                <FaDownload className="quiz-library__button-icon" /> ライブラリに追加
               </>
             )}
           </button>
@@ -259,12 +271,19 @@ function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, onEdit, onDelet
               {tab === "library" && <StatusBadge status={quiz.status} />}
               <DifficultyBadge difficulty={quiz.difficulty_level} />
               {quiz.is_public ? (
-                <Badge tone="blue"><Globe size={12} /> 公開</Badge>
+                <Badge tone="blue">
+                  <FaGlobe className="quiz-library__badge-icon" /> 公開
+                </Badge>
               ) : (
-                <Badge tone="slate"><GlobeLock size={12} /> 非公開</Badge>
+                <Badge tone="slate">
+                  <FaLock className="quiz-library__badge-icon" /> 非公開
+                </Badge>
               )}
               <span>問題数: {quiz.total_questions || 0}</span>
-              <span>プレイ: {quiz.times_played || 0}</span>
+              <span>
+                <FaFire className="quiz-library__modal-stat-icon" />
+                プレイ: {quiz.times_played || 0}
+              </span>
               {quiz.category && <Badge>{quiz.category}</Badge>}
             </div>
           </div>
@@ -272,7 +291,7 @@ function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, onEdit, onDelet
             className="quiz-library__modal-close"
             onClick={onClose}
           >
-            <X size={16} />
+            <FaTimes className="quiz-library__modal-close-icon" />
           </button>
         </div>
 
@@ -317,7 +336,7 @@ function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, onEdit, onDelet
                 </>
               ) : (
                 <>
-                  <Download size={16} /> ライブラリに追加
+                  <FaDownload className="quiz-library__button-icon" /> ライブラリに追加
                 </>
               )}
             </button>
@@ -329,7 +348,7 @@ function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, onEdit, onDelet
                 onClick={() => onEdit(quiz)}
                 disabled={isLoading}
               >
-                <Edit size={16} /> 編集
+                <FaEdit className="quiz-library__button-icon" /> 編集
               </button>
               <button 
                 className={`quiz-library__button quiz-library__button--danger ${isThisQuizDeleting ? 'quiz-library__button--loading' : ''}`}
@@ -343,7 +362,7 @@ function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, onEdit, onDelet
                   </>
                 ) : (
                   <>
-                    <Trash2 size={16} /> 削除
+                    <FaTrash className="quiz-library__button-icon" /> 削除
                   </>
                 )}
               </button>
@@ -352,7 +371,7 @@ function PreviewModal({ isOpen, quiz, onClose, onClone, onStart, onEdit, onDelet
                 onClick={() => onStart(quiz)}
                 disabled={isLoading}
               >
-                <Play size={16} /> ゲーム開始
+                <FaPlay className="quiz-library__button-icon" /> ゲーム開始
               </button>
             </>
           )}
@@ -368,7 +387,7 @@ function EmptyState({ tab, query, filterMode }) {
       return {
         title: "検索結果が見つかりません",
         description: "検索条件を変更してもう一度お試しください。",
-        icon: <SearchX size={48} />
+        icon: <FaSearchMinus className="quiz-library__empty-icon-element" />
       };
     }
     
@@ -376,7 +395,7 @@ function EmptyState({ tab, query, filterMode }) {
       return {
         title: "公開クイズが見つかりません",
         description: "フィルターを調整してもう一度お試しください。",
-        icon: <Globe size={48} />
+        icon: <FaGlobe className="quiz-library__empty-icon-element" />
       };
     }
     
@@ -384,7 +403,7 @@ function EmptyState({ tab, query, filterMode }) {
       return {
         title: "下書きがありません",
         description: "新しいクイズを作成して下書きに保存してみましょう。",
-        icon: <PenTool size={48} />
+        icon: <FaPen className="quiz-library__empty-icon-element" />
       };
     }
     
@@ -392,21 +411,21 @@ function EmptyState({ tab, query, filterMode }) {
       return {
         title: "公開済みクイズがありません",
         description: "下書きを完成させて公開してみましょう。",
-        icon: <Globe size={48} />
+        icon: <FaGlobe className="quiz-library__empty-icon-element" />
       };
     }
     
     return {
       title: "マイライブラリにクイズがありません",
       description: "公開クイズをライブラリに追加するか、新しいクイズを作成してみましょう。",
-      icon: <Book size={48} />
+      icon: <FaBook className="quiz-library__empty-icon-element" />
     };
   };
 
   const { title, description, icon } = getEmptyContent();
 
   return (
-    <div className="quiz-library__empty">
+    <div className="quiz-library__empty tuiz-animate-scale-in">
       <div className="quiz-library__empty-icon">{icon}</div>
       <h3 className="quiz-library__empty-title">{title}</h3>
       <p className="quiz-library__empty-description">{description}</p>
@@ -691,56 +710,57 @@ const QuizLibrary = () => {
   }, [filteredQuizzes, tab]);
 
   return (
-    <div className="quiz-library">
-      {/* Back Button */}
-      <button 
-        className="quiz-library__back-button"
-        onClick={() => navigate('/dashboard')}
-        title="ダッシュボードに戻る"
-      >
-        <ArrowLeft size={20} />
-        <span>ダッシュボード</span>
-      </button>
+    <div className="quiz-library tuiz-animate-fade-in">
+      <div className="quiz-library__wrapper">
+        {/* Back Button */}
+        <button 
+          className="quiz-library__back-button tuiz-animate-slide-in"
+          onClick={() => navigate('/dashboard')}
+          title="ダッシュボードに戻る"
+        >
+          <FaArrowLeft className="quiz-library__back-icon" />
+          <span>ダッシュボード</span>
+        </button>
 
-      {/* Header */}
-      <header className="quiz-library__header">
-        <div className="quiz-library__header-content">
-          <div className="quiz-library__header-left">
-            <div className="quiz-library__title-section">
-              <h1 className="quiz-library__title">
-                <FolderOpen size={24} style={{ display: 'inline', marginRight: '8px' }} />
-                クイズライブラリ
-              </h1>
-              <p className="quiz-library__subtitle">
-                公開クイズを探索してライブラリに追加
-              </p>
+        {/* Header */}
+        <header className="quiz-library__header tuiz-animate-slide-down">
+          <div className="quiz-library__header-content">
+            <div className="quiz-library__header-left">
+              <div className="quiz-library__title-section">
+                <h1 className="quiz-library__title">
+                  <FaFolderOpen className="quiz-library__title-icon" />
+                  クイズライブラリ
+                </h1>
+                <p className="quiz-library__subtitle">
+                  公開クイズを探索してライブラリに追加
+                </p>
+              </div>
+            </div>
+            
+            <div className="quiz-library__tabs">
+              <button 
+                className={`quiz-library__tab ${tab === "library" ? "quiz-library__tab--active" : ""}`}
+                onClick={() => setTab("library")}
+              >
+                マイライブラリ
+              </button>
+              <button 
+                className={`quiz-library__tab ${tab === "public" ? "quiz-library__tab--active" : ""}`}
+                onClick={() => setTab("public")}
+              >
+                公開クイズを探す
+              </button>
             </div>
           </div>
-          
-          <div className="quiz-library__tabs">
-            <button 
-              className={`quiz-library__tab ${tab === "library" ? "quiz-library__tab--active" : ""}`}
-              onClick={() => setTab("library")}
-            >
-              マイライブラリ
-            </button>
-            <button 
-              className={`quiz-library__tab ${tab === "public" ? "quiz-library__tab--active" : ""}`}
-              onClick={() => setTab("public")}
-            >
-              公開クイズを探す
-            </button>
-          </div>
-        </div>
-      </header>
+        </header>
 
       {/* Main Content */}
       <main className="quiz-library__main">
         {/* Toolbar */}
-        <div className="quiz-library__toolbar">
+        <div className="quiz-library__toolbar tuiz-animate-slide-in tuiz-animate-stagger-1">
           <div className="quiz-library__toolbar-left">
             <div className="quiz-library__search">
-              <Search size={16} className="quiz-library__search-icon" />
+              <FaSearch className="quiz-library__search-icon" />
               <input
                 ref={searchRef}
                 className="quiz-library__search-input"
@@ -805,13 +825,13 @@ const QuizLibrary = () => {
                 className={`quiz-library__view-button ${view === "grid" ? "quiz-library__view-button--active" : ""}`}
                 onClick={() => setView("grid")}
               >
-                <Grid3X3 size={16} />
+                <FaTh className="quiz-library__view-icon" />
               </button>
               <button 
                 className={`quiz-library__view-button ${view === "list" ? "quiz-library__view-button--active" : ""}`}
                 onClick={() => setView("list")}
               >
-                <List size={16} />
+                <FaList className="quiz-library__view-icon" />
               </button>
             </div>
           </div>
@@ -819,18 +839,18 @@ const QuizLibrary = () => {
 
         {/* Content */}
         {loading ? (
-          <div className="quiz-library__loading">
+          <div className="quiz-library__loading tuiz-animate-scale-in">
             <LoadingSkeleton type="text" count={3} />
           </div>
         ) : filteredQuizzes.length === 0 ? (
           <EmptyState tab={tab} query={query} filterMode={filterMode} />
         ) : (
-          <div className={`quiz-library__content ${view === "list" ? "quiz-library__content--list" : ""}`}>
+          <div className={`quiz-library__content tuiz-animate-fade-in tuiz-animate-stagger-2 ${view === "list" ? "quiz-library__content--list" : ""}`}>
             {tab === "library" ? (
               // Grouped view for My Library
-              <div>
+              <div className="quiz-library__sections">
                 {groupedQuizzes.published.length > 0 && (
-                  <div className="quiz-library__section">
+                  <div className="quiz-library__section tuiz-animate-slide-in">
                     <h2 className="quiz-library__section-title">公開済みクイズ ({groupedQuizzes.published.length})</h2>
                     {view === "grid" ? (
                       <div className="quiz-library__grid">
@@ -1054,6 +1074,7 @@ const QuizLibrary = () => {
 
       {/* Confirmation Modal */}
       <ConfirmationModal {...confirmationProps} />
+      </div>
     </div>
   );
 };
