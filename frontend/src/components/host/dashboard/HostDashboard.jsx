@@ -32,6 +32,10 @@ import ReportingSystem from '../analytics/ReportingSystem';
 import DataExport from '../analytics/DataExport';
 import LiveAnalytics from '../analytics/LiveAnalytics';
 import EnhancedResults from '../analytics/EnhancedResults';
+// Phase 5: Enhanced UX & Polish Systems
+import { AnimationProvider } from '../animations/AnimationSystem';
+import { AudioProvider } from '../audio/AudioSystem';
+import { MobileOptimizationProvider } from '../mobile/MobileOptimization';
 import './HostDashboard.css';
 
 /**
@@ -221,19 +225,22 @@ function HostDashboard() {
   }
 
   return (
-    <div className="host-dashboard">
-      {/* Header with game info */}
-      <div className="host-dashboard__header">
-        <div className="host-dashboard__header-content">
-          <div className="host-dashboard__game-info">
-            <h1 className="host-dashboard__title">
-              <FaEye className="host-dashboard__title-icon" />
-              ホストダッシュボード
-            </h1>
-            <div className="host-dashboard__subtitle">
-              <span className="host-dashboard__game-title">{title}</span>
-              <span className="host-dashboard__room-code">
-                ルーム: <strong>{room}</strong>
+    <AnimationProvider>
+      <AudioProvider>
+        <MobileOptimizationProvider>
+          <div className="host-dashboard">
+            {/* Header with game info */}
+            <div className="host-dashboard__header">
+              <div className="host-dashboard__header-content">
+                <div className="host-dashboard__game-info">
+                  <h1 className="host-dashboard__title">
+                    <FaEye className="host-dashboard__title-icon" />
+                    ホストダッシュボード
+                  </h1>
+                  <div className="host-dashboard__subtitle">
+                    <span className="host-dashboard__game-title">{title}</span>
+                    <span className="host-dashboard__room-code">
+                      ルーム: <strong>{room}</strong>
               </span>
             </div>
           </div>
@@ -668,6 +675,9 @@ function HostDashboard() {
         </div>
       )}
     </div>
+        </MobileOptimizationProvider>
+      </AudioProvider>
+    </AnimationProvider>
   );
 }
 
