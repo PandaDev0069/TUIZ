@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import socket from '../socket'
 import GameSettingsPanel from '../components/GameSettingsPanel'
 import { FaRocket } from 'react-icons/fa'
-import './HostLobby.css'
+import './hostLobby.css'
 
 function HostLobby() {
   const { state } = useLocation()
