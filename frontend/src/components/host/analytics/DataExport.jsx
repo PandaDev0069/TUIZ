@@ -6,9 +6,9 @@ import {
   FaDownload, FaFileExport, FaFileCsv, FaFilePdf,
   FaFileExcel, FaFileCode, FaCog, FaCalendarAlt,
   FaFilter, FaDatabase, FaCheck, FaTimes,
-  FaSpinner, FaCloudDownload, FaArchive,
+  FaSpinner, FaCloudDownloadAlt, FaArchive,
   FaTable, FaChartBar, FaUsers, FaQuestionCircle,
-  FaHistory, FaSchedule, FaSync, FaTrash
+  FaHistory, FaClock, FaSync, FaTrash
 } from 'react-icons/fa';
 import PropTypes from 'prop-types';
 import './DataExport.css';
@@ -506,7 +506,7 @@ const DataExport = ({
                 </>
               ) : (
                 <>
-                  <FaCloudDownload />
+                  <FaCloudDownloadAlt />
                   Export Now
                 </>
               )}
@@ -516,7 +516,7 @@ const DataExport = ({
               className="export-btn export-btn--secondary"
               onClick={() => setShowScheduleDialog(true)}
             >
-              <FaSchedule />
+              <FaClock />
               Schedule Export
             </button>
           </div>
@@ -579,7 +579,7 @@ const DataExport = ({
             <div className="scheduled-list">
               {scheduledExports.length === 0 ? (
                 <div className="empty-scheduled">
-                  <FaSchedule className="empty-icon" />
+                  <FaClock className="empty-icon" />
                   <p>No scheduled exports</p>
                 </div>
               ) : (

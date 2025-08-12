@@ -17,7 +17,7 @@ import {
   FaChartPie,
   FaUsers,
   FaClock,
-  FaTarget,
+  FaBullseye,
   FaBolt,
   FaFire,
   FaHeart,
@@ -473,7 +473,7 @@ function EnhancedResults({
       fire: FaFire,
       bolt: FaBolt,
       heart: FaHeart,
-      target: FaTarget
+      target: FaBullseye
     };
     const IconComponent = icons[iconType] || FaStar;
     return <IconComponent />;
@@ -690,7 +690,7 @@ function EnhancedResults({
                 {resultsData.topPerformers.highestAccuracy && (
                   <div className="award-card award-card--accuracy">
                     <div className="award-icon">
-                      <FaTarget />
+                      <FaBullseye />
                     </div>
                     <div className="award-content">
                       <div className="award-title">正確性賞</div>
@@ -902,7 +902,7 @@ function EnhancedResults({
 
                 <div className="stat-card">
                   <div className="stat-card-icon">
-                    <FaTarget />
+                    <FaBullseye />
                   </div>
                   <div className="stat-card-content">
                     <div className="stat-card-value">{formatPercentage(resultsData.gameStatistics.overallAccuracy)}</div>

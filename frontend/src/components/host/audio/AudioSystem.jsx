@@ -768,4 +768,4 @@ export function useBackgroundMusic() {
   };
 }
 
-export default AudioSystem;
+export default AudioProvider;

@@ -11,7 +11,7 @@ import {
   FaTrophy,
   FaHeart,
   FaFire,
-  FaTarget,
+  FaBullseye,
   FaExpand,
   FaCompress,
   FaSyncAlt,
@@ -445,7 +445,7 @@ function LiveAnalytics({
 
               <div className="metric-card metric-card--accuracy">
                 <div className="metric-card__icon">
-                  <FaTarget className="metric-icon metric-icon--success" />
+                  <FaBullseye className="metric-icon metric-icon--success" />
                 </div>
                 <div className="metric-card__content">
                   <div className="metric-card__value">
@@ -466,7 +466,7 @@ function LiveAnalytics({
             <div className="current-question-info">
               <div className="question-header">
                 <h3 className="question-title">
-                  <FaTarget className="question-icon" />
+                  <FaBullseye className="question-icon" />
                   現在の問題: {gameState.currentQuestionIndex + 1} / {gameState.totalQuestions}
                 </h3>
                 <div className="question-meta">
@@ -698,7 +698,7 @@ function LiveAnalytics({
 
                   <div className="insight-card">
                     <div className="insight-card-header">
-                      <FaTarget className="insight-card-icon insight-card-icon--info" />
+                      <FaBullseye className="insight-card-icon insight-card-icon--info" />
                       <span className="insight-card-title">参加パターン</span>
                     </div>
                     <div className="insight-card-content">

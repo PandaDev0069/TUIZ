@@ -631,4 +631,4 @@ export function AnimationPerformanceMonitor() {
   );
 }
 
-export default AnimationSystem;
+export default AnimationProvider;

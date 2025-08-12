@@ -7,9 +7,7 @@ import {
   FaTv,
   FaExpand,
   FaCompress,
-  FaTouchApp,
-  FaGesture,
-  FaOrient,
+  FaHandPointer,
   FaBatteryFull,
   FaWifi,
   FaSync
@@ -688,7 +686,7 @@ export function DeviceInfoDisplay() {
         <div className="info-item">
           <span className="info-label">Touch:</span>
           <span className="info-value">
-            <FaTouchApp />
+            <FaHandPointer />
             {deviceInfo.touchSupport ? 'Supported' : 'Not supported'}
           </span>
         </div>

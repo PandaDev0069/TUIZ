@@ -6,7 +6,7 @@ import {
   FaChartBar, FaChartLine, FaChartPie, FaTrophy,
   FaClock, FaUsers, FaBullseye, FaCalendarAlt,
   FaDownload, FaFilter, FaSync, FaEye, FaHeart,
-  FaBolt, FaStar, FaAward, FaFire, FaTarget,
+  FaBolt, FaStar, FaAward, FaFire,
   FaPercent, FaStopwatch, FaUserCheck, FaChevronDown
 } from 'react-icons/fa';
 import PropTypes from 'prop-types';
@@ -344,7 +344,7 @@ const AdvancedAnalytics = ({
               {renderMetricCard('Return Player Rate', analyticsData.engagement.returnPlayerRate, <FaUserCheck />, 7, '%')}
               {renderMetricCard('Peak Concurrent', analyticsData.engagement.peakConcurrentPlayers, <FaBolt />, 23)}
               {renderMetricCard('Chat Messages', analyticsData.engagement.chatMessages, <FaHeart />, 34)}
-              {renderMetricCard('Questions Answered', analyticsData.engagement.questionsAnswered, <FaTarget />, 18)}
+              {renderMetricCard('Questions Answered', analyticsData.engagement.questionsAnswered, <FaBullseye />, 18)}
               {renderMetricCard('Streaks Achieved', analyticsData.engagement.streaksAchieved, <FaFire />, 42)}
             </div>
           </div>
