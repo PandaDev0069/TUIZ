@@ -3,7 +3,6 @@ import {
   FaPlay, 
   FaPause, 
   FaStop, 
-  FaSkipForward, 
   FaStepForward,
   FaRedo,
   FaClock,
@@ -97,7 +96,7 @@ function QuickActions({ gameState, onPauseResume, onSkipQuestion, onTimerAdjust 
               disabled={!canSkip}
               title="現在の問題をスキップ"
             >
-              <FaSkipForward className="quick-action-btn__icon" />
+              <FaStepForward className="quick-action-btn__icon" />
               <span className="quick-action-btn__text">問題スキップ</span>
             </button>
 
@@ -265,7 +264,7 @@ function QuickActions({ gameState, onPauseResume, onSkipQuestion, onTimerAdjust 
                 className="quick-action-btn quick-action-btn--warning"
                 onClick={handleSkipConfirm}
               >
-                <FaSkipForward className="quick-action-btn__icon" />
+                <FaStepForward className="quick-action-btn__icon" />
                 スキップ
               </button>
             </div>

@@ -22,7 +22,7 @@ import {
   FaTrophy,
   FaChartLine,
   FaDownload,
-  FaRefresh,
+  FaSyncAlt,
   FaUserShield,
   FaComments,
   FaHeart,
@@ -455,7 +455,7 @@ function RealTimePlayerManagement({ gameState, players = [], onPlayerAction }) {
             onClick={() => window.location.reload()}
             title="更新"
           >
-            <FaRefresh />
+            <FaSyncAlt />
           </button>
 
           <button

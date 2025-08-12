@@ -1,7 +1,7 @@
 // Socket.IO Host Event Handlers - Backend Implementation
 // Phase 6: Complete Missing Backend Infrastructure
 
-const { RoomManager } = require('../utils/RoomManager');
+const RoomManager = require('../utils/RoomManager');
 const logger = require('../utils/logger');
 
 /**
@@ -462,7 +462,7 @@ class HostSocketHandlers {
   handleHostDisconnect(socket) {
     try {
       // Find room where this socket is the host
-      const rooms = RoomManager.getAllRooms();
+      const rooms = RoomManager.getAllRoomsMap();
       for (const [gameId, room] of rooms) {
         if (room.hostSocketId === socket.id) {
           // Mark host as disconnected

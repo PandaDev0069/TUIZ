@@ -63,7 +63,16 @@ function HostLobby() {
 
   const handleStart = () => {
     socket.emit('startGame', { gameCode: room });
-    navigate('/quiz/control', { state: { room, title } });
+    // Navigate to new Phase 6 host dashboard instead of old quiz control
+    navigate('/host/dashboard', { 
+      state: { 
+        room, 
+        title, 
+        gameId,
+        questionSetId,
+        players: players.length
+      } 
+    });
   }
 
   const handleOpenSettings = () => {

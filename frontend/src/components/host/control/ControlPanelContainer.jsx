@@ -3,7 +3,7 @@ import {
   FaCog,
   FaGamepad,
   FaChartBar,
-  FaTabs,
+  FaListUl,
   FaExpand,
   FaCompress
 } from 'react-icons/fa';

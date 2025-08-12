@@ -14,7 +14,7 @@ import {
   FaTarget,
   FaExpand,
   FaCompress,
-  FaRefresh,
+  FaSyncAlt,
   FaDownload,
   FaPlay,
   FaPause,
@@ -318,7 +318,7 @@ function LiveAnalytics({
               onClick={handleManualRefresh}
               title="手動更新"
             >
-              <FaRefresh />
+              <FaSyncAlt />
             </button>
 
             <button 

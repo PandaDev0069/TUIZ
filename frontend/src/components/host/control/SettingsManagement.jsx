@@ -6,7 +6,7 @@ import {
   FaVolumeUp,
   FaEye,
   FaBolt,
-  FaShield,
+  FaShieldAlt,
   FaChartBar,
   FaSave,
   FaUndo,
@@ -506,7 +506,7 @@ function SettingsManagement({ gameState, onSettingsChange, currentSettings = {} 
     { id: 'players', label: 'プレイヤー', icon: FaUsers },
     { id: 'scoring', label: 'スコア', icon: FaChartBar },
     { id: 'audiovisual', label: 'オーディオ・ビジュアル', icon: FaVolumeUp },
-    { id: 'security', label: 'セキュリティ', icon: FaShield }
+    { id: 'security', label: 'セキュリティ', icon: FaShieldAlt }
   ];
 
   return (

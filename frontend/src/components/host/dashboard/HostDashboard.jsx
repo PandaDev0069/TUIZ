@@ -4,7 +4,7 @@ import {
   FaPlay, 
   FaPause, 
   FaStop, 
-  FaSkipForward, 
+  FaStepForward, 
   FaClock, 
   FaUsers, 
   FaChartBar, 

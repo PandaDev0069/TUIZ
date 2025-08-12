@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  FaTimes, FaEnvelope, FaFlag, FaShield, FaHistory, 
+  FaTimes, FaEnvelope, FaFlag, FaShieldAlt, FaHistory, 
   FaExclamationTriangle, FaBan, FaUndo, FaCrown,
   FaMicrophone, FaMicrophoneSlash, FaEye, FaEyeSlash
 } from 'react-icons/fa';
@@ -186,7 +186,7 @@ const PlayerDetailsModal = ({
                 <h4>Permissions & Status</h4>
                 <div className="permission-list">
                   <div className={`permission-item ${player.moderator ? 'permission-item--active' : ''}`}>
-                    <FaShield />
+                    <FaShieldAlt />
                     <span>Moderator Privileges</span>
                     {player.moderator && <span className="permission-badge">Active</span>}
                   </div>
@@ -289,14 +289,14 @@ const PlayerDetailsModal = ({
                       className="player-btn player-btn--primary"
                       onClick={() => handleAction('grantModerator')}
                     >
-                      <FaShield /> Grant Moderator
+                      <FaShieldAlt /> Grant Moderator
                     </button>
                   ) : (
                     <button 
                       className="player-btn player-btn--secondary"
                       onClick={() => handleAction('removeModerator')}
                     >
-                      <FaShield /> Remove Moderator
+                      <FaShieldAlt /> Remove Moderator
                     </button>
                   )}
                 </div>

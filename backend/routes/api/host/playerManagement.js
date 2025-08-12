@@ -4,7 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { validateHostPermission, validateGameState } = require('../../../middleware/hostAuth');
-const { RoomManager } = require('../../../utils/RoomManager');
+const RoomManager = require('../../../utils/RoomManager');
 const logger = require('../../../utils/logger');
 
 /**
