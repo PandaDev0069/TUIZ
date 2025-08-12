@@ -2,9 +2,9 @@ import socket from '../socket';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
- * Enhanced Game Creation Bridge for Phase 6 Integration
+ * Enhanced Game Creation Bridge for Host Control Integration
  * This service bridges the existing socket-based game creation
- * with the new Phase 6 host control system
+ * with the new host control system
  */
 class GameCreationBridge {
   constructor() {
@@ -13,7 +13,7 @@ class GameCreationBridge {
   }
 
   /**
-   * Create a game using the enhanced Phase 6 system
+   * Create a game using the enhanced host control system
    * Maintains backwards compatibility with existing socket flow
    */
   async createGame({ hostId, questionSetId, settings = {} }) {
@@ -22,10 +22,10 @@ class GameCreationBridge {
         reject(new Error('Game creation timeout - please try again'));
       }, 15000);
 
-      // Enhanced settings for Phase 6 compatibility
+      // Enhanced settings for host control compatibility
       const enhancedSettings = {
         ...settings,
-        // Enable Phase 6 features
+        // Enable host control features
         hostControl: {
           pauseEnabled: true,
           skipEnabled: true,
@@ -40,8 +40,8 @@ class GameCreationBridge {
         bonusPoints: settings.bonusPoints || 5,
         allowLateJoin: settings.allowLateJoin !== false,
         showLeaderboard: settings.showLeaderboard !== false,
-        // Request Phase 6 capabilities
-        requestPhase6: true
+        // Request host control capabilities
+        requestHostControl: true
       };
 
       // Listen for successful game creation
@@ -52,12 +52,11 @@ class GameCreationBridge {
         this.activeGame = game;
         this.capabilities = game.capabilities || {};
         
-        console.log('🎮 Phase 6 Game Created:', {
+        console.log('🎮 Host Control Game Created:', {
           gameCode,
           gameId: game.id,
           capabilities: this.capabilities,
-          hostControlEnabled: game.host_control_enabled,
-          phase6Enabled: game.phase6_enabled
+          hostControlEnabled: game.host_control_enabled
         });
 
         resolve({
@@ -67,8 +66,7 @@ class GameCreationBridge {
             ...game,
             // Ensure capabilities are available
             capabilities: this.capabilities,
-            hostControlEnabled: Boolean(game.host_control_enabled || this.capabilities.hostControl),
-            phase6Enabled: Boolean(game.phase6_enabled || this.capabilities.hostControl)
+            hostControlEnabled: Boolean(game.host_control_enabled || this.capabilities.hostControl)
           },
           message: message || 'Game created successfully'
         });
@@ -97,25 +95,24 @@ class GameCreationBridge {
   }
 
   /**
-   * Check if Phase 6 features are available for the current game
+   * Check if host control features are available for the current game
    */
-  hasPhase6Support() {
+  hasHostControlSupport() {
     return Boolean(
-      this.activeGame?.phase6_enabled || 
       this.activeGame?.host_control_enabled || 
       this.capabilities?.hostControl
     );
   }
 
   /**
-   * Get available Phase 6 capabilities
+   * Get available host control capabilities
    */
   getCapabilities() {
     return {
-      hostControl: this.hasPhase6Support(),
-      playerManagement: this.capabilities?.playerManagement || this.hasPhase6Support(),
-      advancedSettings: this.capabilities?.advancedSettings || this.hasPhase6Support(),
-      realTimeUpdates: this.capabilities?.realTimeUpdates || this.hasPhase6Support(),
+      hostControl: this.hasHostControlSupport(),
+      playerManagement: this.capabilities?.playerManagement || this.hasHostControlSupport(),
+      advancedSettings: this.capabilities?.advancedSettings || this.hasHostControlSupport(),
+      realTimeUpdates: this.capabilities?.realTimeUpdates || this.hasHostControlSupport(),
       ...this.capabilities
     };
   }
@@ -155,11 +152,10 @@ class GameCreationBridge {
       });
 
       // Check if Phase 6 enhanced start is available
-      if (this.hasPhase6Support()) {
-        console.log('🚀 Starting game with Phase 6 enhancements...');
+      if (this.hasHostControlSupport()) {
+        console.log('🚀 Starting game with host control enhancements...');
         socket.emit('startGameEnhanced', { 
           gameCode,
-          phase6Enabled: true,
           hostControlEnabled: true
         });
       } else {
@@ -216,8 +212,8 @@ export const useGameCreation = () => {
     return gameCreationBridge.getCapabilities();
   };
 
-  const hasPhase6Support = () => {
-    return gameCreationBridge.hasPhase6Support();
+  const hasHostControlSupport = () => {
+    return gameCreationBridge.hasHostControlSupport();
   };
 
   const getCurrentGame = () => {
@@ -228,7 +224,7 @@ export const useGameCreation = () => {
     createGame,
     startGame,
     getGameCapabilities,
-    hasPhase6Support,
+    hasHostControlSupport,
     getCurrentGame,
     clearActiveGame: () => gameCreationBridge.clearActiveGame()
   };

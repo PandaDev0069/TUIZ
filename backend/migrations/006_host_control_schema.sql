@@ -5,6 +5,10 @@
 DO $$
 BEGIN
     -- Add game state tracking columns (only new ones needed for host control)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'games' AND column_name = 'host_control_enabled') THEN
+        ALTER TABLE games ADD COLUMN host_control_enabled BOOLEAN DEFAULT TRUE;
+    END IF;
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'games' AND column_name = 'paused_at') THEN
         ALTER TABLE games ADD COLUMN paused_at TIMESTAMPTZ NULL;
     END IF;

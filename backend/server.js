@@ -554,10 +554,10 @@ const io = new Server(server, {
 // Phase 6: Initialize Host Socket Handlers
 const hostHandlers = new HostSocketHandlers(io);
 
-// Phase 6: Setup function to enable enhanced host handlers for Phase 6 games
-function setupPhase6HostHandlers(socket, gameCode, gameId) {
+// Setup function to enable enhanced host handlers for host control games
+function setupHostHandlers(socket, gameCode, gameId) {
   if (!socket || !gameCode || !gameId) {
-    logger.warn('Invalid parameters for Phase 6 host handlers setup', {
+    logger.warn('Invalid parameters for host handlers setup', {
       socket: !!socket,
       gameCode,
       gameId
@@ -566,17 +566,17 @@ function setupPhase6HostHandlers(socket, gameCode, gameId) {
   }
 
   try {
-    // Mark socket as Phase 6 enabled
-    socket.phase6Enabled = true;
+    // Mark socket as host control enabled
+    socket.hostControlEnabled = true;
     socket.hostGameId = gameId;
     socket.hostGameCode = gameCode;
 
-    // Setup Phase 6 host control events
+    // Setup host control events
     if (hostHandlers && typeof hostHandlers.setupHostSocket === 'function') {
       hostHandlers.setupHostSocket(socket, gameCode, gameId);
     }
 
-    logger.info('Phase 6 host handlers enabled', {
+    logger.info('Host control handlers enabled', {
       socketId: socket.id,
       gameCode,
       gameId,
@@ -584,7 +584,7 @@ function setupPhase6HostHandlers(socket, gameCode, gameId) {
     });
 
   } catch (error) {
-    logger.error('Error setting up Phase 6 host handlers', {
+    logger.error('Error setting up host control handlers', {
       error: error.message,
       socketId: socket.id,
       gameCode,
@@ -1056,15 +1056,15 @@ io.on('connection', (socket) => {
   socket.on('createGame', async ({ hostId, questionSetId, settings }) => {
     try {
       if (isDevelopment || isLocalhost) {
-        logger.game(`🎮 [BRIDGE] Creating game via Socket (Phase 6 Integration): Host ${hostId}, QuestionSet ${questionSetId}`);
+        logger.game(`🎮 [BRIDGE] Creating game via Socket (Host Control Integration): Host ${hostId}, QuestionSet ${questionSetId}`);
       }
       
       // Extract actual user ID from hostId (remove the temporary prefix)
       const actualHostId = hostId.includes('host_') ? 
         hostId.split('_')[1] : hostId;
       
-      // === PHASE 6 INTEGRATION BRIDGE ===
-      // Use the new Phase 6 game creation system internally
+      // === HOST CONTROL INTEGRATION BRIDGE ===
+      // Use the new host control game creation system internally
       // while maintaining socket compatibility for frontend
       
       // If no manual title provided, fetch from question set along with play_settings
@@ -1168,8 +1168,7 @@ io.on('connection', (socket) => {
         status: 'waiting',
         game_settings: enhancedGameSettings, // Use enhanced settings
         created_at: new Date().toISOString(),
-        // Phase 6 metadata
-        phase6_enabled: true,
+        // Host control metadata
         host_control_enabled: true
       };
       
@@ -1193,7 +1192,6 @@ io.on('connection', (socket) => {
         room.gameId = dbGame.id; // Update to use database UUID
         room.gameUUID = dbGame.id; // Keep explicit reference
         room.roomCode = gameCode; // Keep room code reference
-        room.phase6Enabled = true; // Mark as Phase 6 compatible
         room.hostControlEnabled = true; // Enable host control features
       } else {
         if (isDevelopment) {
@@ -1212,8 +1210,7 @@ io.on('connection', (socket) => {
         game_settings: enhancedGameSettings, // Use enhanced settings
         created_at: dbGame.created_at,
         dbGame: dbGame, // Keep reference to full database object
-        // Phase 6 metadata
-        phase6_enabled: true,
+        // Host control metadata
         host_control_enabled: true
       };
       
@@ -1230,8 +1227,7 @@ io.on('connection', (socket) => {
         currentQuestionIndex: 0,
         currentAnswers: [],
         questionInProgress: false,
-        // Phase 6 extensions
-        phase6Enabled: true,
+        // Host control extensions
         hostControlEnabled: true
       });
       
@@ -1241,11 +1237,11 @@ io.on('connection', (socket) => {
       // Assign host role to socket with Phase 6 metadata
       socket.hostOfGame = gameCode;
       socket.hostGameId = dbGame.id;
-      socket.phase6HostEnabled = true;
+      socket.hostControlEnabled = true;
       
-      // Enable Phase 6 host handlers for this socket
-      if (typeof setupPhase6HostHandlers === 'function') {
-        setupPhase6HostHandlers(socket, gameCode, dbGame.id);
+      // Enable host control handlers for this socket
+      if (typeof setupHostHandlers === 'function') {
+        setupHostHandlers(socket, gameCode, dbGame.id);
       }
       
       socket.emit('gameCreated', { 
@@ -1260,7 +1256,7 @@ io.on('connection', (socket) => {
             realTimeUpdates: true
           }
         },
-        message: 'Phase 6 compatible game created successfully' 
+        message: 'Host control compatible game created successfully' 
       });
       
       logger.info(`🎮 [BRIDGE] Phase 6 game creation completed successfully`, {
@@ -1268,12 +1264,11 @@ io.on('connection', (socket) => {
         gameCode,
         hostId: actualHostId,
         questionSetId,
-        phase6Enabled: true,
         hostControlEnabled: true
       });
       
     } catch (error) {
-      logger.error('❌ [BRIDGE] Error creating Phase 6 game:', error);
+      logger.error('❌ [BRIDGE] Error creating host control game:', error);
       socket.emit('error', { message: 'Failed to create game', error: error.message });
     }
   });
