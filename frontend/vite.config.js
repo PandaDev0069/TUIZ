@@ -11,5 +11,17 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 1000, // Increase chunk size warning limit to 1000kb
+    rollupOptions: {
+      external: [],
+      output: {
+        manualChunks: undefined
+      }
+    },
+    // Optimize for Vercel deployment
+    target: 'esnext',
+    minify: 'esbuild'
   },
+  optimizeDeps: {
+    exclude: ['@rollup/rollup-linux-x64-gnu']
+  }
 })
