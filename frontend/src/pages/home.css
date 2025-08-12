@@ -25,7 +25,6 @@
 .home__header {
   text-align: center;
   padding: var(--tuiz-space-8) 0 var(--tuiz-space-12);
-  animation: fadeInDown 1s ease-out;
 }
 
 .home__logo {
@@ -38,7 +37,6 @@
   border-radius: var(--tuiz-radius-full);
   box-shadow: var(--tuiz-shadow-glass);
   transition: transform var(--tuiz-duration-normal) var(--tuiz-ease-out);
-  animation: logoFloat 4s ease-in-out infinite;
 }
 
 .home__logo-image:hover {
@@ -63,7 +61,6 @@
   align-items: center;
   justify-content: center;
   padding: var(--tuiz-space-8) 0;
-  animation: fadeInUp 1.2s ease-out 0.3s both;
 }
 
 .home__cards {
@@ -87,18 +84,8 @@
   box-shadow: var(--tuiz-shadow-glass);
   position: relative;
   overflow: hidden;
-  animation: scaleIn 0.8s ease-out;
 }
 
-.home__card:nth-child(1) {
-  animation-delay: 0.5s;
-  animation-fill-mode: both;
-}
-
-.home__card:nth-child(2) {
-  animation-delay: 0.7s;
-  animation-fill-mode: both;
-}
 
 .home__card::before {
   content: '';
@@ -218,7 +205,6 @@
 /* ===== FEATURES ELEMENT ===== */
 .home__features {
   padding: var(--tuiz-space-12) 0 var(--tuiz-space-8);
-  animation: fadeInUp 1.4s ease-out 0.8s both;
 }
 
 .home__features-grid {
@@ -237,23 +223,8 @@
   border: 1px solid var(--tuiz-glass-border-light);
   border-radius: var(--tuiz-radius-2xl);
   transition: all var(--tuiz-duration-normal) var(--tuiz-ease-out);
-  animation: slideInUp 0.8s ease-out;
 }
 
-.home__feature:nth-child(1) {
-  animation-delay: 1s;
-  animation-fill-mode: both;
-}
-
-.home__feature:nth-child(2) {
-  animation-delay: 1.2s;
-  animation-fill-mode: both;
-}
-
-.home__feature:nth-child(3) {
-  animation-delay: 1.4s;
-  animation-fill-mode: both;
-}
 
 .home__feature:hover {
   transform: translateY(-4px);
@@ -266,22 +237,15 @@
   justify-content: center;
   align-items: center;
   transition: transform var(--tuiz-duration-normal) var(--tuiz-ease-out);
-  animation: iconBreathe 4s ease-in-out infinite;
 }
 
-.home__feature-icon--lightning {
-  color: #fbbf24;
-  animation-delay: 0s;
-}
 
 .home__feature-icon--education {
   color: #10b981;
-  animation-delay: 1s;
 }
 
 .home__feature-icon--interactive {
   color: #f472b6;
-  animation-delay: 2s;
 }
 
 .home__feature:hover .home__feature-icon {
@@ -306,7 +270,6 @@
   padding: var(--tuiz-space-8) 0 var(--tuiz-space-4);
   border-top: 1px solid var(--tuiz-glass-border-light);
   margin-top: auto;
-  animation: fadeIn 1.6s ease-out 1.2s both;
 }
 
 .home__footer-content {
@@ -455,7 +418,7 @@
   }
 }
 
-/* ===== ANIMATIONS ===== */
+/* ===== ANIMATIONS (LEGACY - NOW HANDLED BY ANIMATION CONTROLLER) ===== */
 @keyframes pulse {
   0%, 100% {
     transform: scale(1);

@@ -4,7 +4,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Analytics } from '@vercel/analytics/react'
 import socket from './socket'
 import { AuthProvider } from './contexts/AuthContext'
-import AuthDebugger from './components/AuthDebugger'
+import './utils/AnimationController' // Initialize animation controller
 import ToastContainer from './components/ToastContainer'
 import CleanupWarningHandler from './components/CleanupWarningHandler'
 import Home from './pages/Home'
@@ -36,8 +36,6 @@ function App() {
       socket.off('connect');
     };
   }, []);
-
-  const isDevelopment = import.meta.env.DEV;
 
   return (
     <AuthProvider>

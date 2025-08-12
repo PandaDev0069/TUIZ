@@ -201,11 +201,11 @@ function Register() {
   };
 
   return (
-    <div className="auth">
-      <div className="auth__container">
+    <div className="auth tuiz-animate-entrance">
+      <div className="auth__container tuiz-animate-entrance">
         {/* Header */}
-        <div className="auth__header">
-          <h1 className="auth__title">TUIZ情報王</h1>
+        <div className="auth__header tuiz-animate-entrance">
+          <h1 className="auth__title tuiz-animate-continuous">TUIZ情報王</h1>
           <h2 className="auth__subtitle">新規アカウント作成</h2>
           <p className="auth__description">
             クイズ作成・管理のためのアカウントを作成しましょう
@@ -213,11 +213,11 @@ function Register() {
         </div>
 
         {/* Register Form */}
-        <form className="auth__form" onSubmit={handleSubmit}>
+        <form className="auth__form tuiz-animate-entrance" onSubmit={handleSubmit}>
           {/* General Error */}
           {errors.general && (
-            <div className="auth__error-message">
-              <span className="auth__error-icon">
+            <div className="auth__error-message tuiz-animate-entrance">
+              <span className="auth__error-icon tuiz-animate-continuous">
                 <FaExclamationTriangle />
               </span>
               {errors.general}
@@ -225,9 +225,9 @@ function Register() {
           )}
 
           {/* Email Input */}
-          <div className="auth__input-group">
+          <div className="auth__input-group tuiz-animate-entrance">
             <label htmlFor="email" className="auth__label">
-              <FaEnvelope className="auth__label-icon auth__label-icon--email" />
+              <FaEnvelope className="auth__label-icon auth__label-icon--email tuiz-animate-continuous" />
               メールアドレス
             </label>
             <div className="auth__input-wrapper">
@@ -256,9 +256,9 @@ function Register() {
           </div>
 
           {/* Name Input */}
-          <div className="auth__input-group">
+          <div className="auth__input-group tuiz-animate-entrance">
             <label htmlFor="name" className="auth__label">
-              <FaUser className="auth__label-icon auth__label-icon--user" />
+              <FaUser className="auth__label-icon auth__label-icon--user tuiz-animate-continuous" />
               名前
             </label>
             <div className="auth__input-wrapper">
@@ -288,9 +288,9 @@ function Register() {
           </div>
 
           {/* Password Input */}
-          <div className="auth__input-group">
+          <div className="auth__input-group tuiz-animate-entrance">
             <label htmlFor="password" className="auth__label">
-              <FaLock className="auth__label-icon auth__label-icon--lock" />
+              <FaLock className="auth__label-icon auth__label-icon--lock tuiz-animate-continuous" />
               パスワード
             </label>
             <div className="auth__input-wrapper auth__input-wrapper--has-toggle">
@@ -325,9 +325,9 @@ function Register() {
           </div>
 
           {/* Confirm Password Input */}
-          <div className="auth__input-group">
+          <div className="auth__input-group tuiz-animate-entrance">
             <label htmlFor="confirmPassword" className="auth__label">
-              <FaLock className="auth__label-icon auth__label-icon--lock" />
+              <FaLock className="auth__label-icon auth__label-icon--lock tuiz-animate-continuous" />
               パスワード確認
             </label>
             <div className="auth__input-wrapper auth__input-wrapper--has-toggle">
@@ -364,12 +364,12 @@ function Register() {
           {/* Submit Button */}
           <button
             type="submit"
-            className={`auth__button auth__button--register ${loading ? 'auth__button--loading' : ''}`}
+            className={`auth__button auth__button--register tuiz-animate-hover ${loading ? 'auth__button--loading' : ''}`}
             disabled={loading}
           >
             {loading ? (
               <>
-                <span className="auth__loading-spinner"></span>
+                <span className="auth__loading-spinner tuiz-animate-continuous"></span>
                 作成中...
               </>
             ) : (
@@ -378,10 +378,10 @@ function Register() {
           </button>
 
           {/* Login Link */}
-          <div className="auth__links">
+          <div className="auth__links tuiz-animate-entrance">
             <p className="auth__links-text">
               既にアカウントをお持ちの方は{' '}
-              <Link to="/login" className="auth__link">
+              <Link to="/login" className="auth__link tuiz-animate-hover">
                 ログイン
               </Link>
             </p>

@@ -152,11 +152,11 @@ function Login() {
   };
 
   return (
-    <div className="auth">
-      <div className="auth__container">
+    <div className="auth tuiz-animate-entrance">
+      <div className="auth__container tuiz-animate-entrance">
         {/* Header */}
-        <div className="auth__header">
-          <h1 className="auth__title">TUIZ情報王</h1>
+        <div className="auth__header tuiz-animate-entrance">
+          <h1 className="auth__title tuiz-animate-continuous">TUIZ情報王</h1>
           <h2 className="auth__subtitle">ホストログイン</h2>
           <p className="auth__description">
             クイズを作成・管理するためにログインしてください
@@ -164,11 +164,11 @@ function Login() {
         </div>
 
         {/* Login Form */}
-        <form className="auth__form" onSubmit={handleSubmit}>
+        <form className="auth__form tuiz-animate-entrance" onSubmit={handleSubmit}>
           {/* General Error */}
           {errors.general && (
-            <div className="auth__error-message">
-              <span className="auth__error-icon">
+            <div className="auth__error-message tuiz-animate-entrance">
+              <span className="auth__error-icon tuiz-animate-continuous">
                 <FaExclamationTriangle />
               </span>
               {errors.general}
@@ -176,9 +176,9 @@ function Login() {
           )}
 
           {/* Email/Name Input */}
-          <div className="auth__input-group">
+          <div className="auth__input-group tuiz-animate-entrance">
             <label htmlFor="emailOrName" className="auth__label">
-              <FaEnvelope className="auth__label-icon auth__label-icon--email" />
+              <FaEnvelope className="auth__label-icon auth__label-icon--email tuiz-animate-continuous" />
               メールアドレス
             </label>
             <div className="auth__input-wrapper">
@@ -203,9 +203,9 @@ function Login() {
           </div>
 
           {/* Password Input */}
-          <div className="auth__input-group" ref={passwordGroupRef}>
+          <div className="auth__input-group tuiz-animate-entrance" ref={passwordGroupRef}>
             <label htmlFor="password" className="auth__label">
-              <FaLock className="auth__label-icon auth__label-icon--lock" />
+              <FaLock className="auth__label-icon auth__label-icon--lock tuiz-animate-continuous" />
               パスワード
             </label>
             <div className="auth__input-wrapper auth__input-wrapper--has-toggle">
