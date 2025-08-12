@@ -530,7 +530,9 @@
 
 /* Draft Cards */
 .dashboard__draft-card {
-  min-width: 280px;
+  min-width: 320px;
+  max-width: 320px;
+  width: 320px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 1.5rem;
@@ -590,6 +592,13 @@
   color: rgba(255, 255, 255, 0.8);
   margin: 0 0 1rem;
   line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-wrap: break-word;
 }
 
 .dashboard__draft-card-badges {
@@ -615,7 +624,7 @@
 
 .dashboard__quizzes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 320px));
   gap: 1.5rem;
 }
 
@@ -695,6 +704,13 @@
   color: rgba(255, 255, 255, 0.8);
   margin: 0 0 1rem;
   line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-wrap: break-word;
 }
 
 .dashboard__quiz-card-badges {
