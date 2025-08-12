@@ -19,7 +19,6 @@ import WaitingRoom from './pages/WaitingRoom'
 import Host from './pages/Host'
 import HostLobby from './pages/HostLobby'
 import Quiz from './pages/Quiz'
-import QuizControl from './pages/QuizControl'
 import HostDashboard from './components/host/dashboard/HostDashboard'
 import Scoreboard from './pages/Scoreboard'
 import Privacy from './pages/Privacy'
@@ -58,7 +57,6 @@ function App() {
         <Route path="/join" element={<Join />} />
         <Route path="/waiting" element={<WaitingRoom />} />
         <Route path="/quiz" element={<Quiz />} />
-        <Route path="/quiz/control" element={<QuizControl />} />
         <Route path="/scoreboard" element={<Scoreboard />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/license" element={<License />} />
