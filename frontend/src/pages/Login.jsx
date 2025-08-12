@@ -17,10 +17,9 @@ function Login() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   
-  // Refs for input elements for mobile keyboard handling
+  // Refs for input elements
   const emailInputRef = useRef(null);
   const passwordInputRef = useRef(null);
-  const passwordGroupRef = useRef(null); // Target the entire input-group instead
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -46,62 +45,6 @@ function Login() {
     
     return () => clearTimeout(timer);
   }, []);
-
-  // Mobile keyboard handling
-  useEffect(() => {
-    const handleResize = () => {
-      const isKeyboardOpen = window.innerHeight < window.screen.height * 0.75;
-      
-      if (isKeyboardOpen) {
-        setTimeout(() => {
-          const activeElement = document.activeElement;
-          if (activeElement && activeElement === emailInputRef.current) {
-            activeElement.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center',
-              inline: 'nearest'
-            });
-          } else if (activeElement && activeElement === passwordInputRef.current) {
-            // For password field, scroll the entire input group
-            if (passwordGroupRef.current) {
-              passwordGroupRef.current.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center',
-                inline: 'nearest'
-              });
-            }
-          }
-        }, 100);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', () => {
-      setTimeout(handleResize, 500);
-    });
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
-  }, []);
-
-  // Handle input focus for mobile keyboard
-  const handleInputFocus = (inputRef, groupRef = null) => {
-    if (window.innerWidth <= 768) {
-      setTimeout(() => {
-        // For password field, scroll the entire input group; for others, scroll the input
-        const targetElement = groupRef ? groupRef.current : inputRef.current;
-        if (targetElement) {
-          targetElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'nearest'
-          });
-        }
-      }, 300);
-    }
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -160,7 +103,7 @@ function Login() {
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
-      // Close mobile keyboard and scroll to button
+      // Close mobile keyboard
       e.target.blur();
       
       // Small delay to allow keyboard to close
@@ -211,7 +154,6 @@ function Login() {
                 value={formData.emailOrName}
                 onChange={handleChange}
                 onKeyPress={handleKeyPress}
-                onFocus={() => handleInputFocus(emailInputRef)}
                 disabled={loading}
                 autoComplete="username"
               />
@@ -222,7 +164,7 @@ function Login() {
           </div>
 
           {/* Password Input */}
-          <div className="auth__input-group tuiz-animate-slide-in-up tuiz-animate-stagger-2" ref={passwordGroupRef}>
+          <div className="auth__input-group tuiz-animate-slide-in-up tuiz-animate-stagger-2">
             <label htmlFor="password" className="auth__label">
               <FaLock className="auth__label-icon auth__label-icon--lock tuiz-animate-breathe" />
               パスワード
@@ -238,7 +180,6 @@ function Login() {
                 value={formData.password}
                 onChange={handleChange}
                 onKeyPress={handleKeyPress}
-                onFocus={() => handleInputFocus(passwordInputRef, passwordGroupRef)}
                 disabled={loading}
                 autoComplete="current-password"
               />
