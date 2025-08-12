@@ -802,8 +802,6 @@
 
 @media (max-width: 480px) {
   .player-action-animation {
-    max-width: 200px;
-    min-width: 150px;
     position: fixed;
     top: var(--spacing-sm) !important;
     left: var(--spacing-sm) !important;
