@@ -2,6 +2,7 @@
  * TUIZ Host Dashboard - Phase 2.1: Core Control Panel
  * Central hub for host game control and monitoring
  * 
+ * Updated to use Universal Theme System
  * BEM Naming Convention:
  * - Block: host-dashboard
  * - Elements: __header, __content, __section, etc.
@@ -9,9 +10,10 @@
  */
 
 /* ========================================
-   IMPORT HOST DESIGN SYSTEM
+   IMPORT UNIVERSAL THEME SYSTEM
    ======================================== */
 
+@import '../../../styles/universal-theme.css';
 @import '../../../styles/host/host-variables.css';
 @import '../../../styles/host/host-components.css';
 @import '../../../styles/host/host-responsive.css';
@@ -23,9 +25,11 @@
 
 .host-dashboard {
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--host-primary) 0%, var(--host-secondary) 100%);
-  color: var(--host-white);
-  padding: var(--host-space-4);
+  min-height: 100dvh;
+  background: var(--tuiz-gradient-primary);
+  color: var(--tuiz-white);
+  font-family: var(--tuiz-font-family);
+  padding: var(--tuiz-space-4);
   position: relative;
   overflow-x: hidden;
 }
@@ -54,8 +58,8 @@
 }
 
 .host-dashboard__loading p {
-  margin-top: var(--host-space-4);
-  font-size: var(--host-font-size-lg);
+  margin-top: var(--tuiz-space-4);
+  font-size: var(--tuiz-text-lg);
   color: rgba(255, 255, 255, 0.8);
 }
 
@@ -66,16 +70,16 @@
 .host-dashboard__header {
   position: relative;
   z-index: 2;
-  margin-bottom: var(--host-space-6);
-  animation: host-slideInDown var(--host-transition-medium) var(--host-ease-out);
+  margin-bottom: var(--tuiz-space-6);
+  animation: host-slideInDown var(--tuiz-duration-normal) var(--tuiz-ease-out);
 }
 
 .host-dashboard__header-content {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: var(--host-space-4);
-  gap: var(--host-space-4);
+  margin-bottom: var(--tuiz-space-4);
+  gap: var(--tuiz-space-4);
 }
 
 .host-dashboard__game-info {
@@ -85,11 +89,12 @@
 .host-dashboard__title {
   display: flex;
   align-items: center;
-  gap: var(--host-space-3);
+  gap: var(--tuiz-space-3);
   font-size: clamp(1.5rem, 4vw, 2.5rem);
-  font-weight: var(--host-font-weight-bold);
-  margin: 0 0 var(--host-space-2);
-  color: var(--host-white);
+  font-weight: var(--tuiz-font-bold);
+  font-family: var(--tuiz-font-family);
+  margin: 0 0 var(--tuiz-space-2);
+  color: var(--tuiz-white);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -101,33 +106,33 @@
 .host-dashboard__subtitle {
   display: flex;
   flex-direction: column;
-  gap: var(--host-space-1);
-  font-size: var(--host-font-size-base);
+  gap: var(--tuiz-space-1);
+  font-size: var(--tuiz-text-base);
   opacity: 0.9;
 }
 
 .host-dashboard__game-title {
-  font-weight: var(--host-font-weight-semibold);
-  font-size: var(--host-font-size-lg);
+  font-weight: var(--tuiz-font-semibold);
+  font-size: var(--tuiz-text-lg);
 }
 
 .host-dashboard__room-code {
-  font-family: 'Courier New', monospace;
-  font-size: var(--host-font-size-sm);
+  font-family: var(--tuiz-font-family-mono);
+  font-size: var(--tuiz-text-sm);
   opacity: 0.8;
 }
 
 .host-dashboard__room-code strong {
-  background: rgba(255, 255, 255, 0.2);
-  padding: var(--host-space-1) var(--host-space-2);
-  border-radius: var(--host-radius-sm);
-  font-weight: var(--host-font-weight-bold);
-  color: var(--host-warning);
+  background: var(--tuiz-glass-light);
+  padding: var(--tuiz-space-1) var(--tuiz-space-2);
+  border-radius: var(--tuiz-radius-sm);
+  font-weight: var(--tuiz-font-bold);
+  color: var(--tuiz-warning);
 }
 
 .host-dashboard__header-actions {
   display: flex;
-  gap: var(--host-space-2);
+  gap: var(--tuiz-space-2);
   flex-shrink: 0;
 }
 
@@ -140,36 +145,37 @@
 .host-status-badge {
   display: inline-flex;
   align-items: center;
-  gap: var(--host-space-2);
-  padding: var(--host-space-2) var(--host-space-4);
-  border-radius: var(--host-radius-full);
-  font-size: var(--host-font-size-sm);
-  font-weight: var(--host-font-weight-medium);
+  gap: var(--tuiz-space-2);
+  padding: var(--tuiz-space-2) var(--tuiz-space-4);
+  border-radius: var(--tuiz-radius-full);
+  font-size: var(--tuiz-text-sm);
+  font-weight: var(--tuiz-font-medium);
+  font-family: var(--tuiz-font-family);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  box-shadow: var(--host-shadow-md);
-  backdrop-filter: blur(10px);
-  animation: host-pulse 2s ease-in-out infinite;
+  box-shadow: var(--tuiz-shadow-md);
+  backdrop-filter: var(--tuiz-blur-medium);
+  animation: tuizPulse 2s ease-in-out infinite;
 }
 
 .host-status-badge--waiting {
   background: rgba(251, 188, 4, 0.9);
-  color: var(--host-gray-900);
+  color: var(--tuiz-gray-900);
 }
 
 .host-status-badge--active {
-  background: rgba(52, 168, 83, 0.9);
-  color: var(--host-white);
+  background: rgba(16, 185, 129, 0.9);
+  color: var(--tuiz-white);
 }
 
 .host-status-badge--paused {
-  background: rgba(255, 152, 0, 0.9);
-  color: var(--host-white);
+  background: rgba(245, 158, 11, 0.9);
+  color: var(--tuiz-white);
 }
 
 .host-status-badge--finished {
-  background: rgba(66, 133, 244, 0.9);
-  color: var(--host-white);
+  background: rgba(99, 102, 241, 0.9);
+  color: var(--tuiz-white);
 }
 
 .host-status-badge__icon {
@@ -188,13 +194,13 @@
   position: relative;
   z-index: 2;
   display: grid;
-  gap: var(--host-space-4);
+  gap: var(--tuiz-space-4);
   grid-template-areas:
     "overview overview"
     "actions players"
     "analytics analytics";
   grid-template-columns: 1fr 1fr;
-  animation: host-slideInUp var(--host-transition-medium) var(--host-ease-out);
+  animation: host-slideInUp var(--tuiz-duration-normal) var(--tuiz-ease-out);
   animation-delay: 0.2s;
   animation-fill-mode: both;
 }
@@ -218,13 +224,13 @@
 
 /* Section styling */
 .host-dashboard__section {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--host-radius-xl);
-  padding: var(--host-space-4);
-  backdrop-filter: blur(15px);
-  box-shadow: var(--host-shadow-lg);
-  transition: all var(--host-transition-fast);
+  background: var(--tuiz-glass-light);
+  border: 1px solid var(--tuiz-glass-border-light);
+  border-radius: var(--tuiz-radius-2xl);
+  padding: var(--tuiz-space-4);
+  backdrop-filter: var(--tuiz-blur-heavy);
+  box-shadow: var(--tuiz-shadow-glass);
+  transition: all var(--tuiz-duration-fast);
   position: relative;
   overflow: hidden;
 }
@@ -236,14 +242,14 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--host-primary), var(--host-secondary));
+  background: var(--tuiz-gradient-primary);
   opacity: 0.7;
 }
 
 .host-dashboard__section:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--tuiz-glass-medium);
   transform: translateY(-2px);
-  box-shadow: var(--host-shadow-xl);
+  box-shadow: var(--tuiz-shadow-glass-lg);
 }
 
 /* ========================================
@@ -274,37 +280,37 @@
 
 .host-dashboard__notifications {
   position: fixed;
-  top: var(--host-space-4);
-  right: var(--host-space-4);
+  top: var(--tuiz-space-4);
+  right: var(--tuiz-space-4);
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  gap: var(--host-space-2);
+  gap: var(--tuiz-space-2);
   max-width: 400px;
 }
 
 .host-notification {
   display: flex;
   align-items: flex-start;
-  gap: var(--host-space-3);
-  padding: var(--host-space-3);
-  background: var(--host-white);
-  color: var(--host-gray-700);
-  border-radius: var(--host-radius-lg);
-  box-shadow: var(--host-shadow-lg);
-  animation: host-slideInRight var(--host-transition-medium) var(--host-ease-out);
+  gap: var(--tuiz-space-3);
+  padding: var(--tuiz-space-3);
+  background: var(--tuiz-white);
+  color: var(--tuiz-gray-700);
+  border-radius: var(--tuiz-radius-lg);
+  box-shadow: var(--tuiz-shadow-lg);
+  animation: host-slideInRight var(--tuiz-duration-normal) var(--tuiz-ease-out);
 }
 
 .host-notification--success {
-  border-left: 4px solid var(--host-success);
+  border-left: 4px solid var(--tuiz-success);
 }
 
 .host-notification--warning {
-  border-left: 4px solid var(--host-warning);
+  border-left: 4px solid var(--tuiz-warning);
 }
 
 .host-notification--info {
-  border-left: 4px solid var(--host-info);
+  border-left: 4px solid var(--tuiz-info);
 }
 
 .host-notification__icon {
@@ -313,15 +319,15 @@
 }
 
 .host-notification--success .host-notification__icon {
-  color: var(--host-success);
+  color: var(--tuiz-success);
 }
 
 .host-notification--warning .host-notification__icon {
-  color: var(--host-warning);
+  color: var(--tuiz-warning);
 }
 
 .host-notification--info .host-notification__icon {
-  color: var(--host-info);
+  color: var(--tuiz-info);
 }
 
 .host-notification__content {
@@ -329,13 +335,13 @@
 }
 
 .host-notification__title {
-  font-weight: var(--host-font-weight-semibold);
-  margin-bottom: var(--host-space-1);
+  font-weight: var(--tuiz-font-semibold);
+  margin-bottom: var(--tuiz-space-1);
 }
 
 .host-notification__message {
-  font-size: var(--host-font-size-sm);
-  color: var(--host-gray-600);
+  font-size: var(--tuiz-text-sm);
+  color: var(--tuiz-gray-600);
 }
 
 /* ========================================
@@ -353,17 +359,17 @@
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  animation: host-fadeIn var(--host-transition-medium) var(--host-ease-out);
+  animation: host-fadeIn var(--tuiz-duration-normal) var(--tuiz-ease-out);
 }
 
 .host-modal {
-  background: var(--host-white);
-  color: var(--host-gray-700);
-  border-radius: var(--host-radius-xl);
+  background: var(--tuiz-white);
+  color: var(--tuiz-gray-700);
+  border-radius: var(--tuiz-radius-2xl);
   max-width: 500px;
   width: 90vw;
-  box-shadow: var(--host-shadow-xl);
-  animation: host-scaleIn var(--host-transition-medium) var(--host-ease-out);
+  box-shadow: var(--tuiz-shadow-2xl);
+  animation: host-scaleIn var(--tuiz-duration-normal) var(--tuiz-ease-out);
 }
 
 .host-modal-overlay--fullscreen {
@@ -403,44 +409,44 @@
 }
 
 .host-modal--emergency .host-modal__header {
-  background: linear-gradient(135deg, var(--host-danger), #ff6b6b);
-  color: var(--host-white);
+  background: var(--tuiz-gradient-danger);
+  color: var(--tuiz-white);
 }
 
 .host-modal__header {
   display: flex;
   align-items: center;
-  gap: var(--host-space-3);
-  padding: var(--host-space-4);
-  border-radius: var(--host-radius-xl) var(--host-radius-xl) 0 0;
+  gap: var(--tuiz-space-3);
+  padding: var(--tuiz-space-4);
+  border-radius: var(--tuiz-radius-2xl) var(--tuiz-radius-2xl) 0 0;
 }
 
 .host-modal__icon {
-  font-size: var(--host-font-size-xl);
+  font-size: var(--tuiz-text-xl);
 }
 
 .host-modal__icon--danger {
-  color: var(--host-warning);
-  animation: host-pulse 1s ease-in-out infinite;
+  color: var(--tuiz-warning);
+  animation: tuizPulse 1s ease-in-out infinite;
 }
 
 .host-modal__title {
-  font-size: var(--host-font-size-lg);
-  font-weight: var(--host-font-weight-semibold);
+  font-size: var(--tuiz-text-lg);
+  font-weight: var(--tuiz-font-semibold);
   margin: 0;
 }
 
 .host-modal__content {
-  padding: var(--host-space-4);
-  line-height: var(--host-line-height-relaxed);
+  padding: var(--tuiz-space-4);
+  line-height: var(--tuiz-leading-relaxed);
 }
 
 .host-modal__actions {
   display: flex;
   justify-content: flex-end;
-  gap: var(--host-space-3);
-  padding: var(--host-space-4);
-  border-top: 1px solid var(--host-gray-200);
+  gap: var(--tuiz-space-3);
+  padding: var(--tuiz-space-4);
+  border-top: 1px solid var(--tuiz-gray-200);
 }
 
 /* ========================================
@@ -451,7 +457,7 @@
   width: 40px;
   height: 40px;
   border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top: 4px solid var(--host-white);
+  border-top: 4px solid var(--tuiz-white);
   border-radius: 50%;
   animation: host-spin 1s linear infinite;
   margin: 0 auto;
@@ -463,13 +469,13 @@
 
 @media (max-width: 768px) {
   .host-dashboard {
-    padding: var(--host-space-2);
+    padding: var(--tuiz-space-2);
   }
   
   .host-dashboard__header-content {
     flex-direction: column;
     align-items: stretch;
-    gap: var(--host-space-3);
+    gap: var(--tuiz-space-3);
   }
   
   .host-dashboard__header-actions {
@@ -483,22 +489,22 @@
       "players"
       "analytics";
     grid-template-columns: 1fr;
-    gap: var(--host-space-3);
+    gap: var(--tuiz-space-3);
   }
   
   .host-dashboard__section {
-    padding: var(--host-space-3);
+    padding: var(--tuiz-space-3);
   }
   
   .host-dashboard__notifications {
-    left: var(--host-space-2);
-    right: var(--host-space-2);
+    left: var(--tuiz-space-2);
+    right: var(--tuiz-space-2);
     max-width: none;
   }
   
   .host-modal {
-    margin: var(--host-space-2);
-    width: calc(100vw - var(--host-space-4));
+    margin: var(--tuiz-space-2);
+    width: calc(100vw - var(--tuiz-space-4));
   }
 }
 
@@ -508,16 +514,16 @@
   }
   
   .host-dashboard__section {
-    padding: var(--host-space-2);
+    padding: var(--tuiz-space-2);
   }
   
   .host-status-badge {
-    padding: var(--host-space-1_5) var(--host-space-3);
-    font-size: var(--host-font-size-xs);
+    padding: var(--tuiz-space-1_5) var(--tuiz-space-3);
+    font-size: var(--tuiz-text-xs);
   }
   
   .host-notification {
-    padding: var(--host-space-2);
+    padding: var(--tuiz-space-2);
   }
 }
 
@@ -557,13 +563,13 @@
 
 @media (prefers-contrast: high) {
   .host-dashboard {
-    background: linear-gradient(135deg, #000080 0%, #006400 100%);
+    background: var(--tuiz-gradient-primary);
   }
   
   .host-dashboard__section {
     background: rgba(255, 255, 255, 0.95);
-    border: 2px solid var(--host-gray-800);
-    color: var(--host-gray-900);
+    border: 2px solid var(--tuiz-gray-800);
+    color: var(--tuiz-gray-900);
   }
   
   .host-status-badge {
@@ -571,6 +577,6 @@
   }
   
   .host-notification {
-    border: 2px solid var(--host-gray-800);
+    border: 2px solid var(--tuiz-gray-800);
   }
 }
