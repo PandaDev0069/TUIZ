@@ -198,8 +198,7 @@
 }
 
 .join__input--room-code:focus {
-  border-color: var(--tuiz-warning);
-  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.2);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
 }
 
 /* ===== ERROR MESSAGE ELEMENT ===== */
