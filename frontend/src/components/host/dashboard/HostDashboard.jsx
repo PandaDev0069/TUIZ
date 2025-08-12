@@ -23,6 +23,7 @@ import QuickActions from './QuickActions';
 import PlayerManagementPreview from './PlayerManagementPreview';
 import AnalyticsSummary from './AnalyticsSummary';
 import ControlPanelContainer from '../control/ControlPanelContainer';
+import RealTimePlayerManagement from '../player/RealTimePlayerManagement';
 import './HostDashboard.css';
 
 /**
@@ -65,6 +66,7 @@ function HostDashboard() {
   // UI state
   const [showEmergencyStop, setShowEmergencyStop] = useState(false);
   const [showControlPanel, setShowControlPanel] = useState(false);
+  const [showPlayerManagement, setShowPlayerManagement] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
   // Debug logging for development
@@ -294,6 +296,7 @@ function HostDashboard() {
             players={players}
             recentActivity={recentActivity}
             gameState={gameState}
+            onOpenPlayerManagement={() => setShowPlayerManagement(true)}
           />
         </div>
 
@@ -390,6 +393,42 @@ function HostDashboard() {
                 onGameStateChange={handleGameStateChange}
                 players={players}
                 questions={[]} // TODO: Pass actual questions when available
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Player Management Modal */}
+      {showPlayerManagement && (
+        <div className="host-modal-overlay host-modal-overlay--fullscreen">
+          <div className="host-modal host-modal--fullscreen">
+            <div className="host-modal__header">
+              <h3 className="host-modal__title">
+                <FaUsers className="host-modal__icon" />
+                リアルタイムプレイヤー管理
+              </h3>
+              <button 
+                className="host-modal__close"
+                onClick={() => setShowPlayerManagement(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="host-modal__content host-modal__content--no-padding">
+              <RealTimePlayerManagement
+                gameState={{
+                  ...gameState,
+                  id: gameId,
+                  roomCode: room
+                }}
+                players={players}
+                onPlayersUpdate={setPlayers}
+                notifications={notifications}
+                onNotification={(notification) => {
+                  setNotifications(prev => [...prev, notification]);
+                }}
               />
             </div>
           </div>

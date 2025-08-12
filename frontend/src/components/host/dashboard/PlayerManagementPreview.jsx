@@ -25,7 +25,7 @@ import './PlayerManagementPreview.css';
  * - Quick actions for players
  * - Live player statistics
  */
-function PlayerManagementPreview({ players, recentActivity, gameState }) {
+function PlayerManagementPreview({ players, recentActivity, gameState, onOpenPlayerManagement }) {
   const [expandedPlayer, setExpandedPlayer] = useState(null);
   const [showAllPlayers, setShowAllPlayers] = useState(false);
 
@@ -264,7 +264,10 @@ function PlayerManagementPreview({ players, recentActivity, gameState }) {
       {/* View All Players Button */}
       {players.length > 0 && (
         <div className="player-management-preview__footer">
-          <button className="view-all-players-btn">
+          <button 
+            className="view-all-players-btn"
+            onClick={onOpenPlayerManagement}
+          >
             <FaUsers className="view-all-players-btn__icon" />
             <span>プレイヤー管理画面を開く</span>
             <FaChevronRight className="view-all-players-btn__arrow" />
