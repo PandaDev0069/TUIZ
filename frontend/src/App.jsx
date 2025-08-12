@@ -16,7 +16,6 @@ import QuizPreview from './pages/QuizPreview'
 import QuizLibrary from './pages/QuizLibrary'
 import Join from './pages/Join'
 import WaitingRoom from './pages/WaitingRoom'
-import Host from './pages/Host'
 import HostLobby from './pages/HostLobby'
 import Quiz from './pages/Quiz'
 import HostDashboard from './components/host/dashboard/HostDashboard'
@@ -51,7 +50,6 @@ function App() {
         <Route path="/quiz-library" element={<QuizLibrary />} />
         <Route path="/create-quiz" element={<CreateQuiz />} />
         <Route path="/preview" element={<QuizPreview />} />
-        <Route path="/host" element={<Host/>} />
         <Route path="/host/lobby" element={<HostLobby />} />
         <Route path="/host/dashboard" element={<HostDashboard />} />
         <Route path="/join" element={<Join />} />

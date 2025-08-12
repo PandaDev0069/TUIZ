@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   FaBullseye, 
   FaGamepad, 
@@ -19,9 +20,16 @@ import './home.css';
 
 function Home() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleHostLogin = () => {
-    navigate('/login');
+    if (user) {
+      // If user is already authenticated, go directly to dashboard
+      navigate('/dashboard');
+    } else {
+      // If not authenticated, go to login
+      navigate('/login');
+    }
   };
 
   const handleJoinGame = () => {

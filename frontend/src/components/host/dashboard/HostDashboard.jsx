@@ -106,7 +106,7 @@ function HostDashboard() {
 
   useEffect(() => {
     if (!room || !title) {
-      navigate('/host');
+      navigate('/dashboard');
       return;
     }
 

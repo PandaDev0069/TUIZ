@@ -177,7 +177,7 @@ function HostControlPage() {
           <h2>無効なルームコード</h2>
           <p>有効なルームコードが必要です</p>
           <button
-            onClick={() => navigate('/host')}
+            onClick={() => navigate('/dashboard')}
             style={{
               padding: '12px 24px',
               background: 'var(--color-accent)',

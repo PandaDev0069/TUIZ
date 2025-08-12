@@ -1139,7 +1139,7 @@ function EnhancedResults({
       <div className="results-actions">
         <button 
           className="action-btn action-btn--secondary"
-          onClick={() => window.location.href = '/host'}
+          onClick={() => window.location.href = '/dashboard'}
         >
           ホストに戻る
         </button>

@@ -21,7 +21,7 @@ function HostLobby() {
 
   useEffect(() => {
     if (!room || !title) {
-      navigate('/host')
+      navigate('/dashboard')
       return
     }
 
