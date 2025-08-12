@@ -17,6 +17,9 @@ const { validateStorageConfig } = require('./utils/storageConfig');
 const activeGameUpdater = require('./utils/ActiveGameUpdater');
 const RateLimitMiddleware = require('./middleware/rateLimiter');
 
+// Phase 6: Host Socket Handlers
+const HostSocketHandlers = require('./sockets/hostHandlers');
+
 // Initialize database
 const db = new DatabaseManager();
 
@@ -468,6 +471,10 @@ const playerManagementRoutes = require('./routes/api/playerManagement');
 const gameResultsRoutes = require('./routes/api/gameResults');
 const gameSettingsRoutes = require('./routes/api/gameSettings');
 
+// Host control routes (Phase 6)
+const hostGameControlRoutes = require('./routes/api/host/gameControl');
+const hostPlayerManagementRoutes = require('./routes/api/host/playerManagement');
+
 // Mount API routes
 app.use('/api/question-sets', questionSetsRoutes);
 app.use('/api/questions', questionsRoutes);
@@ -479,6 +486,10 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/player', playerManagementRoutes(db));
 app.use('/api/game-results', gameResultsRoutes);
 app.use('/api/game-settings', gameSettingsRoutes);
+
+// Host control API routes (Phase 6)
+app.use('/api/host/game', hostGameControlRoutes);
+app.use('/api/host/player', hostPlayerManagementRoutes);
 
 // Global error handler - must be after all routes
 app.use((error, req, res, next) => {
@@ -537,6 +548,9 @@ const io = new Server(server, {
         credentials: true
     },
 });
+
+// Phase 6: Initialize Host Socket Handlers
+const hostHandlers = new HostSocketHandlers(io);
 
 // Export function to get Socket.IO instance
 module.exports.getIO = () => io;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   FaPlay, 
@@ -36,6 +36,9 @@ import EnhancedResults from '../analytics/EnhancedResults';
 import { AnimationProvider } from '../animations/AnimationSystem';
 import { AudioProvider } from '../audio/AudioSystem';
 import { MobileOptimizationProvider } from '../mobile/MobileOptimization';
+// Phase 6: Host Control Integration
+import HostControlIntegration from '../../../services/HostControlIntegration';
+import { useAuth } from '../../../contexts/AuthContext';
 import './HostDashboard.css';
 
 /**
@@ -51,7 +54,16 @@ import './HostDashboard.css';
 function HostDashboard() {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { user, token } = useAuth();
   const { room, title, gameId, questionSetId } = state || {};
+  
+  // Phase 6: Host Control Integration
+  const hostControlRef = useRef(null);
+  const [hostControlStatus, setHostControlStatus] = useState({
+    isConnected: false,
+    hasPermissions: false,
+    lastAction: null
+  });
   
   // Core game state
   const [gameState, setGameState] = useState({
@@ -98,7 +110,131 @@ function HostDashboard() {
       return;
     }
 
-    // Initialize socket listeners for real-time updates
+    // Phase 6: Initialize Host Control Integration
+    if (user && token && gameId) {
+      const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      hostControlRef.current = new HostControlIntegration(apiBaseUrl, socket);
+      
+      // Initialize host control
+      hostControlRef.current.initializeHostControl(gameId, token)
+        .then(result => {
+          if (result.success) {
+            console.log('Host control initialized successfully');
+            setHostControlStatus(prev => ({
+              ...prev,
+              isConnected: true,
+              hasPermissions: true
+            }));
+          } else {
+            console.error('Failed to initialize host control:', result.error);
+          }
+        });
+
+      // Set up event handlers
+      hostControlRef.current.setHostJoinedHandler((data) => {
+        console.log('Host joined successfully:', data);
+        setGameState(prev => ({ ...prev, ...data.gameState }));
+        setPlayers(data.players || []);
+        setAnalytics(data.analytics || {});
+      });
+
+      hostControlRef.current.setHostActionSuccessHandler((data) => {
+        console.log('Host action successful:', data);
+        setHostControlStatus(prev => ({
+          ...prev,
+          lastAction: data.action,
+          lastActionTime: Date.now()
+        }));
+        
+        // Handle specific action responses
+        if (data.gameState) {
+          setGameState(prev => ({ ...prev, ...data.gameState }));
+        }
+      });
+
+      hostControlRef.current.setHostActionErrorHandler((error) => {
+        console.error('Host action failed:', error);
+        setNotifications(prev => [
+          {
+            id: Date.now(),
+            type: 'error',
+            title: 'ホストアクション失敗',
+            message: error.error || 'アクションの実行に失敗しました',
+            timestamp: Date.now()
+          },
+          ...prev.slice(0, 4)
+        ]);
+      });
+
+      // Game state event handlers
+      hostControlRef.current.setGamePausedHandler((data) => {
+        setGameState(prev => ({ ...prev, status: 'paused', isPaused: true }));
+        setNotifications(prev => [
+          {
+            id: Date.now(),
+            type: 'info',
+            title: 'ゲーム一時停止',
+            message: data.message || 'ゲームが一時停止されました',
+            timestamp: Date.now()
+          },
+          ...prev.slice(0, 4)
+        ]);
+      });
+
+      hostControlRef.current.setGameResumedHandler((data) => {
+        setGameState(prev => ({ ...prev, status: 'active', isPaused: false }));
+        setNotifications(prev => [
+          {
+            id: Date.now(),
+            type: 'success',
+            title: 'ゲーム再開',
+            message: 'ゲームが再開されました',
+            timestamp: Date.now()
+          },
+          ...prev.slice(0, 4)
+        ]);
+      });
+
+      hostControlRef.current.setQuestionSkippedHandler((data) => {
+        setGameState(prev => ({ 
+          ...prev, 
+          currentQuestionIndex: data.nextQuestion - 1 
+        }));
+        setNotifications(prev => [
+          {
+            id: Date.now(),
+            type: 'warning',
+            title: '質問スキップ',
+            message: `質問 ${data.skippedQuestion} をスキップしました`,
+            timestamp: Date.now()
+          },
+          ...prev.slice(0, 4)
+        ]);
+      });
+
+      hostControlRef.current.setPlayerKickedHandler((data) => {
+        setPlayers(prev => prev.filter(p => p.id !== data.playerId));
+        setRecentActivity(prev => [
+          { 
+            type: 'kick', 
+            player: data.playerName, 
+            reason: data.reason,
+            timestamp: Date.now() 
+          },
+          ...prev.slice(0, 9)
+        ]);
+      });
+
+      hostControlRef.current.setPlayerStatusUpdatedHandler((data) => {
+        setPlayers(prev => prev.map(p => 
+          p.id === data.playerId 
+            ? { ...p, ...data.status }
+            : p
+        ));
+      });
+    }
+
+    // Initialize socket listeners for real-time updates (backwards compatibility)
     socket.on('gameStateUpdate', handleGameStateUpdate);
     socket.on('playerUpdate', handlePlayerUpdate);
     socket.on('analyticsUpdate', handleAnalyticsUpdate);
@@ -112,8 +248,13 @@ function HostDashboard() {
       socket.off('playerUpdate');
       socket.off('analyticsUpdate');
       socket.off('hostNotification');
+      
+      // Phase 6: Cleanup host control
+      if (hostControlRef.current) {
+        hostControlRef.current.disconnect();
+      }
     };
-  }, [room, title, navigate]);
+  }, [room, title, navigate, user, token, gameId]);
 
   const handleGameStateUpdate = (data) => {
     if (import.meta.env.DEV) {
@@ -175,26 +316,101 @@ function HostDashboard() {
     }, 5000);
   };
 
-  // Game control handlers
-  const handlePauseResume = () => {
-    const action = gameState.isPaused ? 'resume' : 'pause';
-    socket.emit(`host:game:${action}`, { gameCode: room });
+  // Game control handlers - Phase 6: Enhanced with backend integration
+  const handlePauseResume = async () => {
+    if (!hostControlRef.current) {
+      console.error('Host control not initialized');
+      return;
+    }
+
+    try {
+      if (gameState.isPaused) {
+        await hostControlRef.current.resumeGame(3, 'ホストによる再開');
+      } else {
+        await hostControlRef.current.pauseGame('host_action', 'ホストによる一時停止');
+      }
+    } catch (error) {
+      console.error('Failed to pause/resume game:', error);
+    }
   };
 
-  const handleSkipQuestion = () => {
-    socket.emit('host:game:skip', { gameCode: room });
+  const handleSkipQuestion = async () => {
+    if (!hostControlRef.current) {
+      console.error('Host control not initialized');
+      return;
+    }
+
+    try {
+      await hostControlRef.current.skipQuestion('host_decision', true);
+    } catch (error) {
+      console.error('Failed to skip question:', error);
+    }
   };
 
-  const handleEmergencyStop = () => {
-    socket.emit('host:game:emergency-stop', { gameCode: room });
-    setShowEmergencyStop(false);
+  const handleEmergencyStop = async () => {
+    if (!hostControlRef.current) {
+      console.error('Host control not initialized');
+      return;
+    }
+
+    try {
+      await hostControlRef.current.emergencyStop('host_emergency', true);
+      setShowEmergencyStop(false);
+    } catch (error) {
+      console.error('Failed to emergency stop:', error);
+    }
   };
 
-  const handleTimerAdjust = (seconds) => {
-    socket.emit('host:timer:adjust', { 
-      gameCode: room, 
-      adjustment: seconds 
-    });
+  const handleTimerAdjust = async (seconds) => {
+    if (!hostControlRef.current) {
+      console.error('Host control not initialized');
+      return;
+    }
+
+    try {
+      await hostControlRef.current.adjustTimer(seconds * 1000, 'host_timer_adjustment');
+    } catch (error) {
+      console.error('Failed to adjust timer:', error);
+    }
+  };
+
+  const handleKickPlayer = async (playerId, reason = 'host_decision') => {
+    if (!hostControlRef.current) {
+      console.error('Host control not initialized');
+      return;
+    }
+
+    try {
+      await hostControlRef.current.kickPlayer(playerId, reason);
+    } catch (error) {
+      console.error('Failed to kick player:', error);
+    }
+  };
+
+  const handleMutePlayer = async (playerId, duration = 300000, reason = 'host_moderation') => {
+    if (!hostControlRef.current) {
+      console.error('Host control not initialized');
+      return;
+    }
+
+    try {
+      await hostControlRef.current.mutePlayer(playerId, duration, reason);
+    } catch (error) {
+      console.error('Failed to mute player:', error);
+    }
+  };
+
+  const handleUnmutePlayer = async (playerId, reason = 'host_decision') => {
+    if (!hostControlRef.current) {
+      console.error('Host control not initialized');
+      return;
+    }
+
+    try {
+      await hostControlRef.current.unmutePlayer(playerId, reason);
+    } catch (error) {
+      console.error('Failed to unmute player:', error);
+    }
   };
 
   const handleSettings = () => {
