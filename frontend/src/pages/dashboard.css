@@ -330,7 +330,7 @@
 }
 
 .dashboard__action-icon--join .dashboard__action-icon-element {
-  color: #60a5fa; /* Info blue */
+  color: #fa6060; /* Info blue */
 }
 
 .dashboard__action-icon--analytics .dashboard__action-icon-element {
@@ -338,7 +338,7 @@
 }
 
 .dashboard__action-icon--library .dashboard__action-icon-element {
-  color: #a78bfa; /* Purple */
+  color: #60a5fa; /* Vibrant orange */
 }
 
 .dashboard__action-card:hover .dashboard__action-icon-element {
