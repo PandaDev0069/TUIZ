@@ -15,7 +15,10 @@ import {
   FaEye,
   FaHeart,
   FaFire,
-  FaBolt
+  FaBolt,
+  FaFileExport,
+  FaChartLine,
+  FaFileAlt
 } from 'react-icons/fa';
 import socket from '../../../socket';
 import GameOverview from './GameOverview';
@@ -24,6 +27,11 @@ import PlayerManagementPreview from './PlayerManagementPreview';
 import AnalyticsSummary from './AnalyticsSummary';
 import ControlPanelContainer from '../control/ControlPanelContainer';
 import RealTimePlayerManagement from '../player/RealTimePlayerManagement';
+import AdvancedAnalytics from '../analytics/AdvancedAnalytics';
+import ReportingSystem from '../analytics/ReportingSystem';
+import DataExport from '../analytics/DataExport';
+import LiveAnalytics from '../analytics/LiveAnalytics';
+import EnhancedResults from '../analytics/EnhancedResults';
 import './HostDashboard.css';
 
 /**
@@ -67,6 +75,11 @@ function HostDashboard() {
   const [showEmergencyStop, setShowEmergencyStop] = useState(false);
   const [showControlPanel, setShowControlPanel] = useState(false);
   const [showPlayerManagement, setShowPlayerManagement] = useState(false);
+  const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
+  const [showReportingSystem, setShowReportingSystem] = useState(false);
+  const [showDataExport, setShowDataExport] = useState(false);
+  const [showLiveAnalytics, setShowLiveAnalytics] = useState(false);
+  const [showEnhancedResults, setShowEnhancedResults] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
   // Debug logging for development
@@ -235,6 +248,46 @@ function HostDashboard() {
             </button>
 
             <button 
+              className="host-button host-button--secondary host-button--small"
+              onClick={() => setShowLiveAnalytics(true)}
+            >
+              <FaEye className="host-button__icon" />
+              ライブ分析
+            </button>
+
+            <button 
+              className="host-button host-button--secondary host-button--small"
+              onClick={() => setShowEnhancedResults(true)}
+            >
+              <FaTrophy className="host-button__icon" />
+              詳細結果
+            </button>
+
+            <button 
+              className="host-button host-button--secondary host-button--small"
+              onClick={() => setShowAdvancedAnalytics(true)}
+            >
+              <FaChartLine className="host-button__icon" />
+              詳細分析
+            </button>
+
+            <button 
+              className="host-button host-button--secondary host-button--small"
+              onClick={() => setShowReportingSystem(true)}
+            >
+              <FaFileAlt className="host-button__icon" />
+              レポート
+            </button>
+
+            <button 
+              className="host-button host-button--secondary host-button--small"
+              onClick={() => setShowDataExport(true)}
+            >
+              <FaFileExport className="host-button__icon" />
+              データ出力
+            </button>
+
+            <button 
               className="host-button host-button--outline host-button--small"
               onClick={handleSettings}
             >
@@ -306,6 +359,11 @@ function HostDashboard() {
             analytics={analytics}
             players={players}
             gameState={gameState}
+            onOpenAdvancedAnalytics={() => setShowAdvancedAnalytics(true)}
+            onOpenReportingSystem={() => setShowReportingSystem(true)}
+            onOpenDataExport={() => setShowDataExport(true)}
+            onOpenLiveAnalytics={() => setShowLiveAnalytics(true)}
+            onOpenEnhancedResults={() => setShowEnhancedResults(true)}
           />
         </div>
       </div>
@@ -428,6 +486,181 @@ function HostDashboard() {
                 notifications={notifications}
                 onNotification={(notification) => {
                   setNotifications(prev => [...prev, notification]);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Advanced Analytics Modal - Phase 3 */}
+      {showAdvancedAnalytics && (
+        <div className="host-modal-overlay host-modal-overlay--fullscreen">
+          <div className="host-modal host-modal--fullscreen">
+            <div className="host-modal__header">
+              <h3 className="host-modal__title">
+                <FaChartLine className="host-modal__icon" />
+                詳細分析ダッシュボード
+              </h3>
+              <button 
+                className="host-modal__close"
+                onClick={() => setShowAdvancedAnalytics(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="host-modal__content host-modal__content--no-padding">
+              <AdvancedAnalytics
+                gameState={{
+                  ...gameState,
+                  id: gameId,
+                  roomCode: room,
+                  title: title
+                }}
+                players={players}
+                analytics={analytics}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reporting System Modal - Phase 3 */}
+      {showReportingSystem && (
+        <div className="host-modal-overlay host-modal-overlay--fullscreen">
+          <div className="host-modal host-modal--fullscreen">
+            <div className="host-modal__header">
+              <h3 className="host-modal__title">
+                <FaFileAlt className="host-modal__icon" />
+                レポートシステム
+              </h3>
+              <button 
+                className="host-modal__close"
+                onClick={() => setShowReportingSystem(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="host-modal__content host-modal__content--no-padding">
+              <ReportingSystem
+                gameState={{
+                  ...gameState,
+                  id: gameId,
+                  roomCode: room,
+                  title: title
+                }}
+                players={players}
+                analytics={analytics}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Data Export Modal - Phase 3 */}
+      {showDataExport && (
+        <div className="host-modal-overlay host-modal-overlay--fullscreen">
+          <div className="host-modal host-modal--fullscreen">
+            <div className="host-modal__header">
+              <h3 className="host-modal__title">
+                <FaFileExport className="host-modal__icon" />
+                データエクスポート
+              </h3>
+              <button 
+                className="host-modal__close"
+                onClick={() => setShowDataExport(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="host-modal__content host-modal__content--no-padding">
+              <DataExport
+                gameState={{
+                  ...gameState,
+                  id: gameId,
+                  roomCode: room,
+                  title: title
+                }}
+                players={players}
+                analytics={analytics}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Live Analytics Modal - Phase 4 */}
+      {showLiveAnalytics && (
+        <div className="host-modal-overlay host-modal-overlay--fullscreen">
+          <div className="host-modal host-modal--fullscreen">
+            <div className="host-modal__header">
+              <h3 className="host-modal__title">
+                <FaEye className="host-modal__icon" />
+                ライブ分析ダッシュボード
+              </h3>
+              <button 
+                className="host-modal__close"
+                onClick={() => setShowLiveAnalytics(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="host-modal__content host-modal__content--no-padding">
+              <LiveAnalytics
+                gameState={{
+                  ...gameState,
+                  id: gameId,
+                  roomCode: room,
+                  title: title
+                }}
+                players={players}
+                analytics={analytics}
+                realTimeData={{
+                  currentResponses: [], // TODO: Add real-time response data
+                  engagementMetrics: {}, // TODO: Add engagement metrics
+                  performanceData: {} // TODO: Add performance data
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced Results Modal - Phase 4 */}
+      {showEnhancedResults && (
+        <div className="host-modal-overlay host-modal-overlay--fullscreen">
+          <div className="host-modal host-modal--fullscreen">
+            <div className="host-modal__header">
+              <h3 className="host-modal__title">
+                <FaTrophy className="host-modal__icon" />
+                詳細結果プレゼンテーション
+              </h3>
+              <button 
+                className="host-modal__close"
+                onClick={() => setShowEnhancedResults(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="host-modal__content host-modal__content--no-padding">
+              <EnhancedResults
+                gameState={{
+                  ...gameState,
+                  id: gameId,
+                  roomCode: room,
+                  title: title
+                }}
+                players={players}
+                gameResults={{
+                  leaderboard: players.sort((a, b) => (b.score || 0) - (a.score || 0)),
+                  questionResults: [], // TODO: Add question results
+                  achievements: [], // TODO: Add achievements
+                  analytics: analytics
                 }}
               />
             </div>

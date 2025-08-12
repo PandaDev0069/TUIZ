@@ -1,5 +1,6 @@
 /* AnalyticsSummary.css - Analytics Summary Styling */
 /* Phase 2.1: Host Dashboard Component */
+/* Updated for Phase 3: Added advanced analytics quick actions */
 
 /* Component Root */
 .analytics-summary {
@@ -762,5 +763,141 @@
   .engagement-bar__fill,
   .trend-bar {
     border: 1px solid currentColor;
+  }
+}
+
+/* Advanced Analytics Quick Actions - Phase 3 */
+.analytics-summary__advanced-actions {
+  margin-top: auto;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-background-secondary);
+}
+
+.advanced-actions {
+  padding: var(--spacing-md);
+}
+
+.advanced-actions__header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+}
+
+.advanced-actions__icon {
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+}
+
+.advanced-actions__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.advanced-actions__buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+/* Advanced Action Buttons */
+.advanced-action-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--color-background-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+  width: 100%;
+}
+
+.advanced-action-btn:hover:not(:disabled) {
+  background: var(--color-background-tertiary);
+  border-color: var(--color-border-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.advanced-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.advanced-action-btn__icon {
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  width: 16px;
+  text-align: center;
+}
+
+.advanced-action-btn--analytics .advanced-action-btn__icon {
+  color: var(--color-accent);
+}
+
+.advanced-action-btn--reports .advanced-action-btn__icon {
+  color: var(--color-info);
+}
+
+.advanced-action-btn--export .advanced-action-btn__icon {
+  color: var(--color-warning);
+}
+
+.advanced-action-btn__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.advanced-action-btn__label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+}
+
+.advanced-action-btn__desc {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.3;
+}
+
+/* Responsive Design for Advanced Actions */
+@media (max-width: 768px) {
+  .advanced-actions__buttons {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: var(--spacing-sm);
+    padding-bottom: var(--spacing-xs);
+  }
+
+  .advanced-action-btn {
+    flex-shrink: 0;
+    min-width: 140px;
+  }
+
+  .advanced-action-btn__desc {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .advanced-actions__buttons {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+
+  .advanced-action-btn {
+    min-width: auto;
+  }
+
+  .advanced-action-btn__content {
+    text-align: center;
   }
 }

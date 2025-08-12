@@ -12,21 +12,26 @@ import {
   FaTimes,
   FaArrowUp,
   FaArrowDown,
-  FaEquals
+  FaEquals,
+  FaChartLine as FaLineChart,
+  FaFileAlt,
+  FaFileExport
 } from 'react-icons/fa';
 import './AnalyticsSummary.css';
 
 /**
  * AnalyticsSummary - Analytics Summary with real-time insights
  * Phase 2.1: Host Dashboard Component
+ * Updated for Phase 3: Added links to advanced analytics
  * 
  * Features:
  * - Response rate graphs
  * - Engagement metrics
  * - Real-time insights
  * - Performance tracking
+ * - Quick access to advanced analytics
  */
-function AnalyticsSummary({ analytics, players, gameState }) {
+function AnalyticsSummary({ analytics, players, gameState, onOpenAdvancedAnalytics, onOpenReportingSystem, onOpenDataExport }) {
   const [selectedMetric, setSelectedMetric] = useState('overview');
   const [historicalData, setHistoricalData] = useState([]);
 
@@ -391,6 +396,54 @@ function AnalyticsSummary({ analytics, players, gameState }) {
                 </span>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Advanced Analytics Quick Actions - Phase 3 */}
+      <div className="analytics-summary__advanced-actions">
+        <div className="advanced-actions">
+          <div className="advanced-actions__header">
+            <FaLineChart className="advanced-actions__icon" />
+            <span className="advanced-actions__title">詳細分析</span>
+          </div>
+          
+          <div className="advanced-actions__buttons">
+            <button 
+              className="advanced-action-btn advanced-action-btn--analytics"
+              onClick={onOpenAdvancedAnalytics}
+              disabled={!onOpenAdvancedAnalytics}
+            >
+              <FaLineChart className="advanced-action-btn__icon" />
+              <div className="advanced-action-btn__content">
+                <span className="advanced-action-btn__label">詳細分析</span>
+                <span className="advanced-action-btn__desc">包括的な分析ダッシュボード</span>
+              </div>
+            </button>
+            
+            <button 
+              className="advanced-action-btn advanced-action-btn--reports"
+              onClick={onOpenReportingSystem}
+              disabled={!onOpenReportingSystem}
+            >
+              <FaFileAlt className="advanced-action-btn__icon" />
+              <div className="advanced-action-btn__content">
+                <span className="advanced-action-btn__label">レポート</span>
+                <span className="advanced-action-btn__desc">カスタムレポート生成</span>
+              </div>
+            </button>
+            
+            <button 
+              className="advanced-action-btn advanced-action-btn--export"
+              onClick={onOpenDataExport}
+              disabled={!onOpenDataExport}
+            >
+              <FaFileExport className="advanced-action-btn__icon" />
+              <div className="advanced-action-btn__content">
+                <span className="advanced-action-btn__label">データ出力</span>
+                <span className="advanced-action-btn__desc">複数形式でデータ出力</span>
+              </div>
+            </button>
           </div>
         </div>
       </div>
