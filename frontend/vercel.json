@@ -1,6 +1,4 @@
 {
-  "buildCommand": "npm ci && npm run build",
-  "installCommand": "npm ci --force",
   "rewrites": [
     {
       "source": "/(.*)",
@@ -9,5 +7,6 @@
   ],
   "env": {
     "NODE_OPTIONS": "--max-old-space-size=4096"
-  }
+  },
+  "buildCommand": "npm run build"
 }
