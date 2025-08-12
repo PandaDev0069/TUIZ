@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { FaExclamationTriangle, FaEye, FaEyeSlash, FaCheckCircle } from 'react-icons/fa';
+import { FaExclamationTriangle, FaEye, FaEyeSlash, FaCheckCircle, FaEnvelope, FaUser, FaLock, FaArrowLeft } from 'react-icons/fa';
 import './auth.css';
 
 function Register() {
@@ -201,23 +201,23 @@ function Register() {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-content">
+    <div className="auth">
+      <div className="auth__container">
         {/* Header */}
-        <div className="auth-header">
-          <h1 className="auth-title">TUIZ情報王</h1>
-          <h2 className="auth-subtitle">新規アカウント作成</h2>
-          <p className="auth-description">
+        <div className="auth__header">
+          <h1 className="auth__title">TUIZ情報王</h1>
+          <h2 className="auth__subtitle">新規アカウント作成</h2>
+          <p className="auth__description">
             クイズ作成・管理のためのアカウントを作成しましょう
           </p>
         </div>
 
         {/* Register Form */}
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form className="auth__form" onSubmit={handleSubmit}>
           {/* General Error */}
           {errors.general && (
-            <div className="error-message">
-              <span className="error-icon">
+            <div className="auth__error-message">
+              <span className="auth__error-icon">
                 <FaExclamationTriangle />
               </span>
               {errors.general}
@@ -225,17 +225,18 @@ function Register() {
           )}
 
           {/* Email Input */}
-          <div className="input-group">
-            <label htmlFor="email" className="input-label">
+          <div className="auth__input-group">
+            <label htmlFor="email" className="auth__label">
+              <FaEnvelope className="auth__label-icon auth__label-icon--email" />
               メールアドレス
             </label>
-            <div className="input-wrapper">
+            <div className="auth__input-wrapper">
               <input
                 ref={emailInputRef}
                 type="email"
                 id="email"
                 name="email"
-                className={`auth-input ${getFieldStatus('email')}`}
+                className={`auth__input ${getFieldStatus('email') === 'error' ? 'auth__input--error' : getFieldStatus('email') === 'success' ? 'auth__input--success' : ''}`}
                 placeholder="例: user@example.com"
                 value={formData.email}
                 onChange={handleChange}
@@ -244,28 +245,29 @@ function Register() {
                 autoComplete="email"
               />
               {getFieldStatus('email') === 'success' && (
-                <span className="validation-icon success">
+                <span className="auth__validation-icon auth__validation-icon--success">
                   <FaCheckCircle />
                 </span>
               )}
             </div>
             {errors.email && (
-              <span className="field-error">{errors.email}</span>
+              <span className="auth__field-error">{errors.email}</span>
             )}
           </div>
 
           {/* Name Input */}
-          <div className="input-group">
-            <label htmlFor="name" className="input-label">
+          <div className="auth__input-group">
+            <label htmlFor="name" className="auth__label">
+              <FaUser className="auth__label-icon auth__label-icon--user" />
               名前
             </label>
-            <div className="input-wrapper">
+            <div className="auth__input-wrapper">
               <input
                 ref={nameInputRef}
                 type="text"
                 id="name"
                 name="name"
-                className={`auth-input ${getFieldStatus('name')}`}
+                className={`auth__input ${getFieldStatus('name') === 'error' ? 'auth__input--error' : getFieldStatus('name') === 'success' ? 'auth__input--success' : ''}`}
                 placeholder="例: 田中太郎"
                 value={formData.name}
                 onChange={handleChange}
@@ -274,29 +276,30 @@ function Register() {
                 autoComplete="name"
               />
               {getFieldStatus('name') === 'success' && (
-                <span className="validation-icon success">
+                <span className="auth__validation-icon auth__validation-icon--success">
                   <FaCheckCircle />
                 </span>
               )}
             </div>
             {errors.name && (
-              <span className="field-error">{errors.name}</span>
+              <span className="auth__field-error">{errors.name}</span>
             )}
-            <span className="field-hint">3-20文字、英数字とアンダースコアのみ</span>
+            <span className="auth__field-hint">3-20文字、英数字とアンダースコアのみ</span>
           </div>
 
           {/* Password Input */}
-          <div className="input-group">
-            <label htmlFor="password" className="input-label">
+          <div className="auth__input-group">
+            <label htmlFor="password" className="auth__label">
+              <FaLock className="auth__label-icon auth__label-icon--lock" />
               パスワード
             </label>
-            <div className="input-wrapper has-toggle">
+            <div className="auth__input-wrapper auth__input-wrapper--has-toggle">
               <input
                 ref={passwordInputRef}
                 type={showPassword ? 'text' : 'password'}
                 id="password"
                 name="password"
-                className={`auth-input ${errors.password ? 'error' : ''}`}
+                className={`auth__input ${errors.password ? 'auth__input--error' : ''}`}
                 placeholder="6文字以上のパスワード"
                 value={formData.password}
                 onChange={handleChange}
@@ -306,31 +309,34 @@ function Register() {
               />
               <button
                 type="button"
-                className="password-toggle"
+                className="auth__password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={loading}
                 title={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
               >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                <span className="auth__password-toggle-icon">
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </span>
               </button>
             </div>
             {errors.password && (
-              <span className="field-error">{errors.password}</span>
+              <span className="auth__field-error">{errors.password}</span>
             )}
           </div>
 
           {/* Confirm Password Input */}
-          <div className="input-group">
-            <label htmlFor="confirmPassword" className="input-label">
+          <div className="auth__input-group">
+            <label htmlFor="confirmPassword" className="auth__label">
+              <FaLock className="auth__label-icon auth__label-icon--lock" />
               パスワード確認
             </label>
-            <div className="input-wrapper has-toggle">
+            <div className="auth__input-wrapper auth__input-wrapper--has-toggle">
               <input
                 ref={confirmPasswordInputRef}
                 type={showConfirmPassword ? 'text' : 'password'}
                 id="confirmPassword"
                 name="confirmPassword"
-                className={`auth-input ${errors.confirmPassword ? 'error' : ''}`}
+                className={`auth__input ${errors.confirmPassword ? 'auth__input--error' : ''}`}
                 placeholder="パスワードを再入力"
                 value={formData.confirmPassword}
                 onChange={handleChange}
@@ -340,28 +346,30 @@ function Register() {
               />
               <button
                 type="button"
-                className="password-toggle"
+                className="auth__password-toggle"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 disabled={loading}
                 title={showConfirmPassword ? 'パスワードを隠す' : 'パスワードを表示'}
               >
-                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                <span className="auth__password-toggle-icon">
+                  {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                </span>
               </button>
             </div>
             {errors.confirmPassword && (
-              <span className="field-error">{errors.confirmPassword}</span>
+              <span className="auth__field-error">{errors.confirmPassword}</span>
             )}
           </div>
 
           {/* Submit Button */}
           <button
             type="submit"
-            className={`auth-button register-button ${loading ? 'loading' : ''}`}
+            className={`auth__button auth__button--register ${loading ? 'auth__button--loading' : ''}`}
             disabled={loading}
           >
             {loading ? (
               <>
-                <span className="loading-spinner"></span>
+                <span className="auth__loading-spinner"></span>
                 作成中...
               </>
             ) : (
@@ -370,10 +378,10 @@ function Register() {
           </button>
 
           {/* Login Link */}
-          <div className="auth-links">
-            <p>
+          <div className="auth__links">
+            <p className="auth__links-text">
               既にアカウントをお持ちの方は{' '}
-              <Link to="/login" className="auth-link">
+              <Link to="/login" className="auth__link">
                 ログイン
               </Link>
             </p>
@@ -381,9 +389,10 @@ function Register() {
         </form>
 
         {/* Back to Home */}
-        <div className="auth-footer">
-          <Link to="/" className="back-link">
-            ← ホームに戻る
+        <div className="auth__footer">
+          <Link to="/" className="auth__back-link">
+            <FaArrowLeft className="auth__back-icon" />
+            ホームに戻る
           </Link>
         </div>
       </div>
