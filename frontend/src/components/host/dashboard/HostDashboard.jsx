@@ -22,7 +22,7 @@ import GameOverview from './GameOverview';
 import QuickActions from './QuickActions';
 import PlayerManagementPreview from './PlayerManagementPreview';
 import AnalyticsSummary from './AnalyticsSummary';
-import AnalyticsSummary from './AnalyticsSummary';
+import ControlPanelContainer from '../control/ControlPanelContainer';
 import './HostDashboard.css';
 
 /**
@@ -64,6 +64,7 @@ function HostDashboard() {
   
   // UI state
   const [showEmergencyStop, setShowEmergencyStop] = useState(false);
+  const [showControlPanel, setShowControlPanel] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
   // Debug logging for development
@@ -182,6 +183,17 @@ function HostDashboard() {
     console.log('Opening game settings...');
   };
 
+  const handleControlPanel = () => {
+    setShowControlPanel(true);
+  };
+
+  const handleGameStateChange = (newState) => {
+    setGameState(prev => ({
+      ...prev,
+      ...newState
+    }));
+  };
+
   if (!room || !title) {
     return (
       <div className="host-dashboard host-dashboard--loading">
@@ -212,6 +224,14 @@ function HostDashboard() {
           </div>
           
           <div className="host-dashboard__header-actions">
+            <button 
+              className="host-button host-button--primary host-button--small"
+              onClick={handleControlPanel}
+            >
+              <FaCog className="host-button__icon" />
+              制御パネル
+            </button>
+
             <button 
               className="host-button host-button--outline host-button--small"
               onClick={handleSettings}
@@ -338,6 +358,39 @@ function HostDashboard() {
                 <FaStop className="host-button__icon" />
                 緊急停止
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Control Panel Modal */}
+      {showControlPanel && (
+        <div className="host-modal-overlay host-modal-overlay--fullscreen">
+          <div className="host-modal host-modal--fullscreen">
+            <div className="host-modal__header">
+              <h3 className="host-modal__title">
+                <FaCog className="host-modal__icon" />
+                ゲーム制御パネル
+              </h3>
+              <button 
+                className="host-modal__close"
+                onClick={() => setShowControlPanel(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="host-modal__content host-modal__content--no-padding">
+              <ControlPanelContainer
+                gameState={{
+                  ...gameState,
+                  id: gameId,
+                  roomCode: room
+                }}
+                onGameStateChange={handleGameStateChange}
+                players={players}
+                questions={[]} // TODO: Pass actual questions when available
+              />
             </div>
           </div>
         </div>

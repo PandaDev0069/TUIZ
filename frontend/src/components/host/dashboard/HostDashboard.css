@@ -366,6 +366,42 @@
   animation: host-scaleIn var(--host-transition-medium) var(--host-ease-out);
 }
 
+.host-modal-overlay--fullscreen {
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(8px);
+}
+
+.host-modal--fullscreen {
+  max-width: 95vw;
+  width: 95vw;
+  height: 90vh;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.host-modal__close {
+  background: none;
+  border: none;
+  font-size: var(--font-size-xl);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.host-modal__close:hover {
+  background: var(--color-background-tertiary);
+  color: var(--color-text-primary);
+}
+
+.host-modal__content--no-padding {
+  padding: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
 .host-modal--emergency .host-modal__header {
   background: linear-gradient(135deg, var(--host-danger), #ff6b6b);
   color: var(--host-white);
