@@ -6,6 +6,7 @@ import useQuestionPreload from "../hooks/useQuestionPreload"
 // New player universal styles (BEM)
 import "../styles/player/player-components.css"
 import "../styles/player/player-animations.css"
+import "../styles/player/waiting-room.css"
 
 function WaitingRoom() {
   const location = useLocation()
