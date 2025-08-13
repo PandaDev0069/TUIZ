@@ -288,6 +288,12 @@
    - Why: Improve host awareness of live player changes; mirrors existing playerJoined terminal lines
    - Next: Persist terminal log with capped length and auto-scroll; unify terminal feed (join/leave/system) with icons
 
+## ⏸️ Deferred / Backlog
+- [ ] Universal dotted background utility (deferred 2025-08-14)
+  - Status: Deferred to avoid scope creep; keep current page-specific pattern.
+  - Current: `frontend/src/pages/hostLobby.css` uses a local ::before SVG data-URI pattern; no universal styles added.
+  - Future scope: Add theme tokens (--tuiz-dot-color/size/gap) and utilities (.tuiz-bg-dots, .tuiz-bg-dots--overlay), then refactor HostLobby to consume them and remove the page-specific overlay.
+
 ### Juy 2025
 - [x] **Database Migration** - Updated schema for better performance
 - [x] **Socket.IO Integration** - Real-time communication improvements
