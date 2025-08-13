@@ -7,9 +7,10 @@
  */
 
 /* ========================================
-   IMPORT DESIGN TOKENS
-   ======================================== */
+  IMPORT UNIVERSAL THEME + HOST TOKENS
+  ======================================== */
 
+@import '../universal-theme.css';
 @import './host-variables.css';
 
 /* ========================================
