@@ -475,9 +475,12 @@
 /* ===== GRID VIEW ===== */
 .quiz-library__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  /* Use auto-fit and cap the min track size to 100% to avoid overflow on small screens */
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: var(--tuiz-space-6);
+  width: 100%;
   max-width: 100%;
+  grid-auto-flow: row dense;
 }
 
 /* For better card proportions on larger screens */

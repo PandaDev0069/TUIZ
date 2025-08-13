@@ -80,7 +80,7 @@ function StatusBadge({ status }) {
   return <Badge variant={variant}>{label}</Badge>;
 }
 
-function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete, isCloning = false, cloningQuizId, isDeleting = false, deletingQuizId }) {
+function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete, isCloning = false, cloningQuizId, isDeleting = false, deletingQuizId, className = "", style }) {
   const [thumbnailError, setThumbnailError] = useState(false);
 
   const handleThumbnailError = () => {
@@ -106,7 +106,10 @@ function QuizCard({ quiz, tab, onPreview, onClone, onStart, onEdit, onDelete, is
   const isLoading = isCloning || isDeleting;
 
   return (
-    <article className="quiz-library__card tuiz-glass-card tuiz-animate-entrance tuiz-hover-lift">
+    <article
+      className={`quiz-library__card tuiz-glass-card tuiz-animate-entrance tuiz-hover-lift ${className}`}
+      style={style}
+    >
       {/* Thumbnail */}
       {quiz.thumbnail_url && !thumbnailError && (
         <div className="quiz-library__card-thumbnail">
@@ -912,25 +915,22 @@ const QuizLibrary = () => {
                       {view === "grid" ? (
                         <div className="quiz-library__grid">
                           {groupedQuizzes.published.map((quiz, index) => (
-                            <div 
-                              key={quiz.id} 
+                            <QuizCard
+                              key={quiz.id}
                               className="tuiz-animate-stagger-4"
                               style={{ animationDelay: `${index * 100}ms` }}
-                            >
-                              <QuizCard
-                                quiz={quiz}
-                                tab={tab}
-                                onPreview={(quiz) => setPreview({ open: true, quiz })}
-                                onClone={handleCloneQuiz}
-                                onStart={handleStartQuiz}
-                                onEdit={handleEditQuiz}
-                                onDelete={handleDeleteQuiz}
-                                isCloning={cloning}
-                                cloningQuizId={cloningQuizId}
-                                isDeleting={deleting}
-                                deletingQuizId={deletingQuizId}
-                              />
-                            </div>
+                              quiz={quiz}
+                              tab={tab}
+                              onPreview={(quiz) => setPreview({ open: true, quiz })}
+                              onClone={handleCloneQuiz}
+                              onStart={handleStartQuiz}
+                              onEdit={handleEditQuiz}
+                              onDelete={handleDeleteQuiz}
+                              isCloning={cloning}
+                              cloningQuizId={cloningQuizId}
+                              isDeleting={deleting}
+                              deletingQuizId={deletingQuizId}
+                            />
                           ))}
                         </div>
                       ) : (
@@ -992,25 +992,22 @@ const QuizLibrary = () => {
                       {view === "grid" ? (
                         <div className="quiz-library__grid">
                           {groupedQuizzes.draft.map((quiz, index) => (
-                            <div 
-                              key={quiz.id} 
+                            <QuizCard
+                              key={quiz.id}
                               className="tuiz-animate-stagger-4"
                               style={{ animationDelay: `${index * 100}ms` }}
-                            >
-                              <QuizCard
-                                quiz={quiz}
-                                tab={tab}
-                                onPreview={(quiz) => setPreview({ open: true, quiz })}
-                                onClone={handleCloneQuiz}
-                                onStart={handleStartQuiz}
-                                onEdit={handleEditQuiz}
-                                onDelete={handleDeleteQuiz}
-                                isCloning={cloning}
-                                cloningQuizId={cloningQuizId}
-                                isDeleting={deleting}
-                                deletingQuizId={deletingQuizId}
-                              />
-                            </div>
+                              quiz={quiz}
+                              tab={tab}
+                              onPreview={(quiz) => setPreview({ open: true, quiz })}
+                              onClone={handleCloneQuiz}
+                              onStart={handleStartQuiz}
+                              onEdit={handleEditQuiz}
+                              onDelete={handleDeleteQuiz}
+                              isCloning={cloning}
+                              cloningQuizId={cloningQuizId}
+                              isDeleting={deleting}
+                              deletingQuizId={deletingQuizId}
+                            />
                           ))}
                         </div>
                       ) : (
@@ -1073,25 +1070,22 @@ const QuizLibrary = () => {
                   {view === "grid" ? (
                     <div className="quiz-library__grid">
                       {filteredQuizzes.map((quiz, index) => (
-                        <div 
-                          key={quiz.id} 
+                        <QuizCard
+                          key={quiz.id}
                           className="tuiz-animate-stagger-4"
                           style={{ animationDelay: `${index * 100}ms` }}
-                        >
-                          <QuizCard
-                            quiz={quiz}
-                            tab={tab}
-                            onPreview={(quiz) => setPreview({ open: true, quiz })}
-                            onClone={handleCloneQuiz}
-                            onStart={handleStartQuiz}
-                            onEdit={handleEditQuiz}
-                            onDelete={handleDeleteQuiz}
-                            isCloning={cloning}
-                            cloningQuizId={cloningQuizId}
-                            isDeleting={deleting}
-                            deletingQuizId={deletingQuizId}
-                          />
-                        </div>
+                          quiz={quiz}
+                          tab={tab}
+                          onPreview={(quiz) => setPreview({ open: true, quiz })}
+                          onClone={handleCloneQuiz}
+                          onStart={handleStartQuiz}
+                          onEdit={handleEditQuiz}
+                          onDelete={handleDeleteQuiz}
+                          isCloning={cloning}
+                          cloningQuizId={cloningQuizId}
+                          isDeleting={deleting}
+                          deletingQuizId={deletingQuizId}
+                        />
                       ))}
                     </div>
                   ) : (
