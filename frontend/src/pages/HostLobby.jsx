@@ -21,6 +21,9 @@ function HostLobby() {
   const [menu, setMenu] = useState({ open: false, x: 0, y: 0, name: null, connected: false })
   const [nowTick, setNowTick] = useState(Date.now())
   const menuRef = useRef(null)
+  // Kick/Allow rejoin logic
+  const [kickedSet, setKickedSet] = useState(new Set())
+  const autoKickCooldownRef = useRef(new Map()) // name -> last auto kick timestamp
 
   // Debug logging - only in development
   if (import.meta.env.DEV) {
@@ -38,6 +41,17 @@ function HostLobby() {
     socket.on('playerJoined', ({ player, totalPlayers }) => {
       if (import.meta.env.DEV) {
         console.log('New player joined:', player);
+      }
+      // If player is in kicked list, auto-kick (block rejoin) unless host allowed via Reconnect
+      if (kickedSet.has(player.name)) {
+        const now = Date.now();
+        const last = autoKickCooldownRef.current.get(player.name) || 0;
+        if (now - last > 3000) { // throttle auto-kicks to every 3s
+          autoKickCooldownRef.current.set(player.name, now);
+          try { socket.emit('kickPlayer', { gameCode: room, playerName: player.name }); } catch {}
+          setLogs(prev => [...prev, { type: 'kick', name: player.name, time: now }]);
+        }
+        return; // don't register as connected
       }
       // Get updated player list from the game
       const joinedAt = Date.now();
@@ -175,6 +189,7 @@ function HostLobby() {
     try {
       socket.emit('kickPlayer', { gameCode: room, playerName: name });
       setLogs(prev => [...prev, { type: 'kick', name, time: Date.now() }]);
+  setKickedSet(prev => new Set(prev).add(name));
     } catch (err) {
       console.warn('kickPlayer unsupported:', err);
       setLogs(prev => [...prev, { type: 'error', name, time: Date.now() }]);
@@ -187,6 +202,11 @@ function HostLobby() {
     try {
       socket.emit('requestReconnect', { gameCode: room, playerName: name });
       setLogs(prev => [...prev, { type: 'info', name, time: Date.now() }]);
+      setKickedSet(prev => {
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      });
     } catch (err) {
       console.warn('requestReconnect unsupported:', err);
     } finally {
@@ -231,7 +251,7 @@ function HostLobby() {
     ].filter(Boolean).join(' ')
     const isCurrentlyConnected = connectedMap.has(entry.name)
     const joinedAt = connectedMap.get(entry.name)?.joinedAt
-    return (
+  return (
       <div key={`${entry.type}-${entry.name}-${entry.time}-${index}`} className={classes}>
         <span className="host-terminal-line__prefix">$</span>
         <span className="host-terminal-line__icon" aria-hidden>
@@ -253,7 +273,7 @@ function HostLobby() {
           {isLeft || isKick ? '✖ disconnected' : '✔ connected'}
         </span>
         <span className="host-terminal-line__time">{formatTime(entry.time)}</span>
-        {isCurrentlyConnected && (
+    {isJoin && isCurrentlyConnected && (
           <span className="host-terminal-line__duration" aria-live="polite">
             ⏱ {formatDuration(nowTick - (joinedAt ?? entry.time))}
           </span>

@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { FaGamepad, FaBookOpen, FaCheckCircle, FaExclamationTriangle, FaClock } from 'react-icons/fa'
 import socket from "../socket"
 import useQuestionPreload from "../hooks/useQuestionPreload"
@@ -13,6 +13,11 @@ function WaitingRoom() {
   const navigate = useNavigate()
   const { name, room, initialPlayers = [], serverPlayerCount } = location.state || {}
   const [players, setPlayers] = useState(initialPlayers)
+  const [currentPlayerId, setCurrentPlayerId] = useState(null)
+  const [kicked, setKicked] = useState(false)
+  const [kickedInfo, setKickedInfo] = useState({ reason: '', kickedAt: null, banDuration: 0 })
+  const [rejoinRequested, setRejoinRequested] = useState(false)
+  const [now, setNow] = useState(Date.now())
 
   // Use the preloading hook
   const {
@@ -45,7 +50,7 @@ function WaitingRoom() {
     }
 
     // Listen for successful join response
-    socket.on('joinedGame', ({ gameCode, playerCount, gameStatus, player }) => {
+  socket.on('joinedGame', ({ gameCode, playerCount, gameStatus, player }) => {
       // Add the current player to the players list if not already present
       setPlayers(prev => {
         // Always trust the server's playerCount
@@ -70,9 +75,11 @@ function WaitingRoom() {
         } else {
           // Add new player
           const updatedPlayers = [...prev, currentPlayerData];
-          return updatedPlayers;
+      return updatedPlayers;
         }
       });
+    // Track current player id for future actions
+    setCurrentPlayerId(player.id)
       
       // Request complete player list for synchronization
       try {
@@ -109,7 +116,7 @@ function WaitingRoom() {
       }
     })
 
-    // Listen for players disconnecting
+  // Listen for players disconnecting
     socket.on('playerDisconnected', ({ playerId, playerName, remainingPlayers, allPlayers }) => {
       if (allPlayers && allPlayers.length >= 0) {
         setPlayers(allPlayers);
@@ -120,6 +127,18 @@ function WaitingRoom() {
           return updated;
         });
       }
+    })
+
+    // Listen for being kicked by host
+    socket.on('player:kicked', ({ gameId, reason, kickedAt, banDuration, message }) => {
+      setKicked(true)
+      setKickedInfo({ reason: reason || 'host_decision', kickedAt: kickedAt || new Date().toISOString(), banDuration: banDuration || 0 })
+    })
+
+    // Optional future: host allowed rejoin
+    socket.on('player:rejoin:allowed', ({ gameId }) => {
+      setKicked(false)
+      setRejoinRequested(false)
     })
 
     // Listen for game start
@@ -137,14 +156,70 @@ function WaitingRoom() {
       socket.off('playerJoined')
       socket.off('playerDisconnected')
       socket.off('gameStarted')
+      socket.off('player:kicked')
+      socket.off('player:rejoin:allowed')
     }
   }, [name, room, navigate, initialPlayers])
+
+  // Countdown for ban end
+  useEffect(() => {
+    if (!kicked) return
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [kicked])
+
+  const banEndsAt = useMemo(() => {
+    if (!kickedInfo.kickedAt || !kickedInfo.banDuration) return null
+    const start = new Date(kickedInfo.kickedAt).getTime()
+    return start + kickedInfo.banDuration
+  }, [kickedInfo])
+
+  const remaining = useMemo(() => {
+    if (!banEndsAt) return 0
+    return Math.max(0, Math.ceil((banEndsAt - now) / 1000))
+  }, [banEndsAt, now])
+
+  const requestRejoin = () => {
+    try {
+      // Placeholder event for future backend; harmless if unhandled
+      socket.emit('player:rejoin:request', { gameCode: room, playerId: currentPlayerId, name })
+      setRejoinRequested(true)
+    } catch (e) {
+      setRejoinRequested(true)
+    }
+  }
+
+  const goBackToJoin = () => {
+    navigate('/join', { state: { name, room } })
+  }
 
   return (
     <div className="player-page waiting-room" role="region" aria-live="polite">
       <div className="player-card tuiz-animate-entrance">
         <h1 className="player-card__title">こんにちは、{name}さん！</h1>
-        <div className="player-pill" aria-label="room code">
+        {kicked ? (
+          <div className="preload-error tuiz-animate-fade-in" role="alert" style={{ marginTop: '12px' }}>
+            <div className="preload-error__icon">
+              <FaExclamationTriangle />
+            </div>
+            <p>ホストによりルームから退出させられました。</p>
+            {kickedInfo.reason && <small>理由: {kickedInfo.reason}</small>}
+            {kickedInfo.banDuration > 0 && (
+              <small style={{ display: 'block', marginTop: 8 }}>再参加まで: {remaining}s</small>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'center' }}>
+              <button className="player-btn" onClick={requestRejoin} disabled={rejoinRequested} aria-disabled={rejoinRequested}>
+                {rejoinRequested ? '再参加リクエスト済み' : '再参加をリクエスト'}
+              </button>
+              <button className="player-btn" onClick={goBackToJoin}>参加画面へ戻る</button>
+              {(!kickedInfo.banDuration || remaining === 0) && (
+                <button className="player-btn" onClick={goBackToJoin}>再参加を試す</button>
+              )}
+            </div>
+          </div>
+  ) : (
+  <>
+  <div className="player-pill" aria-label="room code">
           ルームコード: <strong className="player-pill__code" aria-live="polite">{room}</strong>
         </div>
         <h2 className="waiting tuiz-animate-fade-in">
@@ -224,9 +299,11 @@ function WaitingRoom() {
         )}
         
         {/* Players List */}
-        <div className="player-roster" aria-live="polite">
+  <div className="player-roster" aria-live="polite">
           <p>参加者: {players.filter(p => p.name !== 'HOST').length}人</p>
         </div>
+  </>
+  )}
       </div>
     </div>
   )
