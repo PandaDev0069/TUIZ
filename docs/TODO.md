@@ -277,6 +277,7 @@
 - [ ] **Dashboard Redesign Planning** - Analyzed current dashboard structure and demo implementations
 - [ ] **Quiz Library Architecture** - Designed component structure for new quiz management system
  - [x] **Profile Settings Modal - Dashboard Styling Alignment** - Updated ProfileSettingsModal to use universal theme tokens, glassmorphism, BEM classes, and react-icons; added a11y (dialog roles, Escape, initial focus)
+ - [ ] **Dashboard Mobile Layout Fixes** - Tweaked KPI and quiz card grids/actions for better mobile responsiveness (single-column grids, stacked actions, responsive thumbnails)
 
 ### Juy 2025
 - [x] **Database Migration** - Updated schema for better performance
