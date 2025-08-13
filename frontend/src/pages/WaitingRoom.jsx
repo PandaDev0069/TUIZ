@@ -3,7 +3,9 @@ import { useEffect, useState } from "react"
 import { FaGamepad, FaBookOpen, FaCheckCircle, FaExclamationTriangle, FaClock } from 'react-icons/fa'
 import socket from "../socket"
 import useQuestionPreload from "../hooks/useQuestionPreload"
-import "./waitingRoom.css"
+// New player universal styles (BEM)
+import "../styles/player/player-components.css"
+import "../styles/player/player-animations.css"
 
 function WaitingRoom() {
   const location = useLocation()
@@ -138,61 +140,48 @@ function WaitingRoom() {
   }, [name, room, navigate, initialPlayers])
 
   return (
-    <div className="page-container">
-      <div>
-        <h1>こんにちは、{name}さん！</h1>
-        <div className="room-code">
-          ルームコード: <strong>{room}</strong>
+    <div className="player-page waiting-room" role="region" aria-live="polite">
+      <div className="player-card tuiz-animate-entrance">
+        <h1 className="player-card__title">こんにちは、{name}さん！</h1>
+        <div className="player-pill" aria-label="room code">
+          ルームコード: <strong className="player-pill__code" aria-live="polite">{room}</strong>
         </div>
-        <h2 className="waiting-message">
+        <h2 className="waiting tuiz-animate-fade-in">
           ホストがクイズを開始するのを待っています...
         </h2>
         
         {/* Preloading Progress */}
         {isPreloading && (
-          <div className="preload-section">
-            <h3>
-              <FaBookOpen className="preload-icon" />
+          <div className="preload tuiz-animate-fade-in" role="status" aria-label="preloading quiz">
+            <h3 className="preload__title">
+              <FaBookOpen className="anim-pulse" />
               クイズの準備中...
             </h3>
-            
-            <div className="preload-progress">
-              <div className="progress-item">
-                <span className="progress-label">質問データ:</span>
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${progress.questions}%` }}
-                  ></div>
+            <div className="preload__progress">
+              <div className="preload__row">
+                <span className="preload__label">質問データ:</span>
+                <div className="preload__bar" aria-hidden="true">
+                  <div className="preload__fill" style={{ width: `${progress.questions}%` }}></div>
                 </div>
-                <span className="progress-percent">{progress.questions}%</span>
+                <span className="preload__percent" aria-live="polite">{progress.questions}%</span>
               </div>
-              
-              <div className="progress-item">
-                <span className="progress-label">画像 ({stats.totalImages}枚):</span>
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${progress.images}%` }}
-                  ></div>
+              <div className="preload__row">
+                <span className="preload__label">画像 ({stats.totalImages}枚):</span>
+                <div className="preload__bar" aria-hidden="true">
+                  <div className="preload__fill" style={{ width: `${progress.images}%` }}></div>
                 </div>
-                <span className="progress-percent">{progress.images}%</span>
+                <span className="preload__percent" aria-live="polite">{progress.images}%</span>
               </div>
-              
-              <div className="progress-item overall">
-                <span className="progress-label">全体の進行:</span>
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${progress.overall}%` }}
-                  ></div>
+              <div className="preload__row preload__row--overall">
+                <span className="preload__label">全体の進行:</span>
+                <div className="preload__bar" aria-hidden="true">
+                  <div className="preload__fill" style={{ width: `${progress.overall}%` }}></div>
                 </div>
-                <span className="progress-percent">{progress.overall}%</span>
+                <span className="preload__percent" aria-live="polite">{progress.overall}%</span>
               </div>
             </div>
-
             {stats.totalImages > 0 && (
-              <div className="preload-stats">
+              <div className="preload__stats">
                 <small>
                   画像: {stats.loadedImages}枚読み込み完了
                   {stats.failedImages > 0 && `, ${stats.failedImages}枚失敗`}
@@ -204,8 +193,8 @@ function WaitingRoom() {
 
         {/* Completion Status */}
         {isComplete && (
-          <div className="preload-complete">
-            <div className="complete-icon">
+          <div className="preload-complete tuiz-animate-scale-in" role="status">
+            <div className="preload-complete__icon">
               <FaCheckCircle />
             </div>
             <p>クイズの準備が完了しました！</p>
@@ -217,8 +206,8 @@ function WaitingRoom() {
 
         {/* Error Handling */}
         {hasError && (
-          <div className="preload-error">
-            <div className="error-icon">
+          <div className="preload-error tuiz-animate-fade-in" role="alert">
+            <div className="preload-error__icon">
               <FaExclamationTriangle />
             </div>
             <p>準備中にエラーが発生しました</p>
@@ -228,13 +217,13 @@ function WaitingRoom() {
 
         {/* Default Loading for Non-Preload State */}
         {!isPreloading && !isComplete && !hasError && (
-          <div className="loading">
+          <div className="player-loading anim-bounce-in" aria-live="polite">
             <FaClock />
           </div>
         )}
         
         {/* Players List */}
-        <div className="players-list">
+        <div className="player-roster" aria-live="polite">
           <p>参加者: {players.filter(p => p.name !== 'HOST').length}人</p>
         </div>
       </div>

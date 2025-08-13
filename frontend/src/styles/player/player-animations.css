@@ -1,0 +1,6 @@
+/* Player animation helpers built on global animations */
+@import '../animations.css';
+
+.anim-pulse { animation: tuizPulse var(--tuiz-animation-duration-slow) ease-in-out infinite; }
+.anim-bounce-in { animation: tuizScaleIn var(--tuiz-animation-duration-normal) ease-out; }
+.anim-shake { animation: tuizFadeInLeft var(--tuiz-animation-duration-fast) ease-out; }

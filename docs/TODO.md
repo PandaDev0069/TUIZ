@@ -279,6 +279,12 @@
  - [x] **Profile Settings Modal - Dashboard Styling Alignment** - Updated ProfileSettingsModal to use universal theme tokens, glassmorphism, BEM classes, and react-icons; added a11y (dialog roles, Escape, initial focus)
  - [x] **Dashboard Mobile Layout Fixes** - KPI footer anchoring via --vh; horizontal scroller cards compacted with 16:9 thumbs; kept inline actions inside scrollers to avoid tall cards; single-column grids on small screens
 
+### Progress
+- [x] 2025-08-14: Added player universal styles and refactored WaitingRoom to BEM
+  - Files: `frontend/src/styles/player/player-variables.css`, `frontend/src/styles/player/player-components.css`, `frontend/src/styles/player/player-animations.css`, `frontend/src/pages/WaitingRoom.jsx`
+  - Why: Align player experience with host universal theme system; remove duplicate ad-hoc CSS and use shared tokens/animations
+  - Next: Apply same player BEM system to Join page and consolidate any remaining page-specific CSS into player components; create HostLobby BEM pass to share patterns
+
 ### Juy 2025
 - [x] **Database Migration** - Updated schema for better performance
 - [x] **Socket.IO Integration** - Real-time communication improvements

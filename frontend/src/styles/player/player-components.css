@@ -1,0 +1,96 @@
+/* Player components (BEM) built on universal tokens */
+@import '../universal-theme.css';
+@import './player-variables.css';
+
+/* Root container for player pages */
+.player-page {
+  min-height: calc(var(--vh, 1vh) * 100);
+  display: grid;
+  place-items: center;
+  padding: var(--tuiz-space-6);
+  background: var(--tuiz-gradient-primary);
+  color: var(--tuiz-white);
+  font-family: var(--tuiz-font-family);
+}
+
+/* Card */
+.player-card {
+  width: min(680px, 92vw);
+  border: 1px solid var(--player-border);
+  border-radius: var(--player-radius);
+  background: var(--player-surface);
+  box-shadow: var(--tuiz-shadow-glass);
+  backdrop-filter: var(--tuiz-blur-medium);
+  padding: clamp(16px, 4vw, 28px);
+}
+.player-card__title {
+  font-size: clamp(1.4rem, 3.6vw, 1.8rem);
+  font-weight: 700;
+  letter-spacing: .2px;
+  text-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+.player-card__subtitle {
+  margin-top: 4px;
+  color: rgba(255,255,255,.85);
+}
+
+/* Info pill (room code) */
+.player-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  margin-top: 12px;
+  background: var(--player-surface-2);
+  border: 1px solid var(--player-border);
+  border-radius: var(--tuiz-radius-full);
+  padding: 6px 12px;
+  font-weight: 600;
+}
+.player-pill__code { font-variant-numeric: tabular-nums; letter-spacing: .6px; }
+
+/* Waiting status */
+.waiting {
+  margin-top: 12px;
+  color: rgba(255,255,255,.9);
+}
+
+/* Preload module */
+.preload {
+  margin-top: 16px;
+  border: 1px solid var(--player-border);
+  border-radius: var(--player-radius-md);
+  background: var(--player-surface);
+  backdrop-filter: var(--tuiz-blur-medium);
+  padding: 14px;
+}
+.preload__title { display:flex; align-items:center; justify-content:center; gap:8px; font-weight:700; }
+.preload__progress { display:flex; flex-direction:column; gap:10px; margin-top: 10px; }
+.preload__row { display:flex; align-items:center; gap:8px; font-size: .95rem; }
+.preload__row--overall { margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--player-border); font-weight: 700; }
+.preload__label { min-width: 90px; text-align:left; opacity:.95; }
+.preload__bar { position:relative; flex:1; height: 8px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.18); }
+.preload__fill { height: 100%; background: linear-gradient(90deg, var(--player-good), #34d399); border-radius: 999px; transition: width var(--tuiz-duration-normal) var(--tuiz-ease-out); }
+.preload__percent { min-width: 44px; text-align: right; font-weight: 700; }
+.preload__stats { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--player-border); opacity:.9; }
+
+/* Complete */
+.preload-complete { background: rgba(16,185,129,.18); border:1px solid rgba(16,185,129,.35); border-radius: var(--player-radius-md); padding: 14px; margin-top: 16px; }
+.preload-complete__icon { display:flex; justify-content:center; font-size: 1.75rem; color: var(--player-good); }
+
+/* Error */
+.preload-error { background: rgba(239,68,68,.18); border:1px solid rgba(239,68,68,.35); border-radius: var(--player-radius-md); padding: 14px; margin-top: 16px; }
+.preload-error__icon { display:flex; justify-content:center; font-size: 1.75rem; color: var(--player-danger); }
+
+/* Loading fallback */
+.player-loading { display:flex; justify-content:center; font-size: 1.75rem; color: var(--player-accent-weak); }
+
+/* Players count */
+.player-roster { margin-top: 14px; opacity:.95; font-weight:600; }
+
+/* Anim hooks from universal animations */
+.preload .preload__fill::after { content:''; position:absolute; inset:0; animation: tuizShimmer calc(var(--tuiz-animation-duration-slow) * 2) ease-in-out infinite; background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent); }
+
+@media (max-width: 480px) {
+  .player-card { padding: 12px; }
+  .preload__row { font-size: .85rem; }
+}
