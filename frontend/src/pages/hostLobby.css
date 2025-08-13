@@ -348,6 +348,17 @@
   font-size: var(--host-font-size-xs);
 }
 
+/* Player left variations */
+.host-terminal-line--left {
+  background: rgba(234, 67, 53, 0.08);
+}
+.host-terminal-line__command--left {
+  color: var(--host-danger);
+}
+.host-terminal-line__status--left {
+  color: var(--host-danger);
+}
+
 .host-terminal-line__time {
   color: var(--host-gray-500);
   font-size: var(--host-font-size-xs);

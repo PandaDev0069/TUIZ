@@ -171,16 +171,19 @@ function Join() {
                 <div className="join__input-wrapper">
                   <input
                     ref={roomInputRef}
-                    type="text"
+                    type="tel"
                     id="roomCode"
                     name="roomCode"
                     className="join__input join__input--room-code"
                     placeholder="6桁のコード"
                     value={room}
-                    onChange={(e) => setRoom(e.target.value.toUpperCase())}
+                    onChange={(e) => setRoom(e.target.value.replace(/\D/g, ''))}
                     onKeyPress={handleKeyPress}
                     maxLength={6}
                     autoComplete="off"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoCapitalize="off"
                   />
                 </div>
               </div>

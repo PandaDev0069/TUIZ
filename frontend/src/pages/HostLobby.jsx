@@ -12,6 +12,7 @@ function HostLobby() {
   const [players, setPlayers] = useState([])
   const [showSettings, setShowSettings] = useState(false)
   const [playerAnimations, setPlayerAnimations] = useState(new Set())
+  const [leftLogs, setLeftLogs] = useState([])
 
   // Debug logging - only in development
   if (import.meta.env.DEV) {
@@ -25,7 +26,7 @@ function HostLobby() {
       return
     }
 
-    // Listen for new players joining the game
+  // Listen for new players joining the game
     socket.on('playerJoined', ({ player, totalPlayers }) => {
       if (import.meta.env.DEV) {
         console.log('New player joined:', player);
@@ -56,8 +57,29 @@ function HostLobby() {
       });
     });
 
+    // Listen for player disconnects and log a terminal line
+    socket.on('playerDisconnected', ({ playerName, allPlayers }) => {
+      if (import.meta.env.DEV) {
+        console.log('Player disconnected:', playerName);
+      }
+
+      // Update players list from payload if available; otherwise filter locally
+      if (Array.isArray(allPlayers)) {
+        setPlayers(allPlayers.map(p => p.name));
+      } else {
+        setPlayers(prev => prev.filter(name => name !== playerName));
+      }
+
+      // Append a leave log entry for the terminal
+      setLeftLogs(prev => [
+        ...prev,
+        { name: playerName, time: new Date().toISOString() }
+      ]);
+    });
+
     return () => {
-      socket.off('playerJoined');
+  socket.off('playerJoined');
+  socket.off('playerDisconnected');
     }
   }, [room, title, navigate])
 
@@ -157,7 +179,7 @@ function HostLobby() {
                       <div className="host-terminal-content">
                         {players.map((name, i) => (
                           <div 
-                            key={i} 
+                            key={`join-${i}`} 
                             className={`host-terminal-line ${
                               playerAnimations.has(name) ? 'host-terminal-line--new' : ''
                             }`}
@@ -171,6 +193,25 @@ function HostLobby() {
                                 hour: '2-digit', 
                                 minute: '2-digit', 
                                 second: '2-digit' 
+                              })}
+                            </span>
+                          </div>
+                        ))}
+
+                        {leftLogs.map((log, i) => (
+                          <div
+                            key={`left-${i}`}
+                            className="host-terminal-line host-terminal-line--left"
+                          >
+                            <span className="host-terminal-line__prefix">$</span>
+                            <span className="host-terminal-line__command host-terminal-line__command--left">player_left</span>
+                            <span className="host-terminal-line__player">{log.name}</span>
+                            <span className="host-terminal-line__status host-terminal-line__status--left">disconnected</span>
+                            <span className="host-terminal-line__time">
+                              {new Date(log.time).toLocaleTimeString('ja-JP', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit'
                               })}
                             </span>
                           </div>

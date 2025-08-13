@@ -284,6 +284,10 @@
   - Files: `frontend/src/styles/player/player-variables.css`, `frontend/src/styles/player/player-components.css`, `frontend/src/styles/player/player-animations.css`, `frontend/src/pages/WaitingRoom.jsx`
   - Why: Align player experience with host universal theme system; remove duplicate ad-hoc CSS and use shared tokens/animations
   - Next: Apply same player BEM system to Join page and consolidate any remaining page-specific CSS into player components; create HostLobby BEM pass to share patterns
+ - [x] 2025-08-14: HostLobby shows "player left" lines in terminal when users disconnect
+   - Files: `frontend/src/pages/HostLobby.jsx`, `frontend/src/pages/hostLobby.css`
+   - Why: Improve host awareness of live player changes; mirrors existing playerJoined terminal lines
+   - Next: Persist terminal log with capped length and auto-scroll; unify terminal feed (join/leave/system) with icons
 
 ### Juy 2025
 - [x] **Database Migration** - Updated schema for better performance
