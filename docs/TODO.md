@@ -276,6 +276,7 @@
 - [x] **Player Capacity Bug Fix** - Resolved database schema sync issues
 - [ ] **Dashboard Redesign Planning** - Analyzed current dashboard structure and demo implementations
 - [ ] **Quiz Library Architecture** - Designed component structure for new quiz management system
+ - [x] **Profile Settings Modal - Dashboard Styling Alignment** - Updated ProfileSettingsModal to use universal theme tokens, glassmorphism, BEM classes, and react-icons; added a11y (dialog roles, Escape, initial focus)
 
 ### Juy 2025
 - [x] **Database Migration** - Updated schema for better performance

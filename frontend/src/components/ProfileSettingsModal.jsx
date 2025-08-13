@@ -4,17 +4,17 @@ import { useConfirmation } from '../hooks/useConfirmation';
 import ConfirmationModal from './ConfirmationModal';
 import { apiConfig } from '../utils/apiConfig';
 import { useTimerManager } from '../utils/timerManager';
-import { 
-  Check, 
-  X, 
-  Info, 
-  User, 
-  FolderOpen, 
-  Save, 
-  Trash2, 
-  Clock,
-  Upload 
-} from 'lucide-react';
+import {
+  FaCheck,
+  FaTimes,
+  FaInfoCircle,
+  FaUser,
+  FaFolderOpen,
+  FaSave,
+  FaTrash,
+  FaClock,
+  FaUpload
+} from 'react-icons/fa';
 import './profileSettingsModal.css';
 
 const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
@@ -32,6 +32,8 @@ const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const fileInputRef = useRef(null);
+  const nameInputRef = useRef(null);
+  const dialogRef = useRef(null);
 
   // Update form data and preview when user data changes
   useEffect(() => {
@@ -142,6 +144,17 @@ const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
     }
   };
 
+  // Accessibility: focus the dialog and then the first input when opened
+  useEffect(() => {
+    if (isOpen) {
+      // Focus dialog for immediate keyboard access
+      dialogRef.current?.focus();
+      // Then focus name input slightly later to avoid scroll jumps
+      const t = setTimeout(() => nameInputRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [isOpen]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -240,55 +253,70 @@ const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
 
   return (
     <>
-      <div className="profile-settings-modal-overlay" onClick={onClose}>
-      <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>プロフィール設定</h2>
-          <button className="close-button" onClick={onClose}>×</button>
+      <div
+        className="profile-settings__overlay"
+        onClick={onClose}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        role="presentation"
+      >
+      <div
+        className="profile-settings__dialog tuiz-glass-card tuiz-glass-card--medium tuiz-animate-scale-in"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-settings-title"
+        onClick={(e) => e.stopPropagation()}
+        tabIndex={-1}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        ref={dialogRef}
+      >
+        <div className="profile-settings__header">
+          <h2 id="profile-settings-title" className="profile-settings__title tuiz-text-gradient">プロフィール設定</h2>
+          <button aria-label="閉じる" className="profile-settings__close" onClick={onClose}>×</button>
         </div>
 
         {/* Message Display */}
         {message.text && (
-          <div className={`message-banner ${message.type}`}>
-            <span className="message-icon">
-              {message.type === 'success' ? <Check size={16} /> : message.type === 'error' ? <X size={16} /> : <Info size={16} />}
+          <div className={`profile-settings__banner ${message.type ? `profile-settings__banner--${message.type}` : ''} tuiz-animate-fade-in`}>
+            <span className="profile-settings__banner-icon">
+              {message.type === 'success' ? <FaCheck /> : message.type === 'error' ? <FaTimes /> : <FaInfoCircle />}
             </span>
-            <span className="message-text">{message.text}</span>
-            <button 
-              className="message-close"
+            <span className="profile-settings__banner-text">{message.text}</span>
+            <button
+              className="profile-settings__banner-close"
               onClick={() => setMessage({ type: '', text: '' })}
+              aria-label="メッセージを閉じる"
             >
               ×
             </button>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="profile-form">
+        <form onSubmit={handleSubmit} className="profile-settings__form">
           {/* Avatar Section */}
-          <div className="avatar-section">
-            <h3>プロフィール画像</h3>
-            <div className="avatar-container">
-              <div className="avatar-preview">
+          <div className="profile-settings__section profile-settings__section--avatar">
+            <h3 className="profile-settings__section-title">プロフィール画像</h3>
+            <div className="profile-settings__avatar-container">
+              <div className="profile-settings__avatar-preview">
                 {preview ? (
-                  <img src={preview} alt="プロフィール画像" className="avatar-image" />
+                  <img src={preview} alt="プロフィール画像" className="profile-settings__avatar-image" />
                 ) : (
-                  <div className="avatar-placeholder">
-                    <User size={48} className="avatar-icon" />
+                  <div className="profile-settings__avatar-placeholder">
+                    <FaUser className="profile-settings__avatar-icon" />
                   </div>
                 )}
               </div>
               
-              <div className="avatar-controls">
+              <div className="profile-settings__avatar-controls">
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
                   onChange={handleImageSelect}
-                  className="file-input"
+                  className="profile-settings__file-input"
                   id="avatar-upload"
                 />
-                <label htmlFor="avatar-upload" className="upload-button">
-                  <FolderOpen size={16} /> 画像を選択
+                <label htmlFor="avatar-upload" className="tuiz-button tuiz-button--secondary profile-settings__button">
+                  <FaFolderOpen /> 画像を選択
                 </label>
                 
                 {selectedFile && (
@@ -296,9 +324,9 @@ const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
                     type="button"
                     onClick={handleImageUpload}
                     disabled={uploadingImage}
-                    className="upload-confirm-button"
+                    className="tuiz-button tuiz-button--gradient tuiz-button--sm profile-settings__button"
                   >
-                    {uploadingImage ? <><Clock size={16} /> アップロード中...</> : <><Upload size={16} /> アップロード</>}
+                    {uploadingImage ? <><FaClock /> アップロード中...</> : <><FaUpload /> アップロード</>}
                   </button>
                 )}
                 
@@ -307,25 +335,25 @@ const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
                     type="button"
                     onClick={handleRemoveImage}
                     disabled={uploadingImage}
-                    className="remove-button"
+                    className="tuiz-button tuiz-button--danger tuiz-button--sm profile-settings__button"
                   >
-                    {uploadingImage ? <><Clock size={16} /> 削除中...</> : <><Trash2 size={16} /> 削除</>}
+                    {uploadingImage ? <><FaClock /> 削除中...</> : <><FaTrash /> 削除</>}
                   </button>
                 )}
               </div>
               
-              <p className="file-info">
+              <p className="profile-settings__file-info">
                 JPEG, PNG, WebP形式対応 (最大5MB)
               </p>
             </div>
           </div>
 
           {/* Basic Info Section */}
-          <div className="form-section">
-            <h3>基本情報</h3>
+          <div className="profile-settings__section">
+            <h3 className="profile-settings__section-title">基本情報</h3>
             
-            <div className="form-group">
-              <label htmlFor="name">表示名</label>
+            <div className="profile-settings__group">
+              <label className="profile-settings__label" htmlFor="name">表示名</label>
               <input
                 type="text"
                 id="name"
@@ -334,61 +362,62 @@ const ProfileSettingsModal = ({ isOpen, onClose, onProfileUpdated }) => {
                 onChange={handleInputChange}
                 required
                 maxLength={100}
-                className="form-input"
+                className="profile-settings__input tuiz-input"
+                ref={nameInputRef}
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="email">メールアドレス</label>
+            <div className="profile-settings__group">
+              <label className="profile-settings__label" htmlFor="email">メールアドレス</label>
               <input
                 type="email"
                 id="email"
                 name="email"
                 value={formData.email}
                 disabled
-                className="form-input disabled"
+                className="profile-settings__input tuiz-input"
               />
-              <p className="field-note">メールアドレスは変更できません</p>
+              <p className="profile-settings__note">メールアドレスは変更できません</p>
             </div>
           </div>
 
           {/* Account Info Section */}
-          <div className="form-section">
-            <h3>アカウント情報</h3>
-            <div className="info-grid">
-              <div className="info-item">
-                <span className="info-label">ユーザーID:</span>
-                <span className="info-value">{user?.id}</span>
+          <div className="profile-settings__section">
+            <h3 className="profile-settings__section-title">アカウント情報</h3>
+            <div className="profile-settings__info-grid">
+              <div className="profile-settings__info-item">
+                <span className="profile-settings__info-label">ユーザーID:</span>
+                <span className="profile-settings__info-value">{user?.id}</span>
               </div>
-              <div className="info-item">
-                <span className="info-label">登録日:</span>
-                <span className="info-value">
+              <div className="profile-settings__info-item">
+                <span className="profile-settings__info-label">登録日:</span>
+                <span className="profile-settings__info-value">
                   {user?.created_at ? new Date(user.created_at).toLocaleDateString('ja-JP') : '不明'}
                 </span>
               </div>
-              <div className="info-item">
-                <span className="info-label">役割:</span>
-                <span className="info-value">{user?.role || 'user'}</span>
+              <div className="profile-settings__info-item">
+                <span className="profile-settings__info-label">役割:</span>
+                <span className="profile-settings__info-value">{user?.role || 'user'}</span>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="modal-actions">
+          <div className="profile-settings__actions">
             <button
               type="button"
               onClick={onClose}
-              className="cancel-button"
+              className="tuiz-button tuiz-button--secondary"
               disabled={loading}
             >
               キャンセル
             </button>
             <button
               type="submit"
-              className="save-button"
+              className="tuiz-button tuiz-button--gradient"
               disabled={loading}
             >
-              {loading ? <><Clock size={16} /> 保存中...</> : <><Save size={16} /> 保存</>}
+              {loading ? <><FaClock /> 保存中...</> : <><FaSave /> 保存</>}
             </button>
           </div>
         </form>
