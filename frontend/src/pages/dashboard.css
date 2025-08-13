@@ -5,6 +5,8 @@
 .dashboard {
   min-height: 100vh;
   min-height: 100dvh;
+  /* Use JS-updated --vh to avoid mobile address bar jumps and keep KPI footer at bottom */
+  min-height: calc(var(--vh, 1vh) * 100);
   width: 100%;
   background: var(--tuiz-gradient-primary);
   color: var(--tuiz-white);
@@ -21,6 +23,8 @@
 .dashboard__wrapper {
   min-height: 100vh;
   min-height: 100dvh;
+  min-height: calc(var(--vh, 1vh) * 100);
+  flex: 1; /* Fill parent so footer can anchor with margin-top:auto */
   display: flex;
   flex-direction: column;
   max-width: 1400px;
@@ -524,6 +528,20 @@
   display: flex;
   gap: var(--tuiz-space-6);
   padding-bottom: var(--tuiz-space-2);
+}
+
+/* Tighter card sizing inside horizontal scrollers to prevent overly tall cards on mobile */
+.dashboard__horizontal-scroll-content .dashboard__quiz-card,
+.dashboard__horizontal-scroll-content .dashboard__draft-card {
+  width: 320px;
+  min-width: 320px;
+  max-width: 320px;
+}
+
+.dashboard__horizontal-scroll-content .dashboard__quiz-card-thumbnail,
+.dashboard__horizontal-scroll-content .dashboard__draft-card-thumbnail {
+  aspect-ratio: 16 / 9;
+  height: auto;
 }
 
 /* ===== DRAFT CARD ELEMENT ===== */
@@ -1121,14 +1139,16 @@
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 768px) {
   .dashboard {
-    min-height: 100vh;
-    min-height: 100svh;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: calc(var(--vh, 1vh) * 100);
     overflow-x: hidden;
   }
   
   .dashboard__wrapper {
-    min-height: 100vh;
-    min-height: 100svh;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: calc(var(--vh, 1vh) * 100);
   }
   
   .dashboard__header {
@@ -1177,6 +1197,7 @@
   .dashboard__main {
     padding: var(--tuiz-space-6) var(--tuiz-space-4);
     gap: var(--tuiz-space-8);
+  flex: 0 0 auto; /* Don't consume free space so KPI can sit at bottom */
   }
 
   .dashboard__action-grid {
@@ -1220,11 +1241,30 @@
     gap: var(--tuiz-space-4);
   }
 
+  /* Prevent content container from eating vertical free space on mobile */
+  .dashboard__content {
+    flex: 0 0 auto;
+  }
+
   .dashboard__quiz-card,
   .dashboard__draft-card {
     min-width: unset;
     max-width: unset;
     width: 100%;
+  }
+
+  /* Inside horizontal scrollers, keep compact width to avoid tall cards */
+  .dashboard__horizontal-scroll-content .dashboard__quiz-card,
+  .dashboard__horizontal-scroll-content .dashboard__draft-card {
+    width: 300px;
+    min-width: 300px;
+    max-width: 300px;
+  }
+
+  .dashboard__horizontal-scroll-content .dashboard__quiz-card-thumbnail,
+  .dashboard__horizontal-scroll-content .dashboard__draft-card-thumbnail {
+    aspect-ratio: 16 / 9;
+    height: auto;
   }
 
   .dashboard__stats-grid {
@@ -1240,15 +1280,17 @@
 
 @media (max-width: 480px) {
   .dashboard {
-    min-height: 100vh;
-    min-height: 100svh;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: calc(var(--vh, 1vh) * 100);
     width: 100vw;
     overflow-x: hidden;
   }
   
   .dashboard__wrapper {
-    min-height: 100vh;
-    min-height: 100svh;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: calc(var(--vh, 1vh) * 100);
     width: 100%;
   }
 
@@ -1293,6 +1335,31 @@
   .dashboard__button {
     width: 100%;
     justify-content: center;
+  }
+
+  /* But keep actions inline and buttons auto-width inside horizontal scrollers to keep cards short */
+  .dashboard__horizontal-scroll-content .dashboard__quiz-card-actions,
+  .dashboard__horizontal-scroll-content .dashboard__draft-card-actions {
+    flex-direction: row;
+  }
+  .dashboard__horizontal-scroll-content .dashboard__button {
+    width: auto;
+    justify-content: center;
+  }
+
+  /* Reduce card width a bit more for small phones */
+  .dashboard__horizontal-scroll-content .dashboard__quiz-card,
+  .dashboard__horizontal-scroll-content .dashboard__draft-card {
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+  }
+
+  /* Tighten description lines to avoid long cards */
+  .dashboard__quiz-card-description,
+  .dashboard__draft-card-description {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
 
   .dashboard__stats-grid {
@@ -1341,11 +1408,11 @@
 /* ===== iOS SPECIFIC FIXES ===== */
 @supports (-webkit-touch-callout: none) {
   .dashboard {
-    min-height: -webkit-fill-available;
+    min-height: calc(var(--vh, 1vh) * 100);
   }
   
   .dashboard__wrapper {
-    min-height: -webkit-fill-available;
+    min-height: calc(var(--vh, 1vh) * 100);
   }
 }
 

@@ -35,9 +35,10 @@ class ViewportFix {
     
     // Set CSS custom property
     document.documentElement.style.setProperty('--vh', `${vh}px`);
+  document.body.style.minHeight = `calc(var(--vh, 1vh) * 100)`;
     
     // Apply to specific elements that need full height
-    const pageContainers = document.querySelectorAll('.tuiz-page-container, .auth, .home');
+  const pageContainers = document.querySelectorAll('.tuiz-page-container, .auth, .home, .dashboard, .dashboard__wrapper');
     pageContainers.forEach(container => {
       container.style.minHeight = `calc(var(--vh, 1vh) * 100)`;
       container.style.height = `calc(var(--vh, 1vh) * 100)`;
