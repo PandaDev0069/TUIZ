@@ -643,6 +643,9 @@
 
 /* ===== QUIZ CARD ELEMENT ===== */
 .dashboard__quiz-card {
+  min-width: 340px;
+  max-width: 340px;
+  width: 340px;
   background: var(--tuiz-glass-light);
   border-radius: var(--tuiz-radius-2xl);
   padding: var(--tuiz-space-6);

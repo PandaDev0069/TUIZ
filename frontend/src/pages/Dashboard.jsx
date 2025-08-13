@@ -659,18 +659,20 @@ const Dashboard = () => {
                   )}
                 </div>
               ) : (
-                <div className="dashboard__quizzes-grid">
-                  {filteredQuizzes.map((quiz) => (
-                    <QuizCard
-                      key={quiz.id}
-                      quiz={quiz}
-                      onEdit={handleEditQuiz}
-                      onStart={handleStartQuiz}
-                      onDelete={handleDeleteQuiz}
-                      isDeleting={deleting}
-                      deletingQuizId={deletingQuizId}
-                    />
-                  ))}
+                <div className="dashboard__horizontal-scroll">
+                  <div className="dashboard__horizontal-scroll-content">
+                    {filteredQuizzes.map((quiz) => (
+                      <QuizCard
+                        key={quiz.id}
+                        quiz={quiz}
+                        onEdit={handleEditQuiz}
+                        onStart={handleStartQuiz}
+                        onDelete={handleDeleteQuiz}
+                        isDeleting={deleting}
+                        deletingQuizId={deletingQuizId}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </section>
