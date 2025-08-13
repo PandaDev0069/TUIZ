@@ -287,6 +287,10 @@
    - Files: `frontend/src/pages/HostLobby.jsx`, `frontend/src/pages/hostLobby.css`
    - Why: Improve host awareness of live player changes; mirrors existing playerJoined terminal lines
    - Next: Persist terminal log with capped length and auto-scroll; unify terminal feed (join/leave/system) with icons
+ - [x] 2025-08-14: HostLobby terminal UX upgrade (filter/sort/group, badges, icons, durations, export, context menu, resizable, live list)
+   - Files: `frontend/src/pages/HostLobby.jsx`, `frontend/src/pages/hostLobby.css`
+   - Why: Faster operator flow and better readability; adds kick/reconnect UI hooks and CSV export
+   - Next: Wire kick/reconnect to backend events if not present; add capped log size (e.g., 500 entries) and auto-scroll to latest; i18n wrap remaining strings
 
 ## ⏸️ Deferred / Backlog
 - [ ] Universal dotted background utility (deferred 2025-08-14)
