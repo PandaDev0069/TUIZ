@@ -292,6 +292,11 @@
    - Why: Faster operator flow and better readability; adds kick/reconnect UI hooks and CSV export
    - Next: Wire kick/reconnect to backend events if not present; add capped log size (e.g., 500 entries) and auto-scroll to latest; i18n wrap remaining strings
 
+ - [x] 2025-08-14: Remove kick/re-join feature from frontend
+   - Files: `frontend/src/pages/HostLobby.jsx`, `frontend/src/pages/WaitingRoom.jsx`
+   - Why: Product decision to simplify lobby controls and avoid partial backend dependency
+   - Notes: Removed context menu and emitKick/emitReconnect in HostLobby; removed kicked/rejoin UI and socket listeners in WaitingRoom. Backend endpoints left untouched for backward compatibility.
+
 ## ⏸️ Deferred / Backlog
 - [ ] Universal dotted background utility (deferred 2025-08-14)
   - Status: Deferred to avoid scope creep; keep current page-specific pattern.

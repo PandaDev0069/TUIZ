@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import socket from '../socket'
 import GameSettingsPanel from '../components/GameSettingsPanel'
@@ -13,17 +13,12 @@ function HostLobby() {
   const [connectedMap, setConnectedMap] = useState(new Map())
   const [showSettings, setShowSettings] = useState(false)
   const [playerAnimations, setPlayerAnimations] = useState(new Set())
-  // Unified event log: { type: 'join' | 'left' | 'kick' | 'error', name: string, time: number }
+  // Unified event log: { type: 'join' | 'left' | 'error' | 'info', name: string, time: number }
   const [logs, setLogs] = useState([])
   const [filterText, setFilterText] = useState('')
   const [groupBy, setGroupBy] = useState('chrono') // 'chrono' | 'status' | 'player'
   const [sortOrder, setSortOrder] = useState('desc') // 'desc' | 'asc'
-  const [menu, setMenu] = useState({ open: false, x: 0, y: 0, name: null, connected: false })
   const [nowTick, setNowTick] = useState(Date.now())
-  const menuRef = useRef(null)
-  // Kick/Allow rejoin logic
-  const [kickedSet, setKickedSet] = useState(new Set())
-  const autoKickCooldownRef = useRef(new Map()) // name -> last auto kick timestamp
 
   // Debug logging - only in development
   if (import.meta.env.DEV) {
@@ -41,17 +36,6 @@ function HostLobby() {
     socket.on('playerJoined', ({ player, totalPlayers }) => {
       if (import.meta.env.DEV) {
         console.log('New player joined:', player);
-      }
-      // If player is in kicked list, auto-kick (block rejoin) unless host allowed via Reconnect
-      if (kickedSet.has(player.name)) {
-        const now = Date.now();
-        const last = autoKickCooldownRef.current.get(player.name) || 0;
-        if (now - last > 3000) { // throttle auto-kicks to every 3s
-          autoKickCooldownRef.current.set(player.name, now);
-          try { socket.emit('kickPlayer', { gameCode: room, playerName: player.name }); } catch {}
-          setLogs(prev => [...prev, { type: 'kick', name: player.name, time: now }]);
-        }
-        return; // don't register as connected
       }
       // Get updated player list from the game
       const joinedAt = Date.now();
@@ -124,25 +108,7 @@ function HostLobby() {
     return () => clearInterval(id);
   }, [])
 
-  // Close context menu on outside click or escape
-  useEffect(() => {
-    function handleDocClick(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenu(m => ({ ...m, open: false }));
-      }
-    }
-    function handleEsc(e) {
-      if (e.key === 'Escape') setMenu(m => ({ ...m, open: false }));
-    }
-    if (menu.open) {
-      document.addEventListener('mousedown', handleDocClick);
-      document.addEventListener('keydown', handleEsc);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleDocClick);
-      document.removeEventListener('keydown', handleEsc);
-    };
-  }, [menu.open])
+  // Context menu removed (kick/rejoin disabled)
 
   const handleStart = () => {
     socket.emit('startGame', { gameCode: room });
@@ -173,46 +139,7 @@ function HostLobby() {
     setShowSettings(false);
   }
 
-  const handlePlayerNameClick = (e, name) => {
-    e.preventDefault();
-    const rect = e.currentTarget.getBoundingClientRect();
-    setMenu({
-      open: true,
-      x: rect.left,
-      y: rect.bottom + window.scrollY,
-      name,
-      connected: connectedMap.has(name)
-    });
-  }
-
-  const emitKick = (name) => {
-    try {
-      socket.emit('kickPlayer', { gameCode: room, playerName: name });
-      setLogs(prev => [...prev, { type: 'kick', name, time: Date.now() }]);
-  setKickedSet(prev => new Set(prev).add(name));
-    } catch (err) {
-      console.warn('kickPlayer unsupported:', err);
-      setLogs(prev => [...prev, { type: 'error', name, time: Date.now() }]);
-    } finally {
-      setMenu(m => ({ ...m, open: false }));
-    }
-  }
-
-  const emitReconnect = (name) => {
-    try {
-      socket.emit('requestReconnect', { gameCode: room, playerName: name });
-      setLogs(prev => [...prev, { type: 'info', name, time: Date.now() }]);
-      setKickedSet(prev => {
-        const next = new Set(prev);
-        next.delete(name);
-        return next;
-      });
-    } catch (err) {
-      console.warn('requestReconnect unsupported:', err);
-    } finally {
-      setMenu(m => ({ ...m, open: false }));
-    }
-  }
+  // Player name actions removed
 
   const connectedCount = connectedMap.size
   const disconnectedCount = useMemo(() => logs.filter(l => l.type === 'left').length, [logs])
@@ -238,14 +165,13 @@ function HostLobby() {
   const renderLogLine = (entry, index) => {
     const isJoin = entry.type === 'join'
     const isLeft = entry.type === 'left'
-    const isKick = entry.type === 'kick'
+  // kick entries removed
     const isError = entry.type === 'error'
     const isInfo = entry.type === 'info'
     const classes = [
       'host-terminal-line',
       isJoin ? 'host-terminal-line--join' : '',
       isLeft ? 'host-terminal-line--left' : '',
-      isKick ? 'host-terminal-line--kick' : '',
       isError ? 'host-terminal-line--error' : '',
       isInfo ? 'host-terminal-line--info' : ''
     ].filter(Boolean).join(' ')
@@ -257,20 +183,13 @@ function HostLobby() {
         <span className="host-terminal-line__icon" aria-hidden>
           {isJoin && <FaUserPlus />}
           {isLeft && <FaUserMinus />}
-          {isKick && <FaUserMinus />}
         </span>
         <span className="host-terminal-line__command">
-          {isJoin ? 'player_join' : isLeft ? 'player_left' : isKick ? 'player_kick' : 'info'}
+          {isJoin ? 'player_join' : isLeft ? 'player_left' : isInfo ? 'info' : 'info'}
         </span>
-        <button
-          className="host-terminal-line__player"
-          onClick={(e) => handlePlayerNameClick(e, entry.name)}
-          title="アクション"
-        >
-          {entry.name}
-        </button>
-        <span className={`host-terminal-line__status ${isLeft || isKick ? 'host-terminal-line__status--left' : ''}`}>
-          {isLeft || isKick ? '✖ disconnected' : '✔ connected'}
+  <span className="host-terminal-line__player" title="player">{entry.name}</span>
+        <span className={`host-terminal-line__status ${isLeft ? 'host-terminal-line__status--left' : ''}`}>
+          {isLeft ? '✖ disconnected' : '✔ connected'}
         </span>
         <span className="host-terminal-line__time">{formatTime(entry.time)}</span>
     {isJoin && isCurrentlyConnected && (
@@ -288,7 +207,7 @@ function HostLobby() {
     }
     if (groupBy === 'status') {
       const joins = filteredLogs.filter(l => l.type === 'join')
-      const leaves = filteredLogs.filter(l => l.type === 'left' || l.type === 'kick')
+  const leaves = filteredLogs.filter(l => l.type === 'left')
       return (
         <div className="host-terminal-content">
           <div className="host-terminal-group">
@@ -296,7 +215,7 @@ function HostLobby() {
             {joins.map(renderLogLine)}
           </div>
           <div className="host-terminal-group">
-            <div className="host-terminal-group__title">✖ 切断/キック</div>
+            <div className="host-terminal-group__title">✖ 切断</div>
             {leaves.map(renderLogLine)}
           </div>
         </div>
@@ -479,7 +398,7 @@ function HostLobby() {
               <ul className="host-live-card__list">
                 {Array.from(connectedMap.values()).map(({ name, joinedAt }) => (
                   <li key={`live-${name}`} className="host-live-card__item">
-                    <button className="host-live-card__name" onClick={(e) => handlePlayerNameClick(e, name)}>{name}</button>
+                    <span className="host-live-card__name">{name}</span>
                     <span className="host-live-card__duration">⏱ {formatDuration(nowTick - joinedAt)}</span>
                   </li>
                 ))}
@@ -582,18 +501,7 @@ function HostLobby() {
         </div>
       )}
 
-      {/* Context Menu */}
-      {menu.open && (
-        <div
-          ref={menuRef}
-          className="host-context-menu"
-          role="menu"
-          style={{ left: menu.x, top: menu.y }}
-        >
-          <button className="host-context-menu__item" role="menuitem" onClick={() => emitKick(menu.name)}>👢 キック</button>
-          <button className="host-context-menu__item" role="menuitem" onClick={() => emitReconnect(menu.name)}>🔁 再接続リクエスト</button>
-        </div>
-      )}
+  {/* Context menu removed */}
     </div>
   )
 }
