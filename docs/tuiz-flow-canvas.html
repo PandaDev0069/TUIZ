@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TUIZ Game Session – Flow Canvas (Enhanced v2)</title>
+  <style>
+    :root{
+      --bg:#0b1220;         /* deep navy */
+      --panel:#111a2e;      /* card bg */
+      --ink:#e6eefc;        /* primary text */
+      --muted:#9db0d3;      /* secondary text */
+      --accent:#67e8f9;     /* cyan */
+      --accent2:#a78bfa;    /* violet */
+      --good:#34d399;       /* green */
+      --warn:#fbbf24;       /* amber */
+      --danger:#fb7185;     /* rose */
+      --edge:#2a3a60;       /* divider */
+    }
+    html,body{height:100%}
+    body{
+      margin:0; background:linear-gradient(180deg,#0b1220 0%, #0e1630 100%);
+      color:var(--ink); font:500 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    }
+    .wrap{max-width:1200px; margin:32px auto; padding:0 16px 120px}
+    header{display:flex; align-items:center; gap:12px; margin-bottom:20px}
+    .badge{padding:.25rem .5rem; border:1px solid var(--edge); border-radius:999px; color:var(--muted)}
+    h1{font-size:28px; letter-spacing:.3px; margin:0}
+    h2{font-size:18px; color:var(--muted); margin:8px 0 18px}
+
+    .panel{background:var(--panel); border:1px solid var(--edge); border-radius:20px; padding:18px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .grid{display:grid; gap:16px}
+
+    .section{margin-top:22px}
+    .section h3{margin:0 0 12px; font-size:16px; font-weight:700; color:var(--ink)}
+    .hint{color:var(--muted); font-size:13px; margin:6px 0 16px}
+
+    /* Node styles (used in SVG via foreignObject or mirrored in HTML key) */
+    .node{fill:#0f1a33; stroke:#2a3a60; stroke-width:1;}
+    .node-label{font:600 13px Inter, system-ui; fill:#e6eefc}
+
+    /* Legend cards */
+    .legend{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px}
+    .legend .pill{border:1px solid var(--edge); background:#0f1a33; color:var(--muted); padding:6px 10px; border-radius:999px; font-size:12px}
+
+    /* Swimlanes table */
+    .swim{display:grid; grid-template-columns:130px 1fr; gap:0; border:1px solid var(--edge); border-radius:16px; overflow:hidden}
+    .swim .lane{background:#0c1428; border-bottom:1px solid var(--edge);}
+    .swim .lane h4{margin:0; padding:10px 12px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em}
+    .swim .canvas{background:#0a1326}
+    .toolbar{display:flex; gap:10px; margin:8px 0 0; flex-wrap:wrap}
+    .toolbar button{background:#0f1a33; color:var(--ink); border:1px solid var(--edge); padding:6px 10px; border-radius:10px; cursor:pointer}
+    .toolbar button:hover{border-color:#3c4f82}
+
+    /* Mini simulator */
+    .sim-card{display:grid; grid-template-columns:1.2fr .8fr; gap:12px; align-items:center}
+    .question{background:#0e1833; border:1px solid var(--edge); border-radius:14px; padding:12px}
+    .answers{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+    .ans{display:flex; align-items:center; gap:8px; padding:12px; border:1px solid var(--edge); border-radius:12px; background:#0d1730; cursor:pointer; user-select:none}
+    .ans .shape{width:12px; height:12px; border-radius:3px; background:var(--muted)}
+    .ans[data-shape="diamond"] .shape{transform:rotate(45deg)}
+    .ans[data-shape="triangle"] .shape{clip-path:polygon(50% 0, 0 100%, 100% 100%); border-radius:0}
+    .ans[data-shape="circle"] .shape{border-radius:999px}
+    .ans:hover{outline:1px solid var(--accent)}
+    .ans.locked{opacity:.75; outline:1px dashed var(--accent)}
+    .meter{height:10px; background:#0c1428; border:1px solid var(--edge); border-radius:999px; overflow:hidden}
+    .meter>div{height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .2s linear}
+
+    .podium{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; align-items:end}
+    .podium .p{background:#0e1833; border:1px solid var(--edge); border-radius:12px; padding:8px; text-align:center}
+
+    /* Responsive */
+    @media (max-width:820px){
+      h1{font-size:22px}
+      .wrap{padding-bottom:64px}
+      .sim-card{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="badge">TUIZ</span>
+      <h1>Game Session – Visual Flow Canvas (Enhanced)</h1>
+    </header>
+    <h2>Host ↔ Server ↔ Player lifecycles and key events (HTML/CSS/SVG + tiny JS)</h2>
+
+    <!-- SECTION 0: Theme Controls -->
+    <div class="section panel">
+      <h3>0) Branding & Theme Controls</h3>
+      <div class="hint">Keep TUIZ original: deep navy, cyan/violet accents. Try variants and high‑contrast preview.</div>
+      <div class="toolbar">
+        <button onclick="setTheme('#67e8f9','#a78bfa')">TUIZ Classic</button>
+        <button onclick="setTheme('#22d3ee','#34d399')">Cyan + Green</button>
+        <button onclick="setTheme('#f472b6','#60a5fa')">Pink + Blue</button>
+        <button onclick="toggleContrast()">High‑contrast toggle</button>
+      </div>
+    </div>
+
+    <!-- SECTION 1: Session Lifecycle (High-Level) -->
+    <div class="section panel">
+      <h3>1) Session Lifecycle (High‑Level)</h3>
+      <div class="hint">End‑to‑end flow: Create → Lobby → Question Loop → Reveal → Leaderboard → Final Summary → Export/Close</div>
+      <svg viewBox="0 0 1200 180" width="100%" height="220" aria-label="Lifecycle">
+        <defs>
+          <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <polygon points="0 0, 10 4, 0 8" fill="var(--accent)"/>
+          </marker>
+          <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#17264a"/>
+            <stop offset="100%" stop-color="#111a2e"/>
+          </linearGradient>
+        </defs>
+        
+        <!-- Boxes -->
+        <g>
+          <rect x="20" y="50" rx="14" ry="14" width="150" height="64" fill="url(#grad)" stroke="var(--edge)"/>
+          <text x="95" y="88" text-anchor="middle" class="node-label">Create Session</text>
+
+          <rect x="200" y="50" rx="14" ry="14" width="130" height="64" fill="url(#grad)" stroke="var(--edge)"/>
+          <text x="265" y="88" text-anchor="middle" class="node-label">Lobby</text>
+
+          <rect x="360" y="50" rx="14" ry="14" width="180" height="64" fill="url(#grad)" stroke="var(--edge)"/>
+          <text x="450" y="76" text-anchor="middle" class="node-label">Question Loop</text>
+          <text x="450" y="96" text-anchor="middle" class="node-label" fill="var(--muted)">send → answer → score</text>
+
+          <rect x="570" y="50" rx="14" ry="14" width="160" height="64" fill="url(--grad)" stroke="var(--edge)"/>
+          <text x="650" y="88" text-anchor="middle" class="node-label">Reveal & Explain</text>
+
+          <rect x="760" y="50" rx="14" ry="14" width="150" height="64" fill="url(#grad)" stroke="var(--edge)"/>
+          <text x="835" y="88" text-anchor="middle" class="node-label">Leaderboard</text>
+
+          <rect x="940" y="50" rx="14" ry="14" width="160" height="64" fill="url(#grad)" stroke="var(--edge)"/>
+          <text x="1020" y="76" text-anchor="middle" class="node-label">Final Summary</text>
+          <text x="1020" y="96" text-anchor="middle" class="node-label" fill="var(--muted)">export / close</text>
+        </g>
+
+        <!-- Arrows -->
+        <g stroke="var(--accent)" stroke-width="2.2" marker-end="url(#arrow)">
+          <line x1="170" y1="82" x2="200" y2="82"/>
+          <line x1="330" y1="82" x2="360" y2="82"/>
+          <line x1="540" y1="82" x2="570" y2="82"/>
+          <line x1="730" y1="82" x2="760" y2="82"/>
+          <line x1="910" y1="82" x2="940" y2="82"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- SECTION 2: Swimlane Sequence (Create & Lobby) -->
+    <div class="section panel">
+      <h3>2) Create Session & Lobby – Swimlanes</h3>
+      <div class="legend">
+        <span class="pill">Actors: Host UI • Game Server • DB • Player UI</span>
+        <span class="pill">Key cmds: /kick • /lock • /start • /say</span>
+        <span class="pill">Join UX: QR + 6‑digit code • Ghost late joiners</span>
+      </div>
+      <div class="swim">
+        <div class="lane"><h4>Actors</h4></div>
+        <div class="lane"><h4>Messages</h4></div>
+        <div class="lane"><h4>Host UI</h4></div>
+        <div class="canvas">
+          <svg viewBox="0 0 980 210" width="100%" height="230">
+            <defs>
+              <marker id="arrow2" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                <polygon points="0 0, 10 4, 0 8" fill="var(--accent2)"/>
+              </marker>
+            </defs>
+            <!-- Lifelines -->
+            <g stroke="var(--edge)">
+              <line x1="100" y1="10" x2="100" y2="210" />
+              <line x1="340" y1="10" x2="340" y2="210" />
+              <line x1="580" y1="10" x2="580" y2="210" />
+              <line x1="820" y1="10" x2="820" y2="210" />
+            </g>
+            <g fill="var(--muted)" font-size="12">
+              <text x="100" y="22" text-anchor="middle">Host</text>
+              <text x="340" y="22" text-anchor="middle">Server</text>
+              <text x="580" y="22" text-anchor="middle">DB</text>
+              <text x="820" y="22" text-anchor="middle">Player</text>
+            </g>
+
+            <!-- Messages -->
+            <g stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrow2)">
+              <line x1="100" y1="50" x2="340" y2="50" />
+              <line x1="340" y1="80" x2="580" y2="80" />
+              <line x1="580" y1="110" x2="340" y2="110" />
+              <line x1="340" y1="140" x2="100" y2="140" />
+
+              <line x1="820" y1="170" x2="340" y2="170" />
+              <line x1="340" y1="195" x2="820" y2="195" />
+            </g>
+            <!-- Labels -->
+            <g fill="var(--ink)" font-size="12" font-weight="600">
+              <text x="220" y="44" text-anchor="middle">createSession()</text>
+              <text x="460" y="74" text-anchor="middle">insert session</text>
+              <text x="460" y="104" text-anchor="middle">sessionId + code</text>
+              <text x="220" y="134" text-anchor="middle">sessionCreated</text>
+
+              <text x="580" y="164" text-anchor="end">join({code,name})</text>
+              <text x="580" y="190" text-anchor="start">joined({playerId})</text>
+            </g>
+          </svg>
+        </div>
+        <div class="lane"><h4>Game Server</h4></div>
+        <div class="canvas"></div>
+        <div class="lane"><h4>DB</h4></div>
+        <div class="canvas"></div>
+        <div class="lane"><h4>Player UI</h4></div>
+        <div class="canvas"></div>
+      </div>
+      <div class="toolbar">
+        <button onclick="alert('Lobby tips: Lock joins on start; support /kick, /say, /lock, /start.')">Lobby tips</button>
+        <button onclick="alert('Late-join policy: lock on start OR ghost spectators until next question.')">Late‑join policy</button>
+      </div>
+    </div>
+
+    <!-- SECTION 3: Question Loop (Host & Player perspectives) -->
+    <div class="section panel">
+      <h3>3) Question Loop – Ordered Steps</h3>
+      <div class="hint">Server is the source of truth for timer, scoring, streaks, and leaderboard deltas.</div>
+      <svg viewBox="0 0 1200 450" width="100%" height="480">
+        <defs>
+          <marker id="arrow3" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <polygon points="0 0, 10 4, 0 8" fill="var(--good)"/>
+          </marker>
+        </defs>
+        <!-- Swim headers -->
+        <g fill="var(--muted)" font-size="12">
+          <text x="90" y="30" text-anchor="middle">Host</text>
+          <text x="380" y="30" text-anchor="middle">Server</text>
+          <text x="670" y="30" text-anchor="middle">Players</text>
+          <text x="960" y="30" text-anchor="middle">DB</text>
+        </g>
+        <!-- Vertical lifelines -->
+        <g stroke="var(--edge)">
+          <line x1="90" y1="40" x2="90" y2="440" />
+          <line x1="380" y1="40" x2="380" y2="440" />
+          <line x1="670" y1="40" x2="670" y2="440" />
+          <line x1="960" y1="40" x2="960" y2="440" />
+        </g>
+
+        <!-- Steps -->
+        <g stroke="var(--good)" stroke-width="2" marker-end="url(#arrow3)">
+          <line x1="90"  y1="80"  x2="380" y2="80" />
+          <line x1="380" y1="120" x2="670" y2="120" />
+          <line x1="670" y1="160" x2="380" y2="160" />
+          <line x1="380" y1="200" x2="90"  y2="200" />
+          <line x1="380" y1="240" x2="960" y2="240" />
+          <line x1="380" y1="280" x2="670" y2="280" />
+          <line x1="380" y1="320" x2="670" y2="320" />
+          <line x1="380" y1="360" x2="90"  y2="360" />
+        </g>
+
+        <!-- Labels -->
+        <g fill="var(--ink)" font-size="12" font-weight="600">
+          <text x="235" y="74" text-anchor="middle">startGame / nextQuestion</text>
+          <text x="525" y="114" text-anchor="middle">questionSent({timeLimit})</text>
+          <text x="525" y="154" text-anchor="middle">submitAnswer()</text>
+          <text x="235" y="194" text-anchor="middle">progressUpdate({answered/total})</text>
+          <text x="670" y="234" text-anchor="middle">batch write answers + scores</text>
+          <text x="525" y="274" text-anchor="middle">revealAnswer()</text>
+          <text x="525" y="314" text-anchor="middle">leaderboard(deltas)</text>
+          <text x="235" y="354" text-anchor="middle">next / pause / end</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- SECTION 4: Minimal State Machine -->
+    <div class="section panel">
+      <h3>4) Minimal Server State Machine</h3>
+      <div class="hint">Authoritative phases that gate client behavior.</div>
+      <svg viewBox="0 0 900 260" width="100%" height="280">
+        <defs>
+          <marker id="arrow4" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <polygon points="0 0, 10 4, 0 8" fill="var(--warn)"/>
+          </marker>
+        </defs>
+        <g>
+          <rect x="40" y="90" width="120" height="54" rx="12" fill="#112044" stroke="var(--edge)"/>
+          <text x="100" y="122" text-anchor="middle" class="node-label">LOBBY</text>
+
+          <rect x="220" y="40" width="170" height="54" rx="12" fill="#112044" stroke="var(--edge)"/>
+          <text x="305" y="72" text-anchor="middle" class="node-label">QUESTION_ACTIVE</text>
+
+          <rect x="220" y="150" width="170" height="54" rx="12" fill="#112044" stroke="var(--edge)"/>
+          <text x="305" y="182" text-anchor="middle" class="node-label">ANSWER_LOCKED</text>
+
+          <rect x="430" y="40" width="140" height="54" rx="12" fill="#112044" stroke="var(--edge)"/>
+          <text x="500" y="72" text-anchor="middle" class="node-label">REVEAL</text>
+
+          <rect x="430" y="150" width="170" height="54" rx="12" fill="#112044" stroke="var(--edge)"/>
+          <text x="515" y="182" text-anchor="middle" class="node-label">LEADERBOARD</text>
+
+          <rect x="640" y="95" width="150" height="54" rx="12" fill="#112044" stroke="var(--edge)"/>
+          <text x="715" y="127" text-anchor="middle" class="node-label">FINISHED</text>
+        </g>
+        <g stroke="var(--warn)" stroke-width="2.2" marker-end="url(#arrow4)">
+          <line x1="160" y1="106" x2="220" y2="66" />
+          <line x1="305" y1="94" x2="305" y2="150" />
+          <line x1="390" y1="177" x2="430" y2="177" />
+          <line x1="500" y1="94" x2="500" y2="150" />
+          <line x1="600" y1="177" x2="640" y2="122" />
+          <line x1="600" y1="70"  x2="430" y2="70" />
+        </g>
+        <g fill="var(--muted)" font-size="12">
+          <text x="195" y="58" text-anchor="middle">start</text>
+          <text x="322" y="126" text-anchor="start">timer==0 or allAnswered</text>
+          <text x="462" y="168" text-anchor="start">after reveal</text>
+          <text x="640" y="70" text-anchor="end">nextQuestion</text>
+          <text x="715" y="108" text-anchor="middle">endGame</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- SECTION 5: Quick Reference -->
+    <div class="section panel">
+      <h3>5) Quick Reference – Commands & Events</h3>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge);">
+          <h4 style="margin:8px 0 6px">Host Commands</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>/start, /next, /pause, /resume</li>
+            <li>/kick &lt;playerId&gt;, /lock, /unlock</li>
+            <li>/say "message", /end</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge);">
+          <h4 style="margin:8px 0 6px">Socket Events</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>createSession → sessionCreated</li>
+            <li>join → joined, roster, playerJoined</li>
+            <li>questionSent, submitAnswer → answerAck</li>
+            <li>progressUpdate, revealAnswer</li>
+            <li>leaderboard, finalResults, stateSnapshot</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge);">
+          <h4 style="margin:8px 0 6px">Scoring Hook</h4>
+          <code style="display:block; padding:8px; background:#0b1430; border:1px solid var(--edge); border-radius:10px">
+            score = base + timeBonus + streakBonus
+          </code>
+          <p class="hint" style="margin:8px 0 0">Compute on server at window close; batch write to DB.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 6: Player UX & Visual Identity (Kahoot‑inspired, TUIZ original) -->
+    <div class="section panel">
+      <h3>6) Player UX & Visual Identity</h3>
+      <div class="hint">Fast taps, bold shapes, readable at distance. Shape+color for color‑blind support.</div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Answer Buttons</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Shapes: ◆, ■, ▲, ● (paired with colors)</li>
+            <li>Large tap targets (min 48px) + haptics</li>
+            <li>Tap → lock animation (pulse + ring)</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Timer & Tension</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Circular countdown (player); bar (host)</li>
+            <li>Final 3s: ticks + subtle shake</li>
+            <li>Optional calm mode (reduced motion/audio)</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Reveal Effects</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Correct option glow + confetti</li>
+            <li>Distribution bars by option</li>
+            <li>Top 5 fastest (name, time)</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Streak Meter</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>🔥 meter scales with streak</li>
+            <li>Break animation on miss</li>
+            <li>Bonus preview on lock</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 7: Lobby Enhancements -->
+    <div class="section panel">
+      <h3>7) Lobby Enhancements</h3>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Join UX</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>QR + 6‑digit code</li>
+            <li>One‑tap rejoin via token</li>
+            <li>Nickname rules: profanity filter + unique</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Roster & Teams</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Teams (auto balance or drag‑drop)</li>
+            <li>Avatars/emoji tiles; shuffle</li>
+            <li>Capacity + waitlist</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Host Tools</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>/say "Starts in 10s" banner</li>
+            <li>/lock joins; /ghost spectators</li>
+            <li>Pre‑flight test question (no scoring)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 8: Game Modes -->
+    <div class="section panel">
+      <h3>8) Game Modes (Feature‑flag friendly)</h3>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Classic</h4>
+          <p class="hint">Solo scoring with time + streak bonuses.</p>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Team</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Aggregate top N answers per team</li>
+            <li>Team streaks + cheer meter</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Marathon</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Health (❤️) instead of streaks</li>
+            <li>Regen on correct chain</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Speedrun</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Short timers, heavier time bonus weight</li>
+            <li>Ranked by avg response time</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 9: Reactions & Podium -->
+    <div class="section panel">
+      <h3>9) Reactions, Music Cues & Podium</h3>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Live Reactions</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Quick emoji (rate‑limited)</li>
+            <li>Floating bubbles on host (toggle)</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Audio Cues</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Lobby loop, start sting, final 3s ticks</li>
+            <li>Correct chime, streak level up, podium fanfare</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Podium</h4>
+          <div class="podium">
+            <div class="p" style="height:110px">2nd</div>
+            <div class="p" style="height:140px">1st</div>
+            <div class="p" style="height:90px">3rd</div>
+          </div>
+          <ul style="margin:8px 0 8px 16px; padding:0">
+            <li>Badges: Fastest, Most Accurate, Comeback</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 10: Fairness, Anti‑Cheat, & Resilience -->
+    <div class="section panel">
+      <h3>10) Fairness, Anti‑Cheat, & Resilience</h3>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Fair Timing</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Server clock authoritative; client offset on join</li>
+            <li>Accept answer if &lt; 200ms after close (grace)</li>
+            <li>Anti‑spam: one lock per question per player</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Identity & Abuse</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Rate limit reactions/joins per IP</li>
+            <li>Profanity filter on names; duplicate disambiguation</li>
+            <li>Host banlist for session</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Resilience</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Graceful rejoin with stateSnapshot</li>
+            <li>Offline toast; queue answer if briefly offline</li>
+            <li>Fallback to long‑poll if WS drops</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 11: Accessibility & Internationalization -->
+    <div class="section panel">
+      <h3>11) Accessibility & i18n</h3>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">A11y</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Shape + text labels (not just color)</li>
+            <li>Screen‑reader cues; semantic landmarks</li>
+            <li>Reduced motion & high‑contrast theme</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">i18n (JP‑first)</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>All strings via dictionary; RTL safe</li>
+            <li>Number/time formatting per locale</li>
+            <li>Fonts with JP glyph coverage</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 12: Mini Answer & Timer Simulator -->
+    <div class="section panel">
+      <h3>12) Mini Answer & Timer Simulator</h3>
+      <div class="hint">Try locking an answer while the bar fills; see streak bonus preview copy.</div>
+      <div class="sim-card">
+        <div class="question">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px">
+            <strong>Sample Question:</strong>
+            <div class="meter" style="flex:1"><div id="meterFill"></div></div>
+            <button class="badge" onclick="restartDemo()">Restart</button>
+          </div>
+          <p style="margin:8px 0 12px; color:var(--muted)">Which symbol is the triangle?</p>
+          <div class="answers">
+            <div class="ans" data-shape="diamond" onclick="lock(this)"><span class="shape"></span>◆ Diamond</div>
+            <div class="ans" data-shape="square" onclick="lock(this)"><span class="shape"></span>■ Square</div>
+            <div class="ans" data-shape="triangle" onclick="lock(this)"><span class="shape"></span>▲ Triangle</div>
+            <div class="ans" data-shape="circle" onclick="lock(this)"><span class="shape"></span>● Circle</div>
+          </div>
+          <div id="lockMsg" class="hint" style="margin-top:8px">Tap an option to lock. Bonus preview appears here.</div>
+        </div>
+        <div>
+          <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+            <h4 style="margin:8px 0 6px">Scoring Preview</h4>
+            <ul style="margin:0 0 8px 16px; padding:0">
+              <li>Base: 100</li>
+              <li>Time bonus: scales with remaining %</li>
+              <li>Streak bonus: +15% per streak level (demo)</li>
+            </ul>
+          </div>
+          <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge); margin-top:8px">
+            <h4 style="margin:8px 0 6px">Podium Mock</h4>
+            <div class="podium">
+              <div class="p" style="height:110px">2nd</div>
+              <div class="p" style="height:140px">1st</div>
+              <div class="p" style="height:90px">3rd</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 13: Analytics & Exports -->
+    <div class="section panel">
+      <h3>13) Analytics & Exports</h3>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Live Stats</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>Accuracy per question</li>
+            <li>Median response time</li>
+            <li>Option popularity histogram</li>
+          </ul>
+        </div>
+        <div class="sub panel" style="background:#0f1831; border-radius:14px; border:1px solid var(--edge)">
+          <h4 style="margin:8px 0 6px">Post‑Game</h4>
+          <ul style="margin:0 0 8px 16px; padding:0">
+            <li>CSV/JSON export of answers & scores</li>
+            <li>Player report cards (PDF)</li>
+            <li>Question difficulty ranking</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 14: Build Notes -->
+    <div class="section panel">
+      <h3>14) Implementation Checklist</h3>
+      <ul style="margin:0 0 0 16px; padding:0">
+        <li>[ ] Socket events & state machine implemented</li>
+        <li>[ ] Host terminal commands mapped to server actions</li>
+        <li>[ ] Time & streak bonus formulas wired on server</li>
+        <li>[ ] Rejoin flow with stateSnapshot</li>
+        <li>[ ] Analytics pipeline + CSV/JSON export</li>
+        <li>[ ] A11y & i18n pass (JP strings)</li>
+      </ul>
+    </div>
+
+    <footer style="opacity:.7; margin-top:22px; text-align:center; color:var(--muted)">
+      Built for Panda · Copy into repo as <code>docs/tuiz-flow-v2.html</code>
+    </footer>
+  </div>
+
+  <script>
+    // Theme utils
+    function setTheme(a,b){
+      document.documentElement.style.setProperty('--accent', a);
+      document.documentElement.style.setProperty('--accent2', b);
+    }
+    function toggleContrast(){
+      document.body.style.transition='filter .3s';
+      document.body.style.filter = document.body.style.filter ? '' : 'grayscale(1) contrast(1.1)';
+    }
+
+    // Mini Simulator
+    let meter=0, timerId=null, locked=false;
+    const fillEl = () => document.getElementById('meterFill');
+    const msgEl = () => document.getElementById('lockMsg');
+
+    function tick(){
+      if(locked) return;
+      meter = Math.min(100, meter + 1.25); // ~8s full
+      fillEl().style.width = meter + '%';
+      if(meter < 100) timerId = requestAnimationFrame(tick);
+    }
+    function restartDemo(){
+      locked=false; meter=0; fillEl().style.width='0%';
+      msgEl().textContent='Tap an option to lock. Bonus preview appears here.';
+      document.querySelectorAll('.ans').forEach(a=>a.classList.remove('locked'));
+      cancelAnimationFrame(timerId); requestAnimationFrame(tick);
+    }
+    function lock(el){
+      if(locked) return; locked=true;
+      el.classList.add('locked');
+      const timePct = 1 - (meter/100);
+      const base=100; const timeBonus=Math.round(base * 0.5 * timePct); // up to +50
+      const streakLvl=2; // demo constant
+      const streakBonus=Math.round(base * 0.15 * streakLvl);
+      const total=base + timeBonus + streakBonus;
+      msgEl().textContent = `Locked! Base 100 + Time ${timeBonus} + Streak ${streakBonus} = ${total}`;
+    }
+    // start on load
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>

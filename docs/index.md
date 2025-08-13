@@ -47,6 +47,11 @@ Welcome to the **TUIZ Real-time Quiz Application** documentation portal.
     <h3>🗃️ <a href="./database/">Database</a></h3>
     <p>Schemas, migrations, and deployment guides</p>
   </div>
+  
+  <div class="doc-card">
+    <h3>🎮 <a href="./tuiz-flow-canvas.html">Game Flow Canvas</a></h3>
+    <p>Interactive visual guide to game session lifecycles and architecture</p>
+  </div>
 </div>
 
 ## 🎯 Project Status
