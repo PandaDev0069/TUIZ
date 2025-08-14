@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "node test/test-db.js",
+    "test": "node test/testPlayerManagement.js",
     "start": "node server.js",
     "dev": "nodemon server.js",
     "start:supabase": "node server_supabase.js"
