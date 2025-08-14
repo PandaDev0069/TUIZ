@@ -14,18 +14,18 @@ const db = new DatabaseManager();
 // Get all active games
 router.get('/active', RateLimitMiddleware.createReadLimit(), async (req, res) => {
   try {
-    const rooms = roomManager.getAllRooms();
-    const activeGames = Object.values(rooms).map(room => ({
+    const roomsMap = roomManager.getAllRoomsMap();
+    const activeGames = Array.from(roomsMap.values()).map(room => ({
       gameId: room.gameId,
       hostName: room.hostName,
-      playerCount: Object.keys(room.players).length,
+      playerCount: room.players.size,
       status: room.status,
       questionSetId: room.questionSetId,
       currentQuestion: room.currentQuestionIndex,
       totalQuestions: room.questions?.length || 0,
       createdAt: room.createdAt
     }));
-    
+
     res.json({ activeGames });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -47,8 +47,8 @@ router.get('/:gameId', async (req, res) => {
       gameId: room.gameId,
       hostName: room.hostName,
       status: room.status,
-      playerCount: Object.keys(room.players).length,
-      players: Object.values(room.players).map(player => ({
+      playerCount: room.players.size,
+      players: Array.from(room.players.values()).map(player => ({
         id: player.id,
         name: player.name,
         score: player.score,
@@ -153,7 +153,7 @@ router.get('/:gameId/stats', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
     
-    const players = Object.values(room.players);
+    const players = Array.from(room.players.values());
     const stats = {
       totalPlayers: players.length,
       averageScore: players.length > 0 
