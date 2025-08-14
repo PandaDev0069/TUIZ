@@ -339,20 +339,22 @@
 
 .host-group-sort {
   display: flex;
-  gap: var(--host-space-2);
+  gap: var(--host-space-3);
   align-items: center;
+  flex-wrap: nowrap;
 }
 .host-select {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   background: var(--host-gray-800);
   border: 1px solid var(--host-gray-700);
   border-radius: var(--host-radius-lg);
-  padding: 4px 8px 4px 10px;
+  padding: 6px 10px;
   color: var(--host-white);
   font-size: var(--host-font-size-sm);
+  min-width: 80px;
 }
 .host-select select {
   background: transparent;
@@ -370,6 +372,109 @@
   position: absolute;
   right: 8px;
   color: var(--host-gray-400);
+}
+
+/* CustomDropdown integration for terminal */
+.host-select__dropdown.tuiz-dropdown {
+  min-width: 100px;
+  width: auto;
+  position: relative;
+}
+
+.host-select__dropdown .tuiz-dropdown__trigger {
+  background: transparent;
+  border: none;
+  color: var(--host-white);
+  padding: 4px 6px;
+  font-size: var(--host-font-size-sm);
+  gap: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  width: 100%;
+  white-space: nowrap;
+  border-radius: var(--host-radius-sm);
+  transition: background-color var(--host-transition-fast);
+}
+
+.host-select__dropdown .tuiz-dropdown__trigger:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.host-select__dropdown .tuiz-dropdown__trigger--active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.host-select__dropdown .tuiz-dropdown__text {
+  color: var(--host-white);
+  font-size: var(--host-font-size-sm);
+  font-weight: var(--host-font-weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  text-align: left;
+}
+
+.host-select__dropdown .tuiz-dropdown__icon {
+  color: var(--host-gray-400);
+  font-size: 12px;
+  transition: transform var(--host-transition-fast);
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.host-select__dropdown .tuiz-dropdown__trigger--active .tuiz-dropdown__icon {
+  transform: rotate(180deg);
+}
+
+.host-select__dropdown .tuiz-dropdown__menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--host-gray-800);
+  border: 1px solid var(--host-gray-700);
+  border-radius: var(--host-radius-lg);
+  box-shadow: var(--host-shadow-lg);
+  padding: 4px;
+  margin-top: 2px;
+  min-width: 100px;
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.host-select__dropdown .tuiz-dropdown__menu--hidden {
+  display: none;
+}
+
+.host-select__dropdown .tuiz-dropdown__option {
+  padding: 8px 12px;
+  color: var(--host-white);
+  font-size: var(--host-font-size-sm);
+  border-radius: var(--host-radius-sm);
+  cursor: pointer;
+  transition: background-color var(--host-transition-fast);
+  white-space: nowrap;
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+.host-select__dropdown .tuiz-dropdown__option:hover {
+  background: var(--host-gray-700);
+}
+
+.host-select__dropdown .tuiz-dropdown__option--selected {
+  background: var(--host-primary);
+  color: var(--host-white);
+}
+
+.host-select__dropdown .tuiz-dropdown__option--selected:hover {
+  background: var(--host-primary);
 }
 
 /* Terminal Empty State */

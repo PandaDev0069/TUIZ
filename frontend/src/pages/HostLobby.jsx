@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import socket from '../socket'
 import GameSettingsPanel from '../components/GameSettingsPanel'
+import CustomDropdown from '../components/ui/CustomDropdown'
 import { FaRocket, FaUserPlus, FaUserMinus, FaSearch, FaChevronDown, FaDownload } from 'react-icons/fa'
 import './hostLobby.css'
 
@@ -325,23 +326,35 @@ function HostLobby() {
                         />
                       </div>
                       <div className="host-group-sort">
-                        <label className="host-select">
+                        <div className="host-select">
                           <span className="host-select__label">表示</span>
-                          <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)} aria-label="表示">
-                            <option value="chrono">時系列</option>
-                            <option value="status">状態</option>
-                            <option value="player">プレイヤー</option>
-                          </select>
-                          <FaChevronDown aria-hidden className="host-select__icon" />
-                        </label>
-                        <label className="host-select">
+                          <CustomDropdown
+                            value={groupBy}
+                            onChange={setGroupBy}
+                            options={[
+                              { value: 'chrono', label: '時系列' },
+                              { value: 'status', label: '状態' },
+                              { value: 'player', label: 'プレイヤー' }
+                            ]}
+                            placeholder="表示"
+                            icon={FaChevronDown}
+                            className="host-select__dropdown"
+                          />
+                        </div>
+                        <div className="host-select">
                           <span className="host-select__label">ソート</span>
-                          <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} aria-label="ソート">
-                            <option value="desc">新→旧</option>
-                            <option value="asc">旧→新</option>
-                          </select>
-                          <FaChevronDown aria-hidden className="host-select__icon" />
-                        </label>
+                          <CustomDropdown
+                            value={sortOrder}
+                            onChange={setSortOrder}
+                            options={[
+                              { value: 'desc', label: '新→旧' },
+                              { value: 'asc', label: '旧→新' }
+                            ]}
+                            placeholder="ソート"
+                            icon={FaChevronDown}
+                            className="host-select__dropdown"
+                          />
+                        </div>
                         <button className="host-button host-button--small" onClick={handleExport} title="ログをエクスポート">
                           <FaDownload className="host-button__icon" /> エクスポート
                         </button>
