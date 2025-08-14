@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const DatabaseManager = require('../../config/database');
 const AuthMiddleware = require('../../middleware/auth');
+const { getAuthenticatedUser } = require('../../helpers/authHelper');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -550,8 +551,12 @@ router.put('/question/:id/reorder', async (req, res) => {
     const { answerOrder } = req.body; // Array of answer IDs in desired order
     
     // Get authenticated user and verify ownership
-    const authenticatedUser = await getAuthenticatedUser(req, res);
-    if (!authenticatedUser) return;
+    let authenticatedUser;
+    try {
+      authenticatedUser = await getAuthenticatedUser(req.headers.authorization);
+    } catch (authError) {
+      return res.status(401).json({ error: authError.message });
+    }
     
     // Verify user owns the question (through question set)
     const { data: questionData, error: questionError } = await db.supabaseAdmin
