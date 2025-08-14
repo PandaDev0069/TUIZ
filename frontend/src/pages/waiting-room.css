@@ -6,7 +6,7 @@
 /* Root page adjustments */
 .waiting-room .player-card {
   /* Slightly larger max width for lobby info */
-  width: min(740px, 94vw);
+  width: min(740px, 92vw);
 }
 
 /* Title fine-tuning */
@@ -64,4 +64,6 @@
 
 @media (max-width: 480px) {
   .waiting-room .preload { padding: 12px; }
+  /* Ensure comfortable side gutters on very small screens */
+  .waiting-room .player-card { width: 90vw; margin-inline: auto; }
 }
