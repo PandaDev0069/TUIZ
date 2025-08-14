@@ -102,7 +102,7 @@ function Quiz() {
       // Set explanation timer
       const explainTimer = Math.round(data.explanationTime / 1000) || 30;
       setExplanationTimer(explainTimer);
-      setInitialExplanationDuration(explainTimer); // Store the original duration
+      setInitialExplanationDuration(data.explanationTime); // Store in milliseconds (backend already converted)
       
       // Store the game's explanation time setting for use in leaderboard displays
       setGameExplanationTime(explainTimer);
@@ -202,8 +202,8 @@ function Quiz() {
         ...leaderboardData 
       });
       setShowExplanation(true);
-      setExplanationTimer(data.explanationTime); // Use explanation time from server
-      setInitialExplanationDuration(data.explanationTime); // Store the original duration
+      setExplanationTimer(data.explanationTime / 1000); // Convert to seconds for display
+      setInitialExplanationDuration(data.explanationTime); // Store in milliseconds (backend already converted)
     });
 
     // Handle game over
@@ -363,8 +363,8 @@ function Quiz() {
         isIntermediate: explanationData.isIntermediate || false
       },
       
-      // Duration for timer - USE INITIAL DURATION, not current timer
-      duration: initialExplanationDuration * 1000
+      // Duration for timer - USE DURATION AS-IS (backend already in milliseconds)
+      duration: initialExplanationDuration
     };
 
     if (import.meta.env.DEV) {
