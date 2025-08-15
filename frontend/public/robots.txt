@@ -14,4 +14,3 @@ Allow: /login
 Allow: /register
 Allow: /dashboard
 Allow: /join
-Allow: /host
