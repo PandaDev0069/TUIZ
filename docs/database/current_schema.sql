@@ -14,6 +14,16 @@ CREATE TABLE public.answers (
   CONSTRAINT answers_pkey PRIMARY KEY (id),
   CONSTRAINT answers_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.questions(id)
 );
+CREATE TABLE public.game_analytics_snapshots (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  game_id uuid NOT NULL,
+  snapshot_type text NOT NULL CHECK (snapshot_type = ANY (ARRAY['question_start'::text, 'question_end'::text, 'game_pause'::text, 'game_resume'::text, 'player_action'::text])),
+  question_number integer,
+  snapshot_data jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT game_analytics_snapshots_pkey PRIMARY KEY (id),
+  CONSTRAINT game_analytics_snapshots_game_id_fkey FOREIGN KEY (game_id) REFERENCES public.games(id)
+);
 CREATE TABLE public.game_players (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   game_id uuid NOT NULL,
@@ -52,7 +62,7 @@ CREATE TABLE public.games (
   question_set_id uuid NOT NULL,
   game_code character varying NOT NULL UNIQUE,
   current_players integer DEFAULT 0 CHECK (current_players >= 0),
-  status character varying DEFAULT 'waiting'::character varying CHECK (status::text = ANY (ARRAY['waiting'::character varying, 'active'::character varying, 'paused'::character varying, 'finished'::character varying, 'cancelled'::character varying]::text[])),
+  status character varying DEFAULT 'waiting'::character varying CHECK (status::text = ANY (ARRAY['waiting'::character varying::text, 'active'::character varying::text, 'paused'::character varying::text, 'finished'::character varying::text, 'cancelled'::character varying::text, 'stopped'::character varying::text])),
   current_question_index integer DEFAULT 0 CHECK (current_question_index >= 0),
   current_question_start_time timestamp with time zone,
   game_settings jsonb DEFAULT '{}'::jsonb CHECK (
@@ -71,28 +81,47 @@ END),
   platform_info jsonb DEFAULT '{}'::jsonb,
   result_summary jsonb DEFAULT '{}'::jsonb,
   updated_at timestamp with time zone DEFAULT now(),
+  paused_at timestamp with time zone,
+  pause_reason text,
+  paused_duration integer DEFAULT 0,
+  emergency_stop boolean DEFAULT false,
+  skipped_questions ARRAY DEFAULT ARRAY[]::integer[],
+  host_actions jsonb DEFAULT '[]'::jsonb,
+  host_transfer_history jsonb DEFAULT '[]'::jsonb,
+  host_control_enabled boolean DEFAULT false,
   CONSTRAINT games_pkey PRIMARY KEY (id),
   CONSTRAINT games_host_id_fkey FOREIGN KEY (host_id) REFERENCES public.users(id),
   CONSTRAINT games_question_set_id_fkey FOREIGN KEY (question_set_id) REFERENCES public.question_sets(id),
   CONSTRAINT fk_games_current_question FOREIGN KEY (current_question_id) REFERENCES public.questions(id)
 );
-CREATE TABLE public.player_answers (
+CREATE TABLE public.host_sessions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  game_id uuid NOT NULL,
+  host_user_id uuid NOT NULL,
+  session_start timestamp with time zone DEFAULT now(),
+  session_end timestamp with time zone,
+  ip_address inet,
+  user_agent text,
+  actions_count integer DEFAULT 0,
+  last_action_at timestamp with time zone DEFAULT now(),
+  session_data jsonb DEFAULT '{}'::jsonb,
+  CONSTRAINT host_sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT host_sessions_game_id_fkey FOREIGN KEY (game_id) REFERENCES public.games(id)
+);
+CREATE TABLE public.player_actions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   game_id uuid NOT NULL,
   player_id uuid NOT NULL,
-  question_id uuid NOT NULL,
-  answer_id uuid,
-  submitted_answer text,
-  is_correct boolean DEFAULT false,
-  points_earned integer DEFAULT 0 CHECK (points_earned >= 0),
-  response_time integer CHECK (response_time IS NULL OR response_time > 0),
-  streak_bonus integer DEFAULT 0 CHECK (streak_bonus >= 0),
-  answered_at timestamp with time zone DEFAULT now(),
-  selected_answer_id uuid,
-  free_text_answer text,
-  CONSTRAINT player_answers_pkey PRIMARY KEY (id),
-  CONSTRAINT player_answers_game_id_fkey FOREIGN KEY (game_id) REFERENCES public.games(id),
-  CONSTRAINT fk_player_answers_selected_answer FOREIGN KEY (selected_answer_id) REFERENCES public.answers(id)
+  action_type text NOT NULL CHECK (action_type = ANY (ARRAY['kicked'::text, 'muted'::text, 'unmuted'::text, 'warned'::text, 'transferred_host'::text])),
+  action_data jsonb DEFAULT '{}'::jsonb,
+  reason text,
+  duration_ms integer,
+  performed_by uuid,
+  performed_at timestamp with time zone DEFAULT now(),
+  expires_at timestamp with time zone,
+  is_active boolean DEFAULT true,
+  CONSTRAINT player_actions_pkey PRIMARY KEY (id),
+  CONSTRAINT player_actions_game_id_fkey FOREIGN KEY (game_id) REFERENCES public.games(id)
 );
 CREATE TABLE public.question_sets (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -113,8 +142,10 @@ CREATE TABLE public.question_sets (
   completion_rate double precision DEFAULT 0.0,
   last_played_at timestamp with time zone,
   play_settings jsonb DEFAULT '{}'::jsonb,
+  cloned_from uuid,
   CONSTRAINT question_sets_pkey PRIMARY KEY (id),
-  CONSTRAINT question_sets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+  CONSTRAINT question_sets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT question_sets_cloned_from_fkey FOREIGN KEY (cloned_from) REFERENCES public.question_sets(id)
 );
 CREATE TABLE public.questions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
