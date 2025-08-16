@@ -367,14 +367,31 @@ const Dashboard = () => {
     }
   };
 
-  const handleDismissSession = async () => {
+  const handleDismissSession = async (event) => {
     try {
+      console.log('handleDismissSession called with event:', event);
+      console.log('Event details:', {
+        clientX: event?.clientX,
+        clientY: event?.clientY,
+        target: event?.target,
+        currentTarget: event?.currentTarget
+      });
+      
+      // Capture click position
+      const clickPosition = event ? {
+        x: event.clientX,
+        y: event.clientY
+      } : null;
+      
+      console.log('Click position captured:', clickPosition);
+
       const confirmed = await showConfirmation({
         title: '待機中のセッションを終了',
         message: 'この待機中のゲームセッションを終了しますか？参加者がいる場合は切断されます。',
         confirmText: '終了する',
         cancelText: 'キャンセル',
-        type: 'warning'
+        type: 'warning',
+        clickPosition
       });
 
       if (!confirmed) return;
@@ -695,12 +712,14 @@ const Dashboard = () => {
                         onClick={handleRejoinSession}
                         className="dashboard__active-session-btn dashboard__active-session-btn--primary tuiz-hover-scale"
                       >
+                        <FaGamepad />
                         セッションに戻る
                       </button>
                       <button
                         onClick={handleDismissSession}
                         className="dashboard__active-session-btn dashboard__active-session-btn--danger tuiz-hover-scale"
                       >
+                        <FaExclamationTriangle />
                         セッション終了
                       </button>
                     </div>
