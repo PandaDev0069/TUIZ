@@ -44,14 +44,18 @@ function HostLobby() {
   const { room, title, gameId, questionSetId } = state || {}
   
   // Use the host socket hook with session persistence
-  const { socket, reconnect, sessionData } = useHostSocket({
-    gameId,
-    room,
-    title,
-    questionSetId
-  })
+  const { 
+    isConnected: hostConnected, 
+    hostState, 
+    sessionRestored,
+    requestPlayerList,
+    requestGameState,
+    emit, 
+    on, 
+    off
+  } = useHostSocket(gameId, room, questionSetId)
   
-  // Use connection status hook
+  // Use connection status hook  
   const { isConnected, connectionState, reconnectAttempts } = useConnectionStatus()
   
   // Map of currently connected players: name -> joinedAt (ms)
@@ -65,11 +69,6 @@ function HostLobby() {
   const [sortOrder, setSortOrder] = useState('desc') // 'desc' | 'asc'
   const [nowTick, setNowTick] = useState(Date.now())
 
-  // Debug logging - only in development
-  if (import.meta.env.DEV) {
-    console.log('HostLobby state:', state);
-    console.log('HostLobby questionSetId:', questionSetId);
-  }
 
   useEffect(() => {
     if (!room || !title) {
@@ -77,16 +76,141 @@ function HostLobby() {
       return
     }
 
-    // Restore session data if available
-    if (sessionData?.connectedPlayers) {
-      setConnectedMap(new Map(sessionData.connectedPlayers))
-    }
-    if (sessionData?.logs) {
-      setLogs(sessionData.logs)
+    // Debug: Log socket information
+    console.log('🔌 HostLobby useEffect - Socket state:', {
+      hostConnected,
+      isConnected,
+      sessionRestored,
+      room,
+      title
+    });
+
+    // Restore session data based on the new restoration system
+    if (hostState) {
+      if (import.meta.env.DEV) {
+        console.log('🔄 Processing host state restoration:', hostState);
+      }
+      
+      if (hostState.type === 'lobby' && hostState.lobbyState) {
+        // Host restored to lobby
+        const lobby = hostState.lobbyState;
+        if (lobby.connectedPlayers && Array.isArray(lobby.connectedPlayers)) {
+          const playerMap = new Map();
+          lobby.connectedPlayers.forEach(player => {
+            const playerName = player.name || player.playerName || player;
+            playerMap.set(playerName, {
+              name: playerName,
+              joinedAt: player.joinedAt || player.joined_at || Date.now()
+            });
+          });
+          setConnectedMap(playerMap);
+        }
+      } else if (hostState.type === 'activeGame' && hostState.gameState) {
+        // Host restored to active game - should redirect to quiz control
+        const gameState = hostState.gameState;
+        if (import.meta.env.DEV) {
+          console.log('🎮 Host restored to active game, should redirect to quiz control');
+        }
+        // This case should be handled by redirecting to the correct page
+        // For now, show connected players in lobby format
+        if (gameState.connectedPlayers && Array.isArray(gameState.connectedPlayers)) {
+          const playerMap = new Map();
+          gameState.connectedPlayers.forEach(player => {
+            const playerName = player.name || player.playerName || player;
+            playerMap.set(playerName, {
+              name: playerName,
+              joinedAt: player.joinedAt || player.joined_at || Date.now()
+            });
+          });
+          setConnectedMap(playerMap);
+        }
+      } else if (hostState.type === 'completed') {
+        // Host restored to completed game
+        if (import.meta.env.DEV) {
+          console.log('🏁 Game completed, should show results');
+        }
+      }
+      
+      // Handle legacy restoration format or direct player data
+      if (hostState.connectedPlayers && Array.isArray(hostState.connectedPlayers)) {
+        if (import.meta.env.DEV) {
+          console.log('🔄 Processing connected players:', hostState.connectedPlayers.length, 'players');
+        }
+        if (hostState.connectedPlayers.length > 0 && Array.isArray(hostState.connectedPlayers[0])) {
+          // Map entries format: [[name, {name, joinedAt}], ...]
+          setConnectedMap(new Map(hostState.connectedPlayers));
+        } else {
+          // Array of player objects: [{name, joinedAt}, ...]
+          const playerMap = new Map();
+          hostState.connectedPlayers.forEach(player => {
+            const playerName = player.name || player.playerName || player;
+            const joinedAt = player.joinedAt || player.joined_at || Date.now();
+            playerMap.set(playerName, {
+              name: playerName,
+              joinedAt: joinedAt
+            });
+          });
+          setConnectedMap(playerMap);
+        }
+      }
+      
+      if (hostState.logs) {
+        if (import.meta.env.DEV) {
+          console.log('🔄 Restoring logs from hostState:', hostState.logs.length, 'entries');
+        }
+        setLogs(hostState.logs);
+      }
+      
+      // Add restoration success log
+      setLogs(prev => [...prev, {
+        type: 'info',
+        name: 'SYSTEM',
+        time: Date.now(),
+        message: `ホストセッション復元完了 (${hostState.type || 'legacy'})`
+      }]);
     }
 
+    // Listen for host game rejoin confirmation and current player list
+    const handleHostGameJoined = (data) => {
+      // Update connected players from server data
+      if (data.currentPlayers && Array.isArray(data.currentPlayers)) {
+        const playerMap = new Map();
+        data.currentPlayers.forEach(player => {
+          const playerName = player.name || player.playerName || player;
+          playerMap.set(playerName, {
+            name: playerName,
+            joinedAt: player.joinedAt || player.joined_at || Date.now()
+          });
+        });
+        setConnectedMap(playerMap);
+      }
+      
+      // Log the rejoin event
+      setLogs(prev => [...prev, { 
+        type: 'info', 
+        name: 'HOST', 
+        time: Date.now(),
+        message: 'ゲームセッションに再接続しました'
+      }]);
+    };
+
+    const handlePlayerListUpdate = (data) => {
+      if (data.players && Array.isArray(data.players)) {
+        const playerMap = new Map();
+        data.players.forEach(player => {
+          const playerName = player.name || player.playerName || player;
+          playerMap.set(playerName, {
+            name: playerName,
+            joinedAt: player.joinedAt || player.joined_at || Date.now()
+          });
+        });
+        setConnectedMap(playerMap);
+      }
+    };
+
     // Listen for new players joining the game
-    socket.on('playerJoined', ({ player, totalPlayers }) => {
+    const handlePlayerJoined = ({ player, totalPlayers }) => {
+      console.log('🎯 playerJoined event received:', { player, totalPlayers, sessionRestored, hostConnected });
       if (import.meta.env.DEV) {
         console.log('New player joined:', player);
       }
@@ -117,10 +241,10 @@ function HostLobby() {
 
       // Log the join event
       setLogs(prev => [...prev, { type: 'join', name: player.name, time: Date.now() }]);
-    });
+    };
 
     // Listen for player disconnects and log a terminal line
-    socket.on('playerDisconnected', ({ playerName, allPlayers }) => {
+    const handlePlayerDisconnected = ({ playerName, allPlayers }) => {
       if (import.meta.env.DEV) {
         console.log('Player disconnected:', playerName);
       }
@@ -147,13 +271,41 @@ function HostLobby() {
 
       // Append a leave log entry for the terminal
       setLogs(prev => [...prev, { type: 'left', name: playerName, time: Date.now() }]);
-    });
+    };
+
+    // Handle event log restoration
+    const handleEventLogRestored = ({ events }) => {
+      console.log('📜 Event log restored:', events);
+      if (events && Array.isArray(events)) {
+        // Convert backend events to frontend log format
+        const restoredLogs = events.map(event => ({
+          type: event.type, // 'join' or 'left'
+          name: event.playerName,
+          time: event.time,
+          isRestored: true // Mark as restored event
+        }));
+        
+        // Set the restored logs, replacing any existing logs
+        setLogs(restoredLogs);
+        
+        console.log(`📜 Restored ${restoredLogs.length} events to terminal`);
+      }
+    };
+
+    on('host:gameJoined', handleHostGameJoined);
+    on('host:playerListUpdate', handlePlayerListUpdate);
+    on('host:eventLogRestored', handleEventLogRestored);
+    on('playerJoined', handlePlayerJoined);
+    on('playerDisconnected', handlePlayerDisconnected);
 
     return () => {
-      socket.off('playerJoined');
-      socket.off('playerDisconnected');
+      off('host:gameJoined', handleHostGameJoined);
+      off('host:playerListUpdate', handlePlayerListUpdate);
+      off('host:eventLogRestored', handleEventLogRestored);
+      off('playerJoined', handlePlayerJoined);
+      off('playerDisconnected', handlePlayerDisconnected);
     }
-  }, [room, title, navigate, socket, sessionData])
+  }, [room, title, navigate, on, off, hostState])
 
   // Tick for live duration display
   useEffect(() => {
@@ -163,7 +315,7 @@ function HostLobby() {
 
   // Persist session data when state changes
   useEffect(() => {
-    if (socket && connectedMap.size > 0) {
+    if (isConnected && connectedMap.size > 0) {
       const sessionDataToSave = {
         connectedPlayers: Array.from(connectedMap.entries()),
         logs: logs.slice(-50), // Keep last 50 log entries
@@ -175,14 +327,14 @@ function HostLobby() {
         }
       }
       // The socket manager will handle persistence
-      socket.emit('host:saveSession', sessionDataToSave)
+      emit('host:saveSession', sessionDataToSave)
     }
-  }, [connectedMap, logs, socket, room, title, gameId, questionSetId])
+  }, [connectedMap, logs, emit, isConnected, room, title, gameId, questionSetId])
 
   // Context menu removed (kick/rejoin disabled)
 
   const handleStart = () => {
-    socket.emit('startGame', { gameCode: room });
+    emit('startGame', { gameCode: room });
     // Navigate to new Phase 6 host dashboard instead of old quiz control
     navigate('/host/dashboard', { 
       state: { 
@@ -239,26 +391,30 @@ function HostLobby() {
   // kick entries removed
     const isError = entry.type === 'error'
     const isInfo = entry.type === 'info'
+    const isRestored = entry.isRestored || false
     const classes = [
       'host-terminal-line',
       isJoin ? 'host-terminal-line--join' : '',
       isLeft ? 'host-terminal-line--left' : '',
       isError ? 'host-terminal-line--error' : '',
-      isInfo ? 'host-terminal-line--info' : ''
+      isInfo ? 'host-terminal-line--info' : '',
+      isRestored ? 'host-terminal-line--restored' : ''
     ].filter(Boolean).join(' ')
     const isCurrentlyConnected = connectedMap.has(entry.name)
     const joinedAt = connectedMap.get(entry.name)?.joinedAt
   return (
       <div key={`${entry.type}-${entry.name}-${entry.time}-${index}`} className={classes}>
-        <span className="host-terminal-line__prefix">$</span>
+        <span className="host-terminal-line__prefix">{isRestored ? '↻' : '$'}</span>
         <span className="host-terminal-line__icon" aria-hidden>
           {isJoin && <FaUserPlus />}
           {isLeft && <FaUserMinus />}
         </span>
         <span className="host-terminal-line__command">
-          {isJoin ? 'player_join' : isLeft ? 'player_left' : isInfo ? 'info' : 'info'}
+          {isJoin ? 'player_join' : isLeft ? 'player_left' : isInfo ? 'info' : 'system'}
         </span>
-  <span className="host-terminal-line__player" title="player">{entry.name}</span>
+        <span className="host-terminal-line__player" title="player">
+          {isInfo && entry.message ? entry.message : entry.name}
+        </span>
         <span className={`host-terminal-line__status ${isLeft ? 'host-terminal-line__status--left' : ''}`}>
           {isLeft ? '✖ disconnected' : '✔ connected'}
         </span>
@@ -345,6 +501,15 @@ function HostLobby() {
                 <GamepadIcon className="host-room-code-card__icon" /> クイズの準備完了！
               </h1>
               <h2 className="host-room-code-card__subtitle">{title}</h2>
+              
+              {/* Debug info in development */}
+              {import.meta.env.DEV && (
+                <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
+                  Debug: Connection State: {connectionState} | Is Connected: {isConnected ? 'Yes' : 'No'} | Attempts: {reconnectAttempts}
+                  <br />
+                  Session: {sessionRestored ? 'Restored' : 'Not Restored'} | Host State: {hostState ? 'Available' : 'None'}
+                </div>
+              )}
             </div>
             <div className="host-room-code-card__content">
               <div className="host-room-code-display">

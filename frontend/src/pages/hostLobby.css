@@ -547,6 +547,11 @@
 .host-terminal-line--left { animation: host-playerLeft 0.6s ease-out; }
 .host-terminal-line--error { background: rgba(239,68,68,0.1); }
 .host-terminal-line--info { background: rgba(59,130,246,0.08); }
+.host-terminal-line--restored { 
+  background: rgba(156,163,175,0.08); 
+  opacity: 0.8;
+  border-left: 2px solid rgba(156,163,175,0.3);
+}
 
 .host-terminal-line__prefix {
   color: var(--host-success);

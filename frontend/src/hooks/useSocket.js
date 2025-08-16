@@ -18,24 +18,25 @@ export const useSocket = () => {
 
   useEffect(() => {
     const handleConnect = () => {
-      setIsConnected(true);
-      setConnectionState('connected');
+      setIsConnected(socketManager.isConnected());
+      setConnectionState(socketManager.getConnectionState());
       setReconnectAttempts(0);
     };
 
     const handleDisconnect = (reason) => {
-      setIsConnected(false);
-      setConnectionState('disconnected');
+      setIsConnected(socketManager.isConnected());
+      setConnectionState(socketManager.getConnectionState());
     };
 
     const handleReconnect = (attemptNumber) => {
-      setIsConnected(true);
-      setConnectionState('connected');
+      setIsConnected(socketManager.isConnected());
+      setConnectionState(socketManager.getConnectionState());
       setReconnectAttempts(attemptNumber);
     };
 
     const handleError = (error) => {
-      setConnectionState('error');
+      setIsConnected(socketManager.isConnected());
+      setConnectionState(socketManager.getConnectionState());
     };
 
     socketManager.onConnect(handleConnect);
@@ -47,7 +48,17 @@ export const useSocket = () => {
     setIsConnected(socketManager.isConnected());
     setConnectionState(socketManager.getConnectionState());
 
+    // Periodic sync to ensure state consistency (every 1 second)
+    const syncInterval = setInterval(() => {
+      const currentState = socketManager.getConnectionState();
+      const currentConnected = socketManager.isConnected();
+      
+      setIsConnected(currentConnected);
+      setConnectionState(currentState);
+    }, 1000);
+
     return () => {
+      clearInterval(syncInterval);
       // Cleanup is handled by the SocketManager
     };
   }, []);
@@ -144,6 +155,7 @@ export const useGameSession = (gameData) => {
 export const useHostSocket = (gameId, room, questionSetId) => {
   const { isConnected, emit, on, off } = useSocket();
   const [hostState, setHostState] = useState(null);
+  const [sessionRestored, setSessionRestored] = useState(false);
 
   useEffect(() => {
     // Store host session data
@@ -156,25 +168,107 @@ export const useHostSocket = (gameId, room, questionSetId) => {
       });
     }
 
-    const handleHostRestored = (state) => {
-      setHostState(state);
+    const handleHostSessionRestored = (data) => {
+      setHostState(data);
+      setSessionRestored(true);
     };
 
-    on('hostRestored', handleHostRestored);
+    const handlePlayerListUpdate = (data) => {
+      setHostState(prev => ({
+        ...prev,
+        connectedPlayers: data.players || [],
+        playerCount: data.playerCount || 0
+      }));
+    };
 
-    // Request host restoration if connected
-    if (isConnected && gameId && room) {
-      emit('requestHostRestoration', { gameId, room, questionSetId });
+    const handleGameStateUpdate = (data) => {
+      setHostState(prev => ({
+        ...prev,
+        gameState: data
+      }));
+    };
+
+    const handleSessionRestoreError = (error) => {
+      setSessionRestored(false);
+    };
+
+    const handleSessionExpired = (data) => {
+      setSessionRestored(false);
+      if (data.shouldRedirect) {
+        window.location.href = data.shouldRedirect;
+      }
+    };
+
+    // Legacy handlers for backward compatibility
+    const handleHostReconnected = (data) => {
+      setHostState({
+        connectedPlayers: data.players || [],
+        gameSettings: data.game?.game_settings || {},
+        gameStatus: data.game?.status || 'waiting',
+        gameCode: data.gameCode || room,
+        gameId: data.game?.id || gameId,
+        capabilities: data.game?.capabilities || {}
+      });
+    };
+
+    const handleGameRestored = (data) => {
+      if (data.players) {
+        setHostState(prev => ({
+          ...prev,
+          connectedPlayers: data.players,
+          gameSettings: data.gameSettings || prev?.gameSettings,
+          gameStatus: data.status || prev?.gameStatus
+        }));
+      }
+    };
+
+    // Register event handlers
+    on('hostSessionRestored', handleHostSessionRestored);
+    on('host:playerListUpdate', handlePlayerListUpdate);
+    on('host:gameStateUpdate', handleGameStateUpdate);
+    on('sessionRestoreError', handleSessionRestoreError);
+    on('sessionExpired', handleSessionExpired);
+    
+    // Legacy events for backward compatibility
+    on('hostReconnected', handleHostReconnected);
+    on('gameRestored', handleGameRestored);
+    on('hostRestored', handleGameRestored);
+
+    // Request session restoration automatically when connected
+    if (isConnected && gameId && room && !sessionRestored) {
+      emit('restoreSession', { gameId, room, questionSetId, isHost: true });
     }
 
     return () => {
-      off('hostRestored', handleHostRestored);
+      off('hostSessionRestored', handleHostSessionRestored);
+      off('host:playerListUpdate', handlePlayerListUpdate);
+      off('host:gameStateUpdate', handleGameStateUpdate);
+      off('sessionRestoreError', handleSessionRestoreError);
+      off('sessionExpired', handleSessionExpired);
+      off('hostReconnected', handleHostReconnected);
+      off('gameRestored', handleGameRestored);
+      off('hostRestored', handleGameRestored);
     };
-  }, [gameId, room, questionSetId, isConnected, emit, on, off]);
+  }, [gameId, room, questionSetId, isConnected, sessionRestored, emit, on, off]);
+
+  const requestPlayerList = useCallback(() => {
+    if (isConnected && room) {
+      emit('host:requestPlayerList', { gameId, room });
+    }
+  }, [isConnected, gameId, room, emit]);
+
+  const requestGameState = useCallback(() => {
+    if (isConnected && room) {
+      emit('host:requestGameState', { gameId, room });
+    }
+  }, [isConnected, gameId, room, emit]);
 
   return {
     isConnected,
     hostState,
+    sessionRestored,
+    requestPlayerList,
+    requestGameState,
     emit,
     on,
     off
@@ -187,6 +281,7 @@ export const useHostSocket = (gameId, room, questionSetId) => {
 export const usePlayerSocket = (playerName, room, gameId) => {
   const { isConnected, emit, on, off } = useSocket();
   const [playerState, setPlayerState] = useState(null);
+  const [sessionRestored, setSessionRestored] = useState(false);
 
   useEffect(() => {
     // Store player session data
@@ -199,25 +294,80 @@ export const usePlayerSocket = (playerName, room, gameId) => {
       });
     }
 
+    const handlePlayerSessionRestored = (data) => {
+      setPlayerState(data);
+      setSessionRestored(true);
+    };
+
+    const handleGameStateUpdate = (data) => {
+      setPlayerState(prev => ({
+        ...prev,
+        gameState: data
+      }));
+    };
+
+    const handleSessionRestoreError = (error) => {
+      setSessionRestored(false);
+    };
+
+    const handleSessionExpired = (data) => {
+      setSessionRestored(false);
+      if (data.shouldRedirect) {
+        window.location.href = data.shouldRedirect;
+      }
+    };
+
+    const handlePlayerNotInGame = (data) => {
+      setSessionRestored(false);
+    };
+
+    const handleGameNotFound = (data) => {
+      setSessionRestored(false);
+    };
+
+    // Legacy handler for backward compatibility
     const handlePlayerRestored = (state) => {
       setPlayerState(state);
     };
 
+    // Register event handlers
+    on('playerSessionRestored', handlePlayerSessionRestored);
+    on('player:gameStateUpdate', handleGameStateUpdate);
+    on('sessionRestoreError', handleSessionRestoreError);
+    on('sessionExpired', handleSessionExpired);
+    on('player:notInGame', handlePlayerNotInGame);
+    on('player:gameNotFound', handleGameNotFound);
+    
+    // Legacy event for backward compatibility
     on('playerRestored', handlePlayerRestored);
 
     // Request player restoration if connected
-    if (isConnected && playerName && room) {
-      emit('requestPlayerRestoration', { playerName, room, gameId });
+    if (isConnected && playerName && room && !sessionRestored) {
+      emit('restoreSession', { playerName, room, gameId, isHost: false });
     }
 
     return () => {
+      off('playerSessionRestored', handlePlayerSessionRestored);
+      off('player:gameStateUpdate', handleGameStateUpdate);
+      off('sessionRestoreError', handleSessionRestoreError);
+      off('sessionExpired', handleSessionExpired);
+      off('player:notInGame', handlePlayerNotInGame);
+      off('player:gameNotFound', handleGameNotFound);
       off('playerRestored', handlePlayerRestored);
     };
-  }, [playerName, room, gameId, isConnected, emit, on, off]);
+  }, [playerName, room, gameId, isConnected, sessionRestored, emit, on, off]);
+
+  const requestGameState = useCallback(() => {
+    if (isConnected && playerName && room) {
+      emit('player:requestGameState', { playerName, room, gameId });
+    }
+  }, [isConnected, playerName, room, gameId, emit]);
 
   return {
     isConnected,
     playerState,
+    sessionRestored,
+    requestGameState,
     emit,
     on,
     off

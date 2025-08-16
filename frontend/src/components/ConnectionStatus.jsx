@@ -16,7 +16,8 @@ const ConnectionStatus = ({
   className = '',
   position = 'top-right' 
 }) => {
-  const { statusInfo, reconnectAttempts } = useConnectionStatus();
+  const { statusInfo, reconnectAttempts, connectionState, isConnected } = useConnectionStatus();
+
 
   const getIcon = () => {
     switch (statusInfo.status) {
