@@ -1124,7 +1124,6 @@
 }
 
 .dashboard__active-session-card {
-  background: var(--tuiz-glass-light);
   backdrop-filter: var(--tuiz-blur-medium);
   border: 2px solid var(--tuiz-glass-border-light);
   border-radius: var(--tuiz-radius-2xl);
