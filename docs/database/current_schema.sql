@@ -90,9 +90,9 @@ END),
   host_transfer_history jsonb DEFAULT '[]'::jsonb,
   host_control_enabled boolean DEFAULT false,
   CONSTRAINT games_pkey PRIMARY KEY (id),
+  CONSTRAINT fk_games_current_question FOREIGN KEY (current_question_id) REFERENCES public.questions(id),
   CONSTRAINT games_host_id_fkey FOREIGN KEY (host_id) REFERENCES public.users(id),
-  CONSTRAINT games_question_set_id_fkey FOREIGN KEY (question_set_id) REFERENCES public.question_sets(id),
-  CONSTRAINT fk_games_current_question FOREIGN KEY (current_question_id) REFERENCES public.questions(id)
+  CONSTRAINT games_question_set_id_fkey FOREIGN KEY (question_set_id) REFERENCES public.question_sets(id)
 );
 CREATE TABLE public.host_sessions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -144,8 +144,8 @@ CREATE TABLE public.question_sets (
   play_settings jsonb DEFAULT '{}'::jsonb,
   cloned_from uuid,
   CONSTRAINT question_sets_pkey PRIMARY KEY (id),
-  CONSTRAINT question_sets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT question_sets_cloned_from_fkey FOREIGN KEY (cloned_from) REFERENCES public.question_sets(id)
+  CONSTRAINT question_sets_cloned_from_fkey FOREIGN KEY (cloned_from) REFERENCES public.question_sets(id),
+  CONSTRAINT question_sets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.questions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
