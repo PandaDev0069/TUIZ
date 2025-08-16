@@ -194,6 +194,26 @@ class SocketManager {
     }
   }
 
+  // Get the raw socket instance for backward compatibility
+  getSocket() {
+    return this.socket;
+  }
+
+  // Get connection status
+  isConnected() {
+    return this.socket && this.socket.connected;
+  }
+
+  // Get current connection state
+  getConnectionState() {
+    return this.connectionState;
+  }
+
+  // Get reconnection attempts count
+  getReconnectAttempts() {
+    return this.reconnectAttempts;
+  }
+
   reregisterListeners() {
     this.log('🔄 Re-registering event listeners...');
     for (const [event, callbacks] of this.listeners.entries()) {

@@ -1,22 +1,13 @@
-import { SocketManager } from './utils/SocketManager';
-import { apiConfig } from './utils/apiConfig';
-
-// Create singleton socket manager instance
-const socketManager = new SocketManager(apiConfig.socketUrl, {
-    transports: ['websocket', 'polling'],
-    timeout: 20000,
-    forceNew: true
-});
-
-// Initialize connection
-socketManager.connect();
+import socketManager from './utils/SocketManager';
 
 // Only log socket connection in development
 if (import.meta.env.DEV) {
-  console.log(`🔌 Connecting to backend at: ${apiConfig.socketUrl}`);
+  const socketUrl = socketManager.getSocket()?.io?.uri || 'initializing...';
+  console.log(`🔌 Socket Manager initialized, connecting to: ${socketUrl}`);
 }
 
 // Export the socket instance for backward compatibility
+// Note: This may be null initially until connection is established
 export default socketManager.getSocket();
 
 // Also export the manager for advanced usage
