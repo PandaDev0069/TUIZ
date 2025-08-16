@@ -71,6 +71,13 @@ Hook the host components to the actual game session to enable full game flow con
   - [ ] Validation for context usage
 - [ ] Implement context persistence across route changes
 
+#### 1.5 Game Data Bridge Integration
+- [ ] Integrate `GameCreationBridge` to supply full question sets and metadata at game start
+- [ ] Connect `HostControlIntegration` service with `useHostGameSession` for unified socket/HTTP updates
+- [ ] Populate host dashboard components with real quiz content instead of placeholders
+- [ ] Ensure backward compatibility with existing socket-only creation flow
+- [ ] Align start sequence with backend `HostSocketHandlers.handleStartGame` to load questions via `QuestionService` and `GameSettingsService`
+
 ### 2. Real-time Game Control Events
 #### 2.1 Game Lifecycle Events
 - [ ] Implement `startGame` event system:
@@ -129,6 +136,15 @@ Hook the host components to the actual game session to enable full game flow con
   - [ ] Create `kickPlayer(playerId)` functionality
   - [ ] Add `broadcastMessage(message)` for announcements
   - [ ] Implement `restartGame()` from any point
+
+#### 2.4 Backend Quiz Flow Alignment
+- [ ] Map host controls to socket events in `backend/sockets/hostHandlers.js`:
+  - [ ] `startGame` ↔ `startGame`
+  - [ ] `pauseGame`/`resumeGame` ↔ `host:pause`/`host:resume`
+  - [ ] `nextQuestion`/`skipQuestion` ↔ `question:next` and `host:skip:question`
+  - [ ] Timer controls ↔ `host:timer:adjust` and `host:timer:reset`
+  - [ ] Emergency stop ↔ `host:emergency:stop`
+- [ ] Ensure question load pipeline (`QuestionService` → `QuestionFormatAdapter` → `GameSettingsService`) populates `activeGame.questions` for full quiz data flow
 
 ### 3. Host Game State Synchronization
 #### 3.1 Question Progress Synchronization
@@ -470,7 +486,13 @@ Hook the host components to the actual game session to enable full game flow con
   - [ ] Broadcast emergency messages to all players
   - [ ] Send system status updates
   - [ ] Provide technical support contact information
-  - [ ] Enable emergency host-to-player communication
+- [ ] Enable emergency host-to-player communication
+
+#### 6.6 Host Action Persistence
+- [ ] Record pause, resume, skip, and timer adjustments in `host_sessions` table
+- [ ] Persist player moderation actions (kicks, mutes) to `player_actions`
+- [ ] Expose REST and socket APIs to retrieve host action history
+- [ ] Replace references to non-existent `game_participants` table with `game_players`
 
 ## 📊 Real-time Data Integration
 
@@ -726,8 +748,14 @@ Hook the host components to the actual game session to enable full game flow con
 - [ ] Implement scoring reports:
   - [ ] Detailed scoring breakdown per player
   - [ ] Session scoring summary and insights
-  - [ ] Scoring system performance evaluation
-  - [ ] Recommendations for future scoring improvements
+- [ ] Scoring system performance evaluation
+- [ ] Recommendations for future scoring improvements
+
+#### 9.6 Scoreboard & Explanation Integration
+- [ ] Link per-question explanations with scoreboard entries
+- [ ] Share real-time scoreboard data with host analytics and player views
+- [ ] Ensure final results export includes scores and explanations
+- [ ] Route player responses and scoring updates through `HostControlIntegration` for analytics
 
 ## 🔄 Game Flow Management
 
@@ -902,11 +930,14 @@ Hook the host components to the actual game session to enable full game flow con
   - [ ] Data export in multiple formats (CSV, JSON, PDF)
   - [ ] Privacy compliance and data anonymization
   - [ ] Long-term data retention and archival
+- [ ] Persist host control and player moderation actions to `host_sessions` and `player_actions`
+- [ ] Store periodic analytics snapshots in `game_analytics_snapshots` for historical reports
 - [ ] Add data features:
   - [ ] Automated data quality checks and validation
   - [ ] Data visualization and reporting tools
   - [ ] Integration with external analytics platforms
   - [ ] API endpoints for third-party data access
+  - [ ] Resolve outdated references to `game_participants` by aligning with `game_players` schema
 - [ ] Implement data security:
   - [ ] Encryption for sensitive data
   - [ ] Access control and permission management
