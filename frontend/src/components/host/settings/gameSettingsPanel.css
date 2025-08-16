@@ -240,7 +240,7 @@
 }
 
 .settings-category__title {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.5rem;
   font-size: 1.2rem;
   font-weight: 600;
   color: var(--host-white, #e6eefc);
@@ -482,13 +482,13 @@
 }
 
 .settings-panel__error-title {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   font-size: 1.25rem;
   color: var(--host-danger, #fb7185);
 }
 
 .settings-panel__error-message {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1.5rem;
   color: var(--host-gray-300, #9db0d3);
 }
 
