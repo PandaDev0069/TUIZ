@@ -2025,7 +2025,7 @@ io.on('connection', (socket) => {
   });
 
   // Handle host requests for current player list
-  socket.on('host:requestPlayerList', ({ gameId, room }) => {
+  socket.on('host:requestPlayerList', ({ room }) => {
     try {
       const gameCode = room;
       const players = sessionRestoreHandlers.getCurrentPlayers(gameCode);

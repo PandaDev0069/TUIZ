@@ -188,7 +188,7 @@ export const useHostSocket = (gameId, room, questionSetId) => {
       }));
     };
 
-    const handleSessionRestoreError = (error) => {
+    const handleSessionRestoreError = (_error) => {
       setSessionRestored(false);
     };
 
@@ -306,7 +306,7 @@ export const usePlayerSocket = (playerName, room, gameId) => {
       }));
     };
 
-    const handleSessionRestoreError = (error) => {
+    const handleSessionRestoreError = (_error) => {
       setSessionRestored(false);
     };
 
@@ -317,11 +317,11 @@ export const usePlayerSocket = (playerName, room, gameId) => {
       }
     };
 
-    const handlePlayerNotInGame = (data) => {
+    const handlePlayerNotInGame = (_data) => {
       setSessionRestored(false);
     };
 
-    const handleGameNotFound = (data) => {
+    const handleGameNotFound = (_data) => {
       setSessionRestored(false);
     };
 

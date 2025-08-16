@@ -130,7 +130,7 @@ class SessionRestoreHandlers {
   /**
    * Restore host to active game (quiz control)
    */
-  async restoreHostToActiveGame(socket, activeGame, sessionData) {
+  async restoreHostToActiveGame(socket, activeGame, _sessionData) {
     logger.info(`🎮 Restoring host to active game: ${activeGame.gameCode}`);
 
     // Set socket properties
@@ -283,7 +283,7 @@ class SessionRestoreHandlers {
   /**
    * Restore host to completed game view
    */
-  async restoreHostToCompletedGame(socket, gameData, sessionData) {
+  async restoreHostToCompletedGame(socket, gameData, _sessionData) {
     logger.info(`🏁 Restoring host to completed game: ${gameData.id}`);
 
     // Get final results from database
@@ -485,7 +485,7 @@ class SessionRestoreHandlers {
   /**
    * Restore player to completed game results
    */
-  async restorePlayerToCompletedGame(socket, gameData, sessionData) {
+  async restorePlayerToCompletedGame(socket, gameData, _sessionData) {
     const results = await this.getGameResults(gameData.id);
     
     socket.emit('playerSessionRestored', {
