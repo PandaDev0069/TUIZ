@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useManagedInterval } from "../utils/timerManager";
-import socket from "../socket";
+import { usePlayerSocket, useConnectionStatus } from "../hooks/useSocket";
+import ConnectionStatus from "../components/ConnectionStatus";
 import QuestionRenderer from "../components/quiz/QuestionRenderer";
 import PostQuestionDisplay from "../components/quiz/PostQuestionDisplay/PostQuestionDisplay";
 import LoadingSkeleton from "../components/LoadingSkeleton";
@@ -11,6 +12,16 @@ function Quiz() {
   const { state } = useLocation();
   const { name, room } = state || {};
   const navigate = useNavigate();
+
+  // Use the player socket hook with session persistence
+  const { socket, reconnect, sessionData } = usePlayerSocket({
+    playerName: name,
+    room,
+    gameId: state?.gameId
+  })
+  
+  // Use connection status hook
+  const { isConnected, connectionState } = useConnectionStatus()
 
   const [question, setQuestion] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -397,6 +408,14 @@ function Quiz() {
 
   return (
     <div className="page-container">
+      {/* Connection Status Indicator */}
+      <ConnectionStatus 
+        position="top-left"
+        showText={false}
+        compact={true}
+        className="quiz__connection-status"
+      />
+      
       <div className="quiz-page">
         <div className="quiz-header">
           <div className="quiz-player-stats">

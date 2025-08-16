@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import socket from '../socket'
+import { useHostSocket, useConnectionStatus } from '../hooks/useSocket'
+import ConnectionStatus from '../components/ConnectionStatus'
 import GameSettingsPanel from '../components/host/settings/GameSettingsPanel'
 import CustomDropdown from '../components/ui/CustomDropdown'
 import { FaRocket, FaUserPlus, FaUserMinus, FaSearch, FaChevronDown, FaDownload } from 'react-icons/fa'
@@ -41,6 +42,18 @@ function HostLobby() {
   const { state } = useLocation()
   const navigate = useNavigate()
   const { room, title, gameId, questionSetId } = state || {}
+  
+  // Use the host socket hook with session persistence
+  const { socket, reconnect, sessionData } = useHostSocket({
+    gameId,
+    room,
+    title,
+    questionSetId
+  })
+  
+  // Use connection status hook
+  const { isConnected, connectionState, reconnectAttempts } = useConnectionStatus()
+  
   // Map of currently connected players: name -> joinedAt (ms)
   const [connectedMap, setConnectedMap] = useState(new Map())
   const [showSettings, setShowSettings] = useState(false)
@@ -64,7 +77,15 @@ function HostLobby() {
       return
     }
 
-  // Listen for new players joining the game
+    // Restore session data if available
+    if (sessionData?.connectedPlayers) {
+      setConnectedMap(new Map(sessionData.connectedPlayers))
+    }
+    if (sessionData?.logs) {
+      setLogs(sessionData.logs)
+    }
+
+    // Listen for new players joining the game
     socket.on('playerJoined', ({ player, totalPlayers }) => {
       if (import.meta.env.DEV) {
         console.log('New player joined:', player);
@@ -129,16 +150,34 @@ function HostLobby() {
     });
 
     return () => {
-  socket.off('playerJoined');
-  socket.off('playerDisconnected');
+      socket.off('playerJoined');
+      socket.off('playerDisconnected');
     }
-  }, [room, title, navigate])
+  }, [room, title, navigate, socket, sessionData])
 
   // Tick for live duration display
   useEffect(() => {
     const id = setInterval(() => setNowTick(Date.now()), 1000);
     return () => clearInterval(id);
   }, [])
+
+  // Persist session data when state changes
+  useEffect(() => {
+    if (socket && connectedMap.size > 0) {
+      const sessionDataToSave = {
+        connectedPlayers: Array.from(connectedMap.entries()),
+        logs: logs.slice(-50), // Keep last 50 log entries
+        gameState: {
+          room,
+          title,
+          gameId,
+          questionSetId
+        }
+      }
+      // The socket manager will handle persistence
+      socket.emit('host:saveSession', sessionDataToSave)
+    }
+  }, [connectedMap, logs, socket, room, title, gameId, questionSetId])
 
   // Context menu removed (kick/rejoin disabled)
 
@@ -290,6 +329,13 @@ function HostLobby() {
 
   return (
     <div className="host-lobby-page">
+      {/* Connection Status Indicator */}
+      <ConnectionStatus 
+        position="top-right"
+        showText={true}
+        className="host-lobby__connection-status"
+      />
+      
       <div className="host-lobby-container">
         {/* Header Section with Room Code */}
         <div className="host-lobby-header">
