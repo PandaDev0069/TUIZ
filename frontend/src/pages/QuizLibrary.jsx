@@ -488,7 +488,7 @@ function EmptyState({ tab, query, filterMode }) {
 }
 
 const QuizLibrary = () => {
-  const { apiCall } = useAuth();
+  const { apiCall, loading: authLoading, isAuthenticated } = useAuth();
   const { showConfirmation, confirmationProps } = useConfirmation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -551,10 +551,27 @@ const QuizLibrary = () => {
 
   // Fetch quizzes when tab, filters, sort, or filterMode changes
   useEffect(() => {
+    // Don't fetch quizzes while auth is loading or if not authenticated
+    if (authLoading || !isAuthenticated) {
+      return;
+    }
+    
     fetchQuizzes();
-  }, [tab, filters, sort, query, filterMode]);
+  }, [tab, filters, sort, query, filterMode, authLoading, isAuthenticated]);
+
+  // Redirect to login if not authenticated (after auth loading is complete)
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/auth');
+    }
+  }, [authLoading, isAuthenticated, navigate]);
 
   const fetchQuizzes = async () => {
+    // Don't fetch if not authenticated
+    if (!isAuthenticated) {
+      return;
+    }
+    
     try {
       setLoading(true);
       
@@ -762,6 +779,18 @@ const QuizLibrary = () => {
 
     return { published, draft };
   }, [filteredQuizzes, tab]);
+
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="quiz-library tuiz-page-container tuiz-animate-fade-in">
+        <div className="quiz-library__loading tuiz-animate-scale-in">
+          <LoadingSkeleton type="text" count={3} />
+          <p>認証情報を確認中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="quiz-library tuiz-page-container tuiz-animate-fade-in">

@@ -203,7 +203,10 @@ class DatabaseManager {
         session: data.session 
       };
     } catch (error) {
-      console.error('❌ Authentication error:', error);
+      // Only log unexpected auth errors
+      if (!error.message.includes('expired') && !error.message.includes('invalid')) {
+        console.error('Authentication error:', error.message);
+      }
       return { success: false, error: error.message };
     }
   }

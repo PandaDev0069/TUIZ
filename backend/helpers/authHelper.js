@@ -21,16 +21,21 @@ const getAuthenticatedUser = async (authHeader) => {
     throw new Error('Invalid token: Token is empty, undefined, or null');
   }
   
-  logger.debug('🔐 Verifying Supabase JWT token:', token.substring(0, 20) + '...');
-  logger.debug('🔐 Token length:', token.length);
+  logger.debug('🔐 Verifying Supabase JWT token');
   
   try {
     // Use Supabase admin client to verify the token
     const { data: { user }, error } = await db.supabaseAdmin.auth.getUser(token);
     
     if (error) {
-      // Always log authentication errors as they're security-related
-      logger.error('❌ Supabase token verification error:', error);
+      // Reduce logging noise for common auth failures
+      const isExpiredToken = error.message.includes('expired') || error.message.includes('jwt_expired');
+      const isInvalidToken = error.message.includes('invalid_token') || error.message.includes('jwt');
+      
+      if (isDevelopment && !isExpiredToken && !isInvalidToken) {
+        // Only log unexpected errors in development
+        logger.error('Supabase token verification error:', error.message);
+      }
       
       if (error.message.includes('invalid_token') || error.message.includes('jwt')) {
         throw new Error('Invalid JWT token format or signature. Please check if you are sending the correct access_token.');
@@ -96,8 +101,14 @@ const getAuthenticatedUser = async (authHeader) => {
     return userProfile;
     
   } catch (error) {
-    // Always log authentication errors as they're security-related
-    logger.error('❌ Authentication error details:', error);
+    // Reduce logging noise for common auth failures
+    const isExpiredToken = error.message.includes('expired') || error.message.includes('jwt expired');
+    const isInvalidToken = error.message.includes('invalid') || error.message.includes('jwt');
+    
+    if (isDevelopment && !isExpiredToken && !isInvalidToken) {
+      // Only log unexpected auth errors in development
+      logger.error('Authentication error details:', error.message);
+    }
     throw error;
   }
 };
