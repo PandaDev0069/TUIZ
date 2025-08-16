@@ -4,7 +4,38 @@ import socket from '../socket'
 import GameSettingsPanel from '../components/host/settings/GameSettingsPanel'
 import CustomDropdown from '../components/ui/CustomDropdown'
 import { FaRocket, FaUserPlus, FaUserMinus, FaSearch, FaChevronDown, FaDownload } from 'react-icons/fa'
+import { 
+  FiSettings, 
+  FiUsers, 
+  FiUser, 
+  FiClock, 
+  FiTarget, 
+  FiAward, 
+  FiSmartphone, 
+  FiBarChart,
+  FiBook,
+  FiInfo
+} from 'react-icons/fi'
 import './hostLobby.css'
+
+// Custom Gamepad SVG Component
+const GamepadIcon = ({ className }) => (
+  <svg 
+    className={className} 
+    height="1em" 
+    width="1em" 
+    version="1.1" 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 53.626 53.626" 
+    fill="currentColor"
+    style={{ 
+      verticalAlign: '-0.125em',
+      display: 'inline-block'
+    }}
+  >
+    <path d="M48.831,15.334c-7.083-11.637-17.753-3.541-17.753-3.541c-0.692,0.523-1.968,0.953-2.835,0.955 l-2.858,0.002c-0.867,0.001-2.143-0.429-2.834-0.952c0,0-10.671-8.098-17.755,3.539C-2.286,26.97,0.568,39.639,0.568,39.639 c0.5,3.102,2.148,5.172,5.258,4.912c3.101-0.259,9.832-8.354,9.832-8.354c0.556-0.667,1.721-1.212,2.586-1.212l17.134-0.003 c0.866,0,2.03,0.545,2.585,1.212c0,0,6.732,8.095,9.838,8.354c3.106,0.26,4.758-1.812,5.255-4.912 C53.055,39.636,55.914,26.969,48.831,15.334z M20.374,24.806H16.7v3.541c0,0-0.778,0.594-1.982,0.579 c-1.202-0.018-1.746-0.648-1.746-0.648v-3.471h-3.47c0,0-0.433-0.444-0.549-1.613c-0.114-1.169,0.479-2.114,0.479-2.114h3.675 v-3.674c0,0,0.756-0.405,1.843-0.374c1.088,0.034,1.885,0.443,1.885,0.443l-0.015,3.604h3.47c0,0,0.606,0.778,0.656,1.718 C20.996,23.738,20.374,24.806,20.374,24.806z M37.226,28.842c-1.609,0-2.906-1.301-2.906-2.908c0-1.61,1.297-2.908,2.906-2.908 c1.602,0,2.909,1.298,2.909,2.908C40.135,27.542,38.828,28.842,37.226,28.842z M37.226,20.841c-1.609,0-2.906-1.3-2.906-2.907 c0-1.61,1.297-2.908,2.906-2.908c1.602,0,2.909,1.298,2.909,2.908C40.135,19.542,38.828,20.841,37.226,20.841z M44.468,25.136 c-1.609,0-2.906-1.3-2.906-2.908c0-1.609,1.297-2.908,2.906-2.908c1.602,0,2.909,1.299,2.909,2.908 C47.377,23.836,46.07,25.136,44.468,25.136z"/>
+  </svg>
+)
 
 function HostLobby() {
   const { state } = useLocation()
@@ -195,7 +226,7 @@ function HostLobby() {
         <span className="host-terminal-line__time">{formatTime(entry.time)}</span>
     {isJoin && isCurrentlyConnected && (
           <span className="host-terminal-line__duration" aria-live="polite">
-            ⏱ {formatDuration(nowTick - (joinedAt ?? entry.time))}
+            <FiClock className="host-terminal-line__duration-icon" /> {formatDuration(nowTick - (joinedAt ?? entry.time))}
           </span>
         )}
       </div>
@@ -233,7 +264,9 @@ function HostLobby() {
       <div className="host-terminal-content">
         {entries.map(([name, arr]) => (
           <div className="host-terminal-group" key={name}>
-            <div className="host-terminal-group__title">👤 {name}</div>
+            <div className="host-terminal-group__title">
+              <FiUser className="host-terminal-group__icon" /> {name}
+            </div>
             {arr.map(renderLogLine)}
           </div>
         ))}
@@ -262,7 +295,9 @@ function HostLobby() {
         <div className="host-lobby-header">
           <div className="host-room-code-card">
             <div className="host-room-code-card__header">
-              <h1 className="host-room-code-card__title">🎮 クイズの準備完了！</h1>
+              <h1 className="host-room-code-card__title">
+                <GamepadIcon className="host-room-code-card__icon" /> クイズの準備完了！
+              </h1>
               <h2 className="host-room-code-card__subtitle">{title}</h2>
             </div>
             <div className="host-room-code-card__content">
@@ -284,7 +319,9 @@ function HostLobby() {
             <div className="host-players-card">
               <div className="host-players-card__header">
                 <div className="host-players-card__title-section">
-                  <h3 className="host-players-card__title">👥 接続中のプレイヤー</h3>
+                  <h3 className="host-players-card__title">
+                    <FiUsers className="host-players-card__icon" /> 接続中のプレイヤー
+                  </h3>
                   <div className="host-player-count-badge">
                     <span className="host-player-count-badge__number">{connectedCount}</span>
                     <span className="host-player-count-badge__text">人参加中</span>
@@ -295,7 +332,7 @@ function HostLobby() {
                   onClick={handleOpenSettings}
                   title="ゲーム設定"
                 >
-                  ⚙️ 設定
+                  <FiSettings className="host-button__icon" /> 設定
                 </button>
               </div>
 
@@ -364,7 +401,9 @@ function HostLobby() {
                   <div className="host-terminal-window__content" role="log" aria-live="polite">
                     {logs.length === 0 && connectedCount === 0 ? (
                       <div className="host-terminal-empty">
-                        <div className="host-terminal-empty__icon">⏳</div>
+                        <div className="host-terminal-empty__icon">
+                          <FiClock className="host-terminal-empty__clock" />
+                        </div>
                         <div className="host-terminal-empty__text">プレイヤーの参加を待っています...</div>
                         <div className="host-terminal-empty__hint">
                           ルームコード <strong>{room}</strong> を共有してください
@@ -385,7 +424,9 @@ function HostLobby() {
                     disabled={connectedCount === 0}
                   >
                     {connectedCount === 0 ? (
-                      <>⏳ プレイヤーを待機中</>
+                      <>
+                        <FiClock className="host-button__icon" /> プレイヤーを待機中
+                      </>
                     ) : (
                       <><FaRocket className="host-button__icon" /> クイズを開始する ({connectedCount}人)</>
                     )}
@@ -393,7 +434,7 @@ function HostLobby() {
                   
                   {connectedCount > 0 && (
                     <div className="host-lobby-actions__hint">
-                      💡 参加者が全員揃ったらクイズを開始しましょう
+                      <FiInfo className="host-lobby-actions__hint-icon" /> 参加者が全員揃ったらクイズを開始しましょう
                     </div>
                   )}
                 </div>
@@ -406,13 +447,17 @@ function HostLobby() {
             {/* Live Player List Sidebar */}
             <div className="host-live-card">
               <div className="host-live-card__header">
-                <h3 className="host-live-card__title">🟢 現在接続中</h3>
+                <h3 className="host-live-card__title">
+                  <span className="host-live-card__status-indicator"></span> 現在接続中
+                </h3>
               </div>
               <ul className="host-live-card__list">
                 {Array.from(connectedMap.values()).map(({ name, joinedAt }) => (
                   <li key={`live-${name}`} className="host-live-card__item">
                     <span className="host-live-card__name">{name}</span>
-                    <span className="host-live-card__duration">⏱ {formatDuration(nowTick - joinedAt)}</span>
+                    <span className="host-live-card__duration">
+                      <FiClock className="host-live-card__duration-icon" /> {formatDuration(nowTick - joinedAt)}
+                    </span>
                   </li>
                 ))}
                 {connectedCount === 0 && (
@@ -423,11 +468,15 @@ function HostLobby() {
 
             <div className="host-tips-card">
               <div className="host-tips-card__header">
-                <h3 className="host-tips-card__title">💡 ホストのヒント</h3>
+                <h3 className="host-tips-card__title">
+                  <FiInfo className="host-tips-card__icon" /> ホストのヒント
+                </h3>
               </div>
               <div className="host-tips-card__content">
                 <div className="host-tip">
-                  <div className="host-tip__icon">🎯</div>
+                  <div className="host-tip__icon">
+                    <FiTarget className="host-tip__icon-svg" />
+                  </div>
                   <div className="host-tip__content">
                     <strong>プレイヤー参加</strong>
                     <p>ルームコード <span className="host-tip__code">{room}</span> を共有してプレイヤーを招待</p>
@@ -435,7 +484,9 @@ function HostLobby() {
                 </div>
                 
                 <div className="host-tip">
-                  <div className="host-tip__icon">⚙️</div>
+                  <div className="host-tip__icon">
+                    <FiSettings className="host-tip__icon-svg" />
+                  </div>
                   <div className="host-tip__content">
                     <strong>ゲーム設定</strong>
                     <p>設定ボタンから制限時間や得点システムをカスタマイズ</p>
@@ -443,7 +494,9 @@ function HostLobby() {
                 </div>
                 
                 <div className="host-tip">
-                  <div className="host-tip__icon">🏆</div>
+                  <div className="host-tip__icon">
+                    <FiAward className="host-tip__icon-svg" />
+                  </div>
                   <div className="host-tip__content">
                     <strong>ベストな人数</strong>
                     <p>2-20人程度がおすすめ。参加者が揃ったら開始しましょう</p>
@@ -451,7 +504,9 @@ function HostLobby() {
                 </div>
                 
                 <div className="host-tip">
-                  <div className="host-tip__icon">📱</div>
+                  <div className="host-tip__icon">
+                    <FiSmartphone className="host-tip__icon-svg" />
+                  </div>
                   <div className="host-tip__content">
                     <strong>クロスプラットフォーム</strong>
                     <p>PC・スマホ・タブレットから誰でも参加可能</p>
@@ -463,11 +518,15 @@ function HostLobby() {
             {/* Game Info Panel */}
             <div className="host-game-info-card">
               <div className="host-game-info-card__header">
-                <h3 className="host-game-info-card__title">📊 ゲーム情報</h3>
+                <h3 className="host-game-info-card__title">
+                  <FiBarChart className="host-game-info-card__icon" /> ゲーム情報
+                </h3>
               </div>
               <div className="host-game-info-card__content">
                 <div className="host-game-info__stat">
-                  <div className="host-game-info__stat-icon">🎮</div>
+                  <div className="host-game-info__stat-icon">
+                    <GamepadIcon className="host-game-info__stat-icon-svg" />
+                  </div>
                   <div className="host-game-info__stat-content">
                     <span className="host-game-info__stat-label">ゲームID</span>
                     <span className="host-game-info__stat-value">{gameId || 'N/A'}</span>
@@ -475,7 +534,9 @@ function HostLobby() {
                 </div>
                 
                 <div className="host-game-info__stat">
-                  <div className="host-game-info__stat-icon">📚</div>
+                  <div className="host-game-info__stat-icon">
+                    <FiBook className="host-game-info__stat-icon-svg" />
+                  </div>
                   <div className="host-game-info__stat-content">
                     <span className="host-game-info__stat-label">問題セット</span>
                     <span className="host-game-info__stat-value">{questionSetId || 'N/A'}</span>
@@ -483,7 +544,9 @@ function HostLobby() {
                 </div>
                 
                 <div className="host-game-info__stat">
-                  <div className="host-game-info__stat-icon">⏱️</div>
+                  <div className="host-game-info__stat-icon">
+                    <FiClock className="host-game-info__stat-icon-svg" />
+                  </div>
                   <div className="host-game-info__stat-content">
                     <span className="host-game-info__stat-label">待機時間</span>
                     <span className="host-game-info__stat-value">
