@@ -112,7 +112,7 @@ CREATE TABLE public.player_actions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   game_id uuid NOT NULL,
   player_id uuid NOT NULL,
-  action_type text NOT NULL CHECK (action_type = ANY (ARRAY['kicked'::text, 'muted'::text, 'unmuted'::text, 'warned'::text, 'transferred_host'::text])),
+  action_type text NOT NULL CHECK (action_type = ANY (ARRAY['kicked'::text, 'muted'::text, 'unmuted'::text, 'warned'::text, 'transferred_host'::text, 'joined'::text, 'left'::text])),
   action_data jsonb DEFAULT '{}'::jsonb,
   reason text,
   duration_ms integer,

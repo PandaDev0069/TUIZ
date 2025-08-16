@@ -1573,6 +1573,40 @@ io.on('connection', (socket) => {
                 logger.debug(`♻️ Restored returning player score: ${player.score}`);
               }
             }
+            
+            // === LOG PLAYER JOIN ACTION ===
+            try {
+              const actionType = result.isReturningPlayer ? 'rejoined' : 'joined';
+              const joinActionResult = await db.createPlayerAction(
+                gameUUID, 
+                playerUUID, 
+                'joined', // Use 'joined' for both new and returning players
+                {
+                  player_name: playerName,
+                  is_returning: result.isReturningPlayer,
+                  is_authenticated: isAuthenticated,
+                  is_guest: dbGamePlayer.is_guest,
+                  is_host: dbGamePlayer.is_host,
+                  socket_id: socket.id,
+                  user_agent: socket.handshake?.headers?.['user-agent'] || null,
+                  ip_address: socket.handshake?.address || null,
+                  join_method: 'direct_join'
+                },
+                result.isReturningPlayer ? 'Player rejoined the game' : 'Player joined the game',
+                null, // No performer for join actions
+                null  // No duration for join actions
+              );
+              
+              if (joinActionResult.success) {
+                if (isDevelopment) {
+                  logger.debug(`✅ Logged player join action for ${playerName} (${actionType})`);
+                }
+              } else {
+                logger.warn(`⚠️ Failed to log player join action: ${joinActionResult.error}`);
+              }
+            } catch (actionError) {
+              logger.warn(`⚠️ Error logging player join action:`, actionError);
+            }
           } else {
             if (isDevelopment || isLocalhost) {
               logger.warn(`⚠️ Failed to add player to database: ${result.error}`);
@@ -2112,7 +2146,7 @@ io.on('connection', (socket) => {
   });
 
   // Handle player disconnection
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     if (isDevelopment || isLocalhost) {
       logger.connection(`🔌 User disconnected: ${socket.id}`);
     }
@@ -2125,6 +2159,39 @@ io.on('connection', (socket) => {
         const player = activeGame.players.get(socket.id);
         if (player) {
           player.isConnected = false;
+          
+          // === LOG PLAYER DISCONNECT ACTION ===
+          if (player.playerId && activeGame.id) {
+            try {
+              const disconnectActionResult = await db.createPlayerAction(
+                activeGame.id, 
+                player.playerId, 
+                'left',
+                {
+                  player_name: player.name,
+                  is_authenticated: player.isAuthenticated,
+                  is_guest: player.isGuest,
+                  is_host: player.isHost,
+                  socket_id: socket.id,
+                  disconnect_reason: 'normal_disconnect',
+                  session_duration: player.joinedAt ? Date.now() - new Date(player.joinedAt).getTime() : null
+                },
+                'Player left the game',
+                null, // No performer for disconnect actions
+                null  // No duration for disconnect actions
+              );
+              
+              if (disconnectActionResult.success) {
+                if (isDevelopment) {
+                  logger.debug(`✅ Logged player disconnect action for ${player.name}`);
+                }
+              } else {
+                logger.warn(`⚠️ Failed to log player disconnect action: ${disconnectActionResult.error}`);
+              }
+            } catch (actionError) {
+              logger.warn(`⚠️ Error logging player disconnect action:`, actionError);
+            }
+          }
           
           // Get updated player list (only connected players)
           const connectedPlayers = Array.from(activeGame.players.values())

@@ -1493,6 +1493,44 @@ class DatabaseManager {
     }
   }
 
+  async createPlayerAction(gameId, playerId, actionType, actionData = {}, reason = null, performedBy = null, durationMs = null) {
+    try {
+      const playerActionData = {
+        game_id: gameId,
+        player_id: playerId,
+        action_type: actionType,
+        action_data: actionData,
+        reason: reason,
+        performed_by: performedBy,
+        performed_at: new Date().toISOString(),
+        is_active: true
+      };
+
+      // Set expiration for temporary actions
+      if (durationMs && durationMs > 0) {
+        const expiresAt = new Date(Date.now() + durationMs);
+        playerActionData.expires_at = expiresAt.toISOString();
+        playerActionData.duration_ms = durationMs;
+      }
+
+      const { data, error } = await this.supabaseAdmin
+        .from('player_actions')
+        .insert(playerActionData)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Failed to create player action:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, action: data };
+    } catch (error) {
+      logger.error('❌ Player action creation error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // Close connection (for graceful shutdown)
   async close() {
     // Supabase client doesn't need explicit closing
