@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import socket from '../socket'
-import GameSettingsPanel from '../components/GameSettingsPanel'
+import GameSettingsPanel from '../components/host/settings/GameSettingsPanel'
 import CustomDropdown from '../components/ui/CustomDropdown'
 import { FaRocket, FaUserPlus, FaUserMinus, FaSearch, FaChevronDown, FaDownload } from 'react-icons/fa'
 import './hostLobby.css'
