@@ -1967,4 +1967,87 @@ router.get('/:id/questions', RateLimitMiddleware.createReadLimit(), AuthMiddlewa
   }
 });
 
+// Check session status endpoint
+router.post('/session/check', RateLimitMiddleware.createReadLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const { gameId, room } = req.body;
+
+    if (!gameId || !room) {
+      return res.status(400).json({
+        success: false,
+        message: 'gameId and room are required'
+      });
+    }
+
+    logger.debug('🔍 Checking session status:', { gameId, room, userId: req.user.id });
+
+    // Get access to activeGames through ActiveGameUpdater
+    const ActiveGameUpdater = require('../../utils/ActiveGameUpdater');
+    
+    if (!ActiveGameUpdater.activeGamesRef) {
+      logger.error('❌ ActiveGameUpdater reference not set');
+      return res.status(500).json({
+        success: false,
+        message: 'Game session service not available'
+      });
+    }
+    
+    // Get game data from active games
+    const gameData = ActiveGameUpdater.activeGamesRef.get(room);
+    
+    if (!gameData) {
+      logger.debug('❌ Game not found in active games:', room);
+      return res.json({
+        success: true,
+        isActive: false,
+        message: 'Game session not found'
+      });
+    }
+
+    // Check if user is the host of this session
+    const expectedHostId = `host_${req.user.id}`;
+    if (gameData.host !== expectedHostId) {
+      logger.debug('❌ User is not the host of this session:', { 
+        userId: req.user.id, 
+        expectedHostId,
+        actualHostId: gameData.host 
+      });
+      return res.json({
+        success: true,
+        isActive: false,
+        message: 'User is not the host of this session'
+      });
+    }
+
+    // Verify game status
+    const isWaiting = gameData.status === 'waiting' || gameData.gameStatus === 'waiting';
+    
+    logger.debug('✅ Session check result:', {
+      gameId,
+      room,
+      isActive: isWaiting,
+      gameStatus: gameData.gameStatus,
+      status: gameData.status,
+      playerCount: gameData.players ? (gameData.players instanceof Map ? gameData.players.size : Object.keys(gameData.players).length) : 0
+    });
+
+    res.json({
+      success: true,
+      isActive: isWaiting,
+      gameStatus: gameData.status || gameData.gameStatus,
+      playerCount: gameData.players ? (gameData.players instanceof Map ? gameData.players.size : Object.keys(gameData.players).length) : 0,
+      createdAt: gameData.createdAt,
+      hostId: gameData.host
+    });
+
+  } catch (error) {
+    logger.error('Error checking session status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

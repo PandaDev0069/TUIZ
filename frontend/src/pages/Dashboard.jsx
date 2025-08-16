@@ -226,6 +226,8 @@ const Dashboard = () => {
   const [deletingQuizId, setDeletingQuizId] = useState(null); // Track which quiz is being deleted
   const [myQuizSets, setMyQuizSets] = useState([]);
   const [draftQuizzes, setDraftQuizzes] = useState([]);
+  const [activeSession, setActiveSession] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(false);
   const [stats, setStats] = useState({
     totalQuizSets: 0,
     totalGames: 0,
@@ -240,6 +242,7 @@ const Dashboard = () => {
     } else {
       fetchMyQuizSets();
       refreshUserData();
+      checkActiveSession();
     }
   }, [isAuthenticated, navigate]);
 
@@ -294,6 +297,98 @@ const Dashboard = () => {
       showError('クイズデータの取得に失敗しました: ' + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkActiveSession = async () => {
+    try {
+      setCheckingSession(true);
+      
+      // Check localStorage for active host session
+      const gameId = localStorage.getItem('tuiz_current_game_id');
+      const room = localStorage.getItem('tuiz_current_room');
+      const isHost = localStorage.getItem('tuiz_is_host') === 'true';
+      const questionSetId = localStorage.getItem('tuiz_question_set_id');
+      
+      if (gameId && room && isHost) {
+        // Verify the session with the backend
+        const response = await apiCall(`/quiz/session/check`, {
+          method: 'POST',
+          body: JSON.stringify({ gameId, room })
+        });
+        
+        if (response.isActive && response.gameStatus === 'waiting') {
+          // Find the quiz title from our quiz sets
+          const quiz = myQuizSets.find(q => q.id === questionSetId);
+          const quizTitle = quiz?.title || 'クイズゲーム';
+          
+          setActiveSession({
+            gameId,
+            room,
+            questionSetId,
+            title: quizTitle,
+            gameStatus: response.gameStatus,
+            playerCount: response.playerCount || 0,
+            createdAt: response.createdAt
+          });
+        } else {
+          // Session is no longer active, clear localStorage
+          clearSessionData();
+        }
+      }
+    } catch (error) {
+      console.error('Error checking active session:', error);
+      // If there's an error, assume session is invalid and clear it
+      clearSessionData();
+    } finally {
+      setCheckingSession(false);
+    }
+  };
+
+  const clearSessionData = () => {
+    localStorage.removeItem('tuiz_current_game_id');
+    localStorage.removeItem('tuiz_current_room');
+    localStorage.removeItem('tuiz_player_name');
+    localStorage.removeItem('tuiz_is_host');
+    localStorage.removeItem('tuiz_question_set_id');
+    setActiveSession(null);
+  };
+
+  const handleRejoinSession = () => {
+    if (activeSession) {
+      navigate('/host/lobby', {
+        state: {
+          room: activeSession.room,
+          title: activeSession.title,
+          gameId: activeSession.gameId,
+          questionSetId: activeSession.questionSetId
+        }
+      });
+    }
+  };
+
+  const handleDismissSession = async () => {
+    try {
+      const confirmed = await showConfirmation({
+        title: '待機中のセッションを終了',
+        message: 'この待機中のゲームセッションを終了しますか？参加者がいる場合は切断されます。',
+        confirmText: '終了する',
+        cancelText: 'キャンセル',
+        type: 'warning'
+      });
+
+      if (!confirmed) return;
+
+      // Emit end game to backend
+      socket.emit('endGame', { gameCode: activeSession.room });
+      
+      // Clear session data
+      clearSessionData();
+      
+      showSuccess('ゲームセッションを終了しました。');
+    } catch (error) {
+      console.error('Error ending session:', error);
+      showError('セッション終了に失敗しました: ' + error.message);
     }
   };
 
@@ -574,6 +669,57 @@ const Dashboard = () => {
                 </div>
               </div>
             </section>
+
+            {/* Active Session Alert */}
+            {activeSession && (
+              <section className="dashboard__active-session tuiz-animate-fade-in-up tuiz-animate-stagger-2">
+                <div className="dashboard__active-session-card">
+                  <div className="dashboard__active-session-content">
+                    <div className="dashboard__active-session-info">
+                      <div className="dashboard__active-session-icon">
+                        <svg fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="dashboard__active-session-details">
+                        <h3>待機中のゲームセッション</h3>
+                        <div>
+                          <p><strong>{activeSession.title}</strong></p>
+                          <p>ルーム: {activeSession.room}</p>
+                          <p>参加者: {activeSession.playerCount}人</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="dashboard__active-session-actions">
+                      <button
+                        onClick={handleRejoinSession}
+                        className="dashboard__active-session-btn dashboard__active-session-btn--primary tuiz-hover-scale"
+                      >
+                        セッションに戻る
+                      </button>
+                      <button
+                        onClick={handleDismissSession}
+                        className="dashboard__active-session-btn dashboard__active-session-btn--danger tuiz-hover-scale"
+                      >
+                        セッション終了
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Loading indicator for session check */}
+            {checkingSession && (
+              <section className="dashboard__session-check tuiz-animate-fade-in-up">
+                <div className="dashboard__session-check-card">
+                  <div className="dashboard__session-check-content">
+                    <div className="dashboard__session-check-spinner tuiz-animate-spin"></div>
+                    <span className="dashboard__session-check-text">アクティブなセッションをチェック中...</span>
+                  </div>
+                </div>
+              </section>
+            )}
 
             {/* Search Section */}
             <section className="dashboard__search tuiz-animate-fade-in-up tuiz-animate-stagger-2">

@@ -1,6 +1,8 @@
 # 📋 TODO List
 
-**Last Updated**: August 10, 2025 - Dashboard metadata upd### 🏗️ Core Features
+**Last Updated**: August 16, 2025 - Fixed session check API endpoint
+
+### 🏗️ Core Features
 - [ ] **🎮 HOST CONTROL PANEL ENHANCEMENT** - ⚡ **MAJOR PROJECT** 
   - [ ] **Real-time Analytics Dashboard** - Live game insights with Kahoot-style visualizations
   - [ ] **Advanced Player Management** - Individual player controls, team management, spectator mode
@@ -367,3 +369,52 @@
 - Continue with universal theme integration
 - Add animation controller integration
 - Test cross-browser compatibility
+
+### August 16, 2025 - Active Session UI Refactor
+**Files Changed:**
+- Updated: `frontend/src/pages/Dashboard.jsx` (replaced Tailwind classes)
+- Updated: `frontend/src/pages/dashboard.css` (added BEM styles)
+
+**Changes Made:**
+- Replaced Tailwind CSS classes with project's custom BEM methodology
+- Added proper CSS classes: `dashboard__active-session-*` and `dashboard__session-check-*`
+- Used TUIZ universal theme tokens (--tuiz-space-*, --tuiz-radius-*, --tuiz-text-*)
+- Maintained visual consistency while following project conventions
+- Added proper hover states and transitions using `tuiz-hover-scale` class
+- Implemented responsive design with CSS variables
+
+**Why:**
+- Project uses custom BEM CSS methodology, not Tailwind
+- Ensures consistency with existing dashboard components
+- Follows copilot instructions for maintaining project architecture
+
+**Next Steps:**
+- Test UI appearance and functionality
+- Verify session restoration works correctly
+- Continue dashboard modernization following BEM patterns
+
+---
+
+## August 16, 2025 - Fixed Session Check API Endpoint
+
+**Files Modified:**
+- `backend/routes/api/quiz.js` - Fixed `/quiz/session/check` endpoint implementation
+
+**What Changed:**
+- Replaced non-existent `RoomManager.getGameData()` method call with proper `ActiveGameUpdater.activeGamesRef.get()` access
+- Fixed host ID comparison to use correct format (`host_${userId}` instead of raw user ID)
+- Fixed property access: changed `gameData.hostId` to `gameData.host` to match actual activeGames structure
+- Fixed player count calculation to handle Map objects correctly (`gameData.players.size` vs `Object.keys().length`)
+- Fixed game status check: look for both `gameData.status` and `gameData.gameStatus` properties (activeGames uses `status`)
+- Added proper error handling for missing ActiveGameUpdater reference
+- Improved logging for debugging session check process
+
+**Why:**
+- Dashboard was getting 500 Internal Server Error when checking for active sessions
+- Previous implementation tried to use a method that didn't exist in RoomManager
+- Backend architecture uses `activeGames` Map in server.js, accessible through ActiveGameUpdater
+
+**Next Steps:**
+- Test session check functionality in Dashboard
+- Verify active session restoration works correctly
+- Monitor for any remaining session-related errors

@@ -1115,6 +1115,120 @@
   pointer-events: none;
 }
 
+/* ===== ACTIVE SESSION ALERT ===== */
+.dashboard__active-session {
+  margin-bottom: var(--tuiz-space-6);
+}
+
+.dashboard__active-session-card {
+  background: #f0f9ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--tuiz-radius-lg);
+  padding: var(--tuiz-space-4);
+  margin-bottom: var(--tuiz-space-6);
+}
+
+.dashboard__active-session-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.dashboard__active-session-info {
+  display: flex;
+  align-items: center;
+}
+
+.dashboard__active-session-icon {
+  flex-shrink: 0;
+  margin-right: var(--tuiz-space-3);
+}
+
+.dashboard__active-session-icon svg {
+  width: 20px;
+  height: 20px;
+  color: #60a5fa;
+}
+
+.dashboard__active-session-details h3 {
+  font-size: var(--tuiz-text-sm);
+  font-weight: var(--tuiz-font-medium);
+  color: #1e40af;
+  margin: 0 0 var(--tuiz-space-1) 0;
+}
+
+.dashboard__active-session-details p {
+  font-size: var(--tuiz-text-sm);
+  color: #1d4ed8;
+  margin: var(--tuiz-space-1) 0;
+}
+
+.dashboard__active-session-actions {
+  display: flex;
+  gap: var(--tuiz-space-2);
+}
+
+.dashboard__active-session-btn {
+  padding: var(--tuiz-space-1) var(--tuiz-space-3);
+  border-radius: var(--tuiz-radius-md);
+  font-size: var(--tuiz-text-sm);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-weight: var(--tuiz-font-medium);
+}
+
+.dashboard__active-session-btn--primary {
+  background: #2563eb;
+  color: white;
+}
+
+.dashboard__active-session-btn--primary:hover {
+  background: #1d4ed8;
+}
+
+.dashboard__active-session-btn--danger {
+  background: #dc2626;
+  color: white;
+}
+
+.dashboard__active-session-btn--danger:hover {
+  background: #b91c1c;
+}
+
+/* ===== SESSION CHECK LOADING ===== */
+.dashboard__session-check {
+  margin-bottom: var(--tuiz-space-6);
+}
+
+.dashboard__session-check-card {
+  background: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: var(--tuiz-radius-lg);
+  padding: var(--tuiz-space-4);
+  margin-bottom: var(--tuiz-space-6);
+}
+
+.dashboard__session-check-content {
+  display: flex;
+  align-items: center;
+}
+
+.dashboard__session-check-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-bottom: 2px solid #2563eb;
+  border-radius: var(--tuiz-radius-full);
+  animation: tuizSpin 1s linear infinite;
+  margin-right: var(--tuiz-space-3);
+}
+
+.dashboard__session-check-text {
+  font-size: var(--tuiz-text-sm);
+  color: #4b5563;
+}
+
 /* ===== ANIMATIONS ===== */
 @keyframes iconFloat {
   0%, 100% {
