@@ -327,7 +327,24 @@ class SessionRestoreHandlers {
     }
 
     if (activeGame) {
-      await this.restorePlayerToActiveGame(socket, activeGame, sessionData);
+      // Check the actual game status to determine restoration type (same logic as host)
+      const gameStatus = activeGame.status || 'waiting'; // Default to waiting if no status
+      
+      logger.info(`🎮 Active game found for player - Status: ${gameStatus}, Players: ${activeGame.players?.size || 0}`);
+      
+      if (gameStatus === 'active') {
+        // Game is actively running
+        logger.info(`🎮 Restoring player to ACTIVE game: ${activeGame.gameCode}`);
+        await this.restorePlayerToActiveGame(socket, activeGame, sessionData);
+      } else if (gameStatus === 'completed' || gameStatus === 'finished') {
+        // Game is completed
+        logger.info(`🏁 Restoring player to COMPLETED game: ${activeGame.gameCode}`);
+        await this.restorePlayerToCompletedGame(socket, activeGame, sessionData);
+      } else {
+        // Game is in lobby/waiting state
+        logger.info(`🏠 Restoring player to LOBBY: ${activeGame.gameCode} (status: ${gameStatus})`);
+        await this.restorePlayerToLobby(socket, activeGame, sessionData);
+      }
     } else {
       // Check database for game
       const gameFromDb = await this.getGameFromDatabase(gameId, room);
@@ -458,6 +475,37 @@ class SessionRestoreHandlers {
 
     // Join game room
     socket.join(gameCode);
+
+    // Update player connection status in active game
+    const activeGame = this.activeGames.get(gameCode);
+    if (activeGame) {
+      // Find existing player and update connection status
+      let playerFound = false;
+      for (const [playerId, player] of activeGame.players) {
+        if (player.name === playerName) {
+          player.isConnected = true;
+          player.socketId = socket.id;
+          playerFound = true;
+          logger.info(`🔄 Updated existing player ${playerName} connection status to connected`);
+          break;
+        }
+      }
+      
+      // If player not found in active game, add them
+      if (!playerFound) {
+        const newPlayer = {
+          id: socket.id,
+          name: playerName,
+          score: 0,
+          isAuthenticated: true,
+          isHost: false,
+          isConnected: true,
+          socketId: socket.id
+        };
+        activeGame.players.set(socket.id, newPlayer);
+        logger.info(`➕ Added new player ${playerName} to active game`);
+      }
+    }
 
     const lobbyState = {
       gameId: gameData.id,

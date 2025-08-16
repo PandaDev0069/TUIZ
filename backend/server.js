@@ -1644,6 +1644,7 @@ io.on('connection', (socket) => {
       try {
         socket.emit('joinedGame', {
           gameCode,
+          gameId: activeGame.gameId, // Add the UUID for session restoration
           playerCount: activeGame.players.size,
           gameStatus: activeGame.status,
           player: {
@@ -1722,9 +1723,17 @@ io.on('connection', (socket) => {
       const activeGame = activeGames.get(gameCode);
       
       if (!activeGame) {
+        console.log(`❌ getPlayerList: Game ${gameCode} not found`);
         socket.emit('error', { message: 'Game not found' });
         return;
       }
+      
+      console.log(`📋 getPlayerList request for game ${gameCode}`);
+      console.log(`👥 Active players in game:`, Array.from(activeGame.players.values()).map(p => ({
+        id: p.id,
+        name: p.name,
+        isConnected: p.isConnected
+      })));
       
       // Convert players map to array with relevant info
       const players = Array.from(activeGame.players.values()).map(player => ({
@@ -1736,6 +1745,7 @@ io.on('connection', (socket) => {
         isConnected: player.isConnected
       })).filter(player => player.isConnected); // Only send connected players
       
+      console.log(`📤 Sending player list:`, players);
       socket.emit('playerList', { players });
       
     } catch (error) {

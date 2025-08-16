@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom"
 import { useEffect, useMemo, useState } from "react"
 import { FaGamepad, FaBookOpen, FaCheckCircle, FaExclamationTriangle, FaClock } from 'react-icons/fa'
 import { usePlayerSocket } from "../hooks/useSocket"
+import socketManager from "../utils/SocketManager"
 import ConnectionStatus from "../components/ConnectionStatus"
 import useQuestionPreload from "../hooks/useQuestionPreload"
 // New player universal styles (BEM)
@@ -84,7 +85,33 @@ function WaitingRoom() {
     }
 
     // Listen for successful join response
-    const handleJoinedGame = ({ gameCode, playerCount, gameStatus, player }) => {
+    const handleJoinedGame = ({ gameCode, gameId, playerCount, gameStatus, player }) => {
+      if (import.meta.env.DEV) {
+        console.log('🎯 handleJoinedGame called with:', { gameCode, gameId, playerCount, gameStatus, player });
+      }
+
+      // Store gameId for session restoration
+      if (gameId) {
+        // Update session data with the gameId using socketManager directly
+        socketManager.storeSessionData({
+          playerName: name,
+          room,
+          gameId, // Now we have the actual gameId
+          isHost: false
+        });
+        
+        if (import.meta.env.DEV) {
+          console.log('💾 Updated session data with gameId:', gameId);
+          // Also log what's actually stored
+          const storedData = socketManager.getSessionData();
+          console.log('📋 Current stored session data:', storedData);
+        }
+      } else {
+        if (import.meta.env.DEV) {
+          console.warn('⚠️ No gameId provided in joinedGame event!');
+        }
+      }
+
       // Add the current player to the players list if not already present
       setPlayers(prev => {
         // Always trust the server's playerCount
@@ -126,9 +153,103 @@ function WaitingRoom() {
       }
     };
 
+    // Listen for session restoration success
+    const handlePlayerSessionRestored = ({ type, playerState, gameState, lobbyState, message }) => {
+      if (import.meta.env.DEV) {
+        console.log('🔄 Player session restored:', { type, playerState, gameState, lobbyState });
+      }
+
+      // If restored to an active game (game is actually running), navigate to quiz immediately
+      if (type === 'activeGame' && gameState && 
+          (gameState.status === 'active' || gameState.status === 'in-progress')) {
+        if (import.meta.env.DEV) {
+          console.log('🎮 Player restored to active game, navigating to quiz');
+        }
+        navigate('/quiz', { state: { name, room, gameState } });
+        return;
+      }
+
+      // If restored to lobby, stay in waiting room and update player ID + player list
+      if (type === 'lobby') {
+        if (import.meta.env.DEV) {
+          console.log('🏠 Player restored to lobby, staying in waiting room');
+          console.log('📊 Current players before restoration:', players);
+        }
+        
+        // Update current player ID
+        if (playerState && playerState.id) {
+          setCurrentPlayerId(playerState.id);
+        }
+
+        // Add current player to the players list if not already present
+        const currentPlayerData = {
+          id: playerState?.id || `${name}_${Date.now()}`,
+          name: name,
+          score: 0,
+          isAuthenticated: true,
+          isHost: false,
+          isConnected: true
+        };
+
+        setPlayers(prev => {
+          // Check if current player is already in the list
+          const currentPlayerExists = prev.some(p => p.name === name);
+          
+          if (currentPlayerExists) {
+            // Update existing player data
+            const updated = prev.map(p => 
+              p.name === name ? { ...p, ...currentPlayerData, isConnected: true } : p
+            );
+            if (import.meta.env.DEV) {
+              console.log('📊 Updated existing player in list:', updated);
+            }
+            return updated;
+          } else {
+            // Add current player
+            const updated = [...prev, currentPlayerData];
+            if (import.meta.env.DEV) {
+              console.log('📊 Added new player to list:', updated);
+            }
+            return updated;
+          }
+        });
+
+        // Request updated player list from server
+        setTimeout(() => {
+          if (import.meta.env.DEV) {
+            console.log('🔄 Requesting updated player list from server');
+          }
+          emit('getPlayerList', { gameCode: room });
+        }, 100);
+      }
+
+      // Handle other playerState updates
+      if (playerState && playerState.id && type !== 'lobby') {
+        setCurrentPlayerId(playerState.id);
+      }
+
+      // If restored to completed game, we might want to handle this differently
+      if (type === 'completed') {
+        if (import.meta.env.DEV) {
+          console.log('🏁 Player restored to completed game');
+        }
+        // Could navigate to results page or back to join page
+        // For now, staying in waiting room
+      }
+    };
+
     // Listen for player list response
     const handlePlayerList = ({ players }) => {
+      if (import.meta.env.DEV) {
+        console.log('📋 Received player list update:', players);
+        console.log('📊 Current players before update:', players);
+      }
+      
       setPlayers(players);
+      
+      if (import.meta.env.DEV) {
+        console.log('📊 Players state updated to:', players);
+      }
     };
 
     // Listen for new players joining
@@ -175,6 +296,7 @@ function WaitingRoom() {
     on('playerJoined', handlePlayerJoined);
     on('playerDisconnected', handlePlayerDisconnected);
     on('gameStarted', handleGameStarted);
+    on('playerSessionRestored', handlePlayerSessionRestored);
 
     // Cleanup listeners
     return () => {
@@ -186,6 +308,7 @@ function WaitingRoom() {
       off('playerJoined', handlePlayerJoined);
       off('playerDisconnected', handlePlayerDisconnected);
       off('gameStarted', handleGameStarted);
+      off('playerSessionRestored', handlePlayerSessionRestored);
     }
   }, [name, room, navigate, initialPlayers, serverPlayerCount, isConnected, sessionRestored, playerState, emit, on, off])
 
@@ -308,6 +431,16 @@ function WaitingRoom() {
         {/* Players List */}
         <div className="player-roster" aria-live="polite">
           <p>参加者: {players.filter(p => p.name !== 'HOST').length}人</p>
+          {import.meta.env.DEV && (
+            <div style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
+              <details>
+                <summary>Debug: Players ({players.length} total)</summary>
+                <pre style={{ fontSize: '0.7em', maxHeight: '100px', overflow: 'auto' }}>
+                  {JSON.stringify(players, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
         </div>
       </div>
     </div>

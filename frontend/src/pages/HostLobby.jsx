@@ -4,7 +4,7 @@ import { useHostSocket } from '../hooks/useSocket'
 import ConnectionStatus from '../components/ConnectionStatus'
 import GameSettingsPanel from '../components/host/settings/GameSettingsPanel'
 import CustomDropdown from '../components/ui/CustomDropdown'
-import { FaRocket, FaUserPlus, FaUserMinus, FaSearch, FaChevronDown, FaDownload } from 'react-icons/fa'
+import { FaRocket, FaUserPlus, FaUserMinus, FaUserCheck, FaSearch, FaChevronDown, FaDownload } from 'react-icons/fa'
 import { 
   FiSettings, 
   FiUsers, 
@@ -248,6 +248,50 @@ function HostLobby() {
       setLogs(prev => [...prev, { type: 'join', name: player.name, time: Date.now() }]);
     };
 
+    // Listen for player reconnections (when they reload and restore session)
+    const handlePlayerReconnected = ({ player, message }) => {
+      console.log('🔄 playerReconnected event received:', { player, message });
+      if (import.meta.env.DEV) {
+        console.log('Player reconnected:', player);
+      }
+      
+      // Add player back to connected map with preserved join time
+      const reconnectedAt = Date.now();
+      setConnectedMap(prev => {
+        const next = new Map(prev);
+        // Try to preserve original join time if we had it
+        const existing = next.get(player.name);
+        next.set(player.name, { 
+          name: player.name, 
+          joinedAt: existing?.joinedAt ?? reconnectedAt 
+        });
+        return next;
+      });
+
+      // Add animation for reconnected player
+      setPlayerAnimations(prevAnimations => {
+        const newAnimations = new Set(prevAnimations);
+        newAnimations.add(player.name);
+        // Remove animation after animation completes
+        setTimeout(() => {
+          setPlayerAnimations(current => {
+            const next = new Set(current);
+            next.delete(player.name);
+            return next;
+          });
+        }, 600);
+        return newAnimations;
+      });
+
+      // Log the reconnection event
+      setLogs(prev => [...prev, { 
+        type: 'join', 
+        name: player.name, 
+        time: Date.now(),
+        isReconnection: true 
+      }]);
+    };
+
     // Listen for player disconnects and log a terminal line
     const handlePlayerDisconnected = ({ playerName, allPlayers }) => {
       if (import.meta.env.DEV) {
@@ -365,6 +409,7 @@ function HostLobby() {
     on('host:playerListUpdate', handlePlayerListUpdate);
     on('host:eventLogRestored', handleEventLogRestored);
     on('playerJoined', handlePlayerJoined);
+    on('playerReconnected', handlePlayerReconnected);
     on('playerDisconnected', handlePlayerDisconnected);
     on('gameStarted', handleGameStarted);
     on('host:action:success', handleHostActionSuccess);
@@ -375,6 +420,7 @@ function HostLobby() {
       off('host:playerListUpdate', handlePlayerListUpdate);
       off('host:eventLogRestored', handleEventLogRestored);
       off('playerJoined', handlePlayerJoined);
+      off('playerReconnected', handlePlayerReconnected);
       off('playerDisconnected', handlePlayerDisconnected);
       off('gameStarted', handleGameStarted);
       off('host:action:success', handleHostActionSuccess);
@@ -466,13 +512,15 @@ function HostLobby() {
     const isError = entry.type === 'error'
     const isInfo = entry.type === 'info'
     const isRestored = entry.isRestored || false
+    const isReconnection = entry.isReconnection || false
     const classes = [
       'host-terminal-line',
       isJoin ? 'host-terminal-line--join' : '',
       isLeft ? 'host-terminal-line--left' : '',
       isError ? 'host-terminal-line--error' : '',
       isInfo ? 'host-terminal-line--info' : '',
-      isRestored ? 'host-terminal-line--restored' : ''
+      isRestored ? 'host-terminal-line--restored' : '',
+      isReconnection ? 'host-terminal-line--reconnection' : ''
     ].filter(Boolean).join(' ')
     const isCurrentlyConnected = connectedMap.has(entry.name)
     const joinedAt = connectedMap.get(entry.name)?.joinedAt
@@ -480,17 +528,18 @@ function HostLobby() {
       <div key={`${entry.type}-${entry.name}-${entry.time}-${index}`} className={classes}>
         <span className="host-terminal-line__prefix">{isRestored ? '↻' : '$'}</span>
         <span className="host-terminal-line__icon" aria-hidden>
-          {isJoin && <FaUserPlus />}
+          {isJoin && !isReconnection && <FaUserPlus />}
+          {isJoin && isReconnection && <FaUserCheck />}
           {isLeft && <FaUserMinus />}
         </span>
         <span className="host-terminal-line__command">
-          {isJoin ? 'player_join' : isLeft ? 'player_left' : isInfo ? 'info' : 'system'}
+          {isJoin && isReconnection ? 'player_reconnect' : isJoin ? 'player_join' : isLeft ? 'player_left' : isInfo ? 'info' : 'system'}
         </span>
         <span className="host-terminal-line__player" title="player">
           {isInfo && entry.message ? entry.message : entry.name}
         </span>
         <span className={`host-terminal-line__status ${isLeft ? 'host-terminal-line__status--left' : ''}`}>
-          {isLeft ? '✖ disconnected' : '✔ connected'}
+          {isLeft ? '✖ disconnected' : isReconnection ? '🔄 reconnected' : '✔ connected'}
         </span>
         <span className="host-terminal-line__time">{formatTime(entry.time)}</span>
     {isJoin && isCurrentlyConnected && (
