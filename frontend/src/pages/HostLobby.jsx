@@ -302,11 +302,73 @@ function HostLobby() {
       }
     };
 
+    // Handle game start success
+    const handleGameStarted = (data) => {
+      if (import.meta.env.DEV) {
+        console.log('🚀 Game started:', data);
+      }
+      
+      // Add game start log entry
+      setLogs(prev => [...prev, {
+        type: 'info',
+        name: 'SYSTEM',
+        time: Date.now(),
+        message: `ゲーム開始 (${data.playerCount}人参加)`
+      }]);
+
+      // Navigate to host dashboard
+      navigate('/host/dashboard', { 
+        state: { 
+          room, 
+          title, 
+          gameId,
+          questionSetId,
+          players: data.playerCount || connectedMap.size,
+          startedAt: data.startedAt
+        } 
+      });
+    };
+
+    // Handle host action success
+    const handleHostActionSuccess = (data) => {
+      if (import.meta.env.DEV) {
+        console.log('✅ Host action success:', data);
+      }
+      
+      if (data.action === 'start_game') {
+        // Game start was successful, add log entry
+        setLogs(prev => [...prev, {
+          type: 'info',
+          name: 'SYSTEM',
+          time: Date.now(),
+          message: `ゲーム開始承認済み (${data.playerCount}人)`
+        }]);
+      }
+    };
+
+    // Handle host action errors
+    const handleHostActionError = (error) => {
+      if (import.meta.env.DEV) {
+        console.error('❌ Host action error:', error);
+      }
+      
+      // Add error log entry
+      setLogs(prev => [...prev, {
+        type: 'error',
+        name: 'SYSTEM',
+        time: Date.now(),
+        message: `エラー: ${error.error || 'Unknown error'}`
+      }]);
+    };
+
     on('host:gameJoined', handleHostGameJoined);
     on('host:playerListUpdate', handlePlayerListUpdate);
     on('host:eventLogRestored', handleEventLogRestored);
     on('playerJoined', handlePlayerJoined);
     on('playerDisconnected', handlePlayerDisconnected);
+    on('gameStarted', handleGameStarted);
+    on('host:action:success', handleHostActionSuccess);
+    on('host:action:error', handleHostActionError);
 
     return () => {
       off('host:gameJoined', handleHostGameJoined);
@@ -314,6 +376,9 @@ function HostLobby() {
       off('host:eventLogRestored', handleEventLogRestored);
       off('playerJoined', handlePlayerJoined);
       off('playerDisconnected', handlePlayerDisconnected);
+      off('gameStarted', handleGameStarted);
+      off('host:action:success', handleHostActionSuccess);
+      off('host:action:error', handleHostActionError);
     }
   }, [room, title, navigate, on, off, hostState])
 
@@ -344,17 +409,11 @@ function HostLobby() {
   // Context menu removed (kick/rejoin disabled)
 
   const handleStart = () => {
+    // Emit the start game event
     emit('startGame', { gameCode: room });
-    // Navigate to new Phase 6 host dashboard instead of old quiz control
-    navigate('/host/dashboard', { 
-      state: { 
-        room, 
-        title, 
-        gameId,
-        questionSetId,
-        players: connectedMap.size
-      } 
-    });
+    
+    // Don't navigate immediately - wait for confirmation or handle in event listener
+    // Navigation will happen in the gameStarted event handler
   }
 
   const handleOpenSettings = () => {

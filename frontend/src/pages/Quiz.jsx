@@ -13,15 +13,18 @@ function Quiz() {
   const { name, room } = state || {};
   const navigate = useNavigate();
 
-  // Use the player socket hook with session persistence
-  const { socket, reconnect, sessionData } = usePlayerSocket({
-    playerName: name,
-    room,
-    gameId: state?.gameId
-  })
+  // Use the player socket hook with session persistence - fixed parameters
+  const { 
+    isConnected, 
+    playerState, 
+    sessionRestored, 
+    emit, 
+    on, 
+    off 
+  } = usePlayerSocket(name, room, state?.gameId);
   
   // Use connection status hook
-  const { isConnected, connectionState } = useConnectionStatus()
+  const { connectionState } = useConnectionStatus();
 
   const [question, setQuestion] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -48,7 +51,7 @@ function Quiz() {
     }
 
     // Receive question from server
-    socket.on('question', (q) => {
+    on('question', (q) => {
       if (import.meta.env.DEV) {
         console.log('📋 Received question:', q);
       }
@@ -86,7 +89,7 @@ function Quiz() {
     });
 
     // Handle answer result from server
-    socket.on('answerResult', (result) => {
+    on('answerResult', (result) => {
       if (import.meta.env.DEV) {
         console.log('✅ Answer result:', result);
       }
@@ -103,7 +106,7 @@ function Quiz() {
     });
 
     // Handle explanation display
-    socket.on('showExplanation', (data) => {
+    on('showExplanation', (data) => {
       if (import.meta.env.DEV) {
         console.log('💡 Showing explanation:', data);
       }
@@ -140,7 +143,7 @@ function Quiz() {
     });
 
     // Handle individual player answer data for accurate status
-    socket.on('playerAnswerData', (data) => {
+    on('playerAnswerData', (data) => {
       if (import.meta.env.DEV) {
         console.log('🎯 Received player answer data:', data);
       }
@@ -148,7 +151,7 @@ function Quiz() {
     });
 
     // Handle intermediate scoreboard - for questions without explanations
-    socket.on('showLeaderboard', (data) => {
+    on('showLeaderboard', (data) => {
       if (import.meta.env.DEV) {
         console.log('🏆 Received intermediate leaderboard data:', data);
         console.log('Current player state:', { score, streak, questionScore, answerResult, feedback });
@@ -218,19 +221,19 @@ function Quiz() {
     });
 
     // Handle game over
-    socket.on('game_over', ({ scoreboard }) => {
+    on('game_over', ({ scoreboard }) => {
       navigate('/scoreboard', { state: { scoreboard, name, room } });
     });
 
     return () => {
-      socket.off('question');
-      socket.off('answerResult');
-      socket.off('showExplanation');
-      socket.off('playerAnswerData');
-      socket.off('showLeaderboard');
-      socket.off('game_over');
+      off('question');
+      off('answerResult');
+      off('showExplanation');
+      off('playerAnswerData');
+      off('showLeaderboard');
+      off('game_over');
     };
-  }, [name, room, navigate]);
+  }, [name, room, navigate, on, off]);
 
   // Timer effect for questions - using managed interval
   useManagedInterval(
@@ -282,7 +285,7 @@ function Quiz() {
     
     const timeTaken = question ? Math.round((question.timeLimit / 1000) - timer) : 0;
     
-    socket.emit("answer", { 
+    emit("answer", { 
       gameCode: room, 
       questionId: question.id,
       selectedOption: index,
@@ -292,14 +295,14 @@ function Quiz() {
 
   useEffect(() => {
     // Receive result from server
-    socket.on('answer_result', ({ correct }) => {
+    on('answer_result', ({ correct }) => {
       setFeedback(correct ? "正解！" : " 残念!");
     });
 
     return () => {
-      socket.off('answer_result');
+      off('answer_result');
     };
-  }, []);
+  }, [on, off]);
 
   const handleExplanationComplete = () => {
     setShowExplanation(false);

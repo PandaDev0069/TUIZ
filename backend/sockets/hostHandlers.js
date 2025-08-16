@@ -3,14 +3,18 @@
 
 const RoomManager = require('../utils/RoomManager');
 const logger = require('../utils/logger');
+const QuestionFormatAdapter = require('../adapters/QuestionFormatAdapter');
+const QuestionService = require('../services/QuestionService');
+const GameSettingsService = require('../services/GameSettingsService');
 
 /**
  * Host-specific Socket.IO event handlers
  * Implements real-time host control functionality
  */
 class HostSocketHandlers {
-  constructor(io) {
+  constructor(io, activeGames = null) {
     this.io = io;
+    this.activeGames = activeGames;
     this.initializeHandlers();
   }
 
@@ -20,10 +24,46 @@ class HostSocketHandlers {
     });
   }
 
+  // Setup host socket for specific game (called from server.js)
+  setupHostSocket(socket, gameCode, gameId) {
+    try {
+      if (!socket || !gameCode || !gameId) {
+        logger.warn('Invalid parameters for host socket setup', {
+          socket: !!socket,
+          gameCode,
+          gameId
+        });
+        return;
+      }
+
+      // Mark socket as host control enabled
+      socket.hostControlEnabled = true;
+      socket.hostGameId = gameId;
+      socket.hostGameCode = gameCode;
+
+      // Setup additional host-specific event handlers if needed
+      // (The main event handlers are already set up in setupHostEventHandlers)
+
+      logger.info('Host socket setup completed', {
+        socketId: socket.id,
+        gameCode,
+        gameId
+      });
+
+    } catch (error) {
+      logger.error('Host socket setup error:', error);
+    }
+  }
+
   setupHostEventHandlers(socket) {
     // Host joins game room with elevated privileges
     socket.on('host:join', (data) => {
       this.handleHostJoin(socket, data);
+    });
+
+    // Game start event
+    socket.on('startGame', (data) => {
+      this.handleStartGame(socket, data);
     });
 
     // Real-time game control events
@@ -129,6 +169,198 @@ class HostSocketHandlers {
     } catch (error) {
       logger.error('Host join error:', error);
       socket.emit('host:join:error', { error: 'Failed to join as host' });
+    }
+  }
+
+  // Handle game start request
+  async handleStartGame(socket, data) {
+    try {
+      const { gameCode } = data;
+      
+      if (!gameCode) {
+        socket.emit('host:action:error', { 
+          action: 'start_game',
+          error: 'Game code required' 
+        });
+        return;
+      }
+
+      // Use activeGames instead of RoomManager if available
+      const activeGame = this.activeGames ? this.activeGames.get(gameCode) : RoomManager.getRoom(gameCode);
+      
+      if (!activeGame) {
+        socket.emit('host:action:error', { 
+          action: 'start_game',
+          error: 'Game room not found' 
+        });
+        return;
+      }
+
+      // Validate host permissions
+      if (this.activeGames) {
+        // For activeGames structure
+        if (socket.hostOfGame !== gameCode) {
+          socket.emit('host:action:error', { 
+            action: 'start_game',
+            error: 'Only the host can start the game' 
+          });
+          return;
+        }
+      } else {
+        // For RoomManager structure
+        if (activeGame.hostSocketId !== socket.id) {
+          socket.emit('host:action:error', { 
+            action: 'start_game',
+            error: 'Host permissions required' 
+          });
+          return;
+        }
+      }
+
+      if (activeGame.status !== 'waiting') {
+        socket.emit('host:action:error', { 
+          action: 'start_game',
+          error: 'Game must be in waiting state to start' 
+        });
+        return;
+      }
+
+      // Check if there are players
+      const playerCount = this.activeGames ? activeGame.players.size : Object.keys(activeGame.players).length;
+      if (playerCount === 0) {
+        socket.emit('host:action:error', { 
+          action: 'start_game',
+          error: 'Cannot start game without players' 
+        });
+        return;
+      }
+
+      // Load questions from database if not already loaded
+      if (!activeGame.questions || activeGame.questions.length === 0) {
+        const questionSetId = this.activeGames ? activeGame.question_set_id : activeGame.questionSetId;
+        
+        if (!questionSetId) {
+          socket.emit('host:action:error', { 
+            action: 'start_game',
+            error: 'No question set configured for this game' 
+          });
+          return;
+        }
+
+        logger.info(`Loading questions for game ${gameCode} from question set ${questionSetId}`);
+        
+        const questionService = new QuestionService();
+        const questionResult = await questionService.getQuestionSetForGame(questionSetId);
+        
+        if (!questionResult.success || questionResult.questions.length === 0) {
+          logger.error(`Failed to load questions: ${questionResult.error}`);
+          socket.emit('host:action:error', { 
+            action: 'start_game',
+            error: 'Failed to load questions for this game',
+            details: questionResult.error 
+          });
+          return;
+        }
+
+        const dbQuestions = questionResult.questions;
+        logger.info(`Successfully loaded ${dbQuestions.length} questions from database`);
+
+        // Transform questions using QuestionFormatAdapter
+        const questionAdapter = new QuestionFormatAdapter();
+        const gameSettings = this.activeGames ? activeGame.game_settings : activeGame.gameSettings;
+        const transformResult = questionAdapter.transformMultipleQuestions(dbQuestions, gameSettings);
+        
+        if (!transformResult.success || transformResult.questions.length === 0) {
+          logger.error(`Failed to transform questions: ${transformResult.error}`);
+          socket.emit('host:action:error', { 
+            action: 'start_game',
+            error: 'Failed to process questions for this game',
+            details: transformResult.error 
+          });
+          return;
+        }
+
+        const questions = transformResult.questions;
+        logger.info(`Transformed ${questions.length} questions to game format`);
+
+        // Apply game settings to questions using GameSettingsService
+        const settingsResult = GameSettingsService.applySettingsToGame(gameSettings, questions);
+        
+        if (!settingsResult.success) {
+          logger.error(`Failed to apply game settings: ${settingsResult.error}`);
+          logger.warn(`Falling back to questions without enhanced settings`);
+        }
+
+        const finalQuestions = settingsResult.questions || questions;
+        const gameFlowConfig = settingsResult.gameFlowConfig;
+
+        if (finalQuestions.length === 0) {
+          socket.emit('host:action:error', { 
+            action: 'start_game',
+            error: 'No valid questions available for this game',
+            details: 'All questions failed validation' 
+          });
+          return;
+        }
+
+        // Store questions in game
+        activeGame.questions = finalQuestions;
+        if (gameFlowConfig) {
+          activeGame.gameFlowConfig = gameFlowConfig;
+        }
+      }
+
+      const startedAt = new Date().toISOString();
+      
+      // Update game state
+      activeGame.status = 'active';
+      activeGame.started_at = startedAt;
+      activeGame.currentQuestionIndex = 0;
+      
+      if (this.activeGames) {
+        // Update current_players for activeGames structure
+        activeGame.current_players = activeGame.players.size;
+      }
+
+      // Notify all players that the game has started
+      this.io.to(gameCode).emit('gameStarted', {
+        gameCode,
+        message: 'Game has started!',
+        totalQuestions: activeGame.questions.length,
+        playerCount,
+        startedAt
+      });
+
+      // Confirm to host
+      socket.emit('host:action:success', {
+        action: 'start_game',
+        gameCode,
+        startedAt,
+        playerCount,
+        totalQuestions: activeGame.questions.length,
+        gameState: {
+          status: activeGame.status,
+          startedAt,
+          currentQuestion: 1,
+          totalQuestions: activeGame.questions.length
+        }
+      });
+
+      logger.info(`Game ${gameCode} started by host via socket`, {
+        gameCode,
+        hostSocketId: socket.id,
+        playerCount,
+        totalQuestions: activeGame.questions.length,
+        startedAt
+      });
+
+    } catch (error) {
+      logger.error('Host start game error:', error);
+      socket.emit('host:action:error', { 
+        action: 'start_game', 
+        error: 'Failed to start game',
+        details: error.message
+      });
     }
   }
 
@@ -498,15 +730,25 @@ class HostSocketHandlers {
   }
 
   // Helper method to validate host actions
-  validateHostAction(socket, room, gameId) {
-    if (!room) {
+  validateHostAction(socket, gameData, gameCode) {
+    if (!gameData) {
       socket.emit('host:action:error', { error: 'Game room not found' });
       return false;
     }
 
-    if (room.hostSocketId !== socket.id) {
-      socket.emit('host:action:error', { error: 'Host permissions required' });
-      return false;
+    // Check host permissions based on data structure
+    if (this.activeGames) {
+      // For activeGames structure
+      if (socket.hostOfGame !== gameCode) {
+        socket.emit('host:action:error', { error: 'Host permissions required' });
+        return false;
+      }
+    } else {
+      // For RoomManager structure
+      if (gameData.hostSocketId !== socket.id) {
+        socket.emit('host:action:error', { error: 'Host permissions required' });
+        return false;
+      }
     }
 
     return true;

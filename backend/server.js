@@ -554,9 +554,6 @@ const io = new Server(server, {
     },
 });
 
-// Phase 6: Initialize Host Socket Handlers
-const hostHandlers = new HostSocketHandlers(io);
-
 // Setup function to enable enhanced host handlers for host control games
 function setupHostHandlers(socket, gameCode, gameId) {
   if (!socket || !gameCode || !gameId) {
@@ -604,6 +601,9 @@ const activeGames = new Map();
 
 // Initialize the active game updater with the activeGames reference
 activeGameUpdater.setActiveGamesRef(activeGames);
+
+// Phase 6: Initialize Host Socket Handlers (after activeGames is defined)
+const hostHandlers = new HostSocketHandlers(io, activeGames);
 
 // Helper function to check if question phase is complete and handle transitions
 const checkForQuestionCompletion = (gameCode) => {
