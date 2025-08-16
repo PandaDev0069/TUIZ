@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useHostSocket, useConnectionStatus } from '../hooks/useSocket'
+import { useHostSocket } from '../hooks/useSocket'
 import ConnectionStatus from '../components/ConnectionStatus'
 import GameSettingsPanel from '../components/host/settings/GameSettingsPanel'
 import CustomDropdown from '../components/ui/CustomDropdown'
@@ -55,9 +55,6 @@ function HostLobby() {
     off
   } = useHostSocket(gameId, room, questionSetId)
   
-  // Use connection status hook  
-  const { isConnected, connectionState, reconnectAttempts } = useConnectionStatus()
-  
   // Map of currently connected players: name -> joinedAt (ms)
   const [connectedMap, setConnectedMap] = useState(new Map())
   const [showSettings, setShowSettings] = useState(false)
@@ -79,7 +76,6 @@ function HostLobby() {
     // Debug: Log socket information
     console.log('🔌 HostLobby useEffect - Socket state:', {
       hostConnected,
-      isConnected,
       sessionRestored,
       room,
       title
@@ -98,9 +94,11 @@ function HostLobby() {
           const playerMap = new Map();
           lobby.connectedPlayers.forEach(player => {
             const playerName = player.name || player.playerName || player;
+            const timestamp = player.joinedAt || player.joined_at;
+            const validTimestamp = (typeof timestamp === 'number' && !isNaN(timestamp)) ? timestamp : Date.now();
             playerMap.set(playerName, {
               name: playerName,
-              joinedAt: player.joinedAt || player.joined_at || Date.now()
+              joinedAt: validTimestamp
             });
           });
           setConnectedMap(playerMap);
@@ -117,9 +115,11 @@ function HostLobby() {
           const playerMap = new Map();
           gameState.connectedPlayers.forEach(player => {
             const playerName = player.name || player.playerName || player;
+            const timestamp = player.joinedAt || player.joined_at;
+            const validTimestamp = (typeof timestamp === 'number' && !isNaN(timestamp)) ? timestamp : Date.now();
             playerMap.set(playerName, {
               name: playerName,
-              joinedAt: player.joinedAt || player.joined_at || Date.now()
+              joinedAt: validTimestamp
             });
           });
           setConnectedMap(playerMap);
@@ -144,10 +144,11 @@ function HostLobby() {
           const playerMap = new Map();
           hostState.connectedPlayers.forEach(player => {
             const playerName = player.name || player.playerName || player;
-            const joinedAt = player.joinedAt || player.joined_at || Date.now();
+            const timestamp = player.joinedAt || player.joined_at;
+            const validTimestamp = (typeof timestamp === 'number' && !isNaN(timestamp)) ? timestamp : Date.now();
             playerMap.set(playerName, {
               name: playerName,
-              joinedAt: joinedAt
+              joinedAt: validTimestamp
             });
           });
           setConnectedMap(playerMap);
@@ -177,9 +178,11 @@ function HostLobby() {
         const playerMap = new Map();
         data.currentPlayers.forEach(player => {
           const playerName = player.name || player.playerName || player;
+          const timestamp = player.joinedAt || player.joined_at;
+          const validTimestamp = (typeof timestamp === 'number' && !isNaN(timestamp)) ? timestamp : Date.now();
           playerMap.set(playerName, {
             name: playerName,
-            joinedAt: player.joinedAt || player.joined_at || Date.now()
+            joinedAt: validTimestamp
           });
         });
         setConnectedMap(playerMap);
@@ -199,9 +202,11 @@ function HostLobby() {
         const playerMap = new Map();
         data.players.forEach(player => {
           const playerName = player.name || player.playerName || player;
+          const timestamp = player.joinedAt || player.joined_at;
+          const validTimestamp = (typeof timestamp === 'number' && !isNaN(timestamp)) ? timestamp : Date.now();
           playerMap.set(playerName, {
             name: playerName,
-            joinedAt: player.joinedAt || player.joined_at || Date.now()
+            joinedAt: validTimestamp
           });
         });
         setConnectedMap(playerMap);
@@ -257,7 +262,12 @@ function HostLobby() {
           const prevMap = prev;
           for (const p of allPlayers) {
             const prevEntry = prevMap.get(p.name);
-            next.set(p.name, { name: p.name, joinedAt: prevEntry?.joinedAt ?? Date.now() });
+            const timestamp = prevEntry?.joinedAt || p.joinedAt || p.joined_at;
+            const validTimestamp = (typeof timestamp === 'number' && !isNaN(timestamp)) ? timestamp : Date.now();
+            next.set(p.name, { 
+              name: p.name, 
+              joinedAt: validTimestamp
+            });
           }
           return next;
         });
@@ -315,7 +325,7 @@ function HostLobby() {
 
   // Persist session data when state changes
   useEffect(() => {
-    if (isConnected && connectedMap.size > 0) {
+    if (hostConnected && connectedMap.size > 0) {
       const sessionDataToSave = {
         connectedPlayers: Array.from(connectedMap.entries()),
         logs: logs.slice(-50), // Keep last 50 log entries
@@ -329,7 +339,7 @@ function HostLobby() {
       // The socket manager will handle persistence
       emit('host:saveSession', sessionDataToSave)
     }
-  }, [connectedMap, logs, emit, isConnected, room, title, gameId, questionSetId])
+  }, [connectedMap, logs, emit, hostConnected, room, title, gameId, questionSetId])
 
   // Context menu removed (kick/rejoin disabled)
 
@@ -376,6 +386,11 @@ function HostLobby() {
 
   const formatTime = (t) => new Date(t).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   const formatDuration = (ms) => {
+    // Handle invalid inputs
+    if (typeof ms !== 'number' || isNaN(ms) || ms < 0) {
+      return '0s';
+    }
+    
     const s = Math.max(0, Math.floor(ms / 1000));
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);
@@ -421,7 +436,12 @@ function HostLobby() {
         <span className="host-terminal-line__time">{formatTime(entry.time)}</span>
     {isJoin && isCurrentlyConnected && (
           <span className="host-terminal-line__duration" aria-live="polite">
-            <FiClock className="host-terminal-line__duration-icon" /> {formatDuration(nowTick - (joinedAt ?? entry.time))}
+            <FiClock className="host-terminal-line__duration-icon" /> 
+            {(() => {
+              const timestamp = joinedAt || entry.time || Date.now();
+              const duration = nowTick - timestamp;
+              return formatDuration(duration);
+            })()}
           </span>
         )}
       </div>
@@ -490,6 +510,11 @@ function HostLobby() {
         position="top-right"
         showText={true}
         className="host-lobby__connection-status"
+        autoHide={true}
+        autoHideDelay={2000}
+        isConnected={hostConnected}
+        connectionState={hostConnected ? 'connected' : 'disconnected'}
+        reconnectAttempts={0}
       />
       
       <div className="host-lobby-container">
@@ -502,14 +527,6 @@ function HostLobby() {
               </h1>
               <h2 className="host-room-code-card__subtitle">{title}</h2>
               
-              {/* Debug info in development */}
-              {import.meta.env.DEV && (
-                <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
-                  Debug: Connection State: {connectionState} | Is Connected: {isConnected ? 'Yes' : 'No'} | Attempts: {reconnectAttempts}
-                  <br />
-                  Session: {sessionRestored ? 'Restored' : 'Not Restored'} | Host State: {hostState ? 'Available' : 'None'}
-                </div>
-              )}
             </div>
             <div className="host-room-code-card__content">
               <div className="host-room-code-display">
@@ -667,7 +684,12 @@ function HostLobby() {
                   <li key={`live-${name}`} className="host-live-card__item">
                     <span className="host-live-card__name">{name}</span>
                     <span className="host-live-card__duration">
-                      <FiClock className="host-live-card__duration-icon" /> {formatDuration(nowTick - joinedAt)}
+                      <FiClock className="host-live-card__duration-icon" /> 
+                      {(() => {
+                        const timestamp = joinedAt || Date.now();
+                        const duration = nowTick - timestamp;
+                        return formatDuration(duration);
+                      })()}
                     </span>
                   </li>
                 ))}

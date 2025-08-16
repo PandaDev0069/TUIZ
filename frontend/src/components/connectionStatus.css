@@ -7,9 +7,16 @@
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all 0.2s ease, opacity 0.3s ease;
   border: 1px solid transparent;
   user-select: none;
+  opacity: 1;
+}
+
+/* Fading state */
+.connection-status--fading {
+  opacity: 0;
+  transform: translateY(-0.5rem);
 }
 
 /* Position variants */

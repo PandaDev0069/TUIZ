@@ -1,7 +1,8 @@
 import { useLocation, useNavigate } from "react-router-dom"
 import { useEffect, useMemo, useState } from "react"
 import { FaGamepad, FaBookOpen, FaCheckCircle, FaExclamationTriangle, FaClock } from 'react-icons/fa'
-import socket from "../socket"
+import { usePlayerSocket } from "../hooks/useSocket"
+import ConnectionStatus from "../components/ConnectionStatus"
 import useQuestionPreload from "../hooks/useQuestionPreload"
 // New player universal styles (BEM)
 import "../styles/player/player-components.css"
@@ -14,6 +15,17 @@ function WaitingRoom() {
   const { name, room, initialPlayers = [], serverPlayerCount } = location.state || {}
   const [players, setPlayers] = useState(initialPlayers)
   const [currentPlayerId, setCurrentPlayerId] = useState(null)
+
+  // Use player socket hook with session restoration
+  const { 
+    isConnected, 
+    playerState, 
+    sessionRestored, 
+    requestGameState, 
+    emit, 
+    on, 
+    off 
+  } = usePlayerSocket(name, room, null)
 
   // Use the preloading hook
   const {
@@ -32,6 +44,32 @@ function WaitingRoom() {
       return
     }
 
+    // Debug: Log socket information
+    console.log('🔌 WaitingRoom useEffect - Socket state:', {
+      isConnected,
+      sessionRestored,
+      playerState,
+      room,
+      name
+    });
+
+    // Handle session restoration
+    if (sessionRestored && playerState) {
+      if (import.meta.env.DEV) {
+        console.log('🔄 Processing player session restoration:', playerState);
+      }
+      
+      // Restore player list if available
+      if (playerState.players && Array.isArray(playerState.players)) {
+        setPlayers(playerState.players);
+      }
+      
+      // Restore current player ID if available
+      if (playerState.currentPlayerId) {
+        setCurrentPlayerId(playerState.currentPlayerId);
+      }
+    }
+
     // Set initial players if provided
     if (initialPlayers.length > 0) {
       setPlayers(initialPlayers)
@@ -40,13 +78,13 @@ function WaitingRoom() {
       // request the complete player list immediately
       if (serverPlayerCount && serverPlayerCount > initialPlayers.length) {
         setTimeout(() => {
-          socket.emit('getPlayerList', { gameCode: room });
+          emit('getPlayerList', { gameCode: room });
         }, 100);
       }
     }
 
     // Listen for successful join response
-  socket.on('joinedGame', ({ gameCode, playerCount, gameStatus, player }) => {
+    const handleJoinedGame = ({ gameCode, playerCount, gameStatus, player }) => {
       // Add the current player to the players list if not already present
       setPlayers(prev => {
         // Always trust the server's playerCount
@@ -71,29 +109,30 @@ function WaitingRoom() {
         } else {
           // Add new player
           const updatedPlayers = [...prev, currentPlayerData];
-      return updatedPlayers;
+          return updatedPlayers;
         }
       });
-    // Track current player id for future actions
-    setCurrentPlayerId(player.id)
+      
+      // Track current player id for future actions
+      setCurrentPlayerId(player.id)
       
       // Request complete player list for synchronization
       try {
-        socket.emit('getPlayerList', { gameCode });
+        emit('getPlayerList', { gameCode });
       } catch (error) {
         if (import.meta.env.DEV) {
           console.error('Error requesting player list:', error);
         }
       }
-    })
+    };
 
     // Listen for player list response
-    socket.on('playerList', ({ players }) => {
+    const handlePlayerList = ({ players }) => {
       setPlayers(players);
-    })
+    };
 
     // Listen for new players joining
-    socket.on('playerJoined', ({ player, totalPlayers, allPlayers }) => {
+    const handlePlayerJoined = ({ player, totalPlayers, allPlayers }) => {
       if (allPlayers && allPlayers.length > 0) {
         setPlayers(allPlayers);
       } else {
@@ -110,10 +149,10 @@ function WaitingRoom() {
           return updated;
         });
       }
-    })
+    };
 
-  // Listen for players disconnecting
-    socket.on('playerDisconnected', ({ playerId, playerName, remainingPlayers, allPlayers }) => {
+    // Listen for players disconnecting
+    const handlePlayerDisconnected = ({ playerId, playerName, remainingPlayers, allPlayers }) => {
       if (allPlayers && allPlayers.length >= 0) {
         setPlayers(allPlayers);
       } else {
@@ -123,28 +162,48 @@ function WaitingRoom() {
           return updated;
         });
       }
-    })
-
-  // Kick/rejoin flow removed
+    };
 
     // Listen for game start
-    socket.on('gameStarted', (data) => {
+    const handleGameStarted = (data) => {
       navigate('/quiz', { state: { name, room } })
-    })
+    };
+
+    // Register event handlers
+    on('joinedGame', handleJoinedGame);
+    on('playerList', handlePlayerList);
+    on('playerJoined', handlePlayerJoined);
+    on('playerDisconnected', handlePlayerDisconnected);
+    on('gameStarted', handleGameStarted);
 
     // Cleanup listeners
     return () => {
       if (import.meta.env.DEV) {
         console.log('WaitingRoom: Cleaning up socket listeners');
       }
-      socket.off('joinedGame')
-      socket.off('playerList')
-      socket.off('playerJoined')
-      socket.off('playerDisconnected')
-      socket.off('gameStarted')
-  // removed: kick/rejoin listeners
+      off('joinedGame', handleJoinedGame);
+      off('playerList', handlePlayerList);
+      off('playerJoined', handlePlayerJoined);
+      off('playerDisconnected', handlePlayerDisconnected);
+      off('gameStarted', handleGameStarted);
     }
-  }, [name, room, navigate, initialPlayers])
+  }, [name, room, navigate, initialPlayers, serverPlayerCount, isConnected, sessionRestored, playerState, emit, on, off])
+
+  // Persist player session data when state changes
+  useEffect(() => {
+    if (isConnected && name && room) {
+      const sessionDataToSave = {
+        players: players.slice(0, 50), // Keep last 50 players to avoid too much data
+        currentPlayerId,
+        playerName: name,
+        room,
+        lastActivity: Date.now()
+      }
+      
+      // The socket manager will handle persistence
+      emit('player:saveSession', sessionDataToSave)
+    }
+  }, [players, currentPlayerId, emit, isConnected, name, room])
 
   // Removed rejoin helpers and countdown
 
@@ -154,11 +213,20 @@ function WaitingRoom() {
 
   return (
     <div className="player-page waiting-room" role="region" aria-live="polite">
+      {/* Connection Status Indicator */}
+      <ConnectionStatus 
+        position="top-right"
+        showText={true}
+        autoHide={true}
+        autoHideDelay={2000}
+        isConnected={isConnected}
+        connectionState={isConnected ? 'connected' : 'disconnected'}
+        reconnectAttempts={0}
+      />
+      
       <div className="player-card tuiz-animate-entrance">
         <h1 className="player-card__title">こんにちは、{name}さん！</h1>
-  {
-  <>
-  <div className="player-pill" aria-label="room code">
+        <div className="player-pill" aria-label="room code">
           ルームコード: <strong className="player-pill__code" aria-live="polite">{room}</strong>
         </div>
         <h2 className="waiting tuiz-animate-fade-in">
@@ -238,14 +306,13 @@ function WaitingRoom() {
         )}
         
         {/* Players List */}
-  <div className="player-roster" aria-live="polite">
+        <div className="player-roster" aria-live="polite">
           <p>参加者: {players.filter(p => p.name !== 'HOST').length}人</p>
         </div>
-  </>
-  }
       </div>
     </div>
   )
 }
 
 export default WaitingRoom
+
