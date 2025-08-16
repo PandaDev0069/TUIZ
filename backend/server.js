@@ -1257,6 +1257,19 @@ io.on('connection', (socket) => {
           timerControl: true,
           playerManagement: true,
           ...gameSettings.hostControl
+        },
+        
+        // Host permissions (database compatible)
+        hostPermissions: {
+          canPauseGame: true,
+          canSkipQuestions: true,
+          canKickPlayers: true,
+          canMutePlayers: true,
+          canAdjustTimer: true,
+          canTransferHost: true,
+          canViewAnalytics: true,
+          canEmergencyStop: true,
+          ...gameSettings.hostPermissions
         }
       };
       
@@ -1294,6 +1307,59 @@ io.on('connection', (socket) => {
       }
       
       const dbGame = dbResult.game;
+      
+      // === INITIALIZE RELATED TABLES ===
+      try {
+        // 1. Create host session tracking
+        const hostSessionResult = await db.createHostSession(dbGame.id, actualHostId, {
+          game_creation: true,
+          session_type: 'game_host',
+          initial_settings: enhancedGameSettings,
+          question_set_id: questionSetId,
+          creation_method: 'dashboard'
+        });
+        
+        if (!hostSessionResult.success) {
+          logger.warn(`⚠️ Failed to create host session: ${hostSessionResult.error}`);
+        }
+        
+        // 2. Create initial analytics snapshot
+        const analyticsResult = await db.createAnalyticsSnapshot(dbGame.id, 'game_start', null, {
+          initial_player_count: 0,
+          game_settings: enhancedGameSettings,
+          question_set_id: questionSetId,
+          created_via: 'dashboard',
+          host_id: actualHostId
+        });
+        
+        if (!analyticsResult.success) {
+          logger.warn(`⚠️ Failed to create analytics snapshot: ${analyticsResult.error}`);
+        }
+        
+        // 3. Log the game creation action (if log_host_action function exists)
+        try {
+          await db.supabaseAdmin.rpc('log_host_action', {
+            p_game_id: dbGame.id,
+            p_host_id: actualHostId,
+            p_action_type: 'game_created',
+            p_action_data: {
+              question_set_id: questionSetId,
+              initial_settings: enhancedGameSettings,
+              creation_method: 'dashboard'
+            }
+          });
+        } catch (logError) {
+          logger.warn(`⚠️ Failed to log host action: ${logError.message}`);
+        }
+        
+        if (isDevelopment) {
+          logger.debug(`✅ [INIT] Successfully initialized related tables for game ${dbGame.id}`);
+        }
+        
+      } catch (initError) {
+        logger.warn(`⚠️ [INIT] Some initialization steps failed: ${initError.message}`);
+        // Don't fail the entire game creation for initialization errors
+      }
       if (isDevelopment) {
         logger.debug(`✅ [BRIDGE] Phase 6 game created in database with UUID: ${dbGame.id}`);
       }

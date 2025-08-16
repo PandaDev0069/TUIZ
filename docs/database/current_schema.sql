@@ -17,7 +17,7 @@ CREATE TABLE public.answers (
 CREATE TABLE public.game_analytics_snapshots (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   game_id uuid NOT NULL,
-  snapshot_type text NOT NULL CHECK (snapshot_type = ANY (ARRAY['question_start'::text, 'question_end'::text, 'game_pause'::text, 'game_resume'::text, 'player_action'::text])),
+  snapshot_type text NOT NULL CHECK (snapshot_type = ANY (ARRAY['question_start'::text, 'question_end'::text, 'game_pause'::text, 'game_resume'::text, 'player_action'::text, 'game_start'::text, 'game_end'::text])),
   question_number integer,
   snapshot_data jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamp with time zone DEFAULT now(),
