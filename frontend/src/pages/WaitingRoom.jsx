@@ -431,7 +431,8 @@ function WaitingRoom() {
         {/* Players List */}
         <div className="player-roster" aria-live="polite">
           <p>参加者: {players.filter(p => p.name !== 'HOST').length}人</p>
-          {import.meta.env.DEV && (
+          {/* Debug Info */}
+          {/* {import.meta.env.DEV && (
             <div style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
               <details>
                 <summary>Debug: Players ({players.length} total)</summary>
@@ -440,7 +441,7 @@ function WaitingRoom() {
                 </pre>
               </details>
             </div>
-          )}
+          )} */}
         </div>
       </div>
     </div>
