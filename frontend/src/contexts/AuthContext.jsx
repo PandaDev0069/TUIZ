@@ -63,12 +63,16 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('API Error Details:', {
-          endpoint,
-          status: response.status,
-          statusText: response.statusText,
-          responseData: data
-        });
+        // Only log unexpected errors (not 404s for game lookups in preview mode)
+        const isExpected404 = response.status === 404 && endpoint.includes('/games/');
+        if (!isExpected404) {
+          console.error('API Error Details:', {
+            endpoint,
+            status: response.status,
+            statusText: response.statusText,
+            responseData: data
+          });
+        }
         throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -78,7 +82,12 @@ export const AuthProvider = ({ children }) => {
         console.error('API Syntax Error:', { endpoint, error });
         throw new Error(`Invalid response from server (endpoint: ${endpoint})`);
       }
-      console.error('API Call Error:', { endpoint, error });
+      
+      // Only log unexpected API errors (not 404s for game lookups in preview mode)
+      const isExpected404 = error.message?.includes('HTTP 404') && endpoint.includes('/games/');
+      if (!isExpected404) {
+        console.error('API Call Error:', { endpoint, error });
+      }
       throw error;
     }
   };

@@ -102,11 +102,17 @@ function HostDashboard() {
   const [showEnhancedResults, setShowEnhancedResults] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
-  // Debug logging for development
-  if (import.meta.env.DEV) {
-    console.log('HostDashboard state:', { room, title, gameId, questionSetId });
-    console.log('HostDashboard gameState:', gameState);
-  }
+  // Debug logging for development (throttled to reduce noise)
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const logThrottle = setTimeout(() => {
+        console.log('🎮 HostDashboard state:', { room, title, gameId, questionSetId });
+        console.log('📊 HostDashboard gameState:', gameState?.status, gameState?.currentQuestionIndex, gameState?.timeRemaining);
+      }, 1000); // Log once per second max
+      
+      return () => clearTimeout(logThrottle);
+    }
+  }, [room, title, gameId, questionSetId, gameState?.status, gameState?.currentQuestionIndex]);
 
   useEffect(() => {
     if (!room || !title) {
@@ -678,6 +684,8 @@ function HostDashboard() {
               <MobileViewPort mode="scale-to-fit" className="host-game-renderer__viewport">
                 <InlineQuizPreview 
                   gameState={gameState}
+                  gameId={gameId}
+                  questionSetId={questionSetId}
                   disableInteraction={true}
                 />
               </MobileViewPort>

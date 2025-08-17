@@ -17,7 +17,8 @@ function QuizContent({
   questionScore = 0,
   onAnswer,
   showConnectionStatus = true,
-  previewMode = false
+  previewMode = false,
+  isHostView = false
 }) {
   if (!question) {
     return (
@@ -54,9 +55,16 @@ function QuizContent({
       <div className="quiz-page">
         <div className="quiz-header">
           <div className="quiz-player-stats">
-            <div className="quiz-current-score">スコア: {score}</div>
-            {streak > 1 && <div className="quiz-streak-badge">🔥 {streak}連続!</div>}
-            {questionScore > 0 && <div className="quiz-last-points">+{questionScore}</div>}
+            <div className="quiz-current-score">
+              {isHostView ? 'ホストビュー' : `スコア: ${score}`}
+            </div>
+            {!isHostView && streak > 1 && <div className="quiz-streak-badge">🔥 {streak}連続!</div>}
+            {!isHostView && questionScore > 0 && <div className="quiz-last-points">+{questionScore}</div>}
+            {isHostView && (
+              <div className="quiz-host-indicator">
+                👁️ プレイヤーと同期中
+              </div>
+            )}
           </div>
         </div>
 
@@ -70,6 +78,7 @@ function QuizContent({
           showProgress={true}
           showTimer={true}
           previewMode={previewMode}
+          isHostView={isHostView}
         />
       </div>
     </div>
