@@ -3,6 +3,8 @@
 ## Overview
 Hook the host components to the actual game session to enable full game flow control and real-time game management.
 
+
+ = NOT GOING TO FOLLOW (TOO DANGEROUS)
 ## 🏗️ Core Infrastructure
 
 ### 1. Host Game Session State Management
