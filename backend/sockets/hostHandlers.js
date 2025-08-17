@@ -605,6 +605,460 @@ class HostSocketHandlers {
     }
   }
 
+  // Handle timer adjustment request
+  handleHostTimerAdjust(socket, data) {
+    try {
+      const { gameId, adjustment, questionIndex, newTimeLimit } = data;
+      const room = RoomManager.getRoom(gameId);
+      
+      if (!this.validateHostAction(socket, room, gameId)) return;
+
+      if (room.gameState?.status !== 'active') {
+        socket.emit('host:action:error', { 
+          action: 'timer_adjust',
+          error: 'Game must be active to adjust timer' 
+        });
+        return;
+      }
+
+      const adjustedAt = new Date().toISOString();
+      
+      // Apply timer adjustment
+      if (newTimeLimit) {
+        // Set specific time limit
+        room.gameState.timeRemaining = newTimeLimit;
+      } else if (adjustment) {
+        // Adjust current time by amount
+        room.gameState.timeRemaining = Math.max(0, (room.gameState.timeRemaining || 0) + adjustment);
+      }
+
+      // Broadcast timer update to all players
+      this.io.to(gameId).emit('timer:adjusted', {
+        gameId,
+        timeRemaining: room.gameState.timeRemaining,
+        adjustment,
+        adjustedAt,
+        message: `Timer ${adjustment > 0 ? 'extended' : 'reduced'} by host`
+      });
+
+      // Confirm to host
+      socket.emit('host:action:success', {
+        action: 'timer_adjust',
+        timeRemaining: room.gameState.timeRemaining,
+        adjustment,
+        adjustedAt
+      });
+
+      logger.info(`Timer adjusted in game ${gameId}`, {
+        gameId,
+        hostSocketId: socket.id,
+        adjustment,
+        newTimeRemaining: room.gameState.timeRemaining,
+        adjustedAt
+      });
+
+    } catch (error) {
+      logger.error('Host timer adjust error:', error);
+      socket.emit('host:action:error', { action: 'timer_adjust', error: 'Failed to adjust timer' });
+    }
+  }
+
+  // Handle timer reset request
+  handleHostTimerReset(socket, data) {
+    try {
+      const { gameId, resetToOriginal = true, newTimeLimit } = data;
+      const room = RoomManager.getRoom(gameId);
+      
+      if (!this.validateHostAction(socket, room, gameId)) return;
+
+      if (room.gameState?.status !== 'active') {
+        socket.emit('host:action:error', { 
+          action: 'timer_reset',
+          error: 'Game must be active to reset timer' 
+        });
+        return;
+      }
+
+      const resetAt = new Date().toISOString();
+      const currentQuestion = room.questions?.[room.gameState?.currentQuestion - 1];
+      
+      // Reset timer to original or specified value
+      let newTime;
+      if (newTimeLimit) {
+        newTime = newTimeLimit;
+      } else if (resetToOriginal && currentQuestion?.timeLimit) {
+        newTime = currentQuestion.timeLimit;
+      } else {
+        newTime = 30000; // Default 30 seconds
+      }
+
+      room.gameState.timeRemaining = newTime;
+
+      // Broadcast timer reset to all players
+      this.io.to(gameId).emit('timer:reset', {
+        gameId,
+        timeRemaining: newTime,
+        resetAt,
+        message: 'Timer reset by host'
+      });
+
+      // Confirm to host
+      socket.emit('host:action:success', {
+        action: 'timer_reset',
+        timeRemaining: newTime,
+        resetAt
+      });
+
+      logger.info(`Timer reset in game ${gameId}`, {
+        gameId,
+        hostSocketId: socket.id,
+        newTimeRemaining: newTime,
+        resetAt
+      });
+
+    } catch (error) {
+      logger.error('Host timer reset error:', error);
+      socket.emit('host:action:error', { action: 'timer_reset', error: 'Failed to reset timer' });
+    }
+  }
+
+  // Handle mute player request
+  handleHostMutePlayer(socket, data) {
+    try {
+      const { gameId, playerId, reason, duration } = data;
+      const room = RoomManager.getRoom(gameId);
+      
+      if (!this.validateHostAction(socket, room, gameId)) return;
+
+      const player = room.players[playerId];
+      if (!player) {
+        socket.emit('host:action:error', { 
+          action: 'mute_player',
+          error: 'Player not found' 
+        });
+        return;
+      }
+
+      const mutedAt = new Date().toISOString();
+      
+      // Track muted player
+      room.mutedPlayers = room.mutedPlayers || {};
+      room.mutedPlayers[playerId] = {
+        mutedAt,
+        reason: reason || 'host_decision',
+        duration
+      };
+
+      // Update player status
+      player.isMuted = true;
+      player.mutedAt = mutedAt;
+
+      // Notify muted player
+      if (player.socketId) {
+        this.io.to(player.socketId).emit('player:muted', {
+          gameId,
+          reason: reason || 'host_decision',
+          mutedAt,
+          duration,
+          message: 'You have been muted by the host'
+        });
+      }
+
+      // Broadcast to other players (optional)
+      socket.broadcast.to(gameId).emit('player:status:updated', {
+        gameId,
+        playerId,
+        playerName: player.name,
+        status: 'muted'
+      });
+
+      // Confirm to host
+      socket.emit('host:action:success', {
+        action: 'mute_player',
+        mutedPlayer: {
+          playerId,
+          playerName: player.name,
+          mutedAt,
+          reason
+        }
+      });
+
+      // Auto-unmute after duration if specified
+      if (duration && duration > 0) {
+        setTimeout(() => {
+          this.handleHostUnmutePlayer(socket, { gameId, playerId, reason: 'auto_unmute' });
+        }, duration);
+      }
+
+      logger.info(`Player ${playerId} muted in game ${gameId}`, {
+        gameId,
+        hostSocketId: socket.id,
+        playerId,
+        playerName: player.name,
+        reason,
+        mutedAt
+      });
+
+    } catch (error) {
+      logger.error('Host mute player error:', error);
+      socket.emit('host:action:error', { action: 'mute_player', error: 'Failed to mute player' });
+    }
+  }
+
+  // Handle unmute player request
+  handleHostUnmutePlayer(socket, data) {
+    try {
+      const { gameId, playerId, reason } = data;
+      const room = RoomManager.getRoom(gameId);
+      
+      if (!this.validateHostAction(socket, room, gameId)) return;
+
+      const player = room.players[playerId];
+      if (!player) {
+        socket.emit('host:action:error', { 
+          action: 'unmute_player',
+          error: 'Player not found' 
+        });
+        return;
+      }
+
+      const unmutedAt = new Date().toISOString();
+      
+      // Remove from muted players
+      if (room.mutedPlayers && room.mutedPlayers[playerId]) {
+        delete room.mutedPlayers[playerId];
+      }
+
+      // Update player status
+      player.isMuted = false;
+      player.unmutedAt = unmutedAt;
+
+      // Notify unmuted player
+      if (player.socketId) {
+        this.io.to(player.socketId).emit('player:unmuted', {
+          gameId,
+          reason: reason || 'host_decision',
+          unmutedAt,
+          message: 'You have been unmuted by the host'
+        });
+      }
+
+      // Broadcast to other players (optional)
+      socket.broadcast.to(gameId).emit('player:status:updated', {
+        gameId,
+        playerId,
+        playerName: player.name,
+        status: 'active'
+      });
+
+      // Confirm to host
+      socket.emit('host:action:success', {
+        action: 'unmute_player',
+        unmutedPlayer: {
+          playerId,
+          playerName: player.name,
+          unmutedAt,
+          reason
+        }
+      });
+
+      logger.info(`Player ${playerId} unmuted in game ${gameId}`, {
+        gameId,
+        hostSocketId: socket.id,
+        playerId,
+        playerName: player.name,
+        reason,
+        unmutedAt
+      });
+
+    } catch (error) {
+      logger.error('Host unmute player error:', error);
+      socket.emit('host:action:error', { action: 'unmute_player', error: 'Failed to unmute player' });
+    }
+  }
+
+  // Handle host transfer request
+  handleHostTransfer(socket, data) {
+    try {
+      const { gameId, newHostPlayerId, reason } = data;
+      const room = RoomManager.getRoom(gameId);
+      
+      if (!this.validateHostAction(socket, room, gameId)) return;
+
+      const newHostPlayer = room.players[newHostPlayerId];
+      if (!newHostPlayer) {
+        socket.emit('host:action:error', { 
+          action: 'transfer_host',
+          error: 'Target player not found' 
+        });
+        return;
+      }
+
+      const transferredAt = new Date().toISOString();
+      
+      // Transfer host privileges
+      const oldHostSocketId = room.hostSocketId;
+      room.hostSocketId = newHostPlayer.socketId;
+      room.hostTransferHistory = room.hostTransferHistory || [];
+      room.hostTransferHistory.push({
+        fromSocketId: oldHostSocketId,
+        toPlayerId: newHostPlayerId,
+        transferredAt,
+        reason: reason || 'host_decision'
+      });
+
+      // Notify new host
+      if (newHostPlayer.socketId) {
+        this.io.to(newHostPlayer.socketId).emit('host:transferred:to:you', {
+          gameId,
+          transferredAt,
+          message: 'You are now the host of this game',
+          hostPrivileges: true
+        });
+      }
+
+      // Notify all players
+      this.io.to(gameId).emit('host:transferred', {
+        gameId,
+        newHostName: newHostPlayer.name,
+        transferredAt,
+        message: `${newHostPlayer.name} is now the host`
+      });
+
+      // Confirm to old host
+      socket.emit('host:action:success', {
+        action: 'transfer_host',
+        newHost: {
+          playerId: newHostPlayerId,
+          playerName: newHostPlayer.name,
+          transferredAt
+        }
+      });
+
+      logger.info(`Host transferred in game ${gameId}`, {
+        gameId,
+        oldHostSocketId,
+        newHostPlayerId,
+        newHostPlayerName: newHostPlayer.name,
+        transferredAt
+      });
+
+    } catch (error) {
+      logger.error('Host transfer error:', error);
+      socket.emit('host:action:error', { action: 'transfer_host', error: 'Failed to transfer host' });
+    }
+  }
+
+  // Handle settings update request
+  handleHostSettingsUpdate(socket, data) {
+    try {
+      const { gameId, settings, applyImmediately = false } = data;
+      const room = RoomManager.getRoom(gameId);
+      
+      if (!this.validateHostAction(socket, room, gameId)) return;
+
+      const updatedAt = new Date().toISOString();
+      
+      // Update game settings
+      room.gameSettings = {
+        ...room.gameSettings,
+        ...settings,
+        updatedAt
+      };
+
+      // Apply settings immediately if requested and game is active
+      if (applyImmediately && room.gameState?.status === 'active') {
+        // Apply settings to current state
+        if (settings.timeLimit && room.gameState.timeRemaining) {
+          room.gameState.timeRemaining = settings.timeLimit;
+        }
+      }
+
+      // Broadcast settings update to players
+      this.io.to(gameId).emit('game:settings:updated', {
+        gameId,
+        settings: room.gameSettings,
+        updatedAt,
+        applyImmediately
+      });
+
+      // Confirm to host
+      socket.emit('host:action:success', {
+        action: 'update_settings',
+        settings: room.gameSettings,
+        updatedAt
+      });
+
+      logger.info(`Game settings updated in ${gameId}`, {
+        gameId,
+        hostSocketId: socket.id,
+        settingsKeys: Object.keys(settings),
+        updatedAt
+      });
+
+    } catch (error) {
+      logger.error('Host settings update error:', error);
+      socket.emit('host:action:error', { action: 'update_settings', error: 'Failed to update settings' });
+    }
+  }
+
+  // Handle analytics request
+  handleHostAnalyticsRequest(socket, data) {
+    try {
+      const { gameId, analyticsType = 'all' } = data;
+      const room = RoomManager.getRoom(gameId);
+      
+      if (!this.validateHostAction(socket, room, gameId)) return;
+
+      const analytics = this.getGameAnalytics(room);
+      
+      // Enhanced analytics based on type
+      const enhancedAnalytics = {
+        basic: analytics,
+        players: Object.values(room.players).map(player => ({
+          id: player.id,
+          name: player.name,
+          score: player.score || 0,
+          questionsAnswered: player.questionsAnswered || 0,
+          correctAnswers: player.correctAnswers || 0,
+          averageResponseTime: player.averageResponseTime || 0,
+          joinedAt: player.joinedAt,
+          isActive: player.isActive !== false
+        })),
+        questions: room.questions?.map((q, index) => ({
+          questionNumber: index + 1,
+          questionText: q.question,
+          totalResponses: q.responses?.length || 0,
+          correctResponses: q.responses?.filter(r => r.isCorrect).length || 0,
+          averageResponseTime: q.averageResponseTime || 0
+        })) || [],
+        timeline: room.gameTimeline || []
+      };
+
+      // Send requested analytics
+      const responseData = analyticsType === 'all' 
+        ? enhancedAnalytics 
+        : enhancedAnalytics[analyticsType] || analytics;
+
+      socket.emit('host:analytics:response', {
+        gameId,
+        analyticsType,
+        data: responseData,
+        generatedAt: new Date().toISOString()
+      });
+
+      logger.info(`Analytics requested for game ${gameId}`, {
+        gameId,
+        hostSocketId: socket.id,
+        analyticsType
+      });
+
+    } catch (error) {
+      logger.error('Host analytics request error:', error);
+      socket.emit('host:action:error', { action: 'analytics_request', error: 'Failed to get analytics' });
+    }
+  }
+
   // Handle kick player request
   handleHostKickPlayer(socket, data) {
     try {
