@@ -111,14 +111,18 @@ function InlineQuizPreview({
 
   // Game finished state - show scoreboard with final results
   if (isGameEnded) {
-    // Priority order for scoreboard data:
-    // 1. Real scoreboard data from API
-    // 2. Live gameState standings (most current)
-    // 3. GameState fallback data
-    // 4. Hook's getLeaderboardData fallback
+    // Priority order for scoreboard data (matching Quiz.jsx pattern):
+    // 1. gameState.scoreboard (from game_over event, like Quiz.jsx)
+    // 2. Real scoreboard data from API
+    // 3. Live gameState standings (most current)
+    // 4. GameState fallback data
+    // 5. Hook's getLeaderboardData fallback
     let finalScoreboardData = [];
     
-    if (scoreboardData && scoreboardData.length > 0) {
+    if (gameState.scoreboard && gameState.scoreboard.length > 0) {
+      // Use scoreboard from game_over event (same as Quiz.jsx)
+      finalScoreboardData = gameState.scoreboard;
+    } else if (scoreboardData && scoreboardData.length > 0) {
       finalScoreboardData = scoreboardData;
     } else if (gameState.standings && gameState.standings.length > 0) {
       // Transform live gameState standings to scoreboard format
@@ -133,13 +137,13 @@ function InlineQuizPreview({
         correctAnswers: player.correctAnswers || 0,
         totalAnswers: player.totalAnswers || 0
       }));
-    } else if (gameState.finalScoreboard || gameState.scoreboard) {
-      finalScoreboardData = gameState.finalScoreboard || gameState.scoreboard;
+    } else if (gameState.finalScoreboard) {
+      finalScoreboardData = gameState.finalScoreboard;
     } else {
       finalScoreboardData = getLeaderboardData(gameState);
     }
     
-    const room = gameState.room || gameState.gameId || gameId;
+    const room = gameState.room || gameState.gameCode || gameState.gameId || gameId;
     
     // Show loading if scoreboard is still being fetched and we have no fallback data
     if (loadingScoreboard && (!finalScoreboardData || finalScoreboardData.length === 0)) {
@@ -167,12 +171,15 @@ function InlineQuizPreview({
         <div className="inline-quiz-preview__badge inline-quiz-preview__badge--finished">
           <span className="badge-text">GAME FINISHED</span>
           <span className="badge-info">
-            {(scoreboardData && scoreboardData.length > 0) || (gameState.standings && gameState.standings.length > 0) ? 'LIVE RESULTS' : 'Final Results'}
+            {(gameState.scoreboard && gameState.scoreboard.length > 0) || 
+             (scoreboardData && scoreboardData.length > 0) || 
+             (gameState.standings && gameState.standings.length > 0) ? 'LIVE RESULTS' : 'Final Results'}
           </span>
           {/* Debug indicator for data source */}
           {import.meta.env.DEV && (
             <span className="badge-debug">
-              {scoreboardData && scoreboardData.length > 0 ? '🔴 API DATA' : 
+              {gameState.scoreboard && gameState.scoreboard.length > 0 ? '🎮 GAME_OVER' :
+               scoreboardData && scoreboardData.length > 0 ? '🔴 API DATA' : 
                gameState.standings && gameState.standings.length > 0 ? '🟢 LIVE DATA' : '🟡 FALLBACK'}
             </span>
           )}
@@ -181,11 +188,14 @@ function InlineQuizPreview({
         {/* Scoreboard component for final results */}
         <div className="inline-quiz-preview__content inline-quiz-preview__content--scoreboard">
           <Scoreboard 
-            // Pass state prop as expected by Scoreboard component
+            // Pass state prop exactly like Quiz.jsx does for navigation state
+            // Quiz.jsx: navigate('/scoreboard', { state: { scoreboard, name, room } });
+            // We simulate the same state structure for perfect compatibility
             state={{
               scoreboard: finalScoreboardData,
               room: room,
-              isHost: true // Preview is always from host perspective
+              isHost: true, // Preview is always from host perspective
+              name: "Host" // Add name like Quiz does
             }}
           />
         </div>

@@ -943,6 +943,75 @@ const sendNextQuestion = async (gameCode) => {
 };
 
 // Helper function to end game
+// Helper function to create individual game results for each player
+const createGameResultsForPlayers = async (activeGame, scoreboard) => {
+  if (!db || !activeGame.id) return;
+
+  try {
+    const gameResultsPromises = Array.from(activeGame.players.values()).map(async (player) => {
+      // Find player's scoreboard entry for rank
+      const scoreboardEntry = scoreboard.find(entry => entry.name === player.name);
+      const finalRank = scoreboardEntry ? scoreboardEntry.rank : 0;
+
+      // Calculate player statistics
+      const totalQuestions = activeGame.totalQuestions || activeGame.questions?.length || 0;
+      const totalCorrect = player.correctAnswers || 0;
+      const completionPercentage = totalQuestions > 0 ? ((totalCorrect / totalQuestions) * 100) : 0;
+      
+      // Calculate average response time (if available)
+      const responseTimes = player.responseTimes || [];
+      const averageResponseTime = responseTimes.length > 0 
+        ? Math.round(responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length)
+        : 0;
+
+      // Create game result record
+      const gameResultData = {
+        game_id: activeGame.id,
+        player_id: player.id,
+        final_score: player.score || 0,
+        final_rank: finalRank,
+        total_correct: totalCorrect,
+        total_questions: totalQuestions,
+        average_response_time: averageResponseTime,
+        longest_streak: player.longestStreak || player.streak || 0,
+        completion_percentage: Math.round(completionPercentage * 100) / 100 // Round to 2 decimal places
+      };
+
+      // Insert into database
+      const { data, error } = await db.supabaseAdmin
+        .from('game_results')
+        .insert(gameResultData)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error(`❌ Failed to create game result for player ${player.name}:`, error);
+        return { success: false, error, playerId: player.id };
+      }
+
+      if (isDevelopment || isLocalhost) {
+        logger.database(`✅ Created game result for player ${player.name} (Score: ${player.score}, Rank: ${finalRank})`);
+      }
+
+      return { success: true, result: data, playerId: player.id };
+    });
+
+    const results = await Promise.allSettled(gameResultsPromises);
+    
+    const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+    const failed = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)).length;
+
+    if (isDevelopment || isLocalhost) {
+      logger.database(`📊 Game results creation summary: ${successful} successful, ${failed} failed`);
+    }
+
+    return { successful, failed, results };
+  } catch (error) {
+    logger.error('❌ Error in createGameResultsForPlayers:', error);
+    throw error;
+  }
+};
+
 const endGame = async (gameCode) => {
   const activeGame = activeGames.get(gameCode);
   if (!activeGame) return;
@@ -1014,6 +1083,15 @@ const endGame = async (gameCode) => {
       }
     } catch (dbError) {
       logger.error('❌ Database error updating game status:', dbError);
+    }
+  }
+
+  // Create individual game results for each player
+  if (activeGame.id && db) {
+    try {
+      await createGameResultsForPlayers(activeGame, scoreboard);
+    } catch (resultsError) {
+      logger.error('❌ Error creating game results:', resultsError);
     }
   }
 
@@ -1513,6 +1591,9 @@ io.on('connection', (socket) => {
         isAuthenticated: isAuthenticated,
         score: 0,
         streak: 0,
+        correctAnswers: 0,        // Track number of correct answers
+        responseTimes: [],        // Track response times for average calculation
+        longestStreak: 0,         // Track longest streak achieved
         isConnected: true,
         joinedAt: new Date().toISOString()
       };
@@ -1883,6 +1964,7 @@ io.on('connection', (socket) => {
       // Update game state with enhanced questions and flow config
       activeGame.status = 'active';
       activeGame.questions = finalQuestions;
+      activeGame.totalQuestions = finalQuestions.length; // Track total questions for game results
       activeGame.gameFlowConfig = gameFlowConfig;
       activeGame.currentQuestionIndex = 0;
       activeGame.started_at = new Date().toISOString();
@@ -2016,6 +2098,12 @@ io.on('connection', (socket) => {
         player.streak = scoreResult.newStreak;
         player.score += points;
         
+        // Track correct answers count
+        player.correctAnswers = (player.correctAnswers || 0) + 1;
+        
+        // Track longest streak achieved
+        player.longestStreak = Math.max(player.longestStreak || 0, player.streak);
+        
         // Log detailed breakdown for debugging
         if (scoreResult.breakdown && (isDevelopment || isLocalhost)) {
           const breakdown = scoreResult.breakdown;
@@ -2034,6 +2122,12 @@ io.on('connection', (socket) => {
           logger.debug(`❌ ${player.name}: Wrong answer - streak reset`);
         }
       }
+
+      // Track response times for average calculation
+      if (!player.responseTimes) {
+        player.responseTimes = [];
+      }
+      player.responseTimes.push(timeTaken || 0);
       
       // Record the answer
       const answerData = {

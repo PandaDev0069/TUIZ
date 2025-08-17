@@ -63,16 +63,36 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (!response.ok) {
-        // Only log unexpected errors (not 404s for game lookups in preview mode)
-        const isExpected404 = response.status === 404 && endpoint.includes('/games/');
-        if (!isExpected404) {
+        // Handle specific database schema errors
+        if (data?.error?.includes('relationship') && data?.error?.includes('schema cache')) {
+          if (import.meta.env.DEV) {
+            console.warn('🔧 Database schema issue detected:', {
+              endpoint,
+              error: data.error
+            });
+          }
+          throw new Error(`Database schema error: ${data.error}`);
+        }
+
+        // Only log unexpected errors (not 404s/500s for game lookups in preview mode)
+        const isExpectedError = (response.status === 404 || response.status === 500) && 
+          (endpoint.includes('/games/') || endpoint.includes('/game-results/'));
+          
+        if (!isExpectedError) {
           console.error('API Error Details:', {
             endpoint,
             status: response.status,
             statusText: response.statusText,
             responseData: data
           });
+        } else if (import.meta.env.DEV && response.status === 500) {
+          if (data?.error?.includes('relationship')) {
+            console.log('ℹ️ Database schema issue - game results unavailable:', endpoint);
+          } else {
+            console.log('ℹ️ Game results not available (server error):', endpoint);
+          }
         }
+        
         throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 

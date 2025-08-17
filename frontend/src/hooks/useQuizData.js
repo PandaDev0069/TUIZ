@@ -209,7 +209,9 @@ export const useQuizData = (questionSetId, gameId = null) => {
         }
       } catch (gameResultsError) {
         // Game results not found or server error, try active game data
-        if (gameResultsError.message?.includes('HTTP 500')) {
+        if (gameResultsError.message?.includes('Database schema error')) {
+          console.log('ℹ️ Database schema issue detected, using fallback data...');
+        } else if (gameResultsError.message?.includes('HTTP 500')) {
           console.log('ℹ️ Game results server error, trying active game data...');
         } else {
           console.log('ℹ️ No game results found, trying active game data...');
@@ -259,8 +261,14 @@ export const useQuizData = (questionSetId, gameId = null) => {
       return; // Don't throw error, use fallback data
       
     } catch (error) {
-      console.error('❌ Error fetching scoreboard:', error);
-      setScoreboardError(error.message);
+      // Handle specific database schema errors
+      if (error.message?.includes('Database schema error')) {
+        console.warn('🔧 Database schema issue - providing fallback scoreboard data');
+        setScoreboardError('Database configuration issue - showing demo data');
+      } else {
+        console.error('❌ Error fetching scoreboard:', error);
+        setScoreboardError(error.message);
+      }
       
       // Fallback to mock data on error
       const fallbackScoreboard = [
