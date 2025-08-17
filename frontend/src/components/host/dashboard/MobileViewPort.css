@@ -77,11 +77,14 @@
 
 /* Content scaling modes for better fit */
 .mobile-viewport--scale-to-fit {
-  overflow: hidden;
+  /* Allow scrolling even in scale-to-fit mode */
+  overflow: hidden; /* Keep container overflow hidden for visual containment */
 }
 
 .mobile-viewport--scale-to-fit .mobile-viewport__content {
-  overflow: hidden;
+  /* Enable scrolling in the content area */
+  overflow-y: auto;
+  overflow-x: hidden;
   transform-origin: top left;
 }
 

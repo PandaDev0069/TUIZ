@@ -7,7 +7,7 @@
   width: 100%;
   height: 100%;
   border-radius: var(--host-radius-lg, 12px);
-  overflow: hidden;
+  overflow: hidden; /* Keep this to maintain visual containment */
   /* Use TUIZ global gradient background */
   background: var(--tuiz-gradient-primary);
   border: 1px solid var(--tuiz-glass-border-light);
@@ -84,7 +84,7 @@
   z-index: 10;
   background: transparent;
   cursor: default;
-  pointer-events: auto;
+  pointer-events: none; /* Allow scrolling through the blocker */
 }
 
 /* ========================================
@@ -185,7 +185,8 @@
   width: 100%;
   height: 100%;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto; /* Enable vertical scrolling */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
   /* Apply standard page-container styling for consistency */
   display: flex;
   flex-direction: column;
@@ -194,6 +195,30 @@
   padding: 20px;
   color: var(--tuiz-white);
   font-family: var(--tuiz-font-family);
+  /* Enhanced scrolling */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  /* Subtle scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+/* Webkit scrollbar styling */
+.inline-quiz-preview__content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.inline-quiz-preview__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.inline-quiz-preview__content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.inline-quiz-preview__content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Remove custom quiz overrides - let components use their natural styles */
@@ -211,7 +236,7 @@
   flex-direction: column;
   /* Use natural scrolling behavior in preview */
   scroll-behavior: smooth;
-  overflow-y: auto;
+  overflow-y: visible; /* Let parent handle scrolling */
   -webkit-overflow-scrolling: touch;
 }
 
@@ -221,7 +246,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start; /* Changed from center to allow natural flow */
   text-align: center;
   padding: 20px;
   /* Background handled by parent .inline-quiz-preview */
@@ -389,7 +414,8 @@
   position: relative;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto; /* Enable scrolling */
+  overflow-x: hidden;
 }
 
 /* QuestionRenderer integration for host view */
@@ -397,21 +423,22 @@
   position: relative;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto; /* Enable scrolling */
+  overflow-x: hidden;
 }
 
 /* Override QuestionRenderer styles for inline use */
 .inline-quiz-preview__content--question .quiz-question-renderer {
-  height: 100% !important;
-  max-height: 100% !important;
-  overflow: hidden !important;
+  height: auto !important; /* Allow natural height */
+  max-height: none !important; /* Remove height restriction */
+  overflow: visible !important; /* Allow content to be visible */
   padding: 12px !important;
 }
 
 /* Keep question content at natural desktop size */
 .inline-quiz-preview__content--question .quiz-question-content-wrapper {
-  height: 100% !important;
-  overflow: hidden !important;
+  height: auto !important; /* Allow natural height */
+  overflow: visible !important; /* Allow content to be visible */
 }
 
 /* Disable interactions in preview mode */
@@ -700,13 +727,13 @@
 /* Enhanced Explanation and Leaderboard Layouts */
 .quiz-explanation-full {
   width: 100%;
-  height: 100%;
+  height: auto; /* Changed from 100% to auto */
   display: flex;
   flex-direction: column;
   color: var(--tuiz-white);
   padding: 16px;
   gap: 16px;
-  overflow-y: auto;
+  overflow-y: visible; /* Let parent handle scrolling */
 }
 
 .explanation-section {
@@ -716,8 +743,8 @@
 
 .explanation-leaderboard {
   flex-shrink: 0;
-  max-height: 200px;
-  overflow-y: auto;
+  max-height: none; /* Remove height restriction */
+  overflow-y: visible; /* Let parent handle scrolling */
 }
 
 .explanation-header {
