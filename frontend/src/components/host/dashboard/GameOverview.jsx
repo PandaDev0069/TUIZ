@@ -25,7 +25,7 @@ import './GameOverview.css';
  * - Performance metrics cards
  * - Timer controls
  */
-function GameOverview({ gameState, players = [], onTimerAdjust }) {
+function GameOverview({ gameState, players = [], roomCode, onTimerAdjust }) {
   const [showTimerControls, setShowTimerControls] = useState(false);
 
   const formatTime = (seconds) => {
@@ -69,7 +69,18 @@ function GameOverview({ gameState, players = [], onTimerAdjust }) {
       <div className="game-overview__content">
         {/* Live Game Renderer */}
         <div className="game-overview__game-section">
-          <HostGameRenderer gameState={gameState} players={players} />
+          <HostGameRenderer 
+            gameState={gameState} 
+            roomCode={roomCode}
+            timeRemaining={gameState.timeRemaining}
+            playerStats={{
+              totalPlayers: players.length,
+              answered: players.filter(p => p.hasAnswered).length,
+              correctAnswers: players.filter(p => p.lastAnswerCorrect).length,
+              avgScore: players.length > 0 ? 
+                players.reduce((sum, p) => sum + (p.score || 0), 0) / players.length : 0
+            }}
+          />
         </div>
 
         {/* Progress and Timer */}

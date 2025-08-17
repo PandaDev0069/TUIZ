@@ -688,6 +688,7 @@ function HostDashboard() {
           <GameOverview 
             gameState={gameState}
             players={players}
+            roomCode={room}
             onTimerAdjust={handleTimerAdjust}
           />
         </div>
