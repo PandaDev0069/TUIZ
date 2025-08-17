@@ -208,6 +208,11 @@
 /* Grid area assignments */
 .host-dashboard__section--overview {
   grid-area: overview;
+  width: 460px; /* Slightly larger than iPhone Max width to account for padding */
+  height: 970px; /* Slightly larger than iPhone Max height to account for padding */
+  max-width: 460px;
+  max-height: 970px;
+  justify-self: center;
 }
 
 .host-dashboard__section--actions {
@@ -490,6 +495,14 @@
       "analytics";
     grid-template-columns: 1fr;
     gap: var(--tuiz-space-3);
+  }
+  
+  .host-dashboard__section--overview {
+    width: 100%;
+    height: 500px;
+    max-width: 100%;
+    max-height: 500px;
+    justify-self: stretch;
   }
   
   .host-dashboard__section {

@@ -590,13 +590,10 @@ function HostDashboard() {
                   </h1>
                   <div className="host-dashboard__subtitle">
                     <span className="host-dashboard__game-title">{title}</span>
-                    <span className="host-dashboard__room-code">
-                      ルーム: <strong>{room}</strong>
-              </span>
-            </div>
-          </div>
-          
-          <div className="host-dashboard__header-actions">
+                  </div>
+                </div>
+
+                <div className="host-dashboard__header-actions">
             <button 
               className="host-button host-button--primary host-button--small"
               onClick={handleControlPanel}
@@ -660,23 +657,6 @@ function HostDashboard() {
               <FaExclamationTriangle className="host-button__icon" />
               緊急停止
             </button>
-          </div>
-        </div>
-        
-        {/* Status indicator */}
-        <div className="host-dashboard__status">
-          <div className={`host-status-badge host-status-badge--${gameState.status}`}>
-            {gameState.status === 'waiting' && <FaClock className="host-status-badge__icon" />}
-            {gameState.status === 'active' && <FaPlay className="host-status-badge__icon" />}
-            {gameState.status === 'paused' && <FaPause className="host-status-badge__icon" />}
-            {gameState.status === 'finished' && <FaCheckCircle className="host-status-badge__icon" />}
-            
-            <span className="host-status-badge__text">
-              {gameState.status === 'waiting' && '待機中'}
-              {gameState.status === 'active' && '進行中'}
-              {gameState.status === 'paused' && '一時停止'}
-              {gameState.status === 'finished' && '終了'}
-            </span>
           </div>
         </div>
       </div>

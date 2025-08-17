@@ -1,0 +1,46 @@
+/* MobileViewPort - Mobile-sized container */
+.mobile-viewport {
+  width: 430px; /* iPhone 14 Pro Max width */
+  height: 932px; /* iPhone 14 Pro Max height */
+  max-width: 100%;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.mobile-viewport__content {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .mobile-viewport {
+    width: 100%;
+    height: 100vh;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* Alternative mobile sizes */
+.mobile-viewport--small {
+  width: 320px; /* Small mobile */
+  height: 568px;
+}
+
+.mobile-viewport--large {
+  width: 414px; /* iPhone Plus size */
+  height: 736px;
+}
+
+.mobile-viewport--modern {
+  width: 390px; /* iPhone 12/13 size */
+  height: 844px;
+}
