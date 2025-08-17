@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QuestionRenderer from '../../quiz/QuestionRenderer';
 import PostQuestionDisplay from '../../quiz/PostQuestionDisplay/PostQuestionDisplay';
+import LoadingSkeleton from '../../LoadingSkeleton';
+import Scoreboard from '../../../pages/Scoreboard';
 import useQuizData from '../../../hooks/useQuizData';
 import './InlineQuizPreview.css';
 
@@ -35,6 +37,7 @@ function InlineQuizPreview({
 
   // Live game state - prioritize gameState over preview state
   const isLiveGame = gameState && gameState.status === 'active' && gameState.currentQuestion;
+  const isGameEnded = gameState && (gameState.status === 'finished' || gameState.status === 'ended' || gameState.status === 'completed');
   const liveQuestionIndex = gameState?.currentQuestionIndex || 0;
   
   // Get current question - live game takes priority
@@ -104,8 +107,88 @@ function InlineQuizPreview({
     );
   }
 
-  // Error state with fallback
-  if (hasError || (!currentQuestion && !isLiveGame)) {
+  // Game finished state - show scoreboard with final results
+  if (isGameEnded) {
+    // Prepare scoreboard data from gameState
+    const scoreboardData = gameState.finalScoreboard || gameState.scoreboard || [];
+    const room = gameState.room || gameState.gameId || gameId;
+    
+    return (
+      <div className="inline-quiz-preview inline-quiz-preview--finished">
+        {/* Interaction blocker overlay */}
+        {disableInteraction && (
+          <div 
+            className="inline-quiz-preview__interaction-blocker"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
+
+        {/* Game finished badge */}
+        <div className="inline-quiz-preview__badge inline-quiz-preview__badge--finished">
+          <span className="badge-text">GAME FINISHED</span>
+          <span className="badge-info">Final Results</span>
+        </div>
+
+        {/* Scoreboard component for final results */}
+        <div className="inline-quiz-preview__content inline-quiz-preview__content--scoreboard">
+          <Scoreboard 
+            // Pass state prop as expected by Scoreboard component
+            state={{
+              scoreboard: scoreboardData,
+              room: room,
+              isHost: true // Preview is always from host perspective
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Show skeleton when not synced with live game (preview mode with limited data)
+  if (!isLiveGame && !isGameEnded) {
+    return (
+      <div className="inline-quiz-preview inline-quiz-preview--skeleton">
+        {/* Interaction blocker overlay */}
+        {disableInteraction && (
+          <div 
+            className="inline-quiz-preview__interaction-blocker"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
+
+        {/* Preview badge */}
+        <div className="inline-quiz-preview__badge">
+          <span className="badge-text">NOT SYNCED</span>
+          <span className="badge-info">Preview Mode</span>
+        </div>
+
+        {/* Status indicator showing not synced */}
+        <div className="inline-quiz-preview__status">
+          <div className="status-indicator">
+            <span className="status-dot status-dot--offline"></span>
+            <span className="status-text">Waiting for live data...</span>
+          </div>
+        </div>
+
+        {/* Loading skeleton */}
+        <div className="inline-quiz-preview__content inline-quiz-preview__content--skeleton">
+          <LoadingSkeleton 
+            type="question" 
+            count={1} 
+            className="preview-skeleton"
+            animated={true}
+          />
+        </div>
+
+        <div className="preview-sync-notice">
+          🔄 Waiting for game synchronization
+        </div>
+      </div>
+    );
+  }
+
+  // Error state with fallback - only show when we have data but something went wrong
+  if (hasError || (!currentQuestion && !isLiveGame && questions.length === 0)) {
     return (
       <div className="inline-quiz-preview inline-quiz-preview--fallback">
         {/* Interaction blocker overlay */}
@@ -271,27 +354,11 @@ function InlineQuizPreview({
         <span className="badge-text">
           {isLiveGame ? 'LIVE' : (gameId ? 'ACTIVE' : 'PREVIEW')}
         </span>
-        {questionSetMetadata && (
-          <span className="badge-info">
-            {questions.length} Questions
-          </span>
-        )}
         {isLiveGame && (
           <span className="badge-live-indicator">
             🔴 SYNCHRONIZED
           </span>
         )}
-      </div>
-
-      {/* Real data status */}
-      <div className="inline-quiz-preview__status">
-        <div className="status-indicator">
-          <span className={`status-dot ${isLiveGame ? 'status-dot--live' : 'status-dot--preview'}`}></span>
-          <span className="status-text">
-            {questionSetMetadata?.title || 'Quiz Preview'}
-            {isLiveGame && ` - Q${gameState.currentQuestionIndex + 1}/${gameState.totalQuestions || '?'}`}
-          </span>
-        </div>
       </div>
 
       {/* Quiz content with real data using actual QuestionRenderer */}
@@ -332,24 +399,6 @@ function InlineQuizPreview({
           >
             ›
           </button>
-        </div>
-      )}
-
-      {/* Live game progress indicator */}
-      {isLiveGame && (
-        <div className="inline-quiz-preview__live-progress">
-          <div className="live-progress-bar">
-            <div 
-              className="live-progress-fill" 
-              style={{ 
-                width: `${((gameState.currentQuestionIndex + 1) / (gameState.totalQuestions || 1)) * 100}%` 
-              }}
-            ></div>
-          </div>
-          <div className="live-progress-text">
-            Question {gameState.currentQuestionIndex + 1} of {gameState.totalQuestions || '?'}
-            {gameState.phase === 'explanation' && ' - Explanation Phase'}
-          </div>
         </div>
       )}
     </div>

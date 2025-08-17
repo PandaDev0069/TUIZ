@@ -15,16 +15,19 @@ export const useQuizData = (questionSetId, gameId = null) => {
   const [gameSettings, setGameSettings] = useState(null);
   const [questionSetMetadata, setQuestionSetMetadata] = useState(null);
   const [gameData, setGameData] = useState(null);
+  const [scoreboardData, setScoreboardData] = useState([]);
   
   // Loading states
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [loadingGameData, setLoadingGameData] = useState(false);
+  const [loadingScoreboard, setLoadingScoreboard] = useState(false);
   
   // Error states
   const [questionsError, setQuestionsError] = useState(null);
   const [settingsError, setSettingsError] = useState(null);
   const [gameDataError, setGameDataError] = useState(null);
+  const [scoreboardError, setScoreboardError] = useState(null);
 
   /**
    * Fetch questions for the question set
