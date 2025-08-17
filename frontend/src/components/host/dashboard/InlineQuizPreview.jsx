@@ -22,11 +22,13 @@ function InlineQuizPreview({
     questions,
     gameSettings,
     questionSetMetadata,
+    scoreboardData,
     getPreviewQuestion,
     getLeaderboardData,
     isLoading,
     hasError,
-    errorMessage
+    errorMessage,
+    loadingScoreboard
   } = useQuizData(questionSetId, gameId);
 
   // Preview state management (fallback for non-live games)
@@ -109,9 +111,47 @@ function InlineQuizPreview({
 
   // Game finished state - show scoreboard with final results
   if (isGameEnded) {
-    // Prepare scoreboard data from gameState
-    const scoreboardData = gameState.finalScoreboard || gameState.scoreboard || [];
+    // Priority order for scoreboard data:
+    // 1. Real scoreboard data from API
+    // 2. Live gameState standings (most current)
+    // 3. GameState fallback data
+    // 4. Hook's getLeaderboardData fallback
+    let finalScoreboardData = [];
+    
+    if (scoreboardData && scoreboardData.length > 0) {
+      finalScoreboardData = scoreboardData;
+    } else if (gameState.standings && gameState.standings.length > 0) {
+      // Transform live gameState standings to scoreboard format
+      finalScoreboardData = gameState.standings.map((player, index) => ({
+        id: player.id || player.playerId || index + 1,
+        name: player.name || player.playerName || `Player ${index + 1}`,
+        score: player.score || player.totalScore || 0,
+        rankChange: index < 3 ? 'up' : (index < 6 ? 'same' : 'down'),
+        isCorrect: player.isCorrect !== undefined ? player.isCorrect : true,
+        streak: player.streak || 0,
+        averageTime: player.averageTime || 0,
+        correctAnswers: player.correctAnswers || 0,
+        totalAnswers: player.totalAnswers || 0
+      }));
+    } else if (gameState.finalScoreboard || gameState.scoreboard) {
+      finalScoreboardData = gameState.finalScoreboard || gameState.scoreboard;
+    } else {
+      finalScoreboardData = getLeaderboardData(gameState);
+    }
+    
     const room = gameState.room || gameState.gameId || gameId;
+    
+    // Show loading if scoreboard is still being fetched and we have no fallback data
+    if (loadingScoreboard && (!finalScoreboardData || finalScoreboardData.length === 0)) {
+      return (
+        <div className="inline-quiz-preview inline-quiz-preview--loading">
+          <div className="preview-loading">
+            <div className="preview-loading__spinner"></div>
+            <p>Loading final results...</p>
+          </div>
+        </div>
+      );
+    }
     
     return (
       <div className="inline-quiz-preview inline-quiz-preview--finished">
@@ -126,7 +166,16 @@ function InlineQuizPreview({
         {/* Game finished badge */}
         <div className="inline-quiz-preview__badge inline-quiz-preview__badge--finished">
           <span className="badge-text">GAME FINISHED</span>
-          <span className="badge-info">Final Results</span>
+          <span className="badge-info">
+            {(scoreboardData && scoreboardData.length > 0) || (gameState.standings && gameState.standings.length > 0) ? 'LIVE RESULTS' : 'Final Results'}
+          </span>
+          {/* Debug indicator for data source */}
+          {import.meta.env.DEV && (
+            <span className="badge-debug">
+              {scoreboardData && scoreboardData.length > 0 ? '🔴 API DATA' : 
+               gameState.standings && gameState.standings.length > 0 ? '🟢 LIVE DATA' : '🟡 FALLBACK'}
+            </span>
+          )}
         </div>
 
         {/* Scoreboard component for final results */}
@@ -134,7 +183,7 @@ function InlineQuizPreview({
           <Scoreboard 
             // Pass state prop as expected by Scoreboard component
             state={{
-              scoreboard: scoreboardData,
+              scoreboard: finalScoreboardData,
               room: room,
               isHost: true // Preview is always from host perspective
             }}
@@ -264,7 +313,9 @@ function InlineQuizPreview({
           isCorrect: false,
           questionScore: 0
         },
-        standings: gameState.explanationData.leaderboard?.standings || gameState.explanationData.standings || [],
+        standings: gameState.explanationData.leaderboard?.standings || 
+                  gameState.explanationData.standings || 
+                  gameState.standings || [], // Fallback to direct gameState standings
         correctAnswer: gameState.explanationData.leaderboard?.correctAnswer || gameState.explanationData.correctAnswer || 'N/A',
         correctOption: gameState.explanationData.leaderboard?.correctOption || gameState.explanationData.correctOption || 'N/A',
         answerStats: gameState.explanationData.leaderboard?.answerStats || gameState.explanationData.answerStats || { correctPercentage: 0 }

@@ -1116,3 +1116,11 @@
 .inline-quiz-preview__content--scoreboard .confetti-piece {
   animation-duration: 2s !important; /* Faster animation */
 }
+
+/* Debug indicator for development */
+.badge-debug {
+  font-size: 0.7rem;
+  margin-left: 0.5rem;
+  opacity: 0.8;
+  color: var(--tuiz-warning);
+}

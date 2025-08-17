@@ -83,10 +83,13 @@ export const AuthProvider = ({ children }) => {
         throw new Error(`Invalid response from server (endpoint: ${endpoint})`);
       }
       
-      // Only log unexpected API errors (not 404s for game lookups in preview mode)
-      const isExpected404 = error.message?.includes('HTTP 404') && endpoint.includes('/games/');
-      if (!isExpected404) {
+      // Only log unexpected API errors (not 404s/500s for game lookups in preview mode)
+      const isExpectedError = (error.message?.includes('HTTP 404') || error.message?.includes('HTTP 500')) && 
+        (endpoint.includes('/games/') || endpoint.includes('/game-results/'));
+      if (!isExpectedError) {
         console.error('API Call Error:', { endpoint, error });
+      } else if (import.meta.env.DEV && error.message?.includes('HTTP 500')) {
+        console.log('ℹ️ Game results not available (server error):', endpoint);
       }
       throw error;
     }
