@@ -24,7 +24,7 @@ Hook the host components to the actual game session to enable full game flow con
   - [ ] `updateTimer(timeRemaining)`
   - [ ] `resetGame()`
 - [ ] Implement error handling and validation
-- [ ] Add TypeScript interfaces for type safety
+- [ ] Add TypeScript interfaces for type safety (May be no need Beacuse we are using JS for now)
 
 #### 1.2 Host-Side Game State Synchronization
 - [ ] Create `services/HostGameSync.js` service
