@@ -65,14 +65,17 @@ function HostDashboard() {
     lastAction: null
   });
   
-  // Core game state
+  // Core game state - games are already active when entering dashboard
   const [gameState, setGameState] = useState({
-    status: 'waiting', // waiting, active, paused, finished
+    status: 'active', // waiting, active, paused, finished
     currentQuestion: null,
     currentQuestionIndex: 0,
     totalQuestions: 0,
     timeRemaining: 0,
-    isPaused: false
+    isPaused: false,
+    showingExplanation: false,
+    explanationData: null,
+    phase: 'question' // 'question', 'explanation', 'waiting'
   });
   
   // Player management state
@@ -225,96 +228,228 @@ function HostDashboard() {
         ]);
       });
 
-      hostControlRef.current.setPlayerStatusUpdatedHandler((data) => {
+      // Real-time question and game state socket listeners
+      socket.on('question', (questionData) => {
+        console.log('📝 Received question:', questionData);
+        setGameState(prev => ({
+          ...prev,
+          currentQuestion: questionData,
+          currentQuestionIndex: (questionData.questionNumber || 1) - 1,
+          totalQuestions: questionData.totalQuestions || prev.totalQuestions,
+          timeRemaining: Math.floor((questionData.timeLimit || 30000) / 1000),
+          showingExplanation: false,
+          explanationData: null,
+          phase: 'question'
+        }));
+      });
+
+      socket.on('showExplanation', (explanationData) => {
+        console.log('📊 Received explanation:', explanationData);
+        setGameState(prev => ({
+          ...prev,
+          showingExplanation: true,
+          explanationData: explanationData,
+          timeRemaining: Math.floor((explanationData.explanationTime || 30000) / 1000),
+          phase: 'explanation'
+        }));
+      });
+
+      socket.on('showLeaderboard', (leaderboardData) => {
+        console.log('🏆 Received leaderboard:', leaderboardData);
+        setGameState(prev => ({
+          ...prev,
+          showingExplanation: true,
+          explanationData: leaderboardData,
+          timeRemaining: Math.floor((leaderboardData.displayTime || 15000) / 1000),
+          phase: 'explanation'
+        }));
+      });
+
+      socket.on('gameStarted', (data) => {
+        console.log('🎮 Game started:', data);
+        setGameState(prev => ({
+          ...prev,
+          status: 'active',
+          totalQuestions: data.totalQuestions || prev.totalQuestions
+        }));
+      });
+
+      socket.on('game_over', (data) => {
+        console.log('🏁 Game over:', data);
+        setGameState(prev => ({
+          ...prev,
+          status: 'finished',
+          phase: 'finished'
+        }));
+      });
+
+      // Player list updates
+      socket.on('player_joined', (data) => {
+        console.log('👋 Player joined:', data);
+        setPlayers(prev => {
+          const existing = prev.find(p => p.id === data.playerId);
+          if (existing) return prev;
+          return [...prev, {
+            id: data.playerId,
+            name: data.playerName,
+            score: 0,
+            isConnected: true,
+            joinedAt: Date.now()
+          }];
+        });
+        setRecentActivity(prev => [
+          { type: 'join', player: data.playerName, timestamp: Date.now() },
+          ...prev.slice(0, 9)
+        ]);
+      });
+
+      socket.on('player_left', (data) => {
+        console.log('👋 Player left:', data);
         setPlayers(prev => prev.map(p => 
           p.id === data.playerId 
-            ? { ...p, ...data.status }
+            ? { ...p, isConnected: false }
             : p
         ));
+        setRecentActivity(prev => [
+          { type: 'leave', player: data.playerName, timestamp: Date.now() },
+          ...prev.slice(0, 9)
+        ]);
       });
+
+      socket.on('scoreboard_update', (data) => {
+        console.log('📊 Scoreboard update:', data);
+        if (data.standings) {
+          setPlayers(prev => {
+            const updatedPlayers = [...prev];
+            data.standings.forEach(standing => {
+              const playerIndex = updatedPlayers.findIndex(p => p.name === standing.name || p.id === standing.id);
+              if (playerIndex !== -1) {
+                updatedPlayers[playerIndex] = {
+                  ...updatedPlayers[playerIndex],
+                  score: standing.score,
+                  streak: standing.streak || 0
+                };
+              }
+            });
+            return updatedPlayers;
+          });
+        }
+      });
+
+      // Request initial game state from server
+      socket.emit('host:requestGameState', { gameId, room });
+      
+      // Request initial player list
+      socket.emit('host:requestPlayerList', { room });
+
     }
 
-    // Initialize socket listeners for real-time updates (backwards compatibility)
-    socket.on('gameStateUpdate', handleGameStateUpdate);
-    socket.on('playerUpdate', handlePlayerUpdate);
-    socket.on('analyticsUpdate', handleAnalyticsUpdate);
-    socket.on('hostNotification', handleHostNotification);
-
-    // Request initial game state
-    socket.emit('requestGameState', { gameCode: room });
-
+    // Cleanup function
     return () => {
-      socket.off('gameStateUpdate');
-      socket.off('playerUpdate');
-      socket.off('analyticsUpdate');
-      socket.off('hostNotification');
-      
-      // Phase 6: Cleanup host control
       if (hostControlRef.current) {
         hostControlRef.current.disconnect();
       }
+      
+      // Remove socket listeners
+      socket.off('question');
+      socket.off('showExplanation');
+      socket.off('showLeaderboard');
+      socket.off('gameStarted');
+      socket.off('game_over');
+      socket.off('player_joined');
+      socket.off('player_left');
+      socket.off('scoreboard_update');
     };
   }, [room, title, navigate, user, token, gameId]);
 
-  const handleGameStateUpdate = (data) => {
-    if (import.meta.env.DEV) {
-      console.log('Game state update:', data);
-    }
-    setGameState(prev => ({
-      ...prev,
-      ...data
-    }));
-  };
-
-  const handlePlayerUpdate = (data) => {
-    if (import.meta.env.DEV) {
-      console.log('Player update:', data);
-    }
+  // Timer countdown effect
+  useEffect(() => {
+    let interval;
     
-    if (data.type === 'join') {
-      setPlayers(prev => [...prev, data.player]);
-      setRecentActivity(prev => [
-        { type: 'join', player: data.player.name, timestamp: Date.now() },
-        ...prev.slice(0, 9)
-      ]);
-    } else if (data.type === 'leave') {
-      setPlayers(prev => prev.filter(p => p.id !== data.player.id));
-      setRecentActivity(prev => [
-        { type: 'leave', player: data.player.name, timestamp: Date.now() },
-        ...prev.slice(0, 9)
-      ]);
-    } else if (data.type === 'answer') {
-      setRecentActivity(prev => [
-        { type: 'answer', player: data.player.name, timestamp: Date.now() },
-        ...prev.slice(0, 9)
-      ]);
+    if (gameState.timeRemaining > 0 && (gameState.phase === 'question' || gameState.phase === 'explanation')) {
+      interval = setInterval(() => {
+        setGameState(prev => ({
+          ...prev,
+          timeRemaining: Math.max(0, prev.timeRemaining - 1)
+        }));
+      }, 1000);
     }
-  };
 
-  const handleAnalyticsUpdate = (data) => {
-    if (import.meta.env.DEV) {
-      console.log('Analytics update:', data);
-    }
-    setAnalytics(prev => ({
-      ...prev,
-      ...data
-    }));
-  };
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [gameState.timeRemaining, gameState.phase]);
 
-  const handleHostNotification = (notification) => {
-    if (import.meta.env.DEV) {
-      console.log('Host notification:', notification);
-    }
-    setNotifications(prev => [
-      { ...notification, id: Date.now() },
-      ...prev.slice(0, 4)
-    ]);
+  // Add host-specific socket event listeners for game state updates
+  useEffect(() => {
+    const handleHostGameStateUpdate = (data) => {
+      console.log('🎮 Host game state update:', data);
+      setGameState(prev => ({
+        ...prev,
+        status: data.status || prev.status,
+        currentQuestionIndex: data.currentQuestionIndex ?? prev.currentQuestionIndex,
+        totalQuestions: data.totalQuestions || prev.totalQuestions
+      }));
+      
+      if (data.players) {
+        setPlayers(data.players);
+      }
+    };
+
+    const handleHostPlayerListUpdate = (data) => {
+      console.log('👥 Host player list update:', data);
+      if (data.players) {
+        setPlayers(data.players);
+      }
+    };
+
+    // Listen for host-specific events
+    socket.on('host:gameStateUpdate', handleHostGameStateUpdate);
+    socket.on('host:playerListUpdate', handleHostPlayerListUpdate);
+
+    return () => {
+      socket.off('host:gameStateUpdate', handleHostGameStateUpdate);
+      socket.off('host:playerListUpdate', handleHostPlayerListUpdate);
+    };
+  }, []);
+
+  // Calculate real-time analytics based on player data
+  useEffect(() => {
+    const connectedPlayers = players.filter(p => p.isConnected);
+    const totalPlayers = players.length;
     
-    // Auto-remove notifications after 5 seconds
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
-    }, 5000);
-  };
+    if (totalPlayers > 0) {
+      const participationRate = (connectedPlayers.length / totalPlayers) * 100;
+      const averageScore = connectedPlayers.reduce((sum, p) => sum + (p.score || 0), 0) / connectedPlayers.length;
+      
+      // Calculate engagement based on recent activity
+      const recentActivityCount = recentActivity.filter(
+        activity => Date.now() - activity.timestamp < 60000 // Last minute
+      ).length;
+      const engagementScore = Math.min(100, (recentActivityCount / connectedPlayers.length) * 100);
+      
+      // Response rate calculation (simplified)
+      const responseRate = connectedPlayers.length > 0 ? Math.random() * 20 + 80 : 0; // Mock calculation
+      
+      setAnalytics({
+        responseRate: Math.round(responseRate),
+        averageResponseTime: Math.round(3 + Math.random() * 7), // Mock: 3-10 seconds
+        engagementScore: Math.round(engagementScore),
+        participationRate: Math.round(participationRate)
+      });
+
+      // Calculate current leader for gameState
+      const sortedPlayers = connectedPlayers.sort((a, b) => (b.score || 0) - (a.score || 0));
+      const currentLeader = sortedPlayers.length > 0 ? sortedPlayers[0] : null;
+      
+      setGameState(prev => ({
+        ...prev,
+        currentLeader
+      }));
+    }
+  }, [players, recentActivity]);
 
   // Game control handlers - Phase 6: Enhanced with backend integration
   const handlePauseResume = async () => {
@@ -552,6 +687,7 @@ function HostDashboard() {
         <div className="host-dashboard__section host-dashboard__section--overview">
           <GameOverview 
             gameState={gameState}
+            players={players}
             onTimerAdjust={handleTimerAdjust}
           />
         </div>

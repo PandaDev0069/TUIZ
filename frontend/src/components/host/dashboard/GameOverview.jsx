@@ -11,6 +11,7 @@ import {
   FaPlus,
   FaMinus
 } from 'react-icons/fa';
+import HostGameRenderer from './HostGameRenderer';
 import './GameOverview.css';
 
 /**
@@ -18,13 +19,13 @@ import './GameOverview.css';
  * Phase 2.1: Host Dashboard Component
  * 
  * Features:
- * - Current question preview
+ * - Live game rendering via HostGameRenderer
  * - Player count with animations
  * - Game progress indicator
  * - Performance metrics cards
  * - Timer controls
  */
-function GameOverview({ gameState, onTimerAdjust }) {
+function GameOverview({ gameState, players = [], onTimerAdjust }) {
   const [showTimerControls, setShowTimerControls] = useState(false);
 
   const formatTime = (seconds) => {
@@ -66,57 +67,9 @@ function GameOverview({ gameState, onTimerAdjust }) {
       </div>
 
       <div className="game-overview__content">
-        {/* Current Question Preview */}
-        <div className="game-overview__question-section">
-          <div className="question-preview">
-            <div className="question-preview__header">
-              <FaQuestionCircle className="question-preview__icon" />
-              <span className="question-preview__label">現在の問題</span>
-              {gameState.totalQuestions > 0 && (
-                <span className="question-preview__counter">
-                  {gameState.currentQuestionIndex + 1} / {gameState.totalQuestions}
-                </span>
-              )}
-            </div>
-            
-            <div className="question-preview__content">
-              {gameState.currentQuestion ? (
-                <>
-                  <div className="question-preview__text">
-                    {gameState.currentQuestion.text || '問題を読み込み中...'}
-                  </div>
-                  
-                  {gameState.currentQuestion.image && (
-                    <div className="question-preview__image">
-                      <img 
-                        src={gameState.currentQuestion.image} 
-                        alt="問題画像"
-                        className="question-preview__img"
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="question-preview__answers">
-                    {gameState.currentQuestion.answers?.map((answer, index) => (
-                      <div key={index} className="question-preview__answer">
-                        <span className="question-preview__answer-label">
-                          {String.fromCharCode(65 + index)}
-                        </span>
-                        <span className="question-preview__answer-text">
-                          {answer.text}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="question-preview__empty">
-                  <FaQuestionCircle className="question-preview__empty-icon" />
-                  <p>問題が準備されていません</p>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Live Game Renderer */}
+        <div className="game-overview__game-section">
+          <HostGameRenderer gameState={gameState} players={players} />
         </div>
 
         {/* Progress and Timer */}
@@ -214,7 +167,7 @@ function GameOverview({ gameState, onTimerAdjust }) {
             <div className="metric-card__content">
               <div className="player-count-display">
                 <span className="player-count-display__number">
-                  {gameState.playerCount || 0}
+                  {players?.length || gameState.playerCount || 0}
                 </span>
                 <span className="player-count-display__label">人</span>
               </div>

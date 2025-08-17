@@ -1,9 +1,16 @@
 /**
- * GameOverview Component - Live game overview with current question preview
+ * GameOverview Component - Live game overview with HostGameRenderer
  * Phase 2.1: Host Dashboard Component
  * 
+ * Features:
+ * - Live game rendering via HostGameRenderer
+ * - Player count with animations
+ * - Game progress indicator
+ * - Performance metrics cards
+ * - Timer controls
+ * 
  * BEM Naming Convention:
- * - Block: game-overview, question-preview, metric-card, timer-display
+ * - Block: game-overview, metric-card, timer-display
  * - Elements: __header, __content, __icon, etc.
  * - Modifiers: --active, --warning, --progress, etc.
  */
@@ -97,141 +104,20 @@
 }
 
 /* ========================================
-   QUESTION PREVIEW SECTION
+   LIVE GAME RENDERER SECTION
    ======================================== */
 
-.game-overview__question-section {
+.game-overview__game-section {
   flex: 1;
+  min-height: 500px;
+  display: flex;
+  align-items: stretch;
 }
 
-.question-preview {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--host-radius-lg);
-  padding: var(--host-space-4);
+/* Ensure HostGameRenderer takes full space */
+.game-overview__game-section .host-game-renderer {
+  width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  backdrop-filter: blur(10px);
-}
-
-.question-preview__header {
-  display: flex;
-  align-items: center;
-  gap: var(--host-space-2);
-  margin-bottom: var(--host-space-3);
-  padding-bottom: var(--host-space-2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.question-preview__icon {
-  color: var(--host-info);
-  font-size: var(--host-font-size-lg);
-}
-
-.question-preview__label {
-  font-weight: var(--host-font-weight-medium);
-  color: var(--host-white);
-  flex: 1;
-}
-
-.question-preview__counter {
-  font-size: var(--host-font-size-sm);
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.1);
-  padding: var(--host-space-1) var(--host-space-2);
-  border-radius: var(--host-radius-sm);
-  font-family: 'Courier New', monospace;
-}
-
-.question-preview__content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--host-space-3);
-}
-
-.question-preview__text {
-  font-size: var(--host-font-size-base);
-  color: var(--host-white);
-  line-height: var(--host-line-height-relaxed);
-  background: rgba(255, 255, 255, 0.1);
-  padding: var(--host-space-3);
-  border-radius: var(--host-radius-md);
-  border-left: 4px solid var(--host-primary);
-}
-
-.question-preview__image {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  max-height: 200px;
-  overflow: hidden;
-  border-radius: var(--host-radius-md);
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.question-preview__img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  border-radius: var(--host-radius-md);
-}
-
-.question-preview__answers {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--host-space-2);
-}
-
-.question-preview__answer {
-  display: flex;
-  align-items: center;
-  gap: var(--host-space-2);
-  padding: var(--host-space-2);
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: var(--host-radius-md);
-  transition: all var(--host-transition-fast);
-}
-
-.question-preview__answer:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.question-preview__answer-label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: var(--host-primary);
-  color: var(--host-white);
-  border-radius: 50%;
-  font-size: var(--host-font-size-sm);
-  font-weight: var(--host-font-weight-bold);
-  flex-shrink: 0;
-}
-
-.question-preview__answer-text {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: var(--host-font-size-sm);
-  flex: 1;
-}
-
-.question-preview__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 150px;
-  color: rgba(255, 255, 255, 0.6);
-  text-align: center;
-}
-
-.question-preview__empty-icon {
-  font-size: 2rem;
-  margin-bottom: var(--host-space-2);
-  opacity: 0.5;
 }
 
 /* ========================================
@@ -557,8 +443,8 @@
     grid-template-columns: repeat(2, 1fr);
   }
   
-  .question-preview__answers {
-    grid-template-columns: 1fr;
+  .game-overview__game-section {
+    min-height: 400px;
   }
   
   .timer-controls {
@@ -576,8 +462,8 @@
     padding: var(--host-space-2);
   }
   
-  .question-preview {
-    padding: var(--host-space-3);
+  .game-overview__game-section {
+    min-height: 350px;
   }
   
   .progress-display__bar {

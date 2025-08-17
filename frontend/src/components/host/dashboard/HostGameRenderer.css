@@ -1,0 +1,624 @@
+/**
+ * HostGameRenderer - Host Dashboard Game Content Renderer
+ * 
+ * Integrates with TUIZ Universal Theme System
+ * Provides scaled-down, read-only view of the actual game content
+ * Maintains visual consistency with the main game interface
+ */
+
+/* Import universal styles for consistency */
+@import '../../../styles/universal-theme.css';
+@import '../../../styles/host/host-variables.css';
+
+/* ========================================
+   MAIN CONTAINER
+   ======================================== */
+
+.host-game-renderer {
+  /* Use TUIZ glass morphism system */
+  background: var(--tuiz-gradient-primary);
+  border-radius: var(--tuiz-radius-2xl);
+  border: 2px solid var(--tuiz-glass-border-medium);
+  overflow: hidden;
+  position: relative;
+  min-height: 500px;
+  display: flex;
+  flex-direction: column;
+  
+  /* Enhanced glass effect */
+  backdrop-filter: var(--tuiz-blur-medium);
+  box-shadow: var(--tuiz-shadow-glass-lg);
+  
+  /* Subtle animation */
+  transition: all var(--tuiz-duration-normal) var(--tuiz-ease-out);
+}
+
+.host-game-renderer:hover {
+  border-color: var(--tuiz-glass-border-heavy);
+  box-shadow: var(--tuiz-shadow-glass-xl);
+  transform: translateY(-2px);
+}
+
+/* ========================================
+   HEADER SECTION
+   ======================================== */
+
+.host-game-renderer__header {
+  padding: var(--tuiz-space-4) var(--tuiz-space-6);
+  background: var(--tuiz-glass-heavy);
+  border-bottom: 1px solid var(--tuiz-glass-border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  backdrop-filter: var(--tuiz-blur-light);
+}
+
+.host-game-renderer__indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--tuiz-space-2);
+  color: var(--tuiz-purple-300);
+  font-family: var(--tuiz-font-family);
+  font-weight: var(--tuiz-font-semibold);
+  font-size: var(--tuiz-text-sm);
+}
+
+.host-game-renderer__indicator-icon {
+  opacity: 0.8;
+  transition: opacity var(--tuiz-duration-fast) var(--tuiz-ease-out);
+}
+
+.host-game-renderer__indicator:hover .host-game-renderer__indicator-icon {
+  opacity: 1;
+}
+
+.host-game-renderer__indicator-text {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Status Badge System */
+.host-game-renderer__status-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--tuiz-space-2);
+  padding: var(--tuiz-space-2) var(--tuiz-space-4);
+  border-radius: var(--tuiz-radius-full);
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-sm);
+  font-weight: var(--tuiz-font-medium);
+  transition: all var(--tuiz-duration-normal) var(--tuiz-ease-out);
+  border: 1px solid transparent;
+}
+
+.host-game-renderer__status-badge--waiting {
+  background: rgba(107, 114, 128, 0.2);
+  color: var(--tuiz-gray-400);
+  border-color: rgba(107, 114, 128, 0.3);
+}
+
+.host-game-renderer__status-badge--question {
+  background: rgba(34, 197, 94, 0.2);
+  color: var(--tuiz-success);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.host-game-renderer__status-badge--explanation {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--tuiz-info);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.host-game-renderer__status-badge--paused {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--tuiz-warning);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.host-game-renderer__status-badge--finished {
+  background: rgba(168, 85, 247, 0.2);
+  color: var(--tuiz-purple-400);
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+.host-game-renderer__status-icon {
+  animation: tuiz-pulse 2s infinite;
+}
+
+/* ========================================
+   CONTENT AREA
+   ======================================== */
+
+.host-game-renderer__content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tuiz-space-8);
+  position: relative;
+  overflow-y: auto;
+  
+  /* Custom scrollbar for content area */
+  scrollbar-width: thin;
+  scrollbar-color: var(--tuiz-primary-500) transparent;
+}
+
+.host-game-renderer__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.host-game-renderer__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.host-game-renderer__content::-webkit-scrollbar-thumb {
+  background: var(--tuiz-primary-500);
+  border-radius: var(--tuiz-radius-full);
+}
+
+.host-game-renderer__content::-webkit-scrollbar-thumb:hover {
+  background: var(--tuiz-primary-400);
+}
+
+/* ========================================
+   GAME STATE DISPLAYS
+   ======================================== */
+
+/* Waiting State */
+.host-game-renderer__waiting {
+  text-align: center;
+  color: var(--tuiz-white);
+  max-width: 500px;
+  width: 100%;
+}
+
+.host-game-renderer__waiting-content {
+  padding: var(--tuiz-space-8);
+  background: var(--tuiz-glass-light);
+  border-radius: var(--tuiz-radius-2xl);
+  border: 1px solid var(--tuiz-glass-border-light);
+  backdrop-filter: var(--tuiz-blur-light);
+}
+
+.host-game-renderer__waiting-icon {
+  font-size: var(--tuiz-text-5xl);
+  color: var(--tuiz-purple-400);
+  margin-bottom: var(--tuiz-space-6);
+  opacity: 0.8;
+  animation: tuiz-float 3s ease-in-out infinite;
+}
+
+.host-game-renderer__waiting-title {
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-2xl);
+  font-weight: var(--tuiz-font-semibold);
+  margin-bottom: var(--tuiz-space-2);
+  color: var(--tuiz-white);
+}
+
+.host-game-renderer__waiting-message {
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-lg);
+  margin-bottom: var(--tuiz-space-4);
+  color: var(--tuiz-gray-200);
+}
+
+.host-game-renderer__waiting-hint {
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-sm);
+  color: var(--tuiz-gray-300);
+  font-style: italic;
+  padding: var(--tuiz-space-4);
+  background: var(--tuiz-glass-subtle);
+  border-radius: var(--tuiz-radius-lg);
+  border: 1px solid var(--tuiz-glass-border-light);
+}
+
+/* Paused State */
+.host-game-renderer__paused {
+  text-align: center;
+  color: var(--tuiz-white);
+  max-width: 600px;
+  width: 100%;
+}
+
+.host-game-renderer__paused-content {
+  padding: var(--tuiz-space-8);
+  background: var(--tuiz-glass-light);
+  border-radius: var(--tuiz-radius-2xl);
+  border: 1px solid var(--tuiz-glass-border-light);
+  backdrop-filter: var(--tuiz-blur-light);
+}
+
+.host-game-renderer__paused-icon {
+  font-size: var(--tuiz-text-4xl);
+  color: var(--tuiz-warning);
+  margin-bottom: var(--tuiz-space-4);
+  animation: tuiz-pulse 2s infinite;
+}
+
+.host-game-renderer__paused-title {
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-2xl);
+  font-weight: var(--tuiz-font-semibold);
+  margin-bottom: var(--tuiz-space-2);
+  color: var(--tuiz-white);
+}
+
+.host-game-renderer__paused-message {
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-lg);
+  margin-bottom: var(--tuiz-space-6);
+  color: var(--tuiz-gray-200);
+}
+
+.host-game-renderer__paused-preview {
+  padding: var(--tuiz-space-6);
+  background: rgba(245, 158, 11, 0.1);
+  border-radius: var(--tuiz-radius-xl);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  backdrop-filter: var(--tuiz-blur-light);
+}
+
+.host-game-renderer__paused-question {
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-base);
+  color: var(--tuiz-white);
+  line-height: var(--tuiz-leading-relaxed);
+  font-weight: var(--tuiz-font-medium);
+}
+
+/* Finished State */
+.host-game-renderer__finished {
+  text-align: center;
+  color: var(--tuiz-white);
+  max-width: 500px;
+  width: 100%;
+}
+
+.host-game-renderer__finished-content {
+  padding: var(--tuiz-space-8);
+  background: var(--tuiz-glass-light);
+  border-radius: var(--tuiz-radius-2xl);
+  border: 1px solid var(--tuiz-glass-border-light);
+  backdrop-filter: var(--tuiz-blur-light);
+}
+
+.host-game-renderer__finished-icon {
+  font-size: var(--tuiz-text-4xl);
+  color: var(--tuiz-purple-400);
+  margin-bottom: var(--tuiz-space-4);
+  animation: tuiz-bounce 2s infinite;
+}
+
+.host-game-renderer__finished-title {
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-2xl);
+  font-weight: var(--tuiz-font-semibold);
+  margin-bottom: var(--tuiz-space-2);
+  color: var(--tuiz-white);
+}
+
+.host-game-renderer__finished-message {
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-lg);
+  margin-bottom: var(--tuiz-space-4);
+  color: var(--tuiz-gray-200);
+}
+
+.host-game-renderer__finished-stats {
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-sm);
+  color: var(--tuiz-gray-300);
+  padding: var(--tuiz-space-4);
+  background: var(--tuiz-glass-subtle);
+  border-radius: var(--tuiz-radius-lg);
+  border: 1px solid var(--tuiz-glass-border-light);
+}
+
+/* ========================================
+   QUIZ CONTENT CONTAINERS
+   ======================================== */
+
+/* Question Container */
+.host-game-renderer__question-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  
+  /* Scale down for host view */
+  transform: scale(0.85);
+  transform-origin: center;
+  
+  /* Add subtle border to indicate host view */
+  border: 2px dashed var(--tuiz-glass-border-medium);
+  border-radius: var(--tuiz-radius-2xl);
+  padding: var(--tuiz-space-6);
+  background: var(--tuiz-glass-light);
+  backdrop-filter: var(--tuiz-blur-light);
+}
+
+/* Override quiz component styles for host view */
+.host-game-renderer__question-container .quiz-question-renderer {
+  gap: var(--tuiz-space-4);
+  padding: var(--tuiz-space-4);
+}
+
+.host-game-renderer__question-container .quiz-question-progress {
+  background: var(--tuiz-glass-medium);
+  border: 1px solid var(--tuiz-glass-border-light);
+}
+
+.host-game-renderer__question-container .quiz-question-timer .quiz-timer-text {
+  color: var(--tuiz-white);
+}
+
+/* Explanation Container */
+.host-game-renderer__explanation-container {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  
+  /* Scale down for host view */
+  transform: scale(0.8);
+  transform-origin: center;
+  
+  /* Add border to indicate host view */
+  border: 2px dashed var(--tuiz-glass-border-medium);
+  border-radius: var(--tuiz-radius-2xl);
+  overflow: hidden;
+  background: var(--tuiz-glass-light);
+  backdrop-filter: var(--tuiz-blur-light);
+}
+
+/* Override PostQuestionDisplay styles for host view */
+.host-game-renderer__explanation-container .pqd-overlay {
+  position: relative;
+  background: transparent;
+  padding: 0;
+  animation: none;
+}
+
+.host-game-renderer__explanation-container .pqd-container {
+  max-height: none;
+  box-shadow: none;
+  border-radius: var(--tuiz-radius-xl);
+}
+
+/* No content states */
+.host-game-renderer__no-question,
+.host-game-renderer__no-explanation {
+  text-align: center;
+  color: var(--tuiz-gray-300);
+  padding: var(--tuiz-space-12);
+}
+
+.host-game-renderer__no-question-icon,
+.host-game-renderer__no-explanation-icon {
+  font-size: var(--tuiz-text-3xl);
+  margin-bottom: var(--tuiz-space-4);
+  opacity: 0.5;
+}
+
+/* ========================================
+   FOOTER SECTION
+   ======================================== */
+
+.host-game-renderer__footer {
+  padding: var(--tuiz-space-4) var(--tuiz-space-6);
+  background: var(--tuiz-glass-heavy);
+  border-top: 1px solid var(--tuiz-glass-border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  backdrop-filter: var(--tuiz-blur-light);
+}
+
+.host-game-renderer__progress {
+  display: flex;
+  align-items: center;
+  gap: var(--tuiz-space-4);
+  flex: 1;
+}
+
+.host-game-renderer__question-counter {
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-sm);
+  font-weight: var(--tuiz-font-medium);
+  color: var(--tuiz-white);
+  white-space: nowrap;
+}
+
+.host-game-renderer__progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--tuiz-glass-light);
+  border-radius: var(--tuiz-radius-full);
+  overflow: hidden;
+  border: 1px solid var(--tuiz-glass-border-light);
+}
+
+.host-game-renderer__progress-fill {
+  height: 100%;
+  background: var(--tuiz-gradient-success);
+  border-radius: var(--tuiz-radius-full);
+  transition: width var(--tuiz-duration-slow) var(--tuiz-ease-out);
+  position: relative;
+}
+
+.host-game-renderer__progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: tuiz-shimmer 2s infinite;
+}
+
+.host-game-renderer__player-count {
+  display: flex;
+  align-items: center;
+  gap: var(--tuiz-space-2);
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-sm);
+  font-weight: var(--tuiz-font-medium);
+  color: var(--tuiz-white);
+  white-space: nowrap;
+}
+
+.host-game-renderer__player-count-icon {
+  color: var(--tuiz-purple-400);
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 768px) {
+  .host-game-renderer {
+    min-height: 400px;
+  }
+  
+  .host-game-renderer__header {
+    padding: var(--tuiz-space-3) var(--tuiz-space-4);
+    flex-direction: column;
+    gap: var(--tuiz-space-2);
+    align-items: flex-start;
+  }
+  
+  .host-game-renderer__content {
+    padding: var(--tuiz-space-4);
+  }
+  
+  .host-game-renderer__question-container,
+  .host-game-renderer__explanation-container {
+    transform: scale(0.75);
+  }
+  
+  .host-game-renderer__waiting-content,
+  .host-game-renderer__paused-content,
+  .host-game-renderer__finished-content {
+    padding: var(--tuiz-space-6);
+  }
+  
+  .host-game-renderer__footer {
+    padding: var(--tuiz-space-3) var(--tuiz-space-4);
+    flex-direction: column;
+    gap: var(--tuiz-space-3);
+    align-items: stretch;
+  }
+  
+  .host-game-renderer__progress {
+    order: 2;
+  }
+  
+  .host-game-renderer__player-count {
+    order: 1;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .host-game-renderer__content {
+    padding: var(--tuiz-space-3);
+  }
+  
+  .host-game-renderer__question-container,
+  .host-game-renderer__explanation-container {
+    transform: scale(0.65);
+  }
+  
+  .host-game-renderer__status-badge {
+    padding: var(--tuiz-space-1) var(--tuiz-space-3);
+    font-size: var(--tuiz-text-xs);
+  }
+  
+  .host-game-renderer__indicator {
+    font-size: var(--tuiz-text-xs);
+  }
+}
+
+/* ========================================
+   HOST-SPECIFIC OVERRIDES
+   ======================================== */
+
+/* Override quiz component interactions for host view */
+.host-game-renderer .quiz-option {
+  cursor: default;
+  pointer-events: none;
+}
+
+.host-game-renderer .quiz-question-timer {
+  opacity: 0.8;
+}
+
+.host-game-renderer .pqd-timer {
+  opacity: 0.8;
+}
+
+/* Visual indicator overlay for host view */
+.host-game-renderer__content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 48%, rgba(139, 92, 246, 0.05) 50%, transparent 52%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.host-game-renderer__question-container,
+.host-game-renderer__explanation-container {
+  position: relative;
+  z-index: 2;
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+
+@keyframes tuiz-shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Ensure reduced motion compliance */
+@media (prefers-reduced-motion: reduce) {
+  .host-game-renderer__status-icon,
+  .host-game-renderer__waiting-icon,
+  .host-game-renderer__paused-icon,
+  .host-game-renderer__finished-icon,
+  .host-game-renderer__progress-fill::after {
+    animation: none;
+  }
+  
+  .host-game-renderer {
+    transition: none;
+  }
+  
+  .host-game-renderer:hover {
+    transform: none;
+  }
+}
+
+/* High contrast support */
+@media (prefers-contrast: high) {
+  .host-game-renderer {
+    border-color: var(--tuiz-white);
+  }
+  
+  .host-game-renderer__status-badge {
+    border-width: 2px;
+  }
+  
+  .host-game-renderer__question-container,
+  .host-game-renderer__explanation-container {
+    border-width: 3px;
+  }
+}
