@@ -2128,6 +2128,27 @@ io.on('connection', (socket) => {
       // Validate the answer
       const isCorrect = selectedOption === currentQuestion.correctIndex;
       
+      // Record the answer in the database for detailed analytics
+      if (activeGame.id && db && player.dbId) {
+        try {
+          await db.submitPlayerAnswer({
+            player_id: player.dbId,
+            game_id: activeGame.id,
+            question_id: questionId,
+            answer_choice: selectedOption,
+            answer_text: currentQuestion.options?.[selectedOption] || null,
+            is_correct: isCorrect,
+            response_time: timeTaken ? Math.round(timeTaken * 1000) : null // Convert to milliseconds
+          });
+          
+          if (isDevelopment || isLocalhost) {
+            logger.debug(`📝 Recorded answer for ${player.name}: ${isCorrect ? 'correct' : 'incorrect'}`);
+          }
+        } catch (answerError) {
+          logger.error(`❌ Failed to record answer for ${player.name}:`, answerError);
+        }
+      }
+      
       // Calculate points using the new advanced scoring system
       const gameFlowConfig = activeGame.gameFlowConfig || {};
       const scoreResult = calculateGameScore({

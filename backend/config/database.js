@@ -862,7 +862,15 @@ class DatabaseManager {
     try {
       const { data, error } = await this.supabase
         .from('player_answers')
-        .insert(answerData)
+        .insert({
+          player_id: answerData.player_id,
+          game_id: answerData.game_id,
+          question_id: answerData.question_id,
+          answer_choice: answerData.answer_choice,
+          answer_text: answerData.answer_text,
+          is_correct: answerData.is_correct,
+          response_time: answerData.response_time
+        })
         .select()
         .single();
 
@@ -871,6 +879,85 @@ class DatabaseManager {
       return { success: true, answer: data };
     } catch (error) {
       console.error('❌ Submit player answer error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get player answers for a game (for detailed analytics)
+  async getPlayerAnswers(gameId, playerId = null) {
+    try {
+      let query = this.supabase
+        .from('player_answers')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('created_at', { ascending: true });
+
+      if (playerId) {
+        query = query.eq('player_id', playerId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      return { success: true, answers: data };
+    } catch (error) {
+      console.error('❌ Get player answers error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get answer statistics for a game
+  async getGameAnswerStats(gameId) {
+    try {
+      const { data, error } = await this.supabase
+        .from('player_answers')
+        .select('question_id, is_correct, response_time')
+        .eq('game_id', gameId);
+
+      if (error) throw error;
+
+      // Group by question and calculate stats
+      const questionStats = {};
+      data.forEach(answer => {
+        if (!questionStats[answer.question_id]) {
+          questionStats[answer.question_id] = {
+            questionId: answer.question_id,
+            totalAnswers: 0,
+            correctAnswers: 0,
+            totalResponseTime: 0,
+            responseTimes: []
+          };
+        }
+
+        const stats = questionStats[answer.question_id];
+        stats.totalAnswers++;
+        if (answer.is_correct) stats.correctAnswers++;
+        if (answer.response_time) {
+          stats.totalResponseTime += answer.response_time;
+          stats.responseTimes.push(answer.response_time);
+        }
+      });
+
+      // Calculate final metrics
+      Object.values(questionStats).forEach(stats => {
+        stats.accuracyPercentage = stats.totalAnswers > 0 
+          ? Math.round((stats.correctAnswers / stats.totalAnswers) * 100) 
+          : 0;
+        stats.averageResponseTime = stats.responseTimes.length > 0 
+          ? Math.round(stats.totalResponseTime / stats.responseTimes.length) 
+          : 0;
+        stats.fastestResponse = stats.responseTimes.length > 0 
+          ? Math.min(...stats.responseTimes) 
+          : 0;
+        stats.slowestResponse = stats.responseTimes.length > 0 
+          ? Math.max(...stats.responseTimes) 
+          : 0;
+      });
+
+      return { success: true, questionStats: Object.values(questionStats) };
+    } catch (error) {
+      console.error('❌ Get game answer stats error:', error);
       return { success: false, error: error.message };
     }
   }
@@ -1109,7 +1196,7 @@ class DatabaseManager {
         throw new Error('Service role required for finishing games');
       }
 
-      // First, update the game status to finished
+      // Update the game status to finished
       const updateData = { 
         status: 'finished', 
         ended_at: new Date().toISOString(),
@@ -1125,30 +1212,15 @@ class DatabaseManager {
 
       if (gameError) throw gameError;
 
-      // The trigger should automatically create game results, but let's verify
-      // Wait a moment for the trigger to execute
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Check if game results were created
-      const { data: results, error: resultsError } = await this.supabaseAdmin
-        .from('game_results')
-        .select('*')
-        .eq('game_id', gameId);
-
-      if (resultsError) {
-        console.error('❌ Error checking game results:', resultsError);
-        // If results weren't created automatically, try manual creation
-        const manualResult = await this.createGameResults(gameId);
-        if (!manualResult.success) {
-          throw new Error('Failed to create game results: ' + manualResult.error);
-        }
-      }
-
+      // Game results are created by server.js during the endGame process
+      // No need to create them here as they're handled in real-time
+      
       return { 
         success: true, 
         game,
-        resultsCount: results ? results.length : 0
+        message: 'Game finished successfully. Results created by server.js'
       };
+
     } catch (error) {
       console.error('❌ Finish game and create results error:', error);
       return { success: false, error: error.message };
@@ -1713,6 +1785,187 @@ class DatabaseManager {
       return { success: true, action: data };
     } catch (error) {
       logger.error('❌ Player action creation error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // ================================
+  // ENHANCED GAME RESULTS MANAGEMENT
+  // ================================
+
+  // Get comprehensive game analytics
+  async getGameAnalytics(gameId) {
+    try {
+      const { data, error } = await this.supabase
+        .from('game_results')
+        .select(`
+          *,
+          game_players!inner(player_name, is_guest, is_host),
+          games!inner(
+            created_at, 
+            started_at, 
+            ended_at,
+            question_sets(title, difficulty_level, category)
+          )
+        `)
+        .eq('game_id', gameId);
+
+      if (error) throw error;
+
+      if (data.length === 0) {
+        return { success: false, error: 'No results found for this game' };
+      }
+
+      // Calculate comprehensive analytics
+      const analytics = {
+        gameInfo: {
+          gameId,
+          title: data[0].games.question_sets?.title || 'Unknown Quiz',
+          difficulty: data[0].games.question_sets?.difficulty_level || 'medium',
+          category: data[0].games.question_sets?.category || 'General',
+          startedAt: data[0].games.started_at,
+          endedAt: data[0].games.ended_at,
+          duration: data[0].games.ended_at && data[0].games.started_at 
+            ? Math.round((new Date(data[0].games.ended_at) - new Date(data[0].games.started_at)) / 1000 / 60)
+            : 0
+        },
+        participation: {
+          totalPlayers: data.length,
+          guestPlayers: data.filter(r => r.game_players.is_guest).length,
+          registeredPlayers: data.filter(r => !r.game_players.is_guest).length,
+          hostPlayers: data.filter(r => r.game_players.is_host).length,
+          completionRate: Math.round((data.filter(r => r.completion_percentage >= 100).length / data.length) * 100)
+        },
+        performance: {
+          averageScore: Math.round(data.reduce((sum, r) => sum + r.final_score, 0) / data.length),
+          highestScore: Math.max(...data.map(r => r.final_score)),
+          lowestScore: Math.min(...data.map(r => r.final_score)),
+          scoreStandardDeviation: this.calculateStandardDeviation(data.map(r => r.final_score)),
+          averageCorrect: Math.round(data.reduce((sum, r) => sum + r.total_correct, 0) / data.length * 10) / 10,
+          averageCompletion: Math.round(data.reduce((sum, r) => sum + r.completion_percentage, 0) / data.length * 10) / 10,
+          averageResponseTime: Math.round(data.reduce((sum, r) => sum + r.average_response_time, 0) / data.length),
+          longestStreak: Math.max(...data.map(r => r.longest_streak)),
+          perfectScores: data.filter(r => r.completion_percentage >= 100 && r.total_correct === r.total_questions).length
+        },
+        rankings: data
+          .sort((a, b) => a.final_rank - b.final_rank)
+          .map(r => ({
+            rank: r.final_rank,
+            playerName: r.game_players.player_name,
+            score: r.final_score,
+            correct: r.total_correct,
+            total: r.total_questions,
+            completion: r.completion_percentage,
+            streak: r.longest_streak,
+            responseTime: r.average_response_time,
+            isGuest: r.game_players.is_guest,
+            isHost: r.game_players.is_host
+          }))
+      };
+
+      return { success: true, analytics };
+    } catch (error) {
+      console.error('❌ Get game analytics error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Helper function to calculate standard deviation
+  calculateStandardDeviation(values) {
+    if (values.length === 0) return 0;
+    const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+    const squaredDifferences = values.map(val => Math.pow(val - mean, 2));
+    const variance = squaredDifferences.reduce((sum, val) => sum + val, 0) / values.length;
+    return Math.round(Math.sqrt(variance) * 100) / 100;
+  }
+
+  // Get player performance history
+  async getPlayerPerformanceHistory(playerId, options = {}) {
+    try {
+      const { limit = 20, includeGameInfo = true, sortBy = 'created_at' } = options;
+
+      let query = this.supabase
+        .from('game_results')
+        .select(includeGameInfo 
+          ? `*, games!inner(created_at, ended_at, question_sets(title, difficulty_level))`
+          : '*'
+        )
+        .eq('player_id', playerId)
+        .order(sortBy, { ascending: false })
+        .limit(limit);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Calculate performance metrics
+      const performance = data.length > 0 ? {
+        totalGames: data.length,
+        averageScore: Math.round(data.reduce((sum, r) => sum + r.final_score, 0) / data.length),
+        averageRank: Math.round(data.reduce((sum, r) => sum + r.final_rank, 0) / data.length * 10) / 10,
+        averageCorrect: Math.round(data.reduce((sum, r) => sum + r.total_correct, 0) / data.length * 10) / 10,
+        averageCompletion: Math.round(data.reduce((sum, r) => sum + r.completion_percentage, 0) / data.length),
+        bestRank: Math.min(...data.map(r => r.final_rank)),
+        bestScore: Math.max(...data.map(r => r.final_score)),
+        longestStreak: Math.max(...data.map(r => r.longest_streak)),
+        winRate: Math.round((data.filter(r => r.final_rank === 1).length / data.length) * 100),
+        improvementTrend: this.calculateImprovementTrend(data)
+      } : null;
+
+      return { success: true, history: data, performance };
+    } catch (error) {
+      console.error('❌ Get player performance history error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Calculate improvement trend over recent games
+  calculateImprovementTrend(gameResults) {
+    if (gameResults.length < 3) return 'insufficient_data';
+    
+    // Take the most recent games (already sorted by date desc)
+    const recent = gameResults.slice(0, Math.min(5, gameResults.length));
+    const scores = recent.map(r => r.final_score).reverse(); // Oldest to newest
+    
+    // Simple linear regression to detect trend
+    let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    const n = scores.length;
+    
+    for (let i = 0; i < n; i++) {
+      sumX += i;
+      sumY += scores[i];
+      sumXY += i * scores[i];
+      sumXX += i * i;
+    }
+    
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    
+    if (slope > 5) return 'improving';
+    if (slope < -5) return 'declining';
+    return 'stable';
+  }
+
+  // Delete game results (for cleanup/admin)
+  async deleteGameResults(gameId) {
+    try {
+      if (!this.supabaseAdmin) {
+        throw new Error('Service role required for deleting game results');
+      }
+
+      const { data, error } = await this.supabaseAdmin
+        .from('game_results')
+        .delete()
+        .eq('game_id', gameId)
+        .select('id');
+
+      if (error) throw error;
+
+      return { 
+        success: true, 
+        deletedCount: data.length,
+        deletedIds: data.map(r => r.id)
+      };
+    } catch (error) {
+      console.error('❌ Delete game results error:', error);
       return { success: false, error: error.message };
     }
   }
