@@ -1,4 +1,4 @@
-/* MobileViewPort - Mobile-sized container */
+/* MobileViewPort - Mobile-sized container with proper scrolling */
 .mobile-viewport {
   width: 430px; /* iPhone 14 Pro Max width */
   height: 932px; /* iPhone 14 Pro Max height */
@@ -9,6 +9,7 @@
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  position: relative;
 }
 
 .mobile-viewport__content {
@@ -16,6 +17,35 @@
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Enhanced scrolling for mobile feel */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  /* Hide scrollbar for cleaner look */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.mobile-viewport__content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Add scroll indicator for better UX */
+.mobile-viewport::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 5px;
+  width: 3px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.mobile-viewport:hover::after {
+  opacity: 1;
 }
 
 /* Responsive adjustments */
@@ -43,4 +73,35 @@
 .mobile-viewport--modern {
   width: 390px; /* iPhone 12/13 size */
   height: 844px;
+}
+
+/* Content scaling modes for better fit */
+.mobile-viewport--scale-to-fit {
+  overflow: hidden;
+}
+
+.mobile-viewport--scale-to-fit .mobile-viewport__content {
+  overflow: hidden;
+  transform-origin: top left;
+}
+
+/* Auto-scale content if it's too large (optional mode) */
+.mobile-viewport--auto-scale .mobile-viewport__content {
+  transform: scale(0.85);
+  transform-origin: top center;
+  width: 117.65%; /* Compensate for scale */
+  height: 117.65%;
+  overflow: hidden;
+}
+
+/* Compact mode for smaller content */
+.mobile-viewport--compact {
+  width: 375px;
+  height: 667px;
+}
+
+/* Wide mode for more horizontal space */
+.mobile-viewport--wide {
+  width: 480px;
+  height: 932px;
 }

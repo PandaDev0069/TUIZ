@@ -675,7 +675,7 @@ function HostDashboard() {
             </div>
             
             <div className="game-overview__content">
-              <MobileViewPort className="host-game-renderer__viewport">
+              <MobileViewPort mode="scale-to-fit" className="host-game-renderer__viewport">
                 <InlineQuizPreview 
                   gameState={gameState}
                   disableInteraction={true}

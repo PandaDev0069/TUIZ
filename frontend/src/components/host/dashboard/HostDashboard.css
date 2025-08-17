@@ -208,11 +208,17 @@
 /* Grid area assignments */
 .host-dashboard__section--overview {
   grid-area: overview;
-  width: 460px; /* Slightly larger than iPhone Max width to account for padding */
-  height: 970px; /* Slightly larger than iPhone Max height to account for padding */
-  max-width: 460px;
-  max-height: 970px;
+  /* More flexible sizing - adapts to content */
+  width: 460px; /* Base width for iPhone Max + padding */
+  height: 970px; /* Base height for iPhone Max + padding */
+  min-width: 430px; /* Minimum iPhone Max width */
+  min-height: 932px; /* Minimum iPhone Max height */
+  max-width: 500px; /* Allow slight growth if needed */
+  max-height: 1000px; /* Allow slight growth if needed */
   justify-self: center;
+  /* Enable content overflow handling */
+  overflow: hidden;
+  position: relative;
 }
 
 .host-dashboard__section--actions {
