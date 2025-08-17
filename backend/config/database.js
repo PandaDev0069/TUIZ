@@ -875,6 +875,193 @@ class DatabaseManager {
     }
   }
 
+  // Get all players in a game
+  async getGamePlayers(gameId, includeInactive = false) {
+    try {
+      let query = this.supabase
+        .from('game_players')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('current_rank', { ascending: true });
+
+      if (!includeInactive) {
+        query = query.eq('is_active', true);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const activeCount = data.filter(p => p.is_active).length;
+      const guestCount = data.filter(p => p.is_guest).length;
+      const userCount = data.filter(p => !p.is_guest).length;
+
+      return {
+        success: true,
+        players: data,
+        totalCount: data.length,
+        activeCount,
+        guestCount,
+        userCount
+      };
+    } catch (error) {
+      console.error('❌ Get game players error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get specific player in a game
+  async getGamePlayer(gameId, playerId) {
+    try {
+      const { data, error } = await this.supabase
+        .from('game_players')
+        .select('*')
+        .eq('game_id', gameId)
+        .eq('player_id', playerId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return { success: false, error: 'Player not found in this game' };
+        }
+        throw error;
+      }
+
+      return { success: true, player: data };
+    } catch (error) {
+      console.error('❌ Get game player error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Update player in game (score, rank, streak, etc.)
+  async updateGamePlayer(gameId, playerId, updateData) {
+    try {
+      // Filter out invalid fields
+      const validFields = [
+        'current_score', 'current_rank', 'current_streak',
+        'is_active', 'player_name', 'is_host'
+      ];
+      const filteredData = {};
+      
+      Object.keys(updateData).forEach(key => {
+        if (validFields.includes(key)) {
+          filteredData[key] = updateData[key];
+        }
+      });
+
+      if (Object.keys(filteredData).length === 0) {
+        return { success: false, error: 'No valid fields to update' };
+      }
+
+      const { data, error } = await this.supabaseAdmin
+        .from('game_players')
+        .update(filteredData)
+        .eq('game_id', gameId)
+        .eq('player_id', playerId)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      return { success: true, player: data };
+    } catch (error) {
+      console.error('❌ Update game player error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Remove/deactivate player from game
+  async removePlayerFromGame(gameId, playerId, permanent = false) {
+    try {
+      if (permanent) {
+        // Permanently delete the player record
+        const { error } = await this.supabaseAdmin
+          .from('game_players')
+          .delete()
+          .eq('game_id', gameId)
+          .eq('player_id', playerId);
+
+        if (error) throw error;
+
+        return { 
+          success: true, 
+          message: 'Player permanently removed from game' 
+        };
+      } else {
+        // Just deactivate the player
+        const { data, error } = await this.supabaseAdmin
+          .from('game_players')
+          .update({ is_active: false })
+          .eq('game_id', gameId)
+          .eq('player_id', playerId)
+          .select('*')
+          .single();
+
+        if (error) throw error;
+
+        return { 
+          success: true, 
+          message: 'Player deactivated in game',
+          player: data
+        };
+      }
+    } catch (error) {
+      console.error('❌ Remove player from game error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Bulk update multiple players
+  async bulkUpdateGamePlayers(gameId, players) {
+    try {
+      const updates = [];
+      
+      for (const player of players) {
+        if (!player.player_id) continue;
+        
+        const validFields = [
+          'current_score', 'current_rank', 'current_streak',
+          'is_active'
+        ];
+        const updateData = { 
+          game_id: gameId,
+          player_id: player.player_id 
+        };
+        
+        Object.keys(player).forEach(key => {
+          if (validFields.includes(key)) {
+            updateData[key] = player[key];
+          }
+        });
+        
+        updates.push(updateData);
+      }
+
+      if (updates.length === 0) {
+        return { success: false, error: 'No valid updates provided' };
+      }
+
+      const { data, error } = await this.supabaseAdmin
+        .from('game_players')
+        .upsert(updates, { 
+          onConflict: 'game_id,player_id',
+          ignoreDuplicates: false 
+        })
+        .select('*');
+
+      if (error) throw error;
+
+      return { 
+        success: true, 
+        updatedCount: data.length,
+        players: data 
+      };
+    } catch (error) {
+      console.error('❌ Bulk update game players error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   async getGameResults(gameId) {
     try {
       const { data, error } = await this.supabase
@@ -905,12 +1092,11 @@ class DatabaseManager {
         throw new Error('Service role required for creating game results');
       }
 
-      const { data, error } = await this.supabaseAdmin
-        .rpc('create_game_results_manual', { game_id_param: gameId });
-
-      if (error) throw error;
-
-      return { success: true, results: data };
+      // Since we don't have player_answers table yet, we'll return success
+      // The actual game results are created by createGameResultsForPlayers in server.js
+      console.log(`ℹ️ createGameResults called for game ${gameId} - handled by server.js instead`);
+      
+      return { success: true, results: [], message: 'Results handled by server.js' };
     } catch (error) {
       console.error('❌ Create game results error:', error);
       return { success: false, error: error.message };

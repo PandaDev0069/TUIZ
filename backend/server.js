@@ -471,6 +471,7 @@ const gamesRoutes = require('./routes/api/games');
 const quizRoutes = require('./routes/api/quiz');
 const uploadRoutes = require('./routes/upload');
 const playerManagementRoutes = require('./routes/api/playerManagement');
+const playersRoutes = require('./routes/api/players');
 const gameResultsRoutes = require('./routes/api/gameResults');
 const gameSettingsRoutes = require('./routes/api/gameSettings');
 
@@ -487,6 +488,7 @@ app.use('/api/games', gamesRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/player', playerManagementRoutes(db));
+app.use('/api/players', playersRoutes(db));
 app.use('/api/game-results', gameResultsRoutes);
 app.use('/api/game-settings', gameSettingsRoutes);
 
@@ -942,40 +944,82 @@ const sendNextQuestion = async (gameCode) => {
   }
 };
 
+// Helper function to update player rankings in database
+const updatePlayerRankings = async (activeGame) => {
+  if (!activeGame.id || !db) return;
+
+  try {
+    // Calculate rankings based on current scores
+    const playersArray = Array.from(activeGame.players.values())
+      .filter(player => player.playerId) // Only include players with database IDs
+      .map(player => ({
+        playerId: player.playerId,
+        playerName: player.name,
+        score: player.score || 0,
+        streak: player.streak || 0
+      }))
+      .sort((a, b) => b.score - a.score)
+      .map((player, index) => ({
+        ...player,
+        rank: index + 1
+      }));
+
+    // Bulk update player rankings
+    const updatePromises = playersArray.map(player => 
+      db.updateGamePlayer(activeGame.id, player.playerId, {
+        current_rank: player.rank
+      }).catch(error => {
+        logger.error(`❌ Failed to update rank for player ${player.playerName}:`, error);
+      })
+    );
+
+    await Promise.all(updatePromises);
+    
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`✅ Updated rankings for ${playersArray.length} players in game ${activeGame.id}`);
+    }
+
+  } catch (error) {
+    logger.error('❌ Error updating player rankings:', error);
+  }
+};
+
 // Helper function to end game
 // Helper function to create individual game results for each player
 const createGameResultsForPlayers = async (activeGame, scoreboard) => {
   if (!db || !activeGame.id) return;
 
   try {
-    const gameResultsPromises = Array.from(activeGame.players.values()).map(async (player) => {
-      // Find player's scoreboard entry for rank
-      const scoreboardEntry = scoreboard.find(entry => entry.name === player.name);
-      const finalRank = scoreboardEntry ? scoreboardEntry.rank : 0;
+    const gameResultsPromises = Array.from(activeGame.players.values())
+      .filter(player => player.dbId) // Only process players with database IDs
+      .map(async (player) => {
+        // Find player's scoreboard entry for rank
+        const scoreboardEntry = scoreboard.find(entry => entry.name === player.name);
+        const finalRank = scoreboardEntry ? scoreboardEntry.rank : 0;
 
-      // Calculate player statistics
-      const totalQuestions = activeGame.totalQuestions || activeGame.questions?.length || 0;
-      const totalCorrect = player.correctAnswers || 0;
-      const completionPercentage = totalQuestions > 0 ? ((totalCorrect / totalQuestions) * 100) : 0;
-      
-      // Calculate average response time (if available)
-      const responseTimes = player.responseTimes || [];
-      const averageResponseTime = responseTimes.length > 0 
-        ? Math.round(responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length)
-        : 0;
+        // Calculate player statistics
+        const totalQuestions = activeGame.totalQuestions || activeGame.questions?.length || 0;
+        const totalCorrect = player.correctAnswers || 0;
+        const completionPercentage = totalQuestions > 0 ? ((totalCorrect / totalQuestions) * 100) : 0;
+        
+        // Calculate average response time (if available)
+        const responseTimes = player.responseTimes || [];
+        const averageResponseTime = responseTimes.length > 0 
+          ? Math.round(responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length)
+          : 0;
 
-      // Create game result record
-      const gameResultData = {
-        game_id: activeGame.id,
-        player_id: player.id,
-        final_score: player.score || 0,
-        final_rank: finalRank,
-        total_correct: totalCorrect,
-        total_questions: totalQuestions,
-        average_response_time: averageResponseTime,
-        longest_streak: player.longestStreak || player.streak || 0,
-        completion_percentage: Math.round(completionPercentage * 100) / 100 // Round to 2 decimal places
-      };
+        // Create game result record
+        const gameResultData = {
+          game_id: activeGame.id,
+          player_id: player.dbId, // Use game_players.id (foreign key reference)
+          final_score: player.score || 0,
+          final_rank: finalRank,
+          total_correct: totalCorrect,
+          total_questions: totalQuestions,
+          average_response_time: averageResponseTime,
+          longest_streak: player.longestStreak || player.streak || 0,
+          completion_percentage: Math.round(completionPercentage * 100) / 100 // Round to 2 decimal places
+        };
 
       // Insert into database
       const { data, error } = await db.supabaseAdmin
@@ -1047,6 +1091,9 @@ const endGame = async (gameCode) => {
   // Update database status to 'finished'
   if (activeGame.id && db) {
     try {
+      // Update final rankings in database before game ends
+      await updatePlayerRankings(activeGame);
+      
       const statusResult = await db.updateGameStatus(activeGame.id, 'finished', {
         ended_at: new Date().toISOString(),
         current_players: activeGame.players.size
@@ -2042,7 +2089,7 @@ io.on('connection', (socket) => {
   });
 
   // Handle player answers
-  socket.on('answer', ({ gameCode, questionId, selectedOption, timeTaken }) => {
+  socket.on('answer', async ({ gameCode, questionId, selectedOption, timeTaken }) => {
     try {
       if (isDevelopment || isLocalhost) {
         logger.debug(`💭 Answer received:
@@ -2129,6 +2176,19 @@ io.on('connection', (socket) => {
       }
       player.responseTimes.push(timeTaken || 0);
       
+      // Update player in database with current stats
+      if (activeGame.id && db && player.playerId) {
+        try {
+          await db.updateGamePlayer(activeGame.id, player.playerId, {
+            current_score: player.score,
+            current_streak: player.streak,
+            // Note: current_rank will be updated after all answers are processed
+          });
+        } catch (dbError) {
+          logger.error(`❌ Failed to update player ${player.name} in database:`, dbError);
+        }
+      }
+      
       // Record the answer
       const answerData = {
         playerId: socket.id,
@@ -2167,6 +2227,9 @@ io.on('connection', (socket) => {
         answeredCount: activeGame.currentAnswers.length,
         totalPlayers: activeGame.players.size
       });
+      
+      // Update player rankings in database
+      await updatePlayerRankings(activeGame);
       
       // Check if all players have answered or auto-advance conditions are met
       checkForQuestionCompletion(gameCode);

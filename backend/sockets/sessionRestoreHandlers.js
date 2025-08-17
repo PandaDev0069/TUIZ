@@ -201,8 +201,8 @@ class SessionRestoreHandlers {
   async restoreHostToLobby(socket, gameData, sessionData) {
     logger.info(`🏠 Restoring host to lobby for game: ${gameData.id || gameData.gameId || sessionData.room}`);
 
-    // Handle both database objects (room_code) and active game objects (gameCode)
-    const gameCode = gameData.room_code || gameData.gameCode || sessionData.room;
+    // Handle both database objects (game_code) and active game objects (gameCode)
+    const gameCode = gameData.game_code || gameData.gameCode || sessionData.room;
     const gameId = gameData.id || gameData.gameId || gameData.uuid;
     
     // Set socket properties for lobby
@@ -466,7 +466,7 @@ class SessionRestoreHandlers {
    */
   async restorePlayerToLobby(socket, gameData, sessionData) {
     const { playerName } = sessionData;
-    const gameCode = gameData.room_code || sessionData.room;
+    const gameCode = gameData.game_code || sessionData.room;
     
     // Set socket properties for lobby
     socket.gameCode = gameCode;
@@ -571,10 +571,16 @@ class SessionRestoreHandlers {
         const { data, error } = await this.db.supabase
           .from('games')
           .select('*')
-          .eq('room_code', room)
+          .eq('game_code', room)
           .single();
         
         if (error) {
+          // PGRST116 means no rows found - this is normal, game doesn't exist
+          if (error.code === 'PGRST116') {
+            logger.debug(`🔍 Game with code ${room} not found in database`);
+            return null;
+          }
+          // Other errors are actual problems
           logger.error('Error fetching game by room code:', error);
           return null;
         }

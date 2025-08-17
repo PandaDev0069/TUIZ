@@ -54,7 +54,8 @@ CREATE TABLE public.game_results (
   completion_percentage numeric DEFAULT 0.0 CHECK (completion_percentage >= 0::numeric AND completion_percentage <= 100::numeric),
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT game_results_pkey PRIMARY KEY (id),
-  CONSTRAINT game_results_game_id_fkey FOREIGN KEY (game_id) REFERENCES public.games(id)
+  CONSTRAINT game_results_game_id_fkey FOREIGN KEY (game_id) REFERENCES public.games(id),
+  CONSTRAINT game_results_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.game_players(id)
 );
 CREATE TABLE public.games (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -90,9 +91,9 @@ END),
   host_transfer_history jsonb DEFAULT '[]'::jsonb,
   host_control_enabled boolean DEFAULT false,
   CONSTRAINT games_pkey PRIMARY KEY (id),
-  CONSTRAINT fk_games_current_question FOREIGN KEY (current_question_id) REFERENCES public.questions(id),
   CONSTRAINT games_host_id_fkey FOREIGN KEY (host_id) REFERENCES public.users(id),
-  CONSTRAINT games_question_set_id_fkey FOREIGN KEY (question_set_id) REFERENCES public.question_sets(id)
+  CONSTRAINT games_question_set_id_fkey FOREIGN KEY (question_set_id) REFERENCES public.question_sets(id),
+  CONSTRAINT fk_games_current_question FOREIGN KEY (current_question_id) REFERENCES public.questions(id)
 );
 CREATE TABLE public.host_sessions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
