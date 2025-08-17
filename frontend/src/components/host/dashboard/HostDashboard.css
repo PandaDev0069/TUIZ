@@ -593,3 +593,83 @@
     border: 2px solid var(--tuiz-gray-800);
   }
 }
+
+/* ========================================
+   GAME OVERVIEW STYLES (REFACTORED)
+   ======================================== */
+
+.game-overview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.game-overview--mobile {
+  height: 100%;
+  max-height: 100%;
+}
+
+.game-overview__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--host-space-3, 0.75rem);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--host-radius-lg, 12px) var(--host-radius-lg, 12px) 0 0;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.game-overview__title {
+  font-size: var(--host-font-size-sm, 0.875rem);
+  font-weight: var(--host-font-weight-semibold, 600);
+  color: var(--host-white, #ffffff);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--host-space-2, 0.5rem);
+}
+
+.game-overview__room-info {
+  font-size: var(--host-font-size-xs, 0.75rem);
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: var(--host-font-weight-medium, 500);
+}
+
+.game-overview__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN FOR GAME OVERVIEW
+   ======================================== */
+
+@media (max-width: 768px) {
+  .game-overview__header {
+    flex-direction: column;
+    gap: var(--host-space-1, 0.25rem);
+    text-align: center;
+  }
+  
+  .game-overview__title {
+    font-size: 0.75rem;
+  }
+  
+  .game-overview__room-info {
+    font-size: 0.6875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-overview {
+    gap: var(--host-space-1, 0.25rem);
+  }
+  
+  .game-overview__header {
+    padding: var(--host-space-1, 0.25rem);
+  }
+}

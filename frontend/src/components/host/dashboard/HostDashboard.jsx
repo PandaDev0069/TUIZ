@@ -21,7 +21,8 @@ import {
   FaFileAlt
 } from 'react-icons/fa';
 import socket from '../../../socket';
-import GameOverview from './GameOverview';
+import MobileViewPort from './MobileViewPort';
+import InlineQuizPreview from './InlineQuizPreview';
 import QuickActions from './QuickActions';
 import PlayerManagementPreview from './PlayerManagementPreview';
 import AnalyticsSummary from './AnalyticsSummary';
@@ -665,12 +666,23 @@ function HostDashboard() {
       <div className="host-dashboard__content">
         {/* Game Overview - Top section */}
         <div className="host-dashboard__section host-dashboard__section--overview">
-          <GameOverview 
-            gameState={gameState}
-            players={players}
-            roomCode={room}
-            onTimerAdjust={handleTimerAdjust}
-          />
+          <div className="game-overview game-overview--mobile">
+            <div className="game-overview__header">
+              <h3 className="game-overview__title">Game Preview</h3>
+              <div className="game-overview__room-info">
+                Room: <strong>{room}</strong>
+              </div>
+            </div>
+            
+            <div className="game-overview__content">
+              <MobileViewPort className="host-game-renderer__viewport">
+                <InlineQuizPreview 
+                  gameState={gameState}
+                  disableInteraction={true}
+                />
+              </MobileViewPort>
+            </div>
+          </div>
         </div>
 
         {/* Quick Actions - Left side */}

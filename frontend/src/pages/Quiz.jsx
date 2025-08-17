@@ -2,18 +2,23 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useManagedInterval } from "../utils/timerManager";
 import { usePlayerSocket, useConnectionStatus } from "../hooks/useSocket";
-import ConnectionStatus from "../components/ConnectionStatus";
-import QuestionRenderer from "../components/quiz/QuestionRenderer";
+import QuizContent from "../components/quiz/QuizContent";
 import PostQuestionDisplay from "../components/quiz/PostQuestionDisplay/PostQuestionDisplay";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import "./quiz.css";
 
-function Quiz() {
+function Quiz({ previewMode = false, mockData = null }) {
   const { state } = useLocation();
-  const { name, room } = state || {};
+  const { name, room } = (previewMode && mockData) ? mockData : (state || {});
   const navigate = useNavigate();
 
-  // Use the player socket hook with session persistence - fixed parameters
+  // Use the player socket hook with session persistence - skip in preview mode
+  const socketHookResult = usePlayerSocket(
+    previewMode ? null : name, 
+    previewMode ? null : room, 
+    previewMode ? null : (state?.gameId)
+  );
+  
   const { 
     isConnected, 
     playerState, 
@@ -21,10 +26,17 @@ function Quiz() {
     emit, 
     on, 
     off 
-  } = usePlayerSocket(name, room, state?.gameId);
+  } = previewMode ? {
+    isConnected: true,
+    playerState: { connected: true },
+    sessionRestored: true,
+    emit: () => {},
+    on: () => {},
+    off: () => {}
+  } : socketHookResult;
   
-  // Use connection status hook
-  const { connectionState } = useConnectionStatus();
+  // Use connection status hook - skip in preview mode
+  const { connectionState } = previewMode ? { connectionState: 'connected' } : useConnectionStatus();
 
   const [question, setQuestion] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -45,6 +57,16 @@ function Quiz() {
   const [currentPlayerAnswerData, setCurrentPlayerAnswerData] = useState(null); // Store current player's answer data for accuracy
 
   useEffect(() => {
+    // Skip socket setup in preview mode
+    if (previewMode) {
+      // Set up mock data for preview
+      if (mockData?.mockQuestion) {
+        setQuestion(mockData.mockQuestion);
+        setTimer(mockData.mockQuestion.timeLimit || 30);
+      }
+      return;
+    }
+
     if (!name || !room) {
       navigate('/join');
       return;
@@ -226,6 +248,9 @@ function Quiz() {
     });
 
     return () => {
+      // Skip cleanup in preview mode
+      if (previewMode) return;
+      
       off('question');
       off('answerResult');
       off('showExplanation');
@@ -233,7 +258,7 @@ function Quiz() {
       off('showLeaderboard');
       off('game_over');
     };
-  }, [name, room, navigate, on, off]);
+  }, [name, room, navigate, on, off, previewMode]);
 
   // Timer effect for questions - using managed interval
   useManagedInterval(
@@ -411,35 +436,18 @@ function Quiz() {
 
   return (
     <div className="page-container">
-      {/* Connection Status Indicator */}
-      <ConnectionStatus 
-        position="top-left"
-        showText={false}
-        compact={true}
-        className="quiz__connection-status"
+      <QuizContent
+        question={question}
+        selected={selected}
+        answerResult={answerResult}
+        timer={timer}
+        score={score}
+        streak={streak}
+        questionScore={questionScore}
+        onAnswer={handleAnswer}
+        showConnectionStatus={true}
+        previewMode={false}
       />
-      
-      <div className="quiz-page">
-        <div className="quiz-header">
-          <div className="quiz-player-stats">
-            <div className="quiz-current-score">スコア: {score}</div>
-            {streak > 1 && <div className="quiz-streak-badge">🔥 {streak}連続!</div>}
-            {questionScore > 0 && <div className="quiz-last-points">+{questionScore}</div>}
-          </div>
-        </div>
-
-        
-        <QuestionRenderer
-          key={question?.id || question?.questionNumber}
-          question={question}
-          selected={selected}
-          answerResult={answerResult}
-          timer={timer}
-          onAnswer={handleAnswer}
-          showProgress={true}
-          showTimer={true}
-        />
-      </div>
     </div>
   );
 }

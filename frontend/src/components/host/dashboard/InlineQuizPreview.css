@@ -1,0 +1,122 @@
+/* ========================================
+   INLINE QUIZ PREVIEW COMPONENT
+   ======================================== */
+
+.inline-quiz-preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--host-radius-lg, 12px);
+  overflow: hidden;
+  /* Use TUIZ global gradient background */
+  background: var(--tuiz-gradient-primary);
+  border: 1px solid var(--tuiz-glass-border-light);
+}
+
+/* ========================================
+   INTERACTION BLOCKER
+   ======================================== */
+
+.inline-quiz-preview__interaction-blocker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  background: transparent;
+  cursor: default;
+  pointer-events: auto;
+}
+
+/* ========================================
+   PREVIEW BADGE
+   ======================================== */
+
+.inline-quiz-preview__badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 20;
+  background: rgba(255, 193, 7, 0.9);
+  color: #000;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* ========================================
+   QUIZ CONTENT CONTAINER
+   ======================================== */
+
+.inline-quiz-preview__content {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  /* Apply standard page-container styling for consistency */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: var(--tuiz-white);
+  font-family: var(--tuiz-font-family);
+}
+
+/* Remove custom quiz overrides - let components use their natural styles */
+.inline-quiz-preview__content .quiz-content {
+  width: 100%;
+  height: 100%;
+  background: transparent; /* Let the parent gradient show through */
+}
+
+.inline-quiz-preview__content .quiz-page {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 1rem;
+  min-height: auto; /* Override the 100vh from quiz.css for preview */
+  display: flex;
+  flex-direction: column;
+  /* Use natural scrolling behavior in preview */
+  scroll-behavior: smooth;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.inline-quiz-preview__content .page-container {
+  min-height: auto; /* Override 100vh for preview */
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  /* Background handled by parent .inline-quiz-preview */
+  background: transparent;
+  color: var(--tuiz-white);
+  font-family: var(--tuiz-font-family);
+}
+
+/* ========================================
+   RESPONSIVE SCALING
+   ======================================== */
+
+@media (max-width: 480px) {
+  .inline-quiz-preview__badge {
+    top: 6px;
+    right: 6px;
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+  
+  .inline-quiz-preview__content .quiz-question-content-wrapper {
+    padding: 12px;
+  }
+}
