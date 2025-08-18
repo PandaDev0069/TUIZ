@@ -993,9 +993,25 @@ const createGameResultsForPlayers = async (activeGame, scoreboard) => {
     const gameResultsPromises = Array.from(activeGame.players.values())
       .filter(player => player.dbId) // Only process players with database IDs
       .map(async (player) => {
-        // Find player's scoreboard entry for rank
-        const scoreboardEntry = scoreboard.find(entry => entry.name === player.name);
-        const finalRank = scoreboardEntry ? scoreboardEntry.rank : 0;
+        try {
+          // First verify the player still exists in game_players table
+          const { data: playerExists, error: checkError } = await db.supabaseAdmin
+            .from('game_players')
+            .select('id')
+            .eq('id', player.dbId)
+            .single();
+
+          if (checkError || !playerExists) {
+            logger.warn(`⚠️ Player ${player.name} (${player.dbId}) not found in game_players table, skipping result creation`);
+            logger.debug(`Debug info: checkError=${checkError?.message}, playerExists=${!!playerExists}`);
+            return { success: false, error: 'Player not found in game_players', playerId: player.id };
+          }
+
+          logger.debug(`✅ Verified player ${player.name} exists in game_players table with ID: ${player.dbId}`);
+
+          // Find player's scoreboard entry for rank
+          const scoreboardEntry = scoreboard.find(entry => entry.name === player.name);
+          const finalRank = scoreboardEntry ? scoreboardEntry.rank : 0;
 
         // Calculate player statistics
         const totalQuestions = activeGame.totalQuestions || activeGame.questions?.length || 0;
@@ -1021,6 +1037,14 @@ const createGameResultsForPlayers = async (activeGame, scoreboard) => {
           completion_percentage: Math.round(completionPercentage * 100) / 100 // Round to 2 decimal places
         };
 
+        logger.debug(`🔍 Creating game result for ${player.name}:`, {
+          game_id: gameResultData.game_id,
+          player_id: gameResultData.player_id,
+          player_name: player.name,
+          final_score: gameResultData.final_score,
+          final_rank: gameResultData.final_rank
+        });
+
       // Insert into database
       const { data, error } = await db.supabaseAdmin
         .from('game_results')
@@ -1038,7 +1062,12 @@ const createGameResultsForPlayers = async (activeGame, scoreboard) => {
       }
 
       return { success: true, result: data, playerId: player.id };
-    });
+      
+        } catch (playerError) {
+          logger.error(`❌ Error creating result for player ${player.name}:`, playerError);
+          return { success: false, error: playerError.message, playerId: player.id };
+        }
+      });
 
     const results = await Promise.allSettled(gameResultsPromises);
     
