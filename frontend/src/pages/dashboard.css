@@ -18,6 +18,8 @@
   /* Prevent flash - start invisible until animations are ready */
   opacity: 0;
   visibility: hidden;
+  /* Fallback: show page after 200ms regardless of animation state */
+  animation: dashboardFallbackShow 0.1s ease-out 0.2s both;
 }
 
 .dashboard__wrapper {
@@ -37,11 +39,6 @@
   opacity: 1;
   visibility: visible;
   transition: opacity 0.3s ease-out;
-}
-
-/* Fallback: show page after 200ms regardless of animation state */
-.dashboard {
-  animation: dashboardFallbackShow 0.1s ease-out 0.2s both;
 }
 
 @keyframes dashboardFallbackShow {
