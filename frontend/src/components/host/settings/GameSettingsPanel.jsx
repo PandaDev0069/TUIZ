@@ -63,7 +63,7 @@ const settingsConfig = {
         key: "explanationTime",
         label: "解説表示時間",
         type: "slider",
-        min: 10,
+        min: 20,
         max: 120,
         step: 5,
         unit: "秒",

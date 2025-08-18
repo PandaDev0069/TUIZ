@@ -250,6 +250,18 @@ function HostDashboard() {
     console.log('Opening game settings...');
   };
 
+  const handleNext = () => {
+    console.log('🎮 Host manually advancing game...');
+    if (room && gameId) {
+      // Emit the host advance event
+      socket.emit('host_advance', { 
+        gameCode: room,
+        gameId: gameId,
+        reason: 'manual_advance'
+      });
+    }
+  };
+
   const handleGameStateChange = (newState) => {
     setGameState(prev => ({
       ...prev,
@@ -283,9 +295,18 @@ function HostDashboard() {
                 </div>
 
                 <div className="host-dashboard__header-actions">
-          </div>
-        </div>
-      </div>
+                  {/* Temporary testing buttons */}
+                  <button 
+                    className="host-dashboard__btn host-dashboard__btn--next"
+                    onClick={handleNext}
+                    disabled={gameState.status !== 'active'}
+                    title="Manually advance to next question/phase"
+                  >
+                    ⏭️ Next
+                  </button>
+                </div>
+              </div>
+            </div>
 
       {/* Main dashboard grid */}
       <div className="host-dashboard__content">

@@ -110,30 +110,22 @@ class GameSettingsService {
   static parseGameSettings(settings, defaults) {
     const parsed = {
       // Player Management
-      maxPlayers: this.validateNumber(settings.maxPlayers, defaults.maxPlayers, 2, 100),
+      maxPlayers: this.validateNumber(settings.maxPlayers, defaults.maxPlayers, 2, 300),
       
       // Game Flow
       autoAdvance: this.validateBoolean(settings.autoAdvance, defaults.autoAdvance),
+      hybridMode: this.validateBoolean(settings.hybridMode, defaults.hybridMode), 
       showExplanations: this.validateBoolean(settings.showExplanations, defaults.showExplanations),
       explanationTime: this.validateNumber(settings.explanationTime, defaults.explanationTime, 5, 120),
       showLeaderboard: this.validateBoolean(settings.showLeaderboard, defaults.showLeaderboard),
       
-      // Timing
-      useCustomTiming: this.validateBoolean(settings.useCustomTiming, false),
-      questionTime: this.validateNumber(settings.questionTime, defaults.questionTime, 5, 300),
-      
       // Scoring
-      pointCalculation: this.validateEnum(settings.pointCalculation, defaults.pointCalculation, ['fixed', 'time-bonus', 'streak-bonus']),
+      pointCalculation: this.validateEnum(settings.pointCalculation, defaults.pointCalculation, ['fixed', 'time-bonus']),
       streakBonus: this.validateBoolean(settings.streakBonus, defaults.streakBonus),
-      basePoints: this.validateNumber(settings.basePoints, defaults.basePoints, 100, 10000),
       
       // Display Options
       showProgress: this.validateBoolean(settings.showProgress, defaults.showProgress),
-      showCorrectAnswer: this.validateBoolean(settings.showCorrectAnswer, defaults.showCorrectAnswer),
-      
-      // Advanced
-      spectatorMode: this.validateBoolean(settings.spectatorMode, defaults.spectatorMode),
-      allowAnswerChange: this.validateBoolean(settings.allowAnswerChange, defaults.allowAnswerChange)
+      showCorrectAnswer: this.validateBoolean(settings.showCorrectAnswer, defaults.showCorrectAnswer)
     };
 
     if (isDevelopment) {
@@ -150,14 +142,8 @@ class GameSettingsService {
    * @returns {Object} Enhanced question
    */
   static applySettingsToQuestion(question, gameSettings, index) {
-    // Calculate time limit
-    let timeLimit;
-    if (gameSettings.useCustomTiming) {
-      timeLimit = gameSettings.questionTime * 1000; // Convert to milliseconds
-    } else {
-      // Use question's individual time_limit or default
-      timeLimit = (question.timeLimit || question.time_limit || gameSettings.questionTime) * 1000;
-    }
+    // Calculate time limit (use question's individual time_limit or default 30s)
+    let timeLimit = (question.timeLimit || question.time_limit || 30) * 1000; // Convert to milliseconds
 
     // Calculate points based on settings
     let points = this.calculateQuestionPoints(question, gameSettings);
@@ -179,7 +165,6 @@ class GameSettingsService {
       // Display settings
       showProgress: gameSettings.showProgress,
       showCorrectAnswer: gameSettings.showCorrectAnswer,
-      allowAnswerChange: gameSettings.allowAnswerChange,
       
       // Settings metadata
       _settingsApplied: true,
@@ -197,8 +182,8 @@ class GameSettingsService {
    * @returns {Number} Raw base points (no multipliers applied)
    */
   static calculateQuestionPoints(question, gameSettings) {
-    // Return raw base points - let the new scoring system handle all bonuses
-    return question.points || gameSettings.basePoints || 100;
+    // Return raw base points - let the scoring system handle all bonuses
+    return question.points || 100; // Default 100 points
   }
 
   /**
@@ -210,26 +195,20 @@ class GameSettingsService {
     return {
       // Core flow settings
       autoAdvance: gameSettings.autoAdvance,
+      hybridMode: gameSettings.hybridMode,
       showExplanations: gameSettings.showExplanations,
       explanationTime: gameSettings.explanationTime * 1000, // milliseconds
       showLeaderboard: gameSettings.showLeaderboard,
       
-      // Timing configuration
-      defaultQuestionTime: gameSettings.questionTime * 1000, // milliseconds
-      useCustomTiming: gameSettings.useCustomTiming,
-      
       // Scoring configuration
       pointCalculation: gameSettings.pointCalculation,
       streakBonus: gameSettings.streakBonus,
-      basePoints: gameSettings.basePoints,
       
       // Display configuration
       showProgress: gameSettings.showProgress,
       showCorrectAnswer: gameSettings.showCorrectAnswer,
-      allowAnswerChange: gameSettings.allowAnswerChange,
       
-      // Advanced features
-      spectatorMode: gameSettings.spectatorMode,
+      // Player limit
       maxPlayers: gameSettings.maxPlayers
     };
   }
@@ -245,18 +224,14 @@ class GameSettingsService {
     const fallbackDefaults = {
       maxPlayers: 50,
       autoAdvance: true,
+      hybridMode: false,
       showExplanations: true,
       explanationTime: 10,
       showLeaderboard: true,
-      useCustomTiming: false,
-      questionTime: 30,
-      pointCalculation: 'time-bonus',
-      streakBonus: true,
-      basePoints: 1000,
+      pointCalculation: 'fixed',
+      streakBonus: false,
       showProgress: true,
-      showCorrectAnswer: true,
-      allowAnswerChange: false,
-      spectatorMode: false
+      showCorrectAnswer: true
     };
 
     const finalDefaults = defaults || fallbackDefaults;

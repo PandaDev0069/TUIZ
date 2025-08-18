@@ -626,7 +626,16 @@ const checkForQuestionCompletion = (gameCode) => {
       logger.debug(`📝 All players answered question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
     }
     
-    // Show immediate answer feedback first
+    // In manual mode, wait for host to advance instead of auto-proceeding
+    if (gameSettings.autoAdvance === false) {
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`⏸️ Manual mode: All players answered, waiting for host to advance question ${activeGame.currentQuestionIndex + 1}`);
+      }
+      // Don't auto-proceed, wait for host to press Next button
+      return;
+    }
+    
+    // Auto mode: Show immediate answer feedback first
     setTimeout(async () => {
       // Debug the explanation check - only in development
       if (isDevelopment || isLocalhost) {
@@ -710,7 +719,8 @@ const showQuestionExplanation = (gameCode) => {
     
     // Timing - use explanationTime from settings (converted to ms)
     explanationTime: (gameSettings.explanationTime || 30) * 1000,
-    autoAdvance: gameSettings.autoAdvance !== false
+    autoAdvance: gameSettings.autoAdvance !== false,
+    hybridMode: gameSettings.hybridMode || false  // Include hybrid mode info
   };
   
   // Send explanation with leaderboard to all players immediately
@@ -764,16 +774,30 @@ const showQuestionExplanation = (gameCode) => {
   }
 
   // After explanation, proceed to next question (leaderboard already shown during explanation)
-  setTimeout(async () => {
-    // Don't show additional leaderboard after explanation since it's already shown during explanation
+  // In hybrid mode, explanations wait for manual host advance
+  if (gameSettings.hybridMode) {
+    // Hybrid mode: Don't auto-advance after explanations, wait for host
     if (isDevelopment || isLocalhost) {
-      logger.debug(`⏭️ Proceeding to next question after explanation for question ${activeGame.currentQuestionIndex + 1}`);
+      logger.debug(`🔄 Hybrid mode: Waiting for host to advance after explanation for question ${activeGame.currentQuestionIndex + 1}`);
     }
-    await proceedToNextQuestion(gameCode);
-  }, explanationData.explanationTime);
-  
-  if (isDevelopment || isLocalhost) {
-    logger.debug(`⏰ Set explanation timer for ${explanationData.explanationTime}ms for question ${activeGame.currentQuestionIndex + 1}`);
+  } else if (gameSettings.autoAdvance !== false) {
+    // Auto mode: Auto-advance after explanation time
+    setTimeout(async () => {
+      // Don't show additional leaderboard after explanation since it's already shown during explanation
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`⏭️ Auto mode: Proceeding to next question after explanation for question ${activeGame.currentQuestionIndex + 1}`);
+      }
+      await proceedToNextQuestion(gameCode);
+    }, explanationData.explanationTime);
+    
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`⏰ Set explanation timer for ${explanationData.explanationTime}ms for question ${activeGame.currentQuestionIndex + 1}`);
+    }
+  } else {
+    // Manual mode: Wait for host to advance
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`⏸️ Manual mode: Waiting for host to advance after explanation for question ${activeGame.currentQuestionIndex + 1}`);
+    }
   }
 };
 
@@ -813,6 +837,7 @@ const showIntermediateLeaderboard = (gameCode) => {
     displayTime: (gameSettings.explanationTime || 30) * 1000, // Use explanation time setting
     explanationTime: (gameSettings.explanationTime || 30) * 1000, // Also include for frontend consistency
     autoAdvance: gameSettings.autoAdvance !== false,
+    hybridMode: gameSettings.hybridMode || false,  // Include hybrid mode info
     
     // Add answer stats and correct answer for consistency with explanation events
     correctAnswer: currentQuestion.correctIndex,
@@ -857,7 +882,9 @@ const showIntermediateLeaderboard = (gameCode) => {
     }
   }
 
-  // Auto-advance to next question or end game (only if autoAdvance is enabled)
+  // Auto-advance to next question or end game 
+  // In hybrid mode, questions still auto-advance (only explanations are manual)
+  // In manual mode, everything waits for host
   if (gameSettings.autoAdvance !== false) {
     setTimeout(async () => {
       await proceedToNextQuestion(gameCode);
@@ -1018,6 +1045,7 @@ const sendNextQuestion = async (gameCode) => {
     
     // Game flow configuration
     autoAdvance: gameFlowConfig.autoAdvance !== undefined ? gameFlowConfig.autoAdvance : true,
+    hybridMode: gameFlowConfig.hybridMode || false,  // Include hybrid mode info
     showExplanation: question.showExplanation !== undefined ? question.showExplanation : false,
     explanationTime: question.explanationTime || gameFlowConfig.explanationTime || 30000,
     
@@ -2170,7 +2198,13 @@ io.on('connection', (socket) => {
       io.to(gameCode).emit('gameStarted', {
         message: 'Game has started!',
         totalQuestions: questions.length,
-        playerCount: activeGame.players.size
+        playerCount: activeGame.players.size,
+        gameSettings: {
+          autoAdvance: (settingsResult.gameSettings || activeGame.game_settings).autoAdvance !== false,
+          hybridMode: (settingsResult.gameSettings || activeGame.game_settings).hybridMode || false,
+          showExplanations: (settingsResult.gameSettings || activeGame.game_settings).showExplanations,
+          explanationTime: (settingsResult.gameSettings || activeGame.game_settings).explanationTime
+        }
       });
       
       // Send the first question after a short delay
@@ -2456,6 +2490,79 @@ io.on('connection', (socket) => {
     } catch (error) {
       logger.error('❌ Error getting player list:', error);
       socket.emit('error', { message: 'Failed to get player list' });
+    }
+  });
+
+  // Handle host manual advance (for manual/hybrid modes)
+  socket.on('host_advance', async ({ gameCode, gameId, reason }) => {
+    try {
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`🎮 Host advance request received: gameCode=${gameCode}, gameId=${gameId}, reason=${reason}, socketId=${socket.id}`);
+      }
+      
+      const activeGame = activeGames.get(gameCode);
+      if (!activeGame) {
+        logger.error(`❌ Game not found for code: ${gameCode}`);
+        socket.emit('error', { message: 'Game not found' });
+        return;
+      }
+
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`🔍 Host verification: requestSocket=${socket.id}, gameHostSocket=${activeGame.hostSocketId}`);
+      }
+
+      // Verify the socket is the host
+      if (activeGame.hostSocketId !== socket.id) {
+        logger.error(`❌ Host verification failed: ${socket.id} is not the host (${activeGame.hostSocketId})`);
+        socket.emit('error', { message: 'Only the host can advance the game' });
+        return;
+      }
+
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`🎮 Host manually advancing game ${gameCode}, reason: ${reason}`);
+      }
+
+      // In manual mode, we need to handle different phases
+      const gameSettings = activeGame.game_settings || {};
+      const currentPhase = activeGame.showingResults ? 'explanation' : 'question';
+      
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`🎮 Current phase: ${currentPhase}, autoAdvance: ${gameSettings.autoAdvance}, hybridMode: ${gameSettings.hybridMode}`);
+      }
+
+      if (currentPhase === 'question') {
+        // Host advancing from question phase - show explanation/leaderboard
+        const currentQuestion = activeGame.questions[activeGame.currentQuestionIndex];
+        const shouldShowExpl = GameSettingsService.shouldShowExplanation(currentQuestion, gameSettings);
+        
+        if (shouldShowExpl) {
+          if (isDevelopment || isLocalhost) {
+            logger.debug(`🎮 Host advancing to explanation for question ${activeGame.currentQuestionIndex + 1}`);
+          }
+          showQuestionExplanation(gameCode);
+        } else if (gameSettings.showLeaderboard) {
+          if (isDevelopment || isLocalhost) {
+            logger.debug(`🎮 Host advancing to leaderboard for question ${activeGame.currentQuestionIndex + 1}`);
+          }
+          showIntermediateLeaderboard(gameCode);
+        } else {
+          // No explanation or leaderboard, proceed to next question
+          if (isDevelopment || isLocalhost) {
+            logger.debug(`🎮 Host advancing to next question (no explanation/leaderboard)`);
+          }
+          await proceedToNextQuestion(gameCode);
+        }
+      } else {
+        // Host advancing from explanation/leaderboard phase - go to next question
+        if (isDevelopment || isLocalhost) {
+          logger.debug(`🎮 Host advancing from explanation/leaderboard to next question`);
+        }
+        await proceedToNextQuestion(gameCode);
+      }
+      
+    } catch (error) {
+      logger.error('❌ Error handling host advance:', error);
+      socket.emit('error', { message: 'Failed to advance game' });
     }
   });
 

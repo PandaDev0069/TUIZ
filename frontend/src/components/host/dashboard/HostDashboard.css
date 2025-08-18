@@ -198,6 +198,52 @@
   flex-shrink: 0;
 }
 
+/* Temporary testing buttons */
+.host-dashboard__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tuiz-space-2);
+  padding: var(--tuiz-space-2) var(--tuiz-space-4);
+  border: none;
+  border-radius: var(--tuiz-radius-md);
+  font-size: var(--tuiz-text-sm);
+  font-weight: var(--tuiz-font-medium);
+  font-family: var(--tuiz-font-family);
+  cursor: pointer;
+  transition: all var(--tuiz-duration-fast) var(--tuiz-ease-out);
+  box-shadow: var(--tuiz-shadow-sm);
+  backdrop-filter: var(--tuiz-blur-medium);
+}
+
+.host-dashboard__btn--next {
+  background: var(--tuiz-primary);
+  color: var(--tuiz-white);
+}
+
+.host-dashboard__btn--next:hover:not(:disabled) {
+  background: var(--tuiz-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--tuiz-shadow-md);
+}
+
+.host-dashboard__btn--next:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--tuiz-gray-500);
+}
+
+.host-dashboard__btn--settings {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--tuiz-white);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.host-dashboard__btn--settings:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: var(--tuiz-shadow-md);
+}
+
 /* Status Badge */
 .host-dashboard__status {
   display: flex;
