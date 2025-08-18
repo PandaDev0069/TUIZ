@@ -741,3 +741,132 @@
     padding: var(--host-space-1, 0.25rem);
   }
 }
+
+/* ========================================
+   SIMPLIFIED ANALYTICS COMPONENTS
+   ======================================== */
+
+.host-game-info {
+  background: var(--tuiz-white);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--tuiz-gray-200);
+}
+
+.host-game-info h3 {
+  margin: 0 0 1rem 0;
+  color: var(--tuiz-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.host-game-info__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.host-game-info__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.host-game-info__label {
+  color: var(--tuiz-gray-600);
+  font-weight: 500;
+}
+
+.host-game-info__value {
+  color: var(--tuiz-gray-900);
+  font-weight: 600;
+}
+
+.host-analytics-summary {
+  background: var(--tuiz-white);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--tuiz-gray-200);
+}
+
+.host-analytics-summary h3 {
+  margin: 0 0 1rem 0;
+  color: var(--tuiz-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.host-analytics-summary__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.host-analytics-summary__stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--tuiz-gray-100);
+}
+
+.host-analytics-summary__stat:last-child {
+  border-bottom: none;
+}
+
+.host-analytics-summary__label {
+  color: var(--tuiz-gray-600);
+  font-weight: 500;
+}
+
+.host-analytics-summary__value {
+  color: var(--tuiz-primary);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.host-player-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.host-player-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--tuiz-gray-100);
+}
+
+.host-player-item:last-child {
+  border-bottom: none;
+}
+
+.host-player-item__name {
+  font-weight: 600;
+  color: var(--tuiz-gray-900);
+}
+
+.host-player-item__score {
+  color: var(--tuiz-primary);
+  font-weight: 500;
+}
+
+.host-player-item__status {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.host-player-item__status.connected {
+  background: var(--tuiz-success-light);
+  color: var(--tuiz-success);
+}
+
+.host-player-item__status.disconnected {
+  background: var(--tuiz-gray-100);
+  color: var(--tuiz-gray-600);
+}
