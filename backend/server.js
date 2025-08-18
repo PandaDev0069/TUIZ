@@ -14,6 +14,8 @@ const { calculateGameScore } = require('./utils/scoringSystem');
 const { validateStorageConfig } = require('./utils/storageConfig');
 const activeGameUpdater = require('./utils/ActiveGameUpdater');
 const { createApp } = require('./app');
+const { getEnvironment, getServerConfig } = require('./config/env');
+const { getSocketCorsConfig } = require('./config/cors');
 
 // Phase 6: Host Socket Handlers
 const HostSocketHandlers = require('./sockets/hostHandlers');
@@ -36,9 +38,8 @@ const authHelper = new SupabaseAuthHelper(db.supabaseAdmin);
 // Initialize cleanup scheduler
 const cleanupScheduler = new CleanupScheduler(db);
 
-// Environment detection for logging
-const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
-const isLocalhost = process.env.IS_LOCALHOST === 'true' || !process.env.NODE_ENV;
+// Environment detection using centralized config
+const { isDevelopment, isLocalhost } = getEnvironment();
 
 (async () => {
   try {
@@ -74,16 +75,7 @@ const app = createApp({ db, authHelper, cleanupScheduler });
 
 const server = http.createServer(app);
 
-// Socket.IO server with enhanced CORS - Allow network access
-const socketAllowedOrigins = [
-  process.env.SOCKET_CORS_ORIGIN || 'http://localhost:5173',
-  'https://tuiz-nine.vercel.app', // Add your Vercel domain
-  /^https:\/\/.*\.vercel\.app$/, // Allow any Vercel preview domains
-  /^http:\/\/192\.168\.\d+\.\d+:5173$/, // Allow local network IPs
-  /^http:\/\/10\.\d+\.\d+\.\d+:5173$/, // Allow 10.x.x.x network
-  /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:5173$/ // Allow 172.16-31.x.x network
-];
-
+// Socket.IO server with enhanced CORS using centralized config
 // Only log Socket.IO configuration in development
 if (isDevelopment || isLocalhost) {
   logger.debug('🔌 Socket.IO CORS Configuration:');
@@ -92,11 +84,7 @@ if (isDevelopment || isLocalhost) {
 }
 
 const io = new Server(server, {
-    cors: {
-        origin: socketAllowedOrigins,
-        methods: ['GET', 'POST'],
-        credentials: true
-    },
+    cors: getSocketCorsConfig()
 });
 
 // Setup function to enable enhanced host handlers for host control games
@@ -2234,8 +2222,7 @@ io.on('connection', (socket) => {
 // SERVER STARTUP
 // ================================================================
 
-const PORT = 3001;
-const HOST = '0.0.0.0'; // Listen on all network interfaces
+const { port: PORT, host: HOST } = getServerConfig();
 server.listen(PORT, HOST, () => {
     logger.showConfig(); // Show logging configuration
     logger.info(`🚀 Server is running on ${HOST}:${PORT}`);
