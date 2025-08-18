@@ -143,6 +143,73 @@ async function proceedToNextQuestion(gameCode, activeGames, sendNextQuestionFn, 
 }
 
 /**
+ * Send individual player answer data during explanation/leaderboard
+ * @param {Object} activeGame - Current game state
+ * @param {Object} currentQuestion - Current question object
+ * @param {Object} gameHub - GameHub instance
+ * @param {Object} logger - Logger instance
+ * @returns {void}
+ */
+function sendPlayerAnswerData(activeGame, currentQuestion, gameHub, logger) {
+  const { isDevelopment, isLocalhost } = require('../../config/env').getEnvironment();
+  
+  for (const [socketId, player] of activeGame.players) {
+    const playerAnswerData = getCurrentPlayerAnswerData(activeGame.currentAnswers, player.name);
+    if (playerAnswerData) {
+      gameHub.toSocket(socketId).emit('playerAnswerData', {
+        questionId: currentQuestion.id,
+        ...playerAnswerData
+      });
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`📊 Sent playerAnswerData to ${player.name} (${socketId}) during explanation via GameHub`);
+      }
+    } else {
+      if (isDevelopment || isLocalhost) {
+        logger.warn(`⚠️ No answer data found for player ${player.name} when sending explanation data`);
+      }
+    }
+  }
+}
+
+/**
+ * Handle auto-advance logic for explanations
+ * @param {Object} gameSettings - Game settings
+ * @param {Object} explanationData - Explanation data with timing
+ * @param {Function} proceedToNextQuestionFn - Function to proceed to next question
+ * @param {string} gameCode - Game code
+ * @param {number} questionIndex - Current question index
+ * @param {Object} logger - Logger instance
+ * @returns {void}
+ */
+function handleExplanationAutoAdvance(gameSettings, explanationData, proceedToNextQuestionFn, gameCode, questionIndex, logger) {
+  const { isDevelopment, isLocalhost } = require('../../config/env').getEnvironment();
+
+  if (gameSettings.hybridMode) {
+    // Hybrid mode: Don't auto-advance after explanations, wait for host
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`🔄 Hybrid mode: Waiting for host to advance after explanation for question ${questionIndex + 1}`);
+    }
+  } else if (gameSettings.autoAdvance !== false) {
+    // Auto mode: Auto-advance after explanation time
+    setTimeout(async () => {
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`⏭️ Auto mode: Proceeding to next question after explanation for question ${questionIndex + 1}`);
+      }
+      await proceedToNextQuestionFn(gameCode);
+    }, explanationData.explanationTime);
+    
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`⏰ Set explanation timer for ${explanationData.explanationTime}ms for question ${questionIndex + 1}`);
+    }
+  } else {
+    // Manual mode: Wait for host to advance
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`⏸️ Manual mode: Waiting for host to advance after explanation for question ${questionIndex + 1}`);
+    }
+  }
+}
+
+/**
  * Show question explanation with side effects
  * @param {string} gameCode - Game code
  * @param {Map} activeGames - Active games map
@@ -159,7 +226,7 @@ async function showQuestionExplanation(gameCode, activeGames, gameHub, logger, G
   const currentQuestion = activeGame.questions[activeGame.currentQuestionIndex];
   const gameSettings = activeGame.game_settings || {};
   
-  const { isDevelopment, isLocalhost } = require('../config/env').getEnvironment();
+  const { isDevelopment, isLocalhost } = require('../../config/env').getEnvironment();
   if (isDevelopment || isLocalhost) {
     logger.debug(`💡 Showing explanation for question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
   }
@@ -189,46 +256,45 @@ async function showQuestionExplanation(gameCode, activeGames, gameHub, logger, G
     }
   }, 100); // 100ms delay
   
-  // Send individual player answer data to each player
-  for (const [socketId, player] of activeGame.players) {
-    const playerAnswerData = getCurrentPlayerAnswerData(activeGame.currentAnswers, player.name);
-    if (playerAnswerData) {
-      gameHub.toSocket(socketId).emit('playerAnswerData', {
-        questionId: currentQuestion.id,
-        ...playerAnswerData
-      });
-      if (isDevelopment || isLocalhost) {
-        logger.debug(`📊 Sent playerAnswerData to ${player.name} (${socketId}) during explanation via GameHub`);
-      }
-    } else {
-      if (isDevelopment || isLocalhost) {
-        logger.warn(`⚠️ No answer data found for player ${player.name} when sending explanation data`);
-      }
-    }
-  }
+  // Send individual player answer data
+  sendPlayerAnswerData(activeGame, currentQuestion, gameHub, logger);
 
   // Handle auto-advance logic
+  handleExplanationAutoAdvance(
+    gameSettings, 
+    explanationData, 
+    proceedToNextQuestionFn, 
+    gameCode, 
+    activeGame.currentQuestionIndex,
+    logger
+  );
+}
+
+/**
+ * Handle auto-advance logic for leaderboards
+ * @param {Object} gameSettings - Game settings
+ * @param {Object} leaderboardData - Leaderboard data with timing
+ * @param {Function} proceedToNextQuestionFn - Function to proceed to next question
+ * @param {string} gameCode - Game code
+ * @param {number} questionIndex - Current question index
+ * @param {Object} logger - Logger instance
+ * @returns {void}
+ */
+function handleLeaderboardAutoAdvance(gameSettings, leaderboardData, proceedToNextQuestionFn, gameCode, questionIndex, logger) {
+  const { isDevelopment, isLocalhost } = require('../../config/env').getEnvironment();
+
   if (gameSettings.hybridMode) {
-    // Hybrid mode: Don't auto-advance after explanations, wait for host
+    // Hybrid mode: Wait for host to advance from leaderboard
     if (isDevelopment || isLocalhost) {
-      logger.debug(`🔄 Hybrid mode: Waiting for host to advance after explanation for question ${activeGame.currentQuestionIndex + 1}`);
+      logger.debug(`🔄 Hybrid mode: Waiting for host to advance after leaderboard for question ${questionIndex + 1}`);
     }
   } else if (gameSettings.autoAdvance !== false) {
-    // Auto mode: Auto-advance after explanation time
     setTimeout(async () => {
-      if (isDevelopment || isLocalhost) {
-        logger.debug(`⏭️ Auto mode: Proceeding to next question after explanation for question ${activeGame.currentQuestionIndex + 1}`);
-      }
       await proceedToNextQuestionFn(gameCode);
-    }, explanationData.explanationTime);
-    
-    if (isDevelopment || isLocalhost) {
-      logger.debug(`⏰ Set explanation timer for ${explanationData.explanationTime}ms for question ${activeGame.currentQuestionIndex + 1}`);
-    }
+    }, leaderboardData.displayTime);
   } else {
-    // Manual mode: Wait for host to advance
     if (isDevelopment || isLocalhost) {
-      logger.debug(`⏸️ Manual mode: Waiting for host to advance after explanation for question ${activeGame.currentQuestionIndex + 1}`);
+      logger.debug(`⏸️ Manual advance mode - waiting for host to continue`);
     }
   }
 }
@@ -248,7 +314,7 @@ async function showIntermediateLeaderboard(gameCode, activeGames, gameHub, logge
   
   const gameSettings = activeGame.game_settings || {};
   
-  const { isDevelopment, isLocalhost } = require('../config/env').getEnvironment();
+  const { isDevelopment, isLocalhost } = require('../../config/env').getEnvironment();
   if (isDevelopment || isLocalhost) {
     logger.debug(`🏆 Showing intermediate leaderboard for game ${gameCode}`);
   }
@@ -273,39 +339,18 @@ async function showIntermediateLeaderboard(gameCode, activeGames, gameHub, logge
   // Send leaderboard to all players immediately
   gameHub.toRoom(gameCode).emit('showLeaderboard', leaderboardData);
   
-  // Send individual player answer data to each player
-  for (const [socketId, player] of activeGame.players) {
-    const playerAnswerData = getCurrentPlayerAnswerData(activeGame.currentAnswers, player.name);
-    if (playerAnswerData) {
-      gameHub.toSocket(socketId).emit('playerAnswerData', {
-        questionId: currentQuestion.id,
-        ...playerAnswerData
-      });
-      if (isDevelopment || isLocalhost) {
-        logger.debug(`📊 Sent playerAnswerData to ${player.name} (${socketId}) during leaderboard via GameHub`);
-      }
-    } else {
-      if (isDevelopment || isLocalhost) {
-        logger.warn(`⚠️ No answer data found for player ${player.name} when sending leaderboard data`);
-      }
-    }
-  }
+  // Send individual player answer data
+  sendPlayerAnswerData(activeGame, currentQuestion, gameHub, logger);
 
-  // Auto-advance logic
-  if (gameSettings.hybridMode) {
-    // Hybrid mode: Wait for host to advance from leaderboard
-    if (isDevelopment || isLocalhost) {
-      logger.debug(`🔄 Hybrid mode: Waiting for host to advance after leaderboard for question ${activeGame.currentQuestionIndex + 1}`);
-    }
-  } else if (gameSettings.autoAdvance !== false) {
-    setTimeout(async () => {
-      await proceedToNextQuestionFn(gameCode);
-    }, leaderboardData.displayTime);
-  } else {
-    if (isDevelopment || isLocalhost) {
-      logger.debug(`⏸️ Manual advance mode - waiting for host to continue`);
-    }
-  }
+  // Handle auto-advance logic
+  handleLeaderboardAutoAdvance(
+    gameSettings, 
+    leaderboardData, 
+    proceedToNextQuestionFn, 
+    gameCode, 
+    activeGame.currentQuestionIndex,
+    logger
+  );
 }
 
 module.exports = {
