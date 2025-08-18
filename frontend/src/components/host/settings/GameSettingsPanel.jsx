@@ -53,13 +53,6 @@ const settingsConfig = {
         defaultValue: "auto"
       },
       {
-        key: "showExplanations", 
-        label: "解説表示",
-        type: "toggle",
-        description: "各問題の後に解説を表示",
-        defaultValue: false
-      },
-      {
         key: "explanationTime",
         label: "解説表示時間",
         type: "slider",
@@ -67,7 +60,6 @@ const settingsConfig = {
         max: 120,
         step: 5,
         unit: "秒",
-        dependsOn: "showExplanations",
         description: "自動進行時の解説表示時間",
         defaultValue: 30
       }
@@ -108,13 +100,6 @@ const settingsConfig = {
         label: "進捗表示",
         type: "toggle", 
         description: "現在の問題数を表示（例：「問題 X / Y」）",
-        defaultValue: true
-      },
-      {
-        key: "showCorrectAnswer",
-        label: "正解表示",
-        type: "toggle",
-        description: "時間切れ後に正解をハイライト",
         defaultValue: true
       },
       {
@@ -484,7 +469,6 @@ const GameSettingsPanel = ({ questionSetId, gameId, onClose }) => {
                 {localSettings.flowMode === 'manual' ? '手動進行' : 
                  localSettings.flowMode === 'hybrid' ? 'ハイブリッド' : '自動進行'}
               </strong> • 
-              解説表示: <strong>{localSettings.showExplanations ? 'ON' : 'OFF'}</strong> •
               スコア計算: <strong>{localSettings.pointCalculation === 'time-bonus' ? '時間ボーナス付き' : '固定ポイント'}</strong>
             </p>
           </div>

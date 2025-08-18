@@ -5,6 +5,8 @@ import MobileViewPort from './MobileViewPort';
 import InlineQuizPreview from './InlineQuizPreview';
 import { useAuth } from '../../../contexts/AuthContext';
 import './HostDashboard.css';
+import React from 'react';
+import { FaArrowLeft } from 'react-icons/fa';
 
 /**
  * HostDashboard - Clean canvas for host game monitoring
@@ -304,6 +306,14 @@ function HostDashboard() {
                   >
                     ⏭️ Next
                   </button>
+                  <button 
+                    className="quiz-library__back-button tuiz-animate-slide-in-left"
+                    onClick={() => navigate('/dashboard')}
+                    title="ダッシュボードに戻る"
+                  >
+                    <FaArrowLeft className="quiz-library__back-button-icon" />
+                    <span className="quiz-library__back-button-text">ダッシュボード</span>
+                  </button> 
                 </div>
               </div>
             </div>
