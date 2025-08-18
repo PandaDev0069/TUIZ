@@ -69,7 +69,7 @@ async function sendNextQuestion(gameCode, activeGames, gameHub, logger, endGameF
   gameHub.toRoom(gameCode).emit('question', questionData);
 
   // Logging
-  const { isDevelopment, isLocalhost } = require('../config/env').getEnvironment();
+  const { isDevelopment, isLocalhost } = require('../../config/env').getEnvironment();
   if (isDevelopment || isLocalhost) {
     logger.debug(`📋 Sent question ${questionIndex + 1} to game ${gameCode} (${Math.round(question.timeLimit/1000)}s): ${question.question.substring(0, 50)}...`);
   }
@@ -104,7 +104,7 @@ async function proceedToNextQuestion(gameCode, activeGames, sendNextQuestionFn, 
   
   // Prevent double question sending
   if (activeGame.questionInProgress) {
-    const { isDevelopment, isLocalhost } = require('../config/env').getEnvironment();
+    const { isDevelopment, isLocalhost } = require('../../config/env').getEnvironment();
     if (isDevelopment || isLocalhost) {
       logger.debug(`⚠️ Question transition already in progress for game ${gameCode}`);
     }
@@ -115,7 +115,7 @@ async function proceedToNextQuestion(gameCode, activeGames, sendNextQuestionFn, 
   const transitionUpdates = prepareQuestionTransition();
   Object.assign(activeGame, transitionUpdates);
   
-  const { isDevelopment, isLocalhost } = require('../config/env').getEnvironment();
+  const { isDevelopment, isLocalhost } = require('../../config/env').getEnvironment();
   if (isDevelopment || isLocalhost) {
     logger.debug(`➡️ Proceeding to next question in game ${gameCode}`);
   }

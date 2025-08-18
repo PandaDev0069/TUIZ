@@ -138,9 +138,10 @@ async function updateQuestionSetLastPlayed(activeGame, db, logger) {
  * @param {string} gameCode - Game code
  * @param {Object} io - Socket.IO instance for global events
  * @param {Array} scoreboard - Final scoreboard
+ * @param {Object} logger - Logger instance
  * @returns {void}
  */
-function emitGameCompletionEvents(activeGame, gameCode, io, scoreboard) {
+function emitGameCompletionEvents(activeGame, gameCode, io, scoreboard, logger) {
   // Emit game completion event for dashboard updates
   if (activeGame.question_set_id && activeGame.hostId) {
     io.emit('game_completed', { 
@@ -209,7 +210,7 @@ async function endGame(gameCode, activeGames, gameHub, io, db, logger, updatePla
   await updateQuestionSetLastPlayed(activeGame, db, logger);
 
   // Emit completion events
-  emitGameCompletionEvents(activeGame, gameCode, io, scoreboard);
+  emitGameCompletionEvents(activeGame, gameCode, io, scoreboard, logger);
 
   // Clear the ending flag
   activeGame._ending = false;
