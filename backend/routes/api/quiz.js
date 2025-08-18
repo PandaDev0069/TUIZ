@@ -1728,15 +1728,12 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
 
     // Merge new play_settings with existing ones, removing was_published flag
     if (play_settings || currentQuiz.play_settings) {
-      const existingSettings = currentQuiz.play_settings || {};
       const newSettings = play_settings || {};
       
-      // Remove was_published flag when republishing and merge settings
-      const { was_published: _, ...cleanExistingSettings } = existingSettings;
-      updateData.play_settings = {
-        ...cleanExistingSettings,
-        ...newSettings
-      };
+      // Use only the new clean settings (don't merge with old bloated settings)
+      // Remove was_published flag if it exists
+      const { was_published: _, ...cleanNewSettings } = newSettings;
+      updateData.play_settings = cleanNewSettings;
     }
 
     // Update total_questions to match actual question count

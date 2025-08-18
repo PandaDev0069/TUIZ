@@ -93,12 +93,32 @@ function ReviewForm({
     try {
       setIsPublishing(true);
       
-      // Prepare publication data
-      const publicationData = {
-        play_settings: settings
+      // Prepare clean publication data - only the essential settings structure
+      const cleanPlaySettings = {
+        // Player Management
+        maxPlayers: getNumberSetting('players_cap', 50),
+        
+        // Game Flow
+        autoAdvance: getSettingValue('game_settings.autoAdvance', true),
+        hybridMode: getSettingValue('game_settings.hybridMode', false),
+        showExplanations: getSettingValue('game_settings.showExplanations', false),
+        explanationTime: getNumberSetting('game_settings.explanationTime', 30),
+        showLeaderboard: getSettingValue('game_settings.showLeaderboard', false),
+        
+        // Scoring
+        pointCalculation: getStringSetting('game_settings.pointCalculation', 'fixed'),
+        streakBonus: getSettingValue('game_settings.streakBonus', false),
+        
+        // Display Options
+        showProgress: getSettingValue('game_settings.showProgress', false),
+        showCorrectAnswer: getSettingValue('game_settings.showCorrectAnswer', true)
       };
 
-      console.log('Publishing quiz with data:', publicationData);
+      const publicationData = {
+        play_settings: cleanPlaySettings
+      };
+
+      console.log('Publishing quiz with clean data:', publicationData);
       
       const response = await apiCall(`/quiz/${questionSetId}/publish`, {
         method: 'PATCH',
@@ -160,6 +180,17 @@ function ReviewForm({
     
     // Default to なし for any other values
     return 'なし';
+  };
+
+  // Helper function to get flow mode from autoAdvance and hybridMode settings
+  const getFlowMode = () => {
+    const autoAdvance = getSettingValue('game_settings.autoAdvance', true);
+    const hybridMode = getSettingValue('game_settings.hybridMode', false);
+    
+    if (!autoAdvance && !hybridMode) return '手動進行';
+    if (autoAdvance && hybridMode) return 'ハイブリッド';
+    if (autoAdvance && !hybridMode) return '自動進行';
+    return '自動進行'; // default
   };
 
   // Helper function to get boolean setting and display it
@@ -395,17 +426,11 @@ function ReviewForm({
               <h4>ゲーム進行</h4>
               <div className="review-settings-grid">
                 <div className="review-setting-item">
-                  <span className="review-setting-label">自動進行</span>
-                  <span className="review-setting-value">{getBooleanSetting('game_settings.autoAdvance', 'autoAdvance')}</span>
-                </div>
-                <div className="review-setting-item">
-                  <span className="review-setting-label">ハイブリッドモード</span>
-                  <span className="review-setting-value">{getBooleanSetting('game_settings.hybridMode', 'hybridMode')}</span>
+                  <span className="review-setting-label">進行モード</span>
+                  <span className="review-setting-value">{getFlowMode()}</span>
                 </div>
               </div>
-            </div>
-
-            <div className="review-settings-group">
+            </div>            <div className="review-settings-group">
               <h4>回答・解説</h4>
               <div className="review-settings-grid">
                 <div className="review-setting-item">
@@ -445,6 +470,10 @@ function ReviewForm({
                 <div className="review-setting-item">
                   <span className="review-setting-label">進捗表示</span>
                   <span className="review-setting-value">{getBooleanSetting('game_settings.showProgress', 'showProgress') === 'あり' ? '表示' : '非表示'}</span>
+                </div>
+                <div className="review-setting-item">
+                  <span className="review-setting-label">正解表示</span>
+                  <span className="review-setting-value">{getBooleanSetting('game_settings.showCorrectAnswer', 'showCorrectAnswer') === 'あり' ? '表示' : '非表示'}</span>
                 </div>
                 <div className="review-setting-item">
                   <span className="review-setting-label">最大プレイヤー数</span>
