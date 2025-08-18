@@ -14,14 +14,12 @@ const { calculateGameScore } = require('./utils/scoringSystem');
 const { validateStorageConfig } = require('./utils/storageConfig');
 const activeGameUpdater = require('./utils/ActiveGameUpdater');
 const { createApp } = require('./app');
+const { initializeSocketIO } = require('./sockets');
 const { getEnvironment, getServerConfig } = require('./config/env');
 const { getSocketCorsConfig } = require('./config/cors');
 
 // Phase 6: Host Socket Handlers
 const HostSocketHandlers = require('./sockets/hostHandlers');
-
-// Session Restoration Handlers
-const SessionRestoreHandlers = require('./sockets/sessionRestoreHandlers');
 
 // Initialize database
 const db = new DatabaseManager();
@@ -69,23 +67,20 @@ const { isDevelopment, isLocalhost } = getEnvironment();
 // Create Express app using the app.js module
 const app = createApp({ db, cleanupScheduler });
 
+// Store active games in memory (you could also use Redis for production)
+const activeGames = new Map();
+
 // ================================================================
 // SERVER SETUP
 // ================================================================
 
 const server = http.createServer(app);
 
-// Socket.IO server with enhanced CORS using centralized config
-// Only log Socket.IO configuration in development
-if (isDevelopment || isLocalhost) {
-  logger.debug('🔌 Socket.IO CORS Configuration:');
-  logger.debug('  Environment SOCKET_CORS_ORIGIN:', process.env.SOCKET_CORS_ORIGIN || 'Not set');
-  logger.debug('  Socket origins include Vercel domain: ✅');
-}
+// Initialize Socket.IO using the sockets module
+const io = initializeSocketIO(server, activeGames, db, registerMainSocketHandlers);
 
-const io = new Server(server, {
-    cors: getSocketCorsConfig()
-});
+// Export function to get Socket.IO instance
+module.exports.getIO = () => io;
 
 // Setup function to enable enhanced host handlers for host control games
 function setupHostHandlers(socket, gameCode, gameId) {
@@ -126,16 +121,10 @@ function setupHostHandlers(socket, gameCode, gameId) {
   }
 }
 
-// Export function to get Socket.IO instance
-module.exports.getIO = () => io;
-
-// Store active games in memory (you could also use Redis for production)
-const activeGames = new Map();
-
 // Initialize the active game updater with the activeGames reference
 activeGameUpdater.setActiveGamesRef(activeGames);
 
-// Phase 6: Initialize Host Socket Handlers (after activeGames is defined)
+// Initialize Host Socket Handlers (after io and activeGames are defined)
 const hostHandlers = new HostSocketHandlers(io, activeGames);
 
 // Helper function to check if question phase is complete and handle transitions
@@ -901,122 +890,14 @@ const endGame = async (gameCode) => {
 };
 
 // ================================================================
-// SOCKET.IO EVENT HANDLERS
+// SOCKET.IO EVENT HANDLERS (Non-Session Restore)  
 // ================================================================
 
-io.on('connection', (socket) => {
-  if (isDevelopment || isLocalhost) {
-    logger.connection(`🔌 New user connected: ${socket.id}`);
-  }
-
-  // Initialize session restoration handlers for this socket
-  const sessionRestoreHandlers = new SessionRestoreHandlers(io, activeGames, db);
-
-  // Session restoration event handlers
-  socket.on('restoreSession', async (sessionData) => {
-    await sessionRestoreHandlers.handleSessionRestore(socket, sessionData);
-  });
-
-  // Host-specific restoration events (for compatibility)
-  socket.on('host:rejoinGame', async (sessionData) => {
-    const hostSessionData = { ...sessionData, isHost: true };
-    await sessionRestoreHandlers.handleSessionRestore(socket, hostSessionData);
-  });
-
-  // Player-specific restoration events (for compatibility)
-  socket.on('player:rejoinGame', async (sessionData) => {
-    const playerSessionData = { ...sessionData, isHost: false };
-    await sessionRestoreHandlers.handleSessionRestore(socket, playerSessionData);
-  });
-
-  // Legacy restoration events (for backward compatibility)
-  socket.on('requestStateRestoration', async (sessionData) => {
-    await sessionRestoreHandlers.handleSessionRestore(socket, sessionData);
-  });
-
-  socket.on('requestHostRestoration', async (sessionData) => {
-    const hostSessionData = { ...sessionData, isHost: true };
-    await sessionRestoreHandlers.handleSessionRestore(socket, hostSessionData);
-  });
-
-  socket.on('requestPlayerRestoration', async (sessionData) => {
-    const playerSessionData = { ...sessionData, isHost: false };
-    await sessionRestoreHandlers.handleSessionRestore(socket, playerSessionData);
-  });
-
-  // Additional session restoration helpers
-  socket.on('host:requestGameState', ({ gameId, room }) => {
-    try {
-      const gameCode = room;
-      const activeGame = activeGames.get(gameCode);
-      
-      if (activeGame) {
-        const connectedPlayers = Array.from(activeGame.players.values())
-          .filter(p => p.isConnected)
-          .map(p => ({
-            id: p.id,
-            name: p.name,
-            score: p.score,
-            joinedAt: p.joinedAt || Date.now()
-          }));
-
-        socket.emit('host:gameStateUpdate', {
-          gameCode,
-          gameId: activeGame.gameId,
-          status: activeGame.status,
-          players: connectedPlayers,
-          playerCount: connectedPlayers.length,
-          currentQuestionIndex: activeGame.currentQuestionIndex,
-          totalQuestions: activeGame.totalQuestions
-        });
-      } else {
-        socket.emit('host:gameNotFound', { gameCode, gameId });
-      }
-    } catch (error) {
-      logger.error('❌ Error getting game state:', error);
-      socket.emit('error', { message: 'Failed to get game state' });
-    }
-  });
-
-  socket.on('player:requestGameState', ({ playerName, room, gameId }) => {
-    try {
-      const gameCode = room;
-      const activeGame = activeGames.get(gameCode);
-      
-      if (activeGame) {
-        // Find player in game
-        let playerData = null;
-        for (const [playerId, player] of activeGame.players.entries()) {
-          if (player.name === playerName) {
-            playerData = player;
-            break;
-          }
-        }
-
-        if (playerData) {
-          socket.emit('player:gameStateUpdate', {
-            gameCode,
-            gameId: activeGame.gameId,
-            status: activeGame.status,
-            playerState: {
-              name: playerData.name,
-              score: playerData.score,
-              isReady: playerData.isReady
-            },
-            currentQuestionIndex: activeGame.currentQuestionIndex,
-            totalQuestions: activeGame.totalQuestions
-          });
-        } else {
-          socket.emit('player:notInGame', { playerName, gameCode });
-        }
-      } else {
-        socket.emit('player:gameNotFound', { gameCode, gameId });
-      }
-    } catch (error) {
-      logger.error('❌ Error getting player game state:', error);
-      socket.emit('error', { message: 'Failed to get game state' });
-    }
-  });
+/**
+ * Registers main game event handlers on socket (temporary during Checkpoint 3)
+ * TODO: Move these to separate event modules in future checkpoints
+ */
+function registerMainSocketHandlers(socket, io, activeGames, db) {
 
   // Create a new game
   socket.on('createGame', async ({ hostId, questionSetId, settings }) => {
@@ -2216,7 +2097,7 @@ io.on('connection', (socket) => {
       }
     }
   });
-});
+}
 
 // ================================================================
 // SERVER STARTUP
