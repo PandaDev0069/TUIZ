@@ -19,6 +19,15 @@ const { initializeSocketIO } = require('./sockets');
 const { getEnvironment, getServerConfig } = require('./config/env');
 const { getSocketCorsConfig } = require('./config/cors');
 
+// Validation and DTOs
+const { validateSocketPayload } = require('./validation');
+const { 
+  createSocketResponse, 
+  formatGameState, 
+  formatPlayer, 
+  formatLeaderboard 
+} = require('./utils/responseHelpers');
+
 // Domain modules for game logic
 const gameActions = require('./domain/game/actions');
 const gameEndModule = require('./domain/game/endGame');
@@ -333,8 +342,18 @@ const endGame = async (gameCode) => {
 function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
 
   // Create a new game
-  socket.on('createGame', async ({ hostId, questionSetId, settings }) => {
+  socket.on('createGame', async ({ hostId, questionSetId, settings }, callback) => {
     try {
+      // Validate payload
+      const payload = {
+        hostName: hostId || 'Host',
+        questionSetId,
+        settings
+      };
+      if (!validateSocketPayload('gameCreation', payload, callback)) {
+        return;
+      }
+
       if (isDevelopment || isLocalhost) {
         logger.game(`🎮 [BRIDGE] Creating game via Socket (Host Control Integration): Host ${hostId}, QuestionSet ${questionSetId}`);
       }
@@ -583,8 +602,14 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
   });
 
   // Join an existing game
-  socket.on('joinGame', async ({ playerName, gameCode, isAuthenticated = false, userId = null }) => {
+  socket.on('joinGame', async ({ playerName, gameCode, isAuthenticated = false, userId = null }, callback) => {
     try {
+      // Validate payload
+      const payload = { playerName, gameCode, playerId: socket.id };
+      if (!validateSocketPayload('gameJoin', payload, callback)) {
+        return;
+      }
+
       if (isDevelopment) {
         logger.debug(`👤 Join Game Request:
         Player: ${playerName}
@@ -850,8 +875,14 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
   });
 
   // Get current player list for a game
-  socket.on('getPlayerList', ({ gameCode }) => {
+  socket.on('getPlayerList', ({ gameCode }, callback) => {
     try {
+      // Validate payload
+      const payload = { gameCode, action: 'get_player_list', timestamp: Date.now() };
+      if (!validateSocketPayload('hostAction', payload, callback)) {
+        return;
+      }
+
       const activeGame = activeGames.get(gameCode);
       
       if (!activeGame) {
@@ -887,8 +918,14 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
   });
 
   // Start the game
-  socket.on('startGame', async ({ gameCode }) => {
+  socket.on('startGame', async ({ gameCode }, callback) => {
     try {
+      // Validate payload
+      const payload = { gameCode, action: 'start_game', timestamp: Date.now() };
+      if (!validateSocketPayload('hostAction', payload, callback)) {
+        return;
+      }
+
       if (isDevelopment) {
         logger.debug(`🚀 Start Game Request for: ${gameCode}`);
       }
@@ -1107,8 +1144,19 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
   });
 
   // Handle player answers
-  socket.on('answer', async ({ gameCode, questionId, selectedOption, timeTaken }) => {
+  socket.on('answer', async ({ gameCode, questionId, selectedOption, timeTaken }, callback) => {
     try {
+      // Validate payload
+      const payload = {
+        gameCode,
+        playerId: socket.id,
+        answer: selectedOption,
+        timestamp: Date.now()
+      };
+      if (!validateSocketPayload('answerSubmission', payload, callback)) {
+        return;
+      }
+
       if (isDevelopment || isLocalhost) {
         logger.debug(`💭 Answer received:
         Game: ${gameCode}
@@ -1534,7 +1582,6 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
           if (isDevelopment || isLocalhost) {
             logger.debug(`🎮 Host disconnected from game ${socket.hostOfGame}`);
           }
-          // Could transfer host to another player or end the game
         }
       }
     }
