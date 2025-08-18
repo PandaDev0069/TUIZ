@@ -22,26 +22,19 @@ class GameCreationBridge {
         reject(new Error('Game creation timeout - please try again'));
       }, 15000);
 
-      // Enhanced settings for host control compatibility
+      // Core game settings only - simplified
       const enhancedSettings = {
         ...settings,
-        // Enable host control features
-        hostControl: {
-          pauseEnabled: true,
-          skipEnabled: true,
-          emergencyStopEnabled: true,
-          timerControl: true,
-          playerManagement: true,
-          ...settings.hostControl
-        },
-        // Advanced game flow
-        timeLimit: settings.timeLimit || 30,
-        pointsPerQuestion: settings.pointsPerQuestion || 10,
-        bonusPoints: settings.bonusPoints || 5,
-        allowLateJoin: settings.allowLateJoin !== false,
+        // Keep the essential settings from our simplified list
+        maxPlayers: settings.maxPlayers || 50,
+        autoAdvance: settings.autoAdvance !== false,
+        showExplanations: settings.showExplanations !== false,
+        explanationTime: settings.explanationTime || 30,
         showLeaderboard: settings.showLeaderboard !== false,
-        // Request host control capabilities
-        requestHostControl: true
+        pointCalculation: settings.pointCalculation || 'time-bonus',
+        streakBonus: settings.streakBonus !== false,
+        showProgress: settings.showProgress !== false,
+        showCorrectAnswer: settings.showCorrectAnswer !== false
       };
 
       // Listen for successful game creation

@@ -42,7 +42,7 @@ function updateActiveGameSettings(gameCode, newSettings) {
   }
 }
 
-// Default simplified game settings based on the schema
+// Core game settings - simplified and focused on essential features
 const DEFAULT_SETTINGS = {
   // PLAYER MANAGEMENT
   maxPlayers: 50,
@@ -54,16 +54,12 @@ const DEFAULT_SETTINGS = {
   showLeaderboard: true,
   
   // SCORING
-  pointCalculation: 'fixed',
+  pointCalculation: 'time-bonus',
   streakBonus: true,
   
   // DISPLAY OPTIONS
   showProgress: true,
-  showCorrectAnswer: true,
-  
-  // ADVANCED
-  spectatorMode: true,
-  allowAnswerChange: false
+  showCorrectAnswer: true
 };
 
 // GET /api/game-settings/:questionSetId
@@ -100,7 +96,7 @@ router.get('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
     const flattenedSettings = rawSettings.game_settings ? 
       { ...rawSettings, ...rawSettings.game_settings } : rawSettings;
     
-    // Extract only the simplified settings we support
+    // Extract only the core settings we support
     const cleanSettings = {
       maxPlayers: flattenedSettings.maxPlayers || flattenedSettings.players_cap || DEFAULT_SETTINGS.maxPlayers,
       autoAdvance: flattenedSettings.autoAdvance !== undefined ? flattenedSettings.autoAdvance : DEFAULT_SETTINGS.autoAdvance,
@@ -110,9 +106,7 @@ router.get('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
       pointCalculation: flattenedSettings.pointCalculation || DEFAULT_SETTINGS.pointCalculation,
       streakBonus: flattenedSettings.streakBonus !== undefined ? flattenedSettings.streakBonus : DEFAULT_SETTINGS.streakBonus,
       showProgress: flattenedSettings.showProgress !== undefined ? flattenedSettings.showProgress : DEFAULT_SETTINGS.showProgress,
-      showCorrectAnswer: flattenedSettings.showCorrectAnswer !== undefined ? flattenedSettings.showCorrectAnswer : DEFAULT_SETTINGS.showCorrectAnswer,
-      spectatorMode: flattenedSettings.spectatorMode !== undefined ? flattenedSettings.spectatorMode : DEFAULT_SETTINGS.spectatorMode,
-      allowAnswerChange: flattenedSettings.allowAnswerChange !== undefined ? flattenedSettings.allowAnswerChange : DEFAULT_SETTINGS.allowAnswerChange
+      showCorrectAnswer: flattenedSettings.showCorrectAnswer !== undefined ? flattenedSettings.showCorrectAnswer : DEFAULT_SETTINGS.showCorrectAnswer
     };
 
     res.json({
@@ -163,10 +157,10 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
       });
     }
 
-    // Validate and clean incoming settings
+    // Validate and clean incoming settings - only core settings
     const validatedSettings = {};
     
-    // Validate each setting
+    // Validate each core setting
     if (settings.maxPlayers !== undefined) {
       const maxPlayers = parseInt(settings.maxPlayers);
       if (maxPlayers >= 2 && maxPlayers <= 300) {
@@ -209,14 +203,6 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
 
     if (settings.showCorrectAnswer !== undefined) {
       validatedSettings.showCorrectAnswer = Boolean(settings.showCorrectAnswer);
-    }
-
-    if (settings.spectatorMode !== undefined) {
-      validatedSettings.spectatorMode = Boolean(settings.spectatorMode);
-    }
-
-    if (settings.allowAnswerChange !== undefined) {
-      validatedSettings.allowAnswerChange = Boolean(settings.allowAnswerChange);
     }
 
     // Merge with existing play_settings

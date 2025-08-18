@@ -1498,43 +1498,10 @@ io.on('connection', (socket) => {
         showExplanations: gameSettings.showExplanations !== undefined ? gameSettings.showExplanations : true,
         explanationTime: gameSettings.explanationTime !== undefined ? gameSettings.explanationTime : 30,
         showLeaderboard: gameSettings.showLeaderboard !== undefined ? gameSettings.showLeaderboard : true,
-        pointCalculation: gameSettings.pointCalculation || 'fixed',
-        streakBonus: gameSettings.streakBonus !== undefined ? gameSettings.streakBonus : false,
+        pointCalculation: gameSettings.pointCalculation || 'time-bonus',
+        streakBonus: gameSettings.streakBonus !== undefined ? gameSettings.streakBonus : true,
         showProgress: gameSettings.showProgress !== undefined ? gameSettings.showProgress : true,
-        showCorrectAnswer: gameSettings.showCorrectAnswer !== undefined ? gameSettings.showCorrectAnswer : true,
-        spectatorMode: gameSettings.spectatorMode !== undefined ? gameSettings.spectatorMode : true,
-        allowAnswerChange: gameSettings.allowAnswerChange !== undefined ? gameSettings.allowAnswerChange : false,
-        
-        // Phase 6 host control features
-        title: gameTitle,
-        questionSet: questionSetId,
-        timeLimit: gameSettings.timeLimit || 30,
-        pointsPerQuestion: gameSettings.pointsPerQuestion || 10,
-        bonusPoints: gameSettings.bonusPoints || 5,
-        allowLateJoin: gameSettings.allowLateJoin !== false,
-        randomizeQuestions: gameSettings.randomizeQuestions || false,
-        randomizeAnswers: gameSettings.randomizeAnswers || false,
-        hostControl: {
-          pauseEnabled: true,
-          skipEnabled: true,
-          emergencyStopEnabled: true,
-          timerControl: true,
-          playerManagement: true,
-          ...gameSettings.hostControl
-        },
-        
-        // Host permissions (database compatible)
-        hostPermissions: {
-          canPauseGame: true,
-          canSkipQuestions: true,
-          canKickPlayers: true,
-          canMutePlayers: true,
-          canAdjustTimer: true,
-          canTransferHost: true,
-          canViewAnalytics: true,
-          canEmergencyStop: true,
-          ...gameSettings.hostPermissions
-        }
+        showCorrectAnswer: gameSettings.showCorrectAnswer !== undefined ? gameSettings.showCorrectAnswer : true
       };
       
       // Use RoomManager to create the room (legacy compatibility)
