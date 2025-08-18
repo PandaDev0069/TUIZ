@@ -260,7 +260,7 @@ class GameService {
   /**
    * Get question set metadata for game creation
    * @param {string} questionSetId - Question set UUID
-   * @returns {Promise<Object>} Question set metadata
+   * @returns {Promise<Object>} Question set metadata including play settings
    */
   async getQuestionSetMetadata(questionSetId) {
     try {
@@ -268,7 +268,7 @@ class GameService {
 
       const { data: questionSet, error: qsError } = await this.db.supabaseAdmin
         .from('question_sets')
-        .select('id, title, description, total_questions')
+        .select('id, title, description, total_questions, play_settings')
         .eq('id', questionSetId)
         .single();
 

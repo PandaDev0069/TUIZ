@@ -328,8 +328,8 @@ const endGame = async (gameCode) => {
 // ================================================================
 
 /**
- * Registers main game event handlers on socket (temporary during Checkpoint 4)
- * TODO: Move these to separate event modules in future checkpoints
+ * Registers main game event handlers on socket
+ * Note: These handlers orchestrate game flow and delegate to domain modules and services
  */
 function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
 
@@ -340,7 +340,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
         logger.game(`🎮 [BRIDGE] Creating game via Socket (Host Control Integration): Host ${hostId}, QuestionSet ${questionSetId}`);
       }
       
-      // Extract actual user ID from hostId (remove the temporary prefix)
+      // Extract actual user ID from hostId (handle prefixed format for backwards compatibility)
       const actualHostId = hostId.includes('host_') ? 
         hostId.split('_')[1] : hostId;
       
@@ -359,9 +359,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
           if (questionSetResult.success && questionSetResult.data) {
             const questionSet = questionSetResult.data;
             gameTitle = gameTitle || questionSet.title;
-            // Note: This section may need adjustment if play_settings are needed
-            // For now, using empty object as fallback
-            questionSetSettings = {}; // TODO: Add play_settings to GameService if needed
+            questionSetSettings = questionSet.play_settings || {};
             
             // Flatten any nested game_settings to prevent duplication
             if (questionSetSettings.game_settings) {
