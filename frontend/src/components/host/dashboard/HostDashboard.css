@@ -755,7 +755,7 @@
 }
 
 .host-game-info h3 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   color: var(--tuiz-primary);
   font-size: 1.25rem;
   font-weight: 600;
@@ -792,7 +792,7 @@
 }
 
 .host-analytics-summary h3 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   color: var(--tuiz-primary);
   font-size: 1.25rem;
   font-weight: 600;
