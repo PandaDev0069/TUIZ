@@ -1011,34 +1011,34 @@
   color: var(--tuiz-white);
 }
 
-.explanation-content {
+.quiz-explanation-full .explanation-content {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.explanation-title {
+.quiz-explanation-full .explanation-title {
   margin: 0 0 8px;
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--tuiz-white);
 }
 
-.explanation-text {
+.quiz-explanation-full .explanation-text {
   margin: 0;
   line-height: 1.6;
   color: rgba(255, 255, 255, 0.9);
   font-size: 0.95rem;
 }
 
-.explanation-image {
+.quiz-explanation-full .explanation-image {
   max-width: 100%;
   height: auto;
   border-radius: 8px;
   border: 1px solid var(--tuiz-glass-border-light);
 }
 
-.explanation-answer {
+.quiz-explanation-full .explanation-answer {
   padding: 8px 12px;
   background: rgba(76, 175, 80, 0.2);
   border-radius: 8px;
