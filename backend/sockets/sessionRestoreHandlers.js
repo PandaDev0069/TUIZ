@@ -458,6 +458,29 @@ class SessionRestoreHandlers {
       message: 'Player session restored to active game'
     });
 
+    // If there's a current question and timer is running, immediately send the question
+    if (activeGame.currentQuestion && activeGame.isTimerRunning && activeGame.timeRemaining > 0) {
+      logger.info(`🎯 Sending current question to reconnected player ${playerName}`);
+      
+      // Send the current question with proper timing
+      socket.emit('question', {
+        ...activeGame.currentQuestion,
+        timeLimit: activeGame.timeRemaining // Send remaining time
+      });
+    }
+
+    // If game is showing results, ensure player gets the explanation/leaderboard
+    if (activeGame.showingResults && activeGame.lastExplanationData) {
+      logger.info(`📊 Sending current explanation/results to reconnected player ${playerName}`);
+      
+      // Send the explanation or leaderboard that's currently showing
+      if (activeGame.lastExplanationData.explanation) {
+        socket.emit('showExplanation', activeGame.lastExplanationData);
+      } else {
+        socket.emit('showLeaderboard', activeGame.lastExplanationData);
+      }
+    }
+
     logger.info(`✅ Player ${playerName} restored to active game ${activeGame.gameCode}`);
   }
 

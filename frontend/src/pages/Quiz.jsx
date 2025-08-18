@@ -72,6 +72,86 @@ function Quiz({ previewMode = false, mockData = null }) {
       return;
     }
 
+    // Handle session restoration for active games
+    on('playerSessionRestored', (data) => {
+      if (import.meta.env.DEV) {
+        console.log('🔄 Player session restored:', data);
+      }
+      
+      if (data.type === 'activeGame' && data.gameState) {
+        const { gameState } = data;
+        
+        // Update player score and state from restored data
+        if (data.playerState) {
+          setScore(data.playerState.score || 0);
+          setStreak(data.playerState.streak || 0);
+        }
+        
+        // If there's a current question, restore it
+        if (gameState.currentQuestion) {
+          if (import.meta.env.DEV) {
+            console.log('📋 Restoring current question:', gameState.currentQuestion);
+          }
+          
+          setQuestion(gameState.currentQuestion);
+          setSelected(null);
+          setFeedback("");
+          setShowExplanation(false);
+          setExplanationData(null);
+          setAnswerResult(null);
+          setLatestStandings(null);
+          setCurrentPlayerAnswerData(null);
+          
+          // Calculate remaining time based on server state
+          let remainingTime = 10; // default
+          if (gameState.timeRemaining && gameState.timeRemaining > 0) {
+            remainingTime = Math.ceil(gameState.timeRemaining / 1000);
+          } else if (gameState.currentQuestion.timeLimit) {
+            remainingTime = Math.ceil(gameState.currentQuestion.timeLimit / 1000);
+          }
+          
+          setTimer(remainingTime);
+          setQuestionScore(0);
+          
+          if (import.meta.env.DEV) {
+            console.log('⏰ Restored timer with remaining time:', remainingTime);
+          }
+        }
+        
+        // If showing results/explanation, handle that state
+        if (gameState.showingResults) {
+          if (import.meta.env.DEV) {
+            console.log('📊 Game is showing results, waiting for server events...');
+          }
+          // Don't set question to null here, let server events handle the explanation
+        }
+        
+        if (import.meta.env.DEV) {
+          console.log('✅ Successfully restored to active game');
+        }
+      }
+    });
+
+    // Handle session restore errors
+    on('sessionRestoreError', (error) => {
+      if (import.meta.env.DEV) {
+        console.error('❌ Session restore error:', error);
+      }
+      // Could redirect to join page or show error message
+    });
+
+    // Handle session expiration
+    on('sessionExpired', (data) => {
+      if (import.meta.env.DEV) {
+        console.log('⏰ Session expired:', data);
+      }
+      if (data.shouldRedirect) {
+        navigate(data.shouldRedirect);
+      } else {
+        navigate('/join');
+      }
+    });
+
     // Receive question from server
     on('question', (q) => {
       if (import.meta.env.DEV) {
@@ -251,6 +331,9 @@ function Quiz({ previewMode = false, mockData = null }) {
       // Skip cleanup in preview mode
       if (previewMode) return;
       
+      off('playerSessionRestored');
+      off('sessionRestoreError');
+      off('sessionExpired');
       off('question');
       off('answerResult');
       off('showExplanation');
@@ -258,7 +341,41 @@ function Quiz({ previewMode = false, mockData = null }) {
       off('showLeaderboard');
       off('game_over');
     };
-  }, [name, room, navigate, on, off, previewMode]);
+  }, [name, room, navigate, on, off, previewMode, sessionRestored, isConnected]);
+
+  // Separate useEffect for reconnection timeout to avoid infinite loops
+  useEffect(() => {
+    // Skip in preview mode
+    if (previewMode) return;
+    
+    // Only apply timeout if we're in a potential stuck state:
+    // - Connected to server
+    // - Have session data (name and room)
+    // - But no question AND no explanation showing AND not restored
+    // This indicates we're stuck in loading, not in normal game flow
+    const isStuckInLoading = isConnected && name && room && 
+                           !question && !showExplanation && !sessionRestored;
+    
+    if (isStuckInLoading) {
+      if (import.meta.env.DEV) {
+        console.log('🕐 Player appears stuck in loading state, setting timeout...');
+      }
+      
+      const timeout = setTimeout(() => {
+        // Final check before redirecting
+        if (!question && !showExplanation && !sessionRestored) {
+          if (import.meta.env.DEV) {
+            console.log('⏰ Reconnection timeout, redirecting to join page');
+          }
+          navigate('/join');
+        }
+      }, 15000); // 15 second timeout
+      
+      return () => {
+        clearTimeout(timeout);
+      };
+    }
+  }, [sessionRestored, isConnected, name, room, question, previewMode, navigate, showExplanation]);
 
   // Timer effect for questions - using managed interval
   useManagedInterval(
@@ -429,7 +546,19 @@ function Quiz({ previewMode = false, mockData = null }) {
   if (!question) return (
     <div className="page-container">
       <div className="card">
-        <LoadingSkeleton type="question" count={1} />
+        {!sessionRestored && isConnected && !showExplanation ? (
+          <div className="quiz-loading reconnecting">
+            <div className="quiz-loading-skeleton">
+              <div className="loading-bar"></div>
+              <div className="loading-text">ゲームに再接続中...</div>
+              <div className="loading-subtext">
+                接続が復旧するまでお待ちください
+              </div>
+            </div>
+          </div>
+        ) : (
+          <LoadingSkeleton type="question" count={1} />
+        )}
       </div>
     </div>
   );

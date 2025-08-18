@@ -22,6 +22,33 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Quiz reconnection loading state */
+.quiz-loading.reconnecting {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(59, 130, 246, 0.1));
+  border: 2px solid rgba(16, 185, 129, 0.3);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.quiz-loading.reconnecting .loading-text {
+  color: #10b981;
+  font-weight: 600;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.quiz-loading.reconnecting .loading-subtext {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.quiz-loading.reconnecting .loading-bar {
+  background: linear-gradient(90deg, #10b981, #3b82f6);
+  animation: pulse 2s ease-in-out infinite;
+}
+
 /* Quiz content wrapper for better scroll targeting */
 .quiz-question-content-wrapper {
   scroll-margin-top: 80px;

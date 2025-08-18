@@ -15,6 +15,10 @@ export const useSocket = () => {
   const [isConnected, setIsConnected] = useState(socketManager.isConnected());
   const [connectionState, setConnectionState] = useState(socketManager.getConnectionState());
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  
+  // Use refs to track previous values and avoid unnecessary updates
+  const prevConnectedRef = useRef(isConnected);
+  const prevStateRef = useRef(connectionState);
 
   useEffect(() => {
     const handleConnect = () => {
@@ -48,14 +52,22 @@ export const useSocket = () => {
     setIsConnected(socketManager.isConnected());
     setConnectionState(socketManager.getConnectionState());
 
-    // Periodic sync to ensure state consistency (every 1 second)
+    // Optimized periodic sync - only update when values actually change
     const syncInterval = setInterval(() => {
       const currentState = socketManager.getConnectionState();
       const currentConnected = socketManager.isConnected();
       
-      setIsConnected(currentConnected);
-      setConnectionState(currentState);
-    }, 1000);
+      // Only update state if it has actually changed
+      if (prevConnectedRef.current !== currentConnected) {
+        prevConnectedRef.current = currentConnected;
+        setIsConnected(currentConnected);
+      }
+      
+      if (prevStateRef.current !== currentState) {
+        prevStateRef.current = currentState;
+        setConnectionState(currentState);
+      }
+    }, 2000); // Reduced frequency to 2 seconds
 
     return () => {
       clearInterval(syncInterval);

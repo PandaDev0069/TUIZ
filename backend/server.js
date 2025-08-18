@@ -716,6 +716,17 @@ const showQuestionExplanation = (gameCode) => {
   // Send explanation with leaderboard to all players immediately
   io.to(gameCode).emit('showExplanation', explanationData);
   
+  // Update game state for reconnection support
+  activeGame.showingResults = true;
+  activeGame.isTimerRunning = false;
+  activeGame.lastExplanationData = explanationData;
+  
+  // Clear question timer if running
+  if (activeGame.questionTimer) {
+    clearInterval(activeGame.questionTimer);
+    activeGame.questionTimer = null;
+  }
+  
   // Send individual player answer data to each player
   for (const [socketId, player] of activeGame.players) {
     const playerAnswerData = getCurrentPlayerAnswerData(activeGame.currentAnswers, player.name);
@@ -782,6 +793,17 @@ const showIntermediateLeaderboard = (gameCode) => {
   
   // Send leaderboard to all players immediately
   io.to(gameCode).emit('showLeaderboard', leaderboardData);
+  
+  // Update game state for reconnection support
+  activeGame.showingResults = true;
+  activeGame.isTimerRunning = false;
+  activeGame.lastExplanationData = leaderboardData;
+  
+  // Clear question timer if running
+  if (activeGame.questionTimer) {
+    clearInterval(activeGame.questionTimer);
+    activeGame.questionTimer = null;
+  }
   
   // Send individual player answer data to each player
   for (const [socketId, player] of activeGame.players) {
@@ -874,6 +896,14 @@ const proceedToNextQuestion = async (gameCode) => {
     logger.debug(`➡️ Proceeding to next question in game ${gameCode}`);
   }
   
+  // Clear previous question timer and reset state
+  if (activeGame.questionTimer) {
+    clearInterval(activeGame.questionTimer);
+    activeGame.questionTimer = null;
+  }
+  activeGame.showingResults = false;
+  activeGame.lastExplanationData = null;
+  
   // Move to next question
   activeGame.currentQuestionIndex++;
   
@@ -904,6 +934,22 @@ const sendNextQuestion = async (gameCode) => {
 
   // Reset answers for new question
   activeGame.currentAnswers = [];
+  
+  // Update timing and state information for reconnection support
+  activeGame.currentQuestion = {
+    id: question.id,
+    question: question.question,
+    options: question.options,
+    type: question.type,
+    timeLimit: question.timeLimit,
+    correctIndex: question.correctIndex,
+    _dbData: question._dbData,
+    imageUrl: question.image_url
+  };
+  activeGame.timeRemaining = question.timeLimit;
+  activeGame.isTimerRunning = true;
+  activeGame.questionStartTime = Date.now();
+  activeGame.showingResults = false;
 
   // Initialize player streaks if needed
   for (const [playerId, player] of activeGame.players) {
@@ -942,6 +988,21 @@ const sendNextQuestion = async (gameCode) => {
   if (isDevelopment || isLocalhost) {
     logger.debug(`📋 Sent question ${questionIndex + 1} to game ${gameCode} (${Math.round(question.timeLimit/1000)}s): ${question.question.substring(0, 50)}...`);
   }
+  
+  // Start timer to track remaining time for reconnection
+  if (activeGame.questionTimer) {
+    clearInterval(activeGame.questionTimer);
+  }
+  
+  activeGame.questionTimer = setInterval(() => {
+    if (activeGame.timeRemaining <= 0) {
+      clearInterval(activeGame.questionTimer);
+      activeGame.isTimerRunning = false;
+      return;
+    }
+    
+    activeGame.timeRemaining -= 1000; // Decrease by 1 second
+  }, 1000);
 };
 
 // Helper function to update player rankings in database
@@ -1116,6 +1177,14 @@ const endGame = async (gameCode) => {
   // Update game status
   activeGame.status = 'finished';
   activeGame.ended_at = new Date().toISOString();
+  
+  // Clean up timers
+  if (activeGame.questionTimer) {
+    clearInterval(activeGame.questionTimer);
+    activeGame.questionTimer = null;
+  }
+  activeGame.isTimerRunning = false;
+  activeGame.showingResults = false;
 
   // Update database status to 'finished'
   if (activeGame.id && db) {
