@@ -962,14 +962,14 @@
   overflow-y: visible; /* Let parent handle scrolling */
 }
 
-.explanation-header {
+.quiz-explanation-full .explanation-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
 }
 
-.explanation-header h3 {
+.quiz-explanation-full .explanation-header h3 {
   margin: 0;
   font-size: 1.3rem;
   font-weight: 600;
@@ -979,7 +979,7 @@
   background-clip: text;
 }
 
-.explanation-timer {
+.quiz-explanation-full .explanation-timer {
   background: rgba(255, 255, 255, 0.1);
   padding: 4px 8px;
   border-radius: 6px;
