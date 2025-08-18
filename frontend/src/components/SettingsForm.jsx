@@ -414,13 +414,6 @@ function SettingsForm({ settings, setSettings, questions, onPreviewQuiz, onReord
               <span className="stat-value">{questions.length}問</span>
             </div>
             <div className="stat-item">
-              <span className="stat-label">予想総時間</span>
-              <span className="stat-value">
-                {Math.ceil((questions.reduce((total, q) => total + (q.time_limit || 30), 0) + 
-                           (questions.length * (settings.game_settings?.explanationTime || 0))) / 60)}分
-              </span>
-            </div>
-            <div className="stat-item">
               <span className="stat-label">最大参加者</span>
               <span className="stat-value">{settings.players_cap || 50}人</span>
             </div>

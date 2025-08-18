@@ -47,14 +47,6 @@ export const cleanMetadata = (metadata) => {
     cleaned.tags = [];
   }
   
-  // Convert estimated_duration to integer or null (must be positive if provided)
-  if (cleaned.estimated_duration) {
-    const duration = parseInt(cleaned.estimated_duration);
-    cleaned.estimated_duration = (duration > 0) ? duration : null;
-  } else {
-    cleaned.estimated_duration = null;
-  }
-  
   // Ensure boolean fields are properly set
   cleaned.is_public = Boolean(cleaned.is_public);
   

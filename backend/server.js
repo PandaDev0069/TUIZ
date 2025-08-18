@@ -1284,6 +1284,26 @@ const endGame = async (gameCode) => {
   // Send game over event
   io.to(gameCode).emit('game_over', { scoreboard });
 
+  // Update last_played_at for the question set
+  if (activeGame.question_set_id) {
+    try {
+      const { error: updateError } = await dbManager.supabaseAdmin
+        .from('question_sets')
+        .update({ 
+          last_played_at: new Date().toISOString()
+        })
+        .eq('id', activeGame.question_set_id);
+
+      if (updateError) {
+        logger.error('❌ Error updating last_played_at:', updateError);
+      } else {
+        logger.debug('✅ Updated last_played_at for question set:', activeGame.question_set_id);
+      }
+    } catch (error) {
+      logger.error('❌ Error updating last_played_at:', error);
+    }
+  }
+
   // Emit game completion event for dashboard updates
   if (activeGame.question_set_id && activeGame.hostId) {
     io.emit('game_completed', { 

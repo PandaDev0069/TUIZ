@@ -44,12 +44,9 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
         return hasValidText && hasValidAnswers && hasCorrectAnswer;
       }).length;
       
-      const estimatedDuration = Math.ceil(questions.reduce((total, q) => total + q.timeLimit + 5, 0) / 60);
-      
       // Update the question set metadata
       const updateData = {
         total_questions: totalQuestions,
-        estimated_duration: estimatedDuration
       };
 
       // Only log if there are significant changes
@@ -643,12 +640,6 @@ const QuestionsForm = forwardRef(({ questions, setQuestions, questionSetId = nul
                   const hasCorrectAnswer = q.answers.some(a => a.isCorrect);
                   return hasValidText && hasValidAnswers && hasCorrectAnswer;
                 }).length}問
-              </span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-label">予想時間</span>
-              <span className="stat-value">
-                {Math.ceil(questions.reduce((total, q) => total + q.timeLimit + 5, 0) / 60)}分
               </span>
             </div>
             <div className="stat-item">

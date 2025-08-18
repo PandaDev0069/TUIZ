@@ -66,7 +66,6 @@ export const useQuizCreation = () => {
       description: metadata.description?.trim() || "",
       category: metadata.category || "general",
       difficulty_level: metadata.difficulty_level || "medium",
-      estimated_duration: metadata.estimated_duration || 5,
       is_public: Boolean(metadata.is_public),
       tags: Array.isArray(metadata.tags) ? metadata.tags : []
     };

@@ -181,8 +181,7 @@ class QuestionService {
           description,
           total_questions,
           play_settings,
-          difficulty_level,
-          estimated_duration
+          difficulty_level
         `)
         .eq('id', questionSetId)
         .single();

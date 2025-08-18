@@ -480,7 +480,6 @@ router.post('/create', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.aut
       description,
       category,
       difficulty_level,
-      estimated_duration,
       thumbnail_url,
       tags,
       is_public,
@@ -520,14 +519,6 @@ router.post('/create', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.aut
       });
     }
 
-    // Validate estimated_duration (must be positive if provided)
-    if (estimated_duration !== undefined && estimated_duration !== null && (typeof estimated_duration !== 'number' || estimated_duration <= 0)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Estimated duration must be a positive number'
-      });
-    }
-
     // Create user-scoped Supabase client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
 
@@ -538,7 +529,6 @@ router.post('/create', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.aut
       description: description?.trim() || null, // Optional text
       category: category || null, // Optional, max 100 chars
       difficulty_level: difficulty_level || 'medium', // Default 'medium', max 20 chars
-      estimated_duration: estimated_duration || null, // Optional positive integer
       thumbnail_url: thumbnail_url || null, // Optional text
       tags: Array.isArray(tags) ? tags : [], // Default empty array
       is_public: Boolean(is_public), // Default false
@@ -600,7 +590,6 @@ router.get('/my-quizzes', RateLimitMiddleware.createReadLimit(), AuthMiddleware.
         description,
         category,
         difficulty_level,
-        estimated_duration,
         thumbnail_url,
         tags,
         is_public,
@@ -880,7 +869,6 @@ const logger = require('../../utils/logger');
       description: publicQuiz.description,
       category: publicQuiz.category,
       difficulty_level: publicQuiz.difficulty_level,
-      estimated_duration: publicQuiz.estimated_duration,
       total_questions: publicQuiz.total_questions || 0,
       thumbnail_url: clonedThumbnailUrl,
       is_public: false,
@@ -1169,15 +1157,7 @@ router.put('/:id', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authent
       }
     }
 
-    // Validate estimated_duration if provided
-    if (updateData.estimated_duration !== undefined && updateData.estimated_duration !== null) {
-      if (typeof updateData.estimated_duration !== 'number' || updateData.estimated_duration <= 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Estimated duration must be a positive number'
-        });
-      }
-    }
+
 
     // Validate total_questions if provided
     if (updateData.total_questions !== undefined && updateData.total_questions !== null) {

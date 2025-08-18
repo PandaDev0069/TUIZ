@@ -27,7 +27,6 @@ export class QuizSaveManager {
       
       // Optional fields with safe defaults
       is_public: Boolean(cleanedMetadata.is_public), // Default false
-      estimated_duration: cleanedMetadata.estimated_duration || null, // Can be null
       total_questions: 0, // Will be updated as questions are added
       times_played: 0,
       completion_rate: 0.0,
@@ -52,11 +51,6 @@ export class QuizSaveManager {
     // Validate category length (max 100 characters)
     if (draftData.category && draftData.category.length > 100) {
       throw new Error('カテゴリーは100文字以内で入力してください');
-    }
-
-    // Validate estimated_duration (must be positive if provided)
-    if (draftData.estimated_duration && draftData.estimated_duration <= 0) {
-      throw new Error('推定時間は正の数で入力してください');
     }
 
     try {
@@ -96,7 +90,6 @@ export class QuizSaveManager {
       category: cleanedMetadata.category || null,
       difficulty_level: cleanedMetadata.difficulty_level || "medium",
       is_public: Boolean(cleanedMetadata.is_public),
-      estimated_duration: cleanedMetadata.estimated_duration || null,
       tags: Array.isArray(cleanedMetadata.tags) ? cleanedMetadata.tags : []
     };
 
@@ -108,11 +101,6 @@ export class QuizSaveManager {
     // Validate category length (max 100 characters)
     if (updateData.category && updateData.category.length > 100) {
       throw new Error('カテゴリーは100文字以内で入力してください');
-    }
-
-    // Validate estimated_duration (must be positive if provided)
-    if (updateData.estimated_duration && updateData.estimated_duration <= 0) {
-      throw new Error('推定時間は正の数で入力してください');
     }
 
     // Only include thumbnail_url if it's explicitly provided or if preserveThumbnail is false
