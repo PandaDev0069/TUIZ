@@ -67,7 +67,7 @@ const { isDevelopment, isLocalhost } = getEnvironment();
 })();
 
 // Create Express app using the app.js module
-const app = createApp({ db, authHelper, cleanupScheduler });
+const app = createApp({ db, cleanupScheduler });
 
 // ================================================================
 // SERVER SETUP
