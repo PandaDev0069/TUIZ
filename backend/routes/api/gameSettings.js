@@ -10,35 +10,35 @@ const logger = require('../../utils/logger');
 // Initialize database
 const db = new DatabaseManager();
 
-// Helper function to update activeGame maxPlayers in game_settings
-function updateActiveGamePlayersCap(gameCode, maxPlayers) {
-  SecurityUtils.safeLog('info', 'Updating maxPlayers for game', {
+// Update all activeGame settings when they change in the lobby
+function updateActiveGameSettings(gameCode, newSettings) {
+  SecurityUtils.safeLog('info', 'Updating all activeGame settings', {
     gameCode: gameCode,
-    maxPlayers: maxPlayers
+    settingsKeys: Object.keys(newSettings)
   });
   
-  // Store the update in room manager for backup
-  const room = roomManager.getRoom(gameCode);
-  if (room) {
-    room._pendingPlayersCap = maxPlayers;
-    SecurityUtils.safeLog('info', 'Set pending players cap for room', {
+  try {
+    // Use ActiveGameUpdater to update the settings
+    const success = activeGameUpdater.updateGameSettings(gameCode, newSettings);
+    if (success) {
+      SecurityUtils.safeLog('info', 'Successfully updated activeGame settings', {
+        gameCode: gameCode,
+        updatedSettings: Object.keys(newSettings)
+      });
+      return true;
+    } else {
+      SecurityUtils.safeLog('warn', 'Failed to update activeGame settings', {
+        gameCode: gameCode,
+        reason: 'Game not found or activeGames reference not set'
+      });
+      return false;
+    }
+  } catch (error) {
+    SecurityUtils.safeLog('error', 'Failed to sync active game settings', {
       gameCode: gameCode,
-      maxPlayers: maxPlayers
+      error: error.message
     });
-  } else {
-    SecurityUtils.safeLog('warn', 'Room not found in roomManager', {
-      gameCode: gameCode
-    });
-  }
-  
-  // Try to update activeGame directly
-  const success = activeGameUpdater.updatePlayersCap(gameCode, maxPlayers);
-  if (success) {
-    SecurityUtils.safeLog('info', 'Successfully updated activeGame maxPlayers', {
-      gameCode: gameCode
-    });
-  } else {
-    SecurityUtils.safeLog('warn', 'Could not update activeGame directly, will rely on pending update');
+    return false;
   }
 }
 
@@ -55,7 +55,7 @@ const DEFAULT_SETTINGS = {
   
   // SCORING
   pointCalculation: 'fixed',
-  streakBonus: false,
+  streakBonus: true,
   
   // DISPLAY OPTIONS
   showProgress: true,
@@ -266,10 +266,8 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
           room.gameSettings = mergedRoomSettings;
           logger.debug(`🔄 Updated active game settings for room ${roomCode} (gameId: ${gameId})`);
           
-          // If maxPlayers was updated, schedule update for activeGame
-          if (validatedSettings.maxPlayers !== undefined) {
-            updateActiveGamePlayersCap(roomCode, validatedSettings.maxPlayers);
-          }
+          // Update all activeGame settings, not just maxPlayers
+          updateActiveGameSettings(roomCode, mergedRoomSettings);
           
           // Update settings in games table with complete merged settings
           const { error: gameUpdateError } = await db.supabaseAdmin
@@ -489,9 +487,7 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
     };
 
     // Update activeGame players_cap if maxPlayers was changed
-    if (validatedSettings.maxPlayers !== undefined) {
-      updateActiveGamePlayersCap(roomCode, validatedSettings.maxPlayers);
-    }
+    updateActiveGameSettings(roomCode, room.gameSettings);
     
     // Update the database to keep it in sync
     try {

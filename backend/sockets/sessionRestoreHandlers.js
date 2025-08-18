@@ -10,6 +10,12 @@
 
 const logger = require('../utils/logger');
 
+// Environment detection for debug logging
+const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
+const isLocalhost = process.env.NODE_ENV === 'development' || 
+                   process.env.HOSTNAME === 'localhost' || 
+                   process.env.HOST === 'localhost';
+
 class SessionRestoreHandlers {
   constructor(io, activeGames, db) {
     this.io = io;
@@ -371,6 +377,12 @@ class SessionRestoreHandlers {
   async restorePlayerToActiveGame(socket, activeGame, sessionData) {
     const { playerName } = sessionData;
     
+    // Debug: log what properties the activeGame has
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`🔍 ActiveGame properties: id=${activeGame.id} (this is the gameId), gameCode=${activeGame.gameCode}, game_code=${activeGame.game_code}`);
+      logger.debug(`🔍 ActiveGame keys: ${Object.keys(activeGame).join(', ')}`);
+    }
+    
     // Find player in game
     let existingPlayer = null;
     for (const [playerId, player] of activeGame.players.entries()) {
@@ -395,12 +407,17 @@ class SessionRestoreHandlers {
     }
 
     // Set socket properties
-    socket.gameCode = activeGame.gameCode;
+    socket.gameCode = activeGame.gameCode || activeGame.game_code;
     socket.playerName = playerName;
     socket.isPlayer = true;
 
     // Join game room
-    socket.join(activeGame.gameCode);
+    const roomCode = activeGame.gameCode || activeGame.game_code;
+    socket.join(roomCode);
+    
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`🔍 Player ${playerName} joined room ${roomCode}, socket rooms: ${Array.from(socket.rooms)}`);
+    }
 
     // Prepare player state
     const playerState = {
@@ -410,14 +427,14 @@ class SessionRestoreHandlers {
       currentAnswer: existingPlayer.currentAnswer,
       isReady: existingPlayer.isReady,
       responseTime: existingPlayer.responseTime,
-      gameCode: activeGame.gameCode,
-      gameId: activeGame.gameId
+      gameCode: activeGame.gameCode || activeGame.game_code,
+      gameId: activeGame.id // Use 'id' property which contains the actual gameId
     };
 
     // Prepare game state for player
     const gameState = {
-      gameId: activeGame.gameId,
-      gameCode: activeGame.gameCode,
+      gameId: activeGame.id, // Use 'id' property which contains the actual gameId
+      gameCode: activeGame.gameCode || activeGame.game_code,
       title: activeGame.title,
       status: activeGame.status,
       currentQuestionIndex: activeGame.currentQuestionIndex,
@@ -436,7 +453,8 @@ class SessionRestoreHandlers {
         options: activeGame.currentQuestion.options,
         type: activeGame.currentQuestion.type,
         timeLimit: activeGame.currentQuestion.timeLimit || activeGame.settings?.timeLimit || 30,
-        imageUrl: activeGame.currentQuestion.imageUrl
+        imageUrl: activeGame.currentQuestion.imageUrl,
+        _dbData: activeGame.currentQuestion._dbData // Include _dbData for image URLs and other metadata
       };
     }
 
@@ -472,12 +490,49 @@ class SessionRestoreHandlers {
     // If game is showing results, ensure player gets the explanation/leaderboard
     if (activeGame.showingResults && activeGame.lastExplanationData) {
       logger.info(`📊 Sending current explanation/results to reconnected player ${playerName}`);
+      logger.debug(`📊 lastExplanationData has explanation: ${!!activeGame.lastExplanationData.explanation}`);
+      logger.debug(`📊 lastExplanationData keys: ${Object.keys(activeGame.lastExplanationData)}`);
+      
+      // Calculate remaining explanation time
+      let remainingExplanationTime = 0;
+      if (activeGame.explanationEndTime) {
+        remainingExplanationTime = Math.max(0, activeGame.explanationEndTime - Date.now());
+      }
       
       // Send the explanation or leaderboard that's currently showing
       if (activeGame.lastExplanationData.explanation) {
-        socket.emit('showExplanation', activeGame.lastExplanationData);
+        const explanationWithTimer = {
+          ...activeGame.lastExplanationData,
+          remainingTime: remainingExplanationTime // Add remaining time for timer sync
+        };
+        socket.emit('showExplanation', explanationWithTimer);
+        logger.info(`📊 Sent showExplanation to reconnected player ${playerName} with ${remainingExplanationTime}ms remaining`);
       } else {
-        socket.emit('showLeaderboard', activeGame.lastExplanationData);
+        const leaderboardWithTimer = {
+          ...activeGame.lastExplanationData,
+          remainingTime: remainingExplanationTime // Add remaining time for timer sync
+        };
+        socket.emit('showLeaderboard', leaderboardWithTimer);
+        logger.info(`📊 Sent showLeaderboard to reconnected player ${playerName} with ${remainingExplanationTime}ms remaining`);
+      }
+      
+      // Also send individual player answer data if available
+      const currentQuestion = activeGame.questions[activeGame.currentQuestionIndex];
+      if (currentQuestion && activeGame.currentAnswers) {
+        const playerAnswer = activeGame.currentAnswers.find(answer => answer.playerName === playerName);
+        if (playerAnswer) {
+          socket.emit('playerAnswerData', {
+            questionId: currentQuestion.id,
+            selectedOption: playerAnswer.selectedOption,
+            isCorrect: playerAnswer.isCorrect,
+            points: playerAnswer.points,
+            timeTaken: playerAnswer.timeTaken,
+            answeredAt: playerAnswer.answeredAt
+          });
+          logger.info(`📊 Sent playerAnswerData to reconnected player ${playerName}`);
+        } else {
+          logger.warn(`⚠️ No answer found for reconnected player ${playerName} in currentAnswers`);
+        }
       }
     }
 

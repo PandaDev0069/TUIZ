@@ -714,12 +714,30 @@ const showQuestionExplanation = (gameCode) => {
   };
   
   // Send explanation with leaderboard to all players immediately
-  io.to(gameCode).emit('showExplanation', explanationData);
+  if (isDevelopment || isLocalhost) {
+    logger.debug(`📊 Sending showExplanation to room ${gameCode}`);
+    logger.debug(`📊 Active players in room: ${Array.from(activeGame.players.keys())}`);
+    logger.debug(`📊 Sockets in room ${gameCode}: ${Array.from(io.sockets.adapter.rooms.get(gameCode) || [])}`);
+  }
+  
+  // Small delay to ensure all reconnected players are properly in the room
+  setTimeout(() => {
+    io.to(gameCode).emit('showExplanation', explanationData);
+    
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`📊 showExplanation event sent to room ${gameCode}`);
+    }
+  }, 100); // 100ms delay
   
   // Update game state for reconnection support
   activeGame.showingResults = true;
   activeGame.isTimerRunning = false;
   activeGame.lastExplanationData = explanationData;
+  
+  // Set explanation timer tracking
+  activeGame.explanationStartTime = Date.now();
+  activeGame.explanationDuration = explanationData.explanationTime;
+  activeGame.explanationEndTime = Date.now() + explanationData.explanationTime;
   
   // Clear question timer if running
   if (activeGame.questionTimer) {
@@ -735,9 +753,16 @@ const showQuestionExplanation = (gameCode) => {
         questionId: currentQuestion.id,
         ...playerAnswerData
       });
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`📊 Sent playerAnswerData to ${player.name} (${socketId}) during explanation`);
+      }
+    } else {
+      if (isDevelopment || isLocalhost) {
+        logger.warn(`⚠️ No answer data found for player ${player.name} when sending explanation data`);
+      }
     }
   }
-  
+
   // After explanation, proceed to next question (leaderboard already shown during explanation)
   setTimeout(async () => {
     // Don't show additional leaderboard after explanation since it's already shown during explanation
@@ -746,6 +771,10 @@ const showQuestionExplanation = (gameCode) => {
     }
     await proceedToNextQuestion(gameCode);
   }, explanationData.explanationTime);
+  
+  if (isDevelopment || isLocalhost) {
+    logger.debug(`⏰ Set explanation timer for ${explanationData.explanationTime}ms for question ${activeGame.currentQuestionIndex + 1}`);
+  }
 };
 
 // Helper function to show intermediate leaderboard
@@ -799,6 +828,11 @@ const showIntermediateLeaderboard = (gameCode) => {
   activeGame.isTimerRunning = false;
   activeGame.lastExplanationData = leaderboardData;
   
+  // Set leaderboard timer tracking
+  activeGame.explanationStartTime = Date.now();
+  activeGame.explanationDuration = leaderboardData.explanationTime;
+  activeGame.explanationEndTime = Date.now() + leaderboardData.explanationTime;
+  
   // Clear question timer if running
   if (activeGame.questionTimer) {
     clearInterval(activeGame.questionTimer);
@@ -813,9 +847,16 @@ const showIntermediateLeaderboard = (gameCode) => {
         questionId: currentQuestion.id,
         ...playerAnswerData
       });
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`📊 Sent playerAnswerData to ${player.name} (${socketId}) during leaderboard`);
+      }
+    } else {
+      if (isDevelopment || isLocalhost) {
+        logger.warn(`⚠️ No answer data found for player ${player.name} when sending leaderboard data`);
+      }
     }
   }
-  
+
   // Auto-advance to next question or end game (only if autoAdvance is enabled)
   if (gameSettings.autoAdvance !== false) {
     setTimeout(async () => {

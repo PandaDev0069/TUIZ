@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useManagedInterval } from "../utils/timerManager";
 import { usePlayerSocket, useConnectionStatus } from "../hooks/useSocket";
+import socketManager from "../utils/SocketManager";
 import QuizContent from "../components/quiz/QuizContent";
 import PostQuestionDisplay from "../components/quiz/PostQuestionDisplay/PostQuestionDisplay";
 import LoadingSkeleton from "../components/LoadingSkeleton";
@@ -78,6 +79,16 @@ function Quiz({ previewMode = false, mockData = null }) {
         console.log('🔄 Player session restored:', data);
       }
       
+      // Update session data with complete information from server
+      if (data.playerState && data.gameState) {
+        socketManager.storeSessionData({
+          gameId: data.playerState.gameId || data.gameState.gameId,
+          room: data.playerState.gameCode || data.gameState.gameCode,
+          playerName: data.playerState.name,
+          isHost: false
+        });
+      }
+      
       if (data.type === 'activeGame' && data.gameState) {
         const { gameState } = data;
         
@@ -91,6 +102,7 @@ function Quiz({ previewMode = false, mockData = null }) {
         if (gameState.currentQuestion) {
           if (import.meta.env.DEV) {
             console.log('📋 Restoring current question:', gameState.currentQuestion);
+            console.log('📷 Question image URL:', gameState.currentQuestion.imageUrl);
           }
           
           setQuestion(gameState.currentQuestion);
@@ -210,18 +222,32 @@ function Quiz({ previewMode = false, mockData = null }) {
     // Handle explanation display
     on('showExplanation', (data) => {
       if (import.meta.env.DEV) {
-        console.log('💡 Showing explanation:', data);
+        console.log('📖 Received showExplanation event:', data);
       }
       setExplanationData(data);
       setShowExplanation(true);
       
-      // Set explanation timer
-      const explainTimer = Math.round(data.explanationTime / 1000) || 30;
-      setExplanationTimer(explainTimer);
+      // Set explanation timer - use remainingTime for reconnection sync, or full time for new explanations
+      let timerValue;
+      if (data.remainingTime !== undefined && data.remainingTime > 0) {
+        // Reconnection scenario - use remaining time from server
+        timerValue = Math.ceil(data.remainingTime / 1000);
+        if (import.meta.env.DEV) {
+          console.log('⏰ Using remaining explanation time from server:', timerValue, 'seconds');
+        }
+      } else {
+        // New explanation - use full time
+        timerValue = Math.round(data.explanationTime / 1000) || 30;
+        if (import.meta.env.DEV) {
+          console.log('⏰ Using full explanation time:', timerValue, 'seconds');
+        }
+      }
+      
+      setExplanationTimer(timerValue);
       setInitialExplanationDuration(data.explanationTime); // Store in milliseconds (backend already converted)
       
       // Store the game's explanation time setting for use in leaderboard displays
-      setGameExplanationTime(explainTimer);
+      setGameExplanationTime(Math.round(data.explanationTime / 1000) || 30);
       
       // Hide question interface during explanation
       setQuestion(null);
@@ -318,7 +344,24 @@ function Quiz({ previewMode = false, mockData = null }) {
         ...leaderboardData 
       });
       setShowExplanation(true);
-      setExplanationTimer(data.explanationTime / 1000); // Convert to seconds for display
+      
+      // Set leaderboard timer - use remainingTime for reconnection sync, or full time for new leaderboards
+      let timerValue;
+      if (data.remainingTime !== undefined && data.remainingTime > 0) {
+        // Reconnection scenario - use remaining time from server
+        timerValue = Math.ceil(data.remainingTime / 1000);
+        if (import.meta.env.DEV) {
+          console.log('⏰ Using remaining leaderboard time from server:', timerValue, 'seconds');
+        }
+      } else {
+        // New leaderboard - use full time
+        timerValue = data.explanationTime / 1000;
+        if (import.meta.env.DEV) {
+          console.log('⏰ Using full leaderboard time:', timerValue, 'seconds');
+        }
+      }
+      
+      setExplanationTimer(timerValue); // Convert to seconds for display
       setInitialExplanationDuration(data.explanationTime); // Store in milliseconds (backend already converted)
     });
 
@@ -519,21 +562,10 @@ function Quiz({ previewMode = false, mockData = null }) {
         isIntermediate: explanationData.isIntermediate || false
       },
       
-      // Duration for timer - USE DURATION AS-IS (backend already in milliseconds)
-      duration: initialExplanationDuration
+      // Duration for timer - use current explanationTimer state (accounts for restored time)
+      duration: explanationTimer * 1000, // Convert seconds back to milliseconds for PostQuestionDisplay
+      initialDuration: initialExplanationDuration // Keep the original duration for reference
     };
-
-    if (import.meta.env.DEV) {
-      console.log('🔍 PostQuestionDisplay data:', {
-        hasExplanation: !!displayData.explanation,
-        hasAnswerStats: !!displayData.leaderboard.answerStats,
-        hasStandings: !!(displayData.leaderboard.standings && displayData.leaderboard.standings.length > 0),
-        standingsCount: displayData.leaderboard.standings?.length || 0,
-        currentPlayer: displayData.leaderboard.currentPlayer,
-        isIntermediate: displayData.leaderboard.isIntermediate,
-        duration: displayData.duration
-      });
-    }
 
     return (
       <PostQuestionDisplay
