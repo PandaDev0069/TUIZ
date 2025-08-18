@@ -15,11 +15,10 @@ const { getExpressCorsConfig } = require('./config/cors');
  * Creates and configures the Express application
  * @param {Object} dependencies - Injected dependencies
  * @param {DatabaseManager} dependencies.db - Database manager instance
- * @param {SupabaseAuthHelper} dependencies.authHelper - Auth helper instance
  * @param {CleanupScheduler} dependencies.cleanupScheduler - Cleanup scheduler instance
  * @returns {express.Application} Configured Express app
  */
-function createApp({ db, authHelper, cleanupScheduler }) {
+function createApp({ db, cleanupScheduler }) {
   const app = express();
   
   // Environment detection using centralized config
@@ -444,7 +443,7 @@ function createApp({ db, authHelper, cleanupScheduler }) {
   app.use('/api/host/create', hostGameCreationRoutes);
 
   // Global error handler - must be after all routes
-  app.use((error, req, res, next) => {
+  app.use((error, _req, res, _next) => {
     logger.error('Global error handler:', error.message);
     
     // Handle specific error types
