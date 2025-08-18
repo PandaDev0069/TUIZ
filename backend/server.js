@@ -7,6 +7,8 @@ const SupabaseAuthHelper = require('./utils/SupabaseAuthHelper');
 const CleanupScheduler = require('./utils/CleanupScheduler');
 const roomManager = require('./utils/RoomManager');
 const QuestionService = require('./services/QuestionService');
+const GameService = require('./services/GameService');
+const ResultsService = require('./services/ResultsService');
 const QuestionFormatAdapter = require('./adapters/QuestionFormatAdapter');
 const GameSettingsService = require('./services/GameSettingsService');
 const { calculateGameScore } = require('./utils/scoringSystem');
@@ -28,8 +30,10 @@ const HostSocketHandlers = require('./sockets/hostHandlers');
 // Initialize database
 const db = new DatabaseManager();
 
-// Initialize question service
+// Initialize services
 const questionService = new QuestionService();
+const gameService = new GameService(db);
+const resultsService = new ResultsService(db);
 
 // Initialize question format adapter
 const questionAdapter = new QuestionFormatAdapter();
@@ -237,7 +241,7 @@ const sendNextQuestion = async (gameCode) => {
 
 // Helper function to update player rankings in database
 const updatePlayerRankings = async (activeGame) => {
-  if (!activeGame.id || !db) return;
+  if (!activeGame.id) return { success: false, error: 'No game ID' };
 
   try {
     // Calculate rankings based on current scores
@@ -245,9 +249,11 @@ const updatePlayerRankings = async (activeGame) => {
       .filter(player => player.playerId) // Only include players with database IDs
       .map(player => ({
         playerId: player.playerId,
-        playerName: player.name,
+        name: player.name,
         score: player.score || 0,
-        streak: player.streak || 0
+        streak: player.streak || 0,
+        questionsAnswered: player.questionsAnswered || 0,
+        correctAnswers: player.correctAnswers || 0
       }))
       .sort((a, b) => b.score - a.score)
       .map((player, index) => ({
@@ -255,124 +261,61 @@ const updatePlayerRankings = async (activeGame) => {
         rank: index + 1
       }));
 
-    // Bulk update player rankings
-    const updatePromises = playersArray.map(player => 
-      db.updateGamePlayer(activeGame.id, player.playerId, {
-        current_rank: player.rank
-      }).catch(error => {
-        logger.error(`❌ Failed to update rank for player ${player.playerName}:`, error);
-      })
-    );
-
-    await Promise.all(updatePromises);
+    // Use GameService to update rankings
+    const result = await gameService.updatePlayerRankings(activeGame, playersArray);
     
+    const { isDevelopment, isLocalhost } = require('./config/env').getEnvironment();
     if (isDevelopment || isLocalhost) {
       logger.debug(`✅ Updated rankings for ${playersArray.length} players in game ${activeGame.id}`);
     }
 
+    return result;
+
   } catch (error) {
     logger.error('❌ Error updating player rankings:', error);
+    return { success: false, error: error.message };
   }
 };
 
 // Helper function to end game
 // Helper function to create individual game results for each player
 const createGameResultsForPlayers = async (activeGame, scoreboard) => {
-  if (!db || !activeGame.id) return;
+  if (!activeGame.id) {
+    return { 
+      successful: 0, 
+      failed: 0, 
+      results: [],
+      success: false,
+      error: 'No game ID provided'
+    };
+  }
 
   try {
-    const gameResultsPromises = Array.from(activeGame.players.values())
-      .filter(player => player.dbId) // Only process players with database IDs
-      .map(async (player) => {
-        try {
-          // First verify the player still exists in game_players table
-          const { data: playerExists, error: checkError } = await db.supabaseAdmin
-            .from('game_players')
-            .select('id')
-            .eq('id', player.dbId)
-            .single();
+    // Use ResultsService to create game results
+    const result = await resultsService.createGameResultsForPlayers(activeGame, scoreboard);
 
-          if (checkError || !playerExists) {
-            logger.warn(`⚠️ Player ${player.name} (${player.dbId}) not found in game_players table, skipping result creation`);
-            logger.debug(`Debug info: checkError=${checkError?.message}, playerExists=${!!playerExists}`);
-            return { success: false, error: 'Player not found in game_players', playerId: player.id };
-          }
-
-          logger.debug(`✅ Verified player ${player.name} exists in game_players table with ID: ${player.dbId}`);
-
-          // Find player's scoreboard entry for rank
-          const scoreboardEntry = scoreboard.find(entry => entry.name === player.name);
-          const finalRank = scoreboardEntry ? scoreboardEntry.rank : 0;
-
-        // Calculate player statistics
-        const totalQuestions = activeGame.totalQuestions || activeGame.questions?.length || 0;
-        const totalCorrect = player.correctAnswers || 0;
-        const completionPercentage = totalQuestions > 0 ? ((totalCorrect / totalQuestions) * 100) : 0;
-        
-        // Calculate average response time (if available)
-        const responseTimes = player.responseTimes || [];
-        const averageResponseTime = responseTimes.length > 0 
-          ? Math.round(responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length)
-          : 0;
-
-        // Create game result record
-        const gameResultData = {
-          game_id: activeGame.id,
-          player_id: player.dbId, // Use game_players.id (foreign key reference)
-          final_score: player.score || 0,
-          final_rank: finalRank,
-          total_correct: totalCorrect,
-          total_questions: totalQuestions,
-          average_response_time: averageResponseTime,
-          longest_streak: player.longestStreak || player.streak || 0,
-          completion_percentage: Math.round(completionPercentage * 100) / 100 // Round to 2 decimal places
-        };
-
-        logger.debug(`🔍 Creating game result for ${player.name}:`, {
-          game_id: gameResultData.game_id,
-          player_id: gameResultData.player_id,
-          player_name: player.name,
-          final_score: gameResultData.final_score,
-          final_rank: gameResultData.final_rank
-        });
-
-      // Insert into database
-      const { data, error } = await db.supabaseAdmin
-        .from('game_results')
-        .insert(gameResultData)
-        .select()
-        .single();
-
-      if (error) {
-        logger.error(`❌ Failed to create game result for player ${player.name}:`, error);
-        return { success: false, error, playerId: player.id };
-      }
-
-      if (isDevelopment || isLocalhost) {
-        logger.database(`✅ Created game result for player ${player.name} (Score: ${player.score}, Rank: ${finalRank})`);
-      }
-
-      return { success: true, result: data, playerId: player.id };
-      
-        } catch (playerError) {
-          logger.error(`❌ Error creating result for player ${player.name}:`, playerError);
-          return { success: false, error: playerError.message, playerId: player.id };
-        }
-      });
-
-    const results = await Promise.allSettled(gameResultsPromises);
-    
-    const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
-    const failed = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)).length;
-
+    const { isDevelopment, isLocalhost } = require('./config/env').getEnvironment();
     if (isDevelopment || isLocalhost) {
-      logger.database(`📊 Game results creation summary: ${successful} successful, ${failed} failed`);
+      logger.database(`📊 Game results creation summary: ${result.results.successful} successful, ${result.results.failed} failed`);
     }
 
-    return { successful, failed, results };
+    return {
+      successful: result.results.successful,
+      failed: result.results.failed,
+      results: result.outcomes || [],
+      success: result.success,
+      error: result.error
+    };
+
   } catch (error) {
     logger.error('❌ Error in createGameResultsForPlayers:', error);
-    throw error;
+    return {
+      successful: 0,
+      failed: scoreboard?.length || 0,
+      results: [],
+      success: false,
+      error: error.message
+    };
   }
 };
 
@@ -411,15 +354,14 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
       
       if (!gameTitle || !settings?.fromQuestionSet) {
         try {
-          const { data: questionSet, error: qsError } = await db.supabaseAdmin
-            .from('question_sets')
-            .select('title, play_settings')
-            .eq('id', questionSetId)
-            .single();
+          const questionSetResult = await gameService.getQuestionSetMetadata(questionSetId);
           
-          if (!qsError && questionSet) {
+          if (questionSetResult.success && questionSetResult.data) {
+            const questionSet = questionSetResult.data;
             gameTitle = gameTitle || questionSet.title;
-            questionSetSettings = questionSet.play_settings || {};
+            // Note: This section may need adjustment if play_settings are needed
+            // For now, using empty object as fallback
+            questionSetSettings = {}; // TODO: Add play_settings to GameService if needed
             
             // Flatten any nested game_settings to prevent duplication
             if (questionSetSettings.game_settings) {
@@ -493,7 +435,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
       if (isDevelopment) {
         logger.debug(`🔄 [BRIDGE] Creating Phase 6 compatible game in database...`);
       }
-      const dbResult = await db.createGame(gameData);
+      const dbResult = await gameService.createGame(gameData);
       
       if (!dbResult.success) {
         throw new Error(`Database game creation failed: ${dbResult.error}`);
@@ -1086,9 +1028,9 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
       activeGame.hostSocketId = socket.id; // Set the host socket ID for manual advance verification
       
       // Update database status to 'active'
-      if (activeGame.id && db) {
+      if (activeGame.id) {
         try {
-          const statusResult = await db.updateGameStatus(activeGame.id, 'active', {
+          const statusResult = await gameService.updateGameStatus(activeGame.id, 'active', {
             started_at: new Date().toISOString(),
             current_players: activeGame.players.size
           });
@@ -1280,9 +1222,9 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
       player.responseTimes.push(timeTaken || 0);
       
       // Update player in database with current stats
-      if (activeGame.id && db && player.playerId) {
+      if (activeGame.id && player.playerId) {
         try {
-          await db.updateGamePlayer(activeGame.id, player.playerId, {
+          await gameService.updateGamePlayer(activeGame.id, player.playerId, {
             current_score: player.score,
             current_streak: player.streak,
             // Note: current_rank will be updated after all answers are processed

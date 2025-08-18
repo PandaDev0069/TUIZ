@@ -105,25 +105,20 @@ async function handleQuestionSetIncrement(activeGame, db, logger) {
 /**
  * Update last_played_at for question set
  * @param {Object} activeGame - Current game state
- * @param {Object} db - Database manager
+ * @param {Object} gameService - GameService instance
  * @param {Object} logger - Logger instance
  * @returns {Promise<void>}
  */
-async function updateQuestionSetLastPlayed(activeGame, db, logger) {
-  if (!activeGame.question_set_id || !db) return;
+async function updateQuestionSetLastPlayed(activeGame, gameService, logger) {
+  if (!activeGame.question_set_id || !gameService) return;
 
   const { isDevelopment, isLocalhost } = require('../../config/env').getEnvironment();
 
   try {
-    const { error: updateError } = await db.supabaseAdmin
-      .from('question_sets')
-      .update({ 
-        last_played_at: new Date().toISOString()
-      })
-      .eq('id', activeGame.question_set_id);
+    const result = await gameService.updateQuestionSetLastPlayed(activeGame.question_set_id);
 
-    if (updateError) {
-      logger.error('❌ Error updating last_played_at:', updateError);
+    if (!result.success) {
+      logger.error('❌ Error updating last_played_at:', result.error);
     } else if (isDevelopment || isLocalhost) {
       logger.debug('✅ Updated last_played_at for question set:', activeGame.question_set_id);
     }
@@ -207,7 +202,9 @@ async function endGame(gameCode, activeGames, gameHub, io, db, logger, updatePla
   gameHub.toRoom(gameCode).emit('game_over', { scoreboard });
 
   // Update last_played_at for the question set
-  await updateQuestionSetLastPlayed(activeGame, db, logger);
+  const GameService = require('../../services/GameService');
+  const gameService = new GameService(db);
+  await updateQuestionSetLastPlayed(activeGame, gameService, logger);
 
   // Emit completion events
   emitGameCompletionEvents(activeGame, gameCode, io, scoreboard, logger);
