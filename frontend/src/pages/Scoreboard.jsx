@@ -38,23 +38,6 @@ function Scoreboard({ state: propState } = {}) {
   const [showAnimation, setShowAnimation] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   
-  // Debug logging for development
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log('🏆 Scoreboard component data:', {
-        scoreboard: scoreboard?.length || 0,
-        scoreboardData: scoreboard,
-        gameAnalytics,
-        gameInfo,
-        playerStats,
-        performanceStats,
-        propState,
-        locationState,
-        finalState: state
-      });
-    }
-  }, [scoreboard, gameAnalytics, gameInfo, playerStats, performanceStats, propState, locationState, state]);
-  
   useEffect(() => {
     setShowAnimation(true);
     
@@ -160,16 +143,6 @@ function Scoreboard({ state: propState } = {}) {
   let finalScoreboard = scoreboard;
   let analyticsAvailable = false;
   
-  // Debug: Log initial scoreboard data
-  if (import.meta.env.DEV) {
-    console.log('🔍 Initial scoreboard data:', {
-      scoreboardLength: scoreboard?.length || 0,
-      scoreboardData: scoreboard,
-      hasGameAnalytics: !!gameAnalytics?.leaderboard,
-      gameAnalyticsLength: gameAnalytics?.leaderboard?.length || 0
-    });
-  }
-  
   if (gameAnalytics?.leaderboard && gameAnalytics.leaderboard.length > 0) {
     // Use comprehensive database analytics
     finalScoreboard = gameAnalytics.leaderboard.map((player, index) => ({
@@ -195,17 +168,6 @@ function Scoreboard({ state: propState } = {}) {
   const topPlayers = finalScoreboard.slice(0, 3);
   // Get remaining players
   const remainingPlayers = finalScoreboard.slice(3);
-
-  // Debug: Log final scoreboard processing
-  if (import.meta.env.DEV) {
-    console.log('📊 Final scoreboard processing:', {
-      finalScoreboardLength: finalScoreboard?.length || 0,
-      topPlayersLength: topPlayers?.length || 0,
-      topPlayers,
-      analyticsAvailable,
-      remainingPlayersLength: remainingPlayers?.length || 0
-    });
-  }
 
   return (
     <div className="page-container">

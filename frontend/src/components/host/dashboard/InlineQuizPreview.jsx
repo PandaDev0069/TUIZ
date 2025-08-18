@@ -42,20 +42,6 @@ function InlineQuizPreview({
   const isGameEnded = gameState && (gameState.status === 'finished' || gameState.status === 'ended' || gameState.status === 'completed');
   const liveQuestionIndex = gameState?.currentQuestionIndex || 0;
   
-  // Debug game state - only log once when status changes
-  useEffect(() => {
-    if (import.meta.env.DEV && gameState) {
-      console.log('🎮 Game state changed:', {
-        status: gameState.status,
-        gameId: gameState.gameId,
-        id: gameState.id,
-        propGameId: gameId,
-        isGameEnded,
-        isLiveGame
-      });
-    }
-  }, [gameState?.status, gameState?.gameId]); // Only depend on status and gameId
-  
   // Get current question - live game takes priority
   const currentQuestionIndex = isLiveGame ? liveQuestionIndex : previewQuestionIndex;
   const currentQuestion = isLiveGame ? 
@@ -125,20 +111,6 @@ function InlineQuizPreview({
 
   // Game finished state - show scoreboard with available data
   if (isGameEnded) {
-    // Debug: Check what data we actually have
-    console.log('🔍 Debugging data sources:', {
-      'gameState.scoreboard': gameState?.scoreboard,
-      'gameState.scoreboard.length': gameState?.scoreboard?.length,
-      'scoreboardData': scoreboardData,
-      'scoreboardData.length': scoreboardData?.length,
-      'gameState.standings': gameState?.standings,
-      'gameState.standings.length': gameState?.standings?.length
-    });
-    
-    // Debug: Check the entire gameState structure
-    console.log('🔍 Full gameState object:', gameState);
-    console.log('🔍 gameState keys:', Object.keys(gameState || {}));
-    
     // Priority order for scoreboard data:
     // 1. gameState.scoreboard (from game_over event, most reliable)
     // 2. Real scoreboard data from API  
@@ -148,14 +120,11 @@ function InlineQuizPreview({
     
     if (gameState.scoreboard && gameState.scoreboard.length > 0) {
       // Use scoreboard from game_over event (same as Quiz.jsx)
-      console.log('🎮 Using GAME_OVER event scoreboard data:', gameState.scoreboard);
       finalScoreboardData = gameState.scoreboard;
     } else if (scoreboardData && scoreboardData.length > 0) {
-      console.log('🔴 Using API scoreboard data:', scoreboardData);
       finalScoreboardData = scoreboardData;
     } else if (gameState.standings && gameState.standings.length > 0) {
       // Transform live gameState standings to scoreboard format
-      console.log('🟢 Using LIVE gameState standings:', gameState.standings);
       finalScoreboardData = gameState.standings.map((player, index) => ({
         id: player.id || player.playerId || index + 1,
         name: player.name || player.playerName || `Player ${index + 1}`,
@@ -168,23 +137,12 @@ function InlineQuizPreview({
         totalAnswers: player.totalAnswers || 0
       }));
     } else if (gameState.finalScoreboard) {
-      console.log('🔶 Using gameState.finalScoreboard:', gameState.finalScoreboard);
       finalScoreboardData = gameState.finalScoreboard;
     } else {
-      console.log('🟡 Using fallback getLeaderboardData');
       finalScoreboardData = getLeaderboardData(gameState);
     }
     
     const room = gameState.room || gameState.gameCode || gameState.gameId || gameId;
-    
-    console.log('🎯 Final scoreboard data selected:', {
-      source: gameState.scoreboard?.length > 0 ? 'GAME_OVER' :
-              scoreboardData?.length > 0 ? 'API' :
-              gameState.standings?.length > 0 ? 'LIVE' :
-              gameState.finalScoreboard ? 'FINAL' : 'FALLBACK',
-      dataLength: finalScoreboardData?.length || 0,
-      data: finalScoreboardData
-    });
     
     return (
       <div className="inline-quiz-preview inline-quiz-preview--finished">

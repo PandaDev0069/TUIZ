@@ -4,11 +4,21 @@ import { useAuth } from '../contexts/AuthContext';
 /**
  * Custom hook for fetching and managing quiz data for previews and games
  * @param {string} questionSetId - UUID of the question set
- * @param {string} gameId - Optional game ID for active game data
+ * @param {string} gameId    } catch (error) {
+      // Handle specific database schema errors
+      if (error.message?.includes('Database schema error')) {
+        console.warn('🔧 Database schema issue - providing fallback scoreboard data');
+        setScoreboardError('Database configuration issue - showing demo data');
+      } else {
+        // Only log errors that aren't expected 401s during auth restoration
+        if (!isRestoringAuth || (error.response?.status !== 401 && error.message !== 'Access token required' && error.message !== 'Unauthorized')) {
+          console.error('❌ Error fetching scoreboard data:', error);
+        }
+        setScoreboardError(error.message);nal game ID for active game data
  * @returns {Object} Quiz data and loading states
  */
 export const useQuizData = (questionSetId, gameId = null) => {
-  const { apiCall } = useAuth();
+  const { apiCall, isRestoringAuth } = useAuth();
   
   // Data states
   const [questions, setQuestions] = useState([]);
@@ -75,8 +85,21 @@ export const useQuizData = (questionSetId, gameId = null) => {
         throw new Error(response.message || 'Failed to fetch questions');
       }
     } catch (error) {
-      console.error('❌ Error fetching questions:', error);
-      setQuestionsError(error.message);
+      // Only log errors that aren't expected 401s during auth restoration
+      if (!isRestoringAuth || (error.response?.status !== 401 && error.message !== 'Access token required' && error.message !== 'Unauthorized')) {
+        console.error('❌ Error fetching questions:', error);
+      }
+      
+      // Handle auth errors gracefully during reload
+      if (error.message === 'Access token required' || error.message === 'Unauthorized') {
+        if (!isRestoringAuth) {
+          console.log('🔐 Auth error during reload - questions will be fetched when auth is restored');
+        }
+        setQuestionsError('Authentication required - refreshing session...');
+      } else {
+        setQuestionsError(error.message);
+      }
+      
       setQuestions([]);
     } finally {
       setLoadingQuestions(false);
@@ -110,7 +133,10 @@ export const useQuizData = (questionSetId, gameId = null) => {
         throw new Error(response.error || 'Failed to fetch game settings');
       }
     } catch (error) {
-      console.error('❌ Error fetching game settings:', error);
+      // Only log errors that aren't expected 401s during auth restoration
+      if (!isRestoringAuth || (error.response?.status !== 401 && error.message !== 'Access token required' && error.message !== 'Unauthorized')) {
+        console.error('❌ Error fetching game settings:', error);
+      }
       setSettingsError(error.message);
       setGameSettings(null);
     } finally {
@@ -146,7 +172,8 @@ export const useQuizData = (questionSetId, gameId = null) => {
     } catch (error) {
       // Silently handle game data errors for preview mode
       // This is expected when gameId doesn't correspond to an active game
-      if (import.meta.env.DEV && !error.message.includes('404')) {
+      if (import.meta.env.DEV && !error.message.includes('404') && 
+          (!isRestoringAuth || (error.response?.status !== 401 && error.message !== 'Access token required' && error.message !== 'Unauthorized'))) {
         console.log('ℹ️ Game data not available (preview mode):', error.message);
       }
       setGameDataError(null); // Don't treat this as an error in preview
@@ -362,10 +389,22 @@ export const useQuizData = (questionSetId, gameId = null) => {
     }));
   }, [scoreboardData, gameData]);
 
-  // Effect to fetch questions when questionSetId changes
+  // Effect to fetch questions when questionSetId changes or auth is restored
   useEffect(() => {
     fetchQuestions();
   }, [fetchQuestions]);
+
+  // Retry effect for auth restoration after reload
+  useEffect(() => {
+    if (questionsError === 'Authentication required - refreshing session...' && apiCall) {
+      const retryTimer = setTimeout(() => {
+        console.log('🔄 Retrying questions fetch after auth restoration...');
+        fetchQuestions();
+      }, 5000); // Retry after 5 seconds
+      
+      return () => clearTimeout(retryTimer);
+    }
+  }, [questionsError, apiCall, fetchQuestions]);
 
   // Effect to fetch settings after questions are loaded
   useEffect(() => {

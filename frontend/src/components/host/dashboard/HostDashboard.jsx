@@ -56,7 +56,47 @@ function HostDashboard() {
   const { state } = useLocation();
   const navigate = useNavigate();
   const { user, token } = useAuth();
-  const { room, title, gameId, questionSetId } = state || {};
+  
+  // Enhanced session persistence - restore from localStorage if state is lost
+  const getHostSessionData = () => {
+    // First try to get from navigation state
+    if (state?.gameId) {
+      // Save to localStorage for reload persistence
+      const sessionData = {
+        room: state.room,
+        title: state.title,
+        gameId: state.gameId,
+        questionSetId: state.questionSetId,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('tuiz_host_session', JSON.stringify(sessionData));
+      return state;
+    }
+    
+    // Fallback to localStorage if navigation state is lost (page reload)
+    const savedSession = localStorage.getItem('tuiz_host_session');
+    if (savedSession) {
+      try {
+        const sessionData = JSON.parse(savedSession);
+        // Check if session is not too old (24 hours max)
+        const isRecent = Date.now() - sessionData.timestamp < 24 * 60 * 60 * 1000;
+        if (isRecent && sessionData.gameId) {
+          console.log('🔄 Restored host session from localStorage:', sessionData);
+          return sessionData;
+        } else {
+          // Clean up old session
+          localStorage.removeItem('tuiz_host_session');
+        }
+      } catch (error) {
+        console.error('Failed to parse saved host session:', error);
+        localStorage.removeItem('tuiz_host_session');
+      }
+    }
+    
+    return {};
+  };
+  
+  const { room, title, gameId, questionSetId } = getHostSessionData();
   
   // Phase 6: Host Control Integration
   const hostControlRef = useRef(null);
@@ -101,6 +141,24 @@ function HostDashboard() {
   const [showLiveAnalytics, setShowLiveAnalytics] = useState(false);
   const [showEnhancedResults, setShowEnhancedResults] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  
+  // Show restoration message if this looks like a reload scenario
+  const isRestoringSession = !state?.gameId && gameId; // We have gameId from localStorage but not from navigation state
+  
+  // Show loading/restoration UI early in render
+  if (isRestoringSession) {
+    return (
+      <div className="host-dashboard__loading">
+        <div className="loading-content">
+          <div className="spinner"></div>
+          <h3>🔄 Restoring Host Session...</h3>
+          <p>Reconnecting to game room: <strong>{room}</strong></p>
+          <p>Game: <strong>{title}</strong></p>
+          <small>This happens automatically after page reload</small>
+        </div>
+      </div>
+    );
+  }
 
   // Debug logging for development (throttled to reduce noise)
   useEffect(() => {
@@ -115,7 +173,8 @@ function HostDashboard() {
   }, [room, title, gameId, questionSetId, gameState?.status, gameState?.currentQuestionIndex]);
 
   useEffect(() => {
-    if (!room || !title) {
+    if (!room || !title || !gameId) {
+      console.log('⚠️ Missing host session data, redirecting to dashboard');
       navigate('/dashboard');
       return;
     }
@@ -290,6 +349,9 @@ function HostDashboard() {
           scoreboard: data.scoreboard,
           finalScoreboard: data.scoreboard
         }));
+        
+        // Keep session for a while after game ends (for viewing results)
+        // Will be cleaned up on next page load if too old
       });
 
       // Player list updates
@@ -345,11 +407,19 @@ function HostDashboard() {
         }
       });
 
-      // Request initial game state from server
+      // Enhanced initial state requests with retry logic for reload scenarios
       socket.emit('host:requestGameState', { gameId, room });
-      
-      // Request initial player list
       socket.emit('host:requestPlayerList', { room });
+      
+      // Add retry logic for cases where the initial requests fail (e.g., after reload)
+      const retryTimeout = setTimeout(() => {
+        console.log('🔄 Retrying initial state requests after reload...');
+        socket.emit('host:requestGameState', { gameId, room });
+        socket.emit('host:requestPlayerList', { room });
+      }, 3000);
+      
+      // Clean up retry timeout on component unmount
+      return () => clearTimeout(retryTimeout);
 
     }
 
