@@ -624,15 +624,20 @@ const checkForQuestionCompletion = (gameCode) => {
   if (allPlayersAnswered) {
     if (isDevelopment || isLocalhost) {
       logger.debug(`📝 All players answered question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
+      logger.debug(`🔧 Debug manual mode check: autoAdvance=${gameSettings.autoAdvance}, type=${typeof gameSettings.autoAdvance}`);
     }
     
-    // In manual mode, wait for host to advance instead of auto-proceeding
+    // In manual mode, wait for host to advance regardless of explanation settings
     if (gameSettings.autoAdvance === false) {
       if (isDevelopment || isLocalhost) {
         logger.debug(`⏸️ Manual mode: All players answered, waiting for host to advance question ${activeGame.currentQuestionIndex + 1}`);
       }
-      // Don't auto-proceed, wait for host to press Next button
+      // Don't show explanation or leaderboard automatically, wait for host
       return;
+    }
+    
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`🚀 Auto mode detected (autoAdvance=${gameSettings.autoAdvance}), proceeding with explanation logic`);
     }
     
     // Auto mode: Show immediate answer feedback first
@@ -650,7 +655,7 @@ const checkForQuestionCompletion = (gameCode) => {
       const shouldShowExpl = GameSettingsService.shouldShowExplanation(currentQuestion, gameSettings);
       logger.debug(`🔍 Should show explanation: ${shouldShowExpl}`);
       
-      // Check if we should show explanation
+      // Check if we should show explanation (only in auto/hybrid modes)
       if (shouldShowExpl) {
         if (isDevelopment || isLocalhost) {
           logger.debug(`💡 Showing explanation for question ${activeGame.currentQuestionIndex + 1}`);
@@ -1315,7 +1320,7 @@ const endGame = async (gameCode) => {
   // Update last_played_at for the question set
   if (activeGame.question_set_id) {
     try {
-      const { error: updateError } = await dbManager.supabaseAdmin
+      const { error: updateError } = await db.supabaseAdmin
         .from('question_sets')
         .update({ 
           last_played_at: new Date().toISOString()
@@ -2169,6 +2174,7 @@ io.on('connection', (socket) => {
       activeGame.gameFlowConfig = gameFlowConfig;
       activeGame.currentQuestionIndex = 0;
       activeGame.started_at = new Date().toISOString();
+      activeGame.hostSocketId = socket.id; // Set the host socket ID for manual advance verification
       
       // Update database status to 'active'
       if (activeGame.id && db) {
@@ -2192,6 +2198,13 @@ io.on('connection', (socket) => {
       
       if (isDevelopment) {
         logger.debug(`✅ Game ${gameCode} started with ${activeGame.players.size} players`);
+        logger.debug(`🎮 Game ${gameCode} started by host via socket {
+  gameCode: '${gameCode}',
+  hostSocketId: '${activeGame.hostSocketId}',
+  playerCount: ${activeGame.players.size},
+  totalQuestions: ${activeGame.questions.length},
+  startedAt: '${activeGame.started_at}'
+}`);
       }
       
       // Notify all players that the game has started
