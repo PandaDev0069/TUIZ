@@ -252,7 +252,6 @@ html {
 
 body {
   overscroll-behavior: none;
-  overscroll-behavior-y: none;
   position: relative;
 }
 
@@ -755,7 +754,6 @@ html {
     position: relative;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: none;
     overscroll-behavior: none;
     margin: 0;
     padding: 0;
@@ -775,7 +773,6 @@ html {
   /* Prevent iOS bounce/elastic scrolling */
   html, body {
     overscroll-behavior: none;
-    overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
   }
   
@@ -816,7 +813,6 @@ html {
     margin: 0;
     padding: 0;
     overscroll-behavior: none;
-    overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
     touch-action: manipulation;
   }
