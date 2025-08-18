@@ -134,8 +134,21 @@ router.post('/:gameId/mute-player',
       const { gameId } = req.params;
       const { playerId, duration = 300000, reason = 'host_moderation' } = req.body; // 5 minutes default
       
+      // Validate duration: must be integer between 1000 ms (1s) and 1800000 ms (30 min)
+      const MIN_DURATION = 1000; // 1 second
+      const MAX_DURATION = 1800000; // 30 minutes
+      const parsedDuration = Number(duration);
       if (!playerId) {
         return res.status(400).json({ error: 'Player ID required' });
+      }
+      if (
+        isNaN(parsedDuration) ||
+        parsedDuration < MIN_DURATION ||
+        parsedDuration > MAX_DURATION
+      ) {
+        return res.status(400).json({
+          error: `Mute duration must be between ${MIN_DURATION} and ${MAX_DURATION} milliseconds`
+        });
       }
 
       const room = RoomManager.getRoom(gameId);
@@ -149,13 +162,13 @@ router.post('/:gameId/mute-player',
       }
 
       const mutedAt = new Date().toISOString();
-      const unmuteAt = new Date(Date.now() + duration).toISOString();
+      const unmuteAt = new Date(Date.now() + parsedDuration).toISOString();
       
       const muteRecord = {
         playerId,
         mutedAt,
         unmuteAt,
-        duration,
+        duration: parsedDuration,
         reason,
         hostId: req.user.id
       };
@@ -190,12 +203,12 @@ router.post('/:gameId/mute-player',
             status: { isMuted: false }
           });
         }
-      }, duration);
+      }, parsedDuration);
 
       // Notify muted player
       req.io.to(player.socketId).emit('player:muted', {
         gameId,
-        duration,
+        duration: parsedDuration,
         unmuteAt,
         reason,
         message: `You have been muted by the host for ${Math.round(duration / 60000)} minutes`
@@ -206,7 +219,7 @@ router.post('/:gameId/mute-player',
         gameId,
         playerId,
         playerName: player.name,
-        status: { isMuted: true, muteDuration: duration }
+        status: { isMuted: true, muteDuration: parsedDuration }
       });
 
       // Log host action
@@ -215,7 +228,7 @@ router.post('/:gameId/mute-player',
         hostId: req.user.id,
         playerId,
         playerName: player.name,
-        duration,
+        duration: parsedDuration,
         reason,
         mutedAt
       });
@@ -227,7 +240,7 @@ router.post('/:gameId/mute-player',
           playerName: player.name,
           mutedAt,
           unmuteAt,
-          duration,
+          duration: parsedDuration,
           reason
         },
         totalMutedPlayers: Object.keys(room.mutedPlayers).length
