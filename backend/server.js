@@ -1,14 +1,14 @@
 require('dotenv').config();
 const logger = require('./utils/logger');
 const http = require('http');
-const jwt = require('jsonwebtoken');
 const DatabaseManager = require('./config/database');
-const SupabaseAuthHelper = require('./utils/SupabaseAuthHelper');
 const CleanupScheduler = require('./utils/CleanupScheduler');
 const roomManager = require('./utils/RoomManager');
 const QuestionService = require('./services/QuestionService');
 const GameService = require('./services/GameService');
 const ResultsService = require('./services/ResultsService');
+const PlayerService = require('./services/PlayerService');
+const HostOpsService = require('./services/HostOpsService');
 const QuestionFormatAdapter = require('./adapters/QuestionFormatAdapter');
 const GameSettingsService = require('./services/GameSettingsService');
 const { calculateGameScore } = require('./utils/scoringSystem');
@@ -34,12 +34,11 @@ const db = new DatabaseManager();
 const questionService = new QuestionService();
 const gameService = new GameService(db);
 const resultsService = new ResultsService(db);
+const playerService = new PlayerService(db);
+const hostOpsService = new HostOpsService(db);
 
 // Initialize question format adapter
 const questionAdapter = new QuestionFormatAdapter();
-
-// Initialize auth helper
-const authHelper = new SupabaseAuthHelper(db.supabaseAdmin);
 
 // Initialize cleanup scheduler
 const cleanupScheduler = new CleanupScheduler(db);
@@ -375,7 +374,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
             }
           } else {
             if (isDevelopment) {
-              logger.warn(`⚠️ [BRIDGE] Could not fetch question set: ${qsError?.message || 'Not found'}`);
+              logger.warn(`⚠️ [BRIDGE] Could not fetch question set: ${questionSetResult?.error || 'Not found'}`);
             }
             gameTitle = gameTitle || 'クイズゲーム'; // Default fallback title
           }
@@ -444,7 +443,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
       // === INITIALIZE RELATED TABLES ===
       try {
         // 1. Create host session tracking
-        const hostSessionResult = await db.createHostSession(dbGame.id, actualHostId, {
+        const hostSessionResult = await hostOpsService.createHostSession(dbGame.id, actualHostId, {
           game_creation: true,
           session_type: 'game_host',
           initial_settings: enhancedGameSettings,
@@ -457,7 +456,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
         }
         
         // 2. Create initial analytics snapshot
-        const analyticsResult = await db.createAnalyticsSnapshot(dbGame.id, 'game_start', null, {
+        const analyticsResult = await hostOpsService.createAnalyticsSnapshot(dbGame.id, 'game_start', null, {
           initial_player_count: 0,
           game_settings: enhancedGameSettings,
           question_set_id: questionSetId,
@@ -471,15 +470,12 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
         
         // 3. Log the game creation action (if log_host_action function exists)
         try {
-          await db.supabaseAdmin.rpc('log_host_action', {
-            p_game_id: dbGame.id,
-            p_host_id: actualHostId,
-            p_action_type: 'game_created',
-            p_action_data: {
-              question_set_id: questionSetId,
-              initial_settings: enhancedGameSettings,
-              creation_method: 'dashboard'
-            }
+          await hostOpsService.logHostAction(dbGame.id, actualHostId, 'game_created', {
+            game_code: gameCode,
+            action_type: 'game_created',
+            question_set_data: { question_set_id: questionSetId },
+            game_settings: enhancedGameSettings,
+            creation_method: 'dashboard'
           });
         } catch (logError) {
           logger.warn(`⚠️ Failed to log host action: ${logError.message}`);
@@ -677,7 +673,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
             }
           }
           
-          const result = await db.addPlayerToGame(gameUUID, playerData);
+          const result = await playerService.addToGame(gameUUID, playerData);
           
           if (result.success) {
             dbGamePlayer = result.gamePlayer;
@@ -713,7 +709,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
             // === LOG PLAYER JOIN ACTION ===
             try {
               const actionType = result.isReturningPlayer ? 'rejoined' : 'joined';
-              const joinActionResult = await db.createPlayerAction(
+              const joinActionResult = await playerService.recordAction(
                 gameUUID, 
                 playerUUID, 
                 'joined', // Use 'joined' for both new and returning players
@@ -780,7 +776,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
       try {
         socket.emit('joinedGame', {
           gameCode,
-          gameId: activeGame.gameId, // Add the UUID for session restoration
+          gameId: activeGame.id, // Add the UUID for session restoration
           playerCount: activeGame.players.size,
           gameStatus: activeGame.status,
           player: {
@@ -1151,16 +1147,17 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
       const isCorrect = selectedOption === currentQuestion.correctIndex;
       
       // Record the answer in the database for detailed analytics
-      if (activeGame.id && db && player.dbId) {
+      if (activeGame.id && player.dbId) {
         try {
-          await db.submitPlayerAnswer({
+          await playerService.recordAnswer({
             player_id: player.dbId,
             game_id: activeGame.id,
             question_id: questionId,
-            answer_choice: selectedOption,
+            answer_id: selectedOption?.toString(), // Convert to string for consistency
             answer_text: currentQuestion.options?.[selectedOption] || null,
             is_correct: isCorrect,
-            response_time: timeTaken ? Math.round(timeTaken * 1000) : null // Convert to milliseconds
+            time_taken: timeTaken ? Math.round(timeTaken * 1000) : null, // Convert to milliseconds
+            points_earned: scoreData?.points || 0
           });
           
           if (isDevelopment || isLocalhost) {
@@ -1338,7 +1335,21 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
   socket.on('host:requestPlayerList', ({ room }) => {
     try {
       const gameCode = room;
-      const players = sessionRestoreHandlers.getCurrentPlayers(gameCode);
+      const activeGame = activeGames.get(gameCode);
+      if (!activeGame) {
+        socket.emit('error', { message: 'Game not found' });
+        return;
+      }
+      const players = Array.from(activeGame.players.values())
+        .filter(p => p.isConnected)
+        .map(p => ({
+          id: p.id,
+          name: p.name,
+          score: p.score,
+          isAuthenticated: p.isAuthenticated,
+          isHost: p.isHost || false,
+          isConnected: p.isConnected,
+        }));
       
       socket.emit('host:playerListUpdate', {
         gameCode,
@@ -1446,7 +1457,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
           // === LOG PLAYER DISCONNECT ACTION ===
           if (player.playerId && activeGame.id) {
             try {
-              const disconnectActionResult = await db.createPlayerAction(
+              const disconnectActionResult = await playerService.recordAction(
                 activeGame.id, 
                 player.playerId, 
                 'left',

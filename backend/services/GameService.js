@@ -26,15 +26,16 @@ class GameService {
   async createGame(gameData) {
     try {
       logger.debug('🎯 Creating game in database', {
-        gameCode: gameData.gameCode,
-        hostId: gameData.hostId,
-        questionSetId: gameData.questionSetId
+        gameCode: gameData.game_code,
+        hostId: gameData.host_id,
+        questionSetId: gameData.question_set_id
       });
 
       const dbResult = await this.db.createGame(gameData);
 
       if (dbResult.success) {
-        logger.database(`✅ Game created: ${gameData.gameCode} (DB ID: ${dbResult.data.id})`);
+        const gameId = dbResult.game?.id || 'unknown';
+        logger.database(`✅ Game created: ${gameData.game_code} (DB ID: ${gameId})`);
       } else {
         logger.error('❌ Failed to create game in database:', dbResult.error);
       }
