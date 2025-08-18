@@ -203,7 +203,10 @@ class DatabaseManager {
         session: data.session 
       };
     } catch (error) {
-      console.error('❌ Authentication error:', error);
+      // Only log unexpected auth errors
+      if (!error.message.includes('expired') && !error.message.includes('invalid')) {
+        console.error('Authentication error:', error.message);
+      }
       return { success: false, error: error.message };
     }
   }
@@ -859,7 +862,15 @@ class DatabaseManager {
     try {
       const { data, error } = await this.supabase
         .from('player_answers')
-        .insert(answerData)
+        .insert({
+          player_id: answerData.player_id,
+          game_id: answerData.game_id,
+          question_id: answerData.question_id,
+          answer_choice: answerData.answer_choice,
+          answer_text: answerData.answer_text,
+          is_correct: answerData.is_correct,
+          response_time: answerData.response_time
+        })
         .select()
         .single();
 
@@ -868,6 +879,272 @@ class DatabaseManager {
       return { success: true, answer: data };
     } catch (error) {
       console.error('❌ Submit player answer error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get player answers for a game (for detailed analytics)
+  async getPlayerAnswers(gameId, playerId = null) {
+    try {
+      let query = this.supabase
+        .from('player_answers')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('created_at', { ascending: true });
+
+      if (playerId) {
+        query = query.eq('player_id', playerId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      return { success: true, answers: data };
+    } catch (error) {
+      console.error('❌ Get player answers error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get answer statistics for a game
+  async getGameAnswerStats(gameId) {
+    try {
+      const { data, error } = await this.supabase
+        .from('player_answers')
+        .select('question_id, is_correct, response_time')
+        .eq('game_id', gameId);
+
+      if (error) throw error;
+
+      // Group by question and calculate stats
+      const questionStats = {};
+      data.forEach(answer => {
+        if (!questionStats[answer.question_id]) {
+          questionStats[answer.question_id] = {
+            questionId: answer.question_id,
+            totalAnswers: 0,
+            correctAnswers: 0,
+            totalResponseTime: 0,
+            responseTimes: []
+          };
+        }
+
+        const stats = questionStats[answer.question_id];
+        stats.totalAnswers++;
+        if (answer.is_correct) stats.correctAnswers++;
+        if (answer.response_time) {
+          stats.totalResponseTime += answer.response_time;
+          stats.responseTimes.push(answer.response_time);
+        }
+      });
+
+      // Calculate final metrics
+      Object.values(questionStats).forEach(stats => {
+        stats.accuracyPercentage = stats.totalAnswers > 0 
+          ? Math.round((stats.correctAnswers / stats.totalAnswers) * 100) 
+          : 0;
+        stats.averageResponseTime = stats.responseTimes.length > 0 
+          ? Math.round(stats.totalResponseTime / stats.responseTimes.length) 
+          : 0;
+        stats.fastestResponse = stats.responseTimes.length > 0 
+          ? Math.min(...stats.responseTimes) 
+          : 0;
+        stats.slowestResponse = stats.responseTimes.length > 0 
+          ? Math.max(...stats.responseTimes) 
+          : 0;
+      });
+
+      return { success: true, questionStats: Object.values(questionStats) };
+    } catch (error) {
+      console.error('❌ Get game answer stats error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get all players in a game
+  async getGamePlayers(gameId, includeInactive = false) {
+    try {
+      let query = this.supabase
+        .from('game_players')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('current_rank', { ascending: true });
+
+      if (!includeInactive) {
+        query = query.eq('is_active', true);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const activeCount = data.filter(p => p.is_active).length;
+      const guestCount = data.filter(p => p.is_guest).length;
+      const userCount = data.filter(p => !p.is_guest).length;
+
+      return {
+        success: true,
+        players: data,
+        totalCount: data.length,
+        activeCount,
+        guestCount,
+        userCount
+      };
+    } catch (error) {
+      console.error('❌ Get game players error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get specific player in a game
+  async getGamePlayer(gameId, playerId) {
+    try {
+      const { data, error } = await this.supabase
+        .from('game_players')
+        .select('*')
+        .eq('game_id', gameId)
+        .eq('player_id', playerId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return { success: false, error: 'Player not found in this game' };
+        }
+        throw error;
+      }
+
+      return { success: true, player: data };
+    } catch (error) {
+      console.error('❌ Get game player error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Update player in game (score, rank, streak, etc.)
+  async updateGamePlayer(gameId, playerId, updateData) {
+    try {
+      // Filter out invalid fields
+      const validFields = [
+        'current_score', 'current_rank', 'current_streak',
+        'is_active', 'player_name', 'is_host'
+      ];
+      const filteredData = {};
+      
+      Object.keys(updateData).forEach(key => {
+        if (validFields.includes(key)) {
+          filteredData[key] = updateData[key];
+        }
+      });
+
+      if (Object.keys(filteredData).length === 0) {
+        return { success: false, error: 'No valid fields to update' };
+      }
+
+      const { data, error } = await this.supabaseAdmin
+        .from('game_players')
+        .update(filteredData)
+        .eq('game_id', gameId)
+        .eq('player_id', playerId)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      return { success: true, player: data };
+    } catch (error) {
+      console.error('❌ Update game player error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Remove/deactivate player from game
+  async removePlayerFromGame(gameId, playerId, permanent = false) {
+    try {
+      if (permanent) {
+        // Permanently delete the player record
+        const { error } = await this.supabaseAdmin
+          .from('game_players')
+          .delete()
+          .eq('game_id', gameId)
+          .eq('player_id', playerId);
+
+        if (error) throw error;
+
+        return { 
+          success: true, 
+          message: 'Player permanently removed from game' 
+        };
+      } else {
+        // Just deactivate the player
+        const { data, error } = await this.supabaseAdmin
+          .from('game_players')
+          .update({ is_active: false })
+          .eq('game_id', gameId)
+          .eq('player_id', playerId)
+          .select('*')
+          .single();
+
+        if (error) throw error;
+
+        return { 
+          success: true, 
+          message: 'Player deactivated in game',
+          player: data
+        };
+      }
+    } catch (error) {
+      console.error('❌ Remove player from game error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Bulk update multiple players
+  async bulkUpdateGamePlayers(gameId, players) {
+    try {
+      const updates = [];
+      
+      for (const player of players) {
+        if (!player.player_id) continue;
+        
+        const validFields = [
+          'current_score', 'current_rank', 'current_streak',
+          'is_active'
+        ];
+        const updateData = { 
+          game_id: gameId,
+          player_id: player.player_id 
+        };
+        
+        Object.keys(player).forEach(key => {
+          if (validFields.includes(key)) {
+            updateData[key] = player[key];
+          }
+        });
+        
+        updates.push(updateData);
+      }
+
+      if (updates.length === 0) {
+        return { success: false, error: 'No valid updates provided' };
+      }
+
+      const { data, error } = await this.supabaseAdmin
+        .from('game_players')
+        .upsert(updates, { 
+          onConflict: 'game_id,player_id',
+          ignoreDuplicates: false 
+        })
+        .select('*');
+
+      if (error) throw error;
+
+      return { 
+        success: true, 
+        updatedCount: data.length,
+        players: data 
+      };
+    } catch (error) {
+      console.error('❌ Bulk update game players error:', error);
       return { success: false, error: error.message };
     }
   }
@@ -902,12 +1179,11 @@ class DatabaseManager {
         throw new Error('Service role required for creating game results');
       }
 
-      const { data, error } = await this.supabaseAdmin
-        .rpc('create_game_results_manual', { game_id_param: gameId });
-
-      if (error) throw error;
-
-      return { success: true, results: data };
+      // Since we don't have player_answers table yet, we'll return success
+      // The actual game results are created by createGameResultsForPlayers in server.js
+      console.log(`ℹ️ createGameResults called for game ${gameId} - handled by server.js instead`);
+      
+      return { success: true, results: [], message: 'Results handled by server.js' };
     } catch (error) {
       console.error('❌ Create game results error:', error);
       return { success: false, error: error.message };
@@ -920,7 +1196,7 @@ class DatabaseManager {
         throw new Error('Service role required for finishing games');
       }
 
-      // First, update the game status to finished
+      // Update the game status to finished
       const updateData = { 
         status: 'finished', 
         ended_at: new Date().toISOString(),
@@ -936,30 +1212,15 @@ class DatabaseManager {
 
       if (gameError) throw gameError;
 
-      // The trigger should automatically create game results, but let's verify
-      // Wait a moment for the trigger to execute
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Check if game results were created
-      const { data: results, error: resultsError } = await this.supabaseAdmin
-        .from('game_results')
-        .select('*')
-        .eq('game_id', gameId);
-
-      if (resultsError) {
-        console.error('❌ Error checking game results:', resultsError);
-        // If results weren't created automatically, try manual creation
-        const manualResult = await this.createGameResults(gameId);
-        if (!manualResult.success) {
-          throw new Error('Failed to create game results: ' + manualResult.error);
-        }
-      }
-
+      // Game results are created by server.js during the endGame process
+      // No need to create them here as they're handled in real-time
+      
       return { 
         success: true, 
         game,
-        resultsCount: results ? results.length : 0
+        message: 'Game finished successfully. Results created by server.js'
       };
+
     } catch (error) {
       console.error('❌ Finish game and create results error:', error);
       return { success: false, error: error.message };
@@ -1221,6 +1482,492 @@ class DatabaseManager {
     }
 
     return gameCode;
+  }
+
+  // ================================
+  // HOST CONTROL METHODS (Phase 6)
+  // ================================
+  
+  async logHostAction(gameId, hostId, actionType, actionData = {}, targetPlayerId = null) {
+    try {
+      const { data, error } = await this.supabaseAdmin
+        .rpc('log_host_action', {
+          p_game_id: gameId,
+          p_host_id: hostId,
+          p_action_type: actionType,
+          p_action_data: actionData,
+          p_target_player_id: targetPlayerId
+        });
+
+      if (error) {
+        logger.error('❌ Failed to log host action:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, actionId: data };
+    } catch (error) {
+      logger.error('❌ Host action logging error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async createAnalyticsSnapshot(gameId, snapshotType, questionNumber = null, snapshotData = {}) {
+    try {
+      const { data, error } = await this.supabaseAdmin
+        .rpc('create_analytics_snapshot', {
+          p_game_id: gameId,
+          p_snapshot_type: snapshotType,
+          p_question_number: questionNumber,
+          p_snapshot_data: snapshotData
+        });
+
+      if (error) {
+        logger.error('❌ Failed to create analytics snapshot:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, snapshotId: data };
+    } catch (error) {
+      logger.error('❌ Analytics snapshot error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async updateGameHostControl(gameId, hostControlData) {
+    try {
+      const updateData = {};
+      
+      // Map host control fields
+      if (hostControlData.pausedAt !== undefined) updateData.paused_at = hostControlData.pausedAt;
+      if (hostControlData.pauseReason !== undefined) updateData.pause_reason = hostControlData.pauseReason;
+      if (hostControlData.pausedDuration !== undefined) updateData.paused_duration = hostControlData.pausedDuration;
+      if (hostControlData.stoppedAt !== undefined) updateData.stopped_at = hostControlData.stoppedAt;
+      if (hostControlData.stopReason !== undefined) updateData.stop_reason = hostControlData.stopReason;
+      if (hostControlData.emergencyStop !== undefined) updateData.emergency_stop = hostControlData.emergencyStop;
+      if (hostControlData.skippedQuestions !== undefined) updateData.skipped_questions = hostControlData.skippedQuestions;
+      if (hostControlData.hostActions !== undefined) updateData.host_actions = hostControlData.hostActions;
+      if (hostControlData.hostTransferHistory !== undefined) updateData.host_transfer_history = hostControlData.hostTransferHistory;
+
+      const { data, error } = await this.supabaseAdmin
+        .from('games')
+        .update(updateData)
+        .eq('id', gameId)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Failed to update game host control data:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, game: data };
+    } catch (error) {
+      logger.error('❌ Game host control update error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getPlayerActions(gameId, playerId = null, actionType = null) {
+    try {
+      let query = this.supabaseAdmin
+        .from('player_actions')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('performed_at', { ascending: false });
+
+      if (playerId) {
+        query = query.eq('player_id', playerId);
+      }
+
+      if (actionType) {
+        query = query.eq('action_type', actionType);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        logger.error('❌ Failed to get player actions:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, actions: data };
+    } catch (error) {
+      logger.error('❌ Player actions query error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getGameAnalyticsSnapshots(gameId, snapshotType = null, questionNumber = null) {
+    try {
+      let query = this.supabaseAdmin
+        .from('game_analytics_snapshots')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('created_at', { ascending: false });
+
+      if (snapshotType) {
+        query = query.eq('snapshot_type', snapshotType);
+      }
+
+      if (questionNumber !== null) {
+        query = query.eq('question_number', questionNumber);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        logger.error('❌ Failed to get analytics snapshots:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, snapshots: data };
+    } catch (error) {
+      logger.error('❌ Analytics snapshots query error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async createHostSession(gameId, hostUserId, sessionData = {}) {
+    try {
+      const { data, error } = await this.supabaseAdmin
+        .from('host_sessions')
+        .insert({
+          game_id: gameId,
+          host_user_id: hostUserId,
+          session_data: sessionData,
+          session_start: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Failed to create host session:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, session: data };
+    } catch (error) {
+      logger.error('❌ Host session creation error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async updateHostSession(sessionId, sessionData) {
+    try {
+      const updateData = {
+        last_action_at: new Date().toISOString()
+      };
+
+      if (sessionData.actionsCount !== undefined) {
+        updateData.actions_count = sessionData.actionsCount;
+      }
+      if (sessionData.sessionEnd !== undefined) {
+        updateData.session_end = sessionData.sessionEnd;
+      }
+      if (sessionData.sessionData !== undefined) {
+        updateData.session_data = sessionData.sessionData;
+      }
+
+      const { data, error } = await this.supabaseAdmin
+        .from('host_sessions')
+        .update(updateData)
+        .eq('id', sessionId)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Failed to update host session:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, session: data };
+    } catch (error) {
+      logger.error('❌ Host session update error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getHostGameStats(hostId, gameId = null) {
+    try {
+      let query = this.supabaseAdmin
+        .from('host_game_stats')
+        .select('*');
+
+      if (gameId) {
+        query = query.eq('game_id', gameId);
+      }
+
+      // Note: RLS policy will automatically filter by host_id = auth.uid()
+      const { data, error } = await query;
+
+      if (error) {
+        logger.error('❌ Failed to get host game stats:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, stats: data };
+    } catch (error) {
+      logger.error('❌ Host game stats query error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async cleanupExpiredPlayerActions() {
+    try {
+      const { data, error } = await this.supabaseAdmin
+        .rpc('cleanup_expired_player_actions');
+
+      if (error) {
+        logger.error('❌ Failed to cleanup expired player actions:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, cleanedCount: data };
+    } catch (error) {
+      logger.error('❌ Player actions cleanup error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getActivePlayerActions(gameId, actionTypes = ['muted', 'kicked']) {
+    try {
+      const { data, error } = await this.supabaseAdmin
+        .from('player_actions')
+        .select('*')
+        .eq('game_id', gameId)
+        .eq('is_active', true)
+        .in('action_type', actionTypes)
+        .order('performed_at', { ascending: false });
+
+      if (error) {
+        logger.error('❌ Failed to get active player actions:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, actions: data };
+    } catch (error) {
+      logger.error('❌ Active player actions query error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async createPlayerAction(gameId, playerId, actionType, actionData = {}, reason = null, performedBy = null, durationMs = null) {
+    try {
+      const playerActionData = {
+        game_id: gameId,
+        player_id: playerId,
+        action_type: actionType,
+        action_data: actionData,
+        reason: reason,
+        performed_by: performedBy,
+        performed_at: new Date().toISOString(),
+        is_active: true
+      };
+
+      // Set expiration for temporary actions
+      if (durationMs && durationMs > 0) {
+        const expiresAt = new Date(Date.now() + durationMs);
+        playerActionData.expires_at = expiresAt.toISOString();
+        playerActionData.duration_ms = durationMs;
+      }
+
+      const { data, error } = await this.supabaseAdmin
+        .from('player_actions')
+        .insert(playerActionData)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Failed to create player action:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, action: data };
+    } catch (error) {
+      logger.error('❌ Player action creation error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // ================================
+  // ENHANCED GAME RESULTS MANAGEMENT
+  // ================================
+
+  // Get comprehensive game analytics
+  async getGameAnalytics(gameId) {
+    try {
+      const { data, error } = await this.supabase
+        .from('game_results')
+        .select(`
+          *,
+          game_players!inner(player_name, is_guest, is_host),
+          games!inner(
+            created_at, 
+            started_at, 
+            ended_at,
+            question_sets(title, difficulty_level, category)
+          )
+        `)
+        .eq('game_id', gameId);
+
+      if (error) throw error;
+
+      if (data.length === 0) {
+        return { success: false, error: 'No results found for this game' };
+      }
+
+      // Calculate comprehensive analytics
+      const analytics = {
+        gameInfo: {
+          gameId,
+          title: data[0].games.question_sets?.title || 'Unknown Quiz',
+          difficulty: data[0].games.question_sets?.difficulty_level || 'medium',
+          category: data[0].games.question_sets?.category || 'General',
+          startedAt: data[0].games.started_at,
+          endedAt: data[0].games.ended_at,
+          duration: data[0].games.ended_at && data[0].games.started_at 
+            ? Math.round((new Date(data[0].games.ended_at) - new Date(data[0].games.started_at)) / 1000 / 60)
+            : 0
+        },
+        participation: {
+          totalPlayers: data.length,
+          guestPlayers: data.filter(r => r.game_players.is_guest).length,
+          registeredPlayers: data.filter(r => !r.game_players.is_guest).length,
+          hostPlayers: data.filter(r => r.game_players.is_host).length,
+          completionRate: Math.round((data.filter(r => r.completion_percentage >= 100).length / data.length) * 100)
+        },
+        performance: {
+          averageScore: Math.round(data.reduce((sum, r) => sum + r.final_score, 0) / data.length),
+          highestScore: Math.max(...data.map(r => r.final_score)),
+          lowestScore: Math.min(...data.map(r => r.final_score)),
+          scoreStandardDeviation: this.calculateStandardDeviation(data.map(r => r.final_score)),
+          averageCorrect: Math.round(data.reduce((sum, r) => sum + r.total_correct, 0) / data.length * 10) / 10,
+          averageCompletion: Math.round(data.reduce((sum, r) => sum + r.completion_percentage, 0) / data.length * 10) / 10,
+          averageResponseTime: Math.round(data.reduce((sum, r) => sum + r.average_response_time, 0) / data.length),
+          longestStreak: Math.max(...data.map(r => r.longest_streak)),
+          perfectScores: data.filter(r => r.completion_percentage >= 100 && r.total_correct === r.total_questions).length
+        },
+        rankings: data
+          .sort((a, b) => a.final_rank - b.final_rank)
+          .map(r => ({
+            rank: r.final_rank,
+            playerName: r.game_players.player_name,
+            score: r.final_score,
+            correct: r.total_correct,
+            total: r.total_questions,
+            completion: r.completion_percentage,
+            streak: r.longest_streak,
+            responseTime: r.average_response_time,
+            isGuest: r.game_players.is_guest,
+            isHost: r.game_players.is_host
+          }))
+      };
+
+      return { success: true, analytics };
+    } catch (error) {
+      console.error('❌ Get game analytics error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Helper function to calculate standard deviation
+  calculateStandardDeviation(values) {
+    if (values.length === 0) return 0;
+    const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+    const squaredDifferences = values.map(val => Math.pow(val - mean, 2));
+    const variance = squaredDifferences.reduce((sum, val) => sum + val, 0) / values.length;
+    return Math.round(Math.sqrt(variance) * 100) / 100;
+  }
+
+  // Get player performance history
+  async getPlayerPerformanceHistory(playerId, options = {}) {
+    try {
+      const { limit = 20, includeGameInfo = true, sortBy = 'created_at' } = options;
+
+      let query = this.supabase
+        .from('game_results')
+        .select(includeGameInfo 
+          ? `*, games!inner(created_at, ended_at, question_sets(title, difficulty_level))`
+          : '*'
+        )
+        .eq('player_id', playerId)
+        .order(sortBy, { ascending: false })
+        .limit(limit);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Calculate performance metrics
+      const performance = data.length > 0 ? {
+        totalGames: data.length,
+        averageScore: Math.round(data.reduce((sum, r) => sum + r.final_score, 0) / data.length),
+        averageRank: Math.round(data.reduce((sum, r) => sum + r.final_rank, 0) / data.length * 10) / 10,
+        averageCorrect: Math.round(data.reduce((sum, r) => sum + r.total_correct, 0) / data.length * 10) / 10,
+        averageCompletion: Math.round(data.reduce((sum, r) => sum + r.completion_percentage, 0) / data.length),
+        bestRank: Math.min(...data.map(r => r.final_rank)),
+        bestScore: Math.max(...data.map(r => r.final_score)),
+        longestStreak: Math.max(...data.map(r => r.longest_streak)),
+        winRate: Math.round((data.filter(r => r.final_rank === 1).length / data.length) * 100),
+        improvementTrend: this.calculateImprovementTrend(data)
+      } : null;
+
+      return { success: true, history: data, performance };
+    } catch (error) {
+      console.error('❌ Get player performance history error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Calculate improvement trend over recent games
+  calculateImprovementTrend(gameResults) {
+    if (gameResults.length < 3) return 'insufficient_data';
+    
+    // Take the most recent games (already sorted by date desc)
+    const recent = gameResults.slice(0, Math.min(5, gameResults.length));
+    const scores = recent.map(r => r.final_score).reverse(); // Oldest to newest
+    
+    // Simple linear regression to detect trend
+    let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    const n = scores.length;
+    
+    for (let i = 0; i < n; i++) {
+      sumX += i;
+      sumY += scores[i];
+      sumXY += i * scores[i];
+      sumXX += i * i;
+    }
+    
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    
+    if (slope > 5) return 'improving';
+    if (slope < -5) return 'declining';
+    return 'stable';
+  }
+
+  // Delete game results (for cleanup/admin)
+  async deleteGameResults(gameId) {
+    try {
+      if (!this.supabaseAdmin) {
+        throw new Error('Service role required for deleting game results');
+      }
+
+      const { data, error } = await this.supabaseAdmin
+        .from('game_results')
+        .delete()
+        .eq('game_id', gameId)
+        .select('id');
+
+      if (error) throw error;
+
+      return { 
+        success: true, 
+        deletedCount: data.length,
+        deletedIds: data.map(r => r.id)
+      };
+    } catch (error) {
+      console.error('❌ Delete game results error:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   // Close connection (for graceful shutdown)

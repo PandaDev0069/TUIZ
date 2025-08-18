@@ -79,7 +79,6 @@ async function debugRLSIssue() {
         category: 'general',
         difficulty_level: 'medium',
         is_public: false,
-        estimated_duration: 5,
         total_questions: 0,
         status: 'draft'
       })
@@ -128,7 +127,6 @@ async function debugRLSIssue() {
           category: 'general',
           difficulty_level: 'medium',
           is_public: false,
-          estimated_duration: 5,
           total_questions: 0,
           status: 'draft'
         })

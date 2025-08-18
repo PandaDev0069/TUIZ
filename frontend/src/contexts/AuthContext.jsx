@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isRestoringAuth, setIsRestoringAuth] = useState(false);
 
   // Initialize auth state from localStorage
   useEffect(() => {
@@ -22,6 +23,7 @@ export const AuthProvider = ({ children }) => {
     const savedUser = localStorage.getItem('tuiz_user');
 
     if (savedToken && savedUser) {
+      setIsRestoringAuth(true);
       setToken(savedToken);
       setUser(JSON.parse(savedUser));
       
@@ -63,12 +65,42 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('API Error Details:', {
-          endpoint,
-          status: response.status,
-          statusText: response.statusText,
-          responseData: data
-        });
+        // Handle specific database schema errors
+        if (data?.error?.includes('relationship') && data?.error?.includes('schema cache')) {
+          if (import.meta.env.DEV) {
+            console.warn('🔧 Database schema issue detected:', {
+              endpoint,
+              error: data.error
+            });
+          }
+          throw new Error(`Database schema error: ${data.error}`);
+        }
+
+        // Only log unexpected errors (not 404s/500s for game lookups in preview mode, not 401s during auth restoration)
+        const isExpectedError = (
+          (response.status === 404 || response.status === 500) && 
+          (endpoint.includes('/games/') || endpoint.includes('/game-results/'))
+        ) || (
+          response.status === 401 && (isRestoringAuth || !token) // 401 during auth restoration or when token is not yet available
+        );
+          
+        if (!isExpectedError) {
+          console.error('API Error Details:', {
+            endpoint,
+            status: response.status,
+            statusText: response.statusText,
+            responseData: data
+          });
+        } else if (import.meta.env.DEV) {
+          if (response.status === 401 && (isRestoringAuth || !token)) {
+            // Silently handle auth errors during restoration - they're expected
+          } else if (response.status === 500 && data?.error?.includes('relationship')) {
+            console.log('ℹ️ Database schema issue - game results unavailable:', endpoint);
+          } else if (response.status === 500) {
+            console.log('ℹ️ Game results not available (server error):', endpoint);
+          }
+        }
+        
         throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -78,7 +110,24 @@ export const AuthProvider = ({ children }) => {
         console.error('API Syntax Error:', { endpoint, error });
         throw new Error(`Invalid response from server (endpoint: ${endpoint})`);
       }
-      console.error('API Call Error:', { endpoint, error });
+      
+      // Only log unexpected API errors (not 404s/500s for game lookups, not 401s during auth restoration)
+      const isExpectedError = (
+        (error.message?.includes('HTTP 404') || error.message?.includes('HTTP 500')) && 
+        (endpoint.includes('/games/') || endpoint.includes('/game-results/'))
+      ) || (
+        error.message?.includes('Access token required') && (isRestoringAuth || !token) // 401 during auth restoration or when token is not yet available
+      );
+      
+      if (!isExpectedError) {
+        console.error('API Call Error:', { endpoint, error });
+      } else if (import.meta.env.DEV) {
+        if (error.message?.includes('Access token required') && (isRestoringAuth || !token)) {
+          // Silently handle auth errors during restoration - they're expected
+        } else if (error.message?.includes('HTTP 500')) {
+          console.log('ℹ️ Game results not available (server error):', endpoint);
+        }
+      }
       throw error;
     }
   };
@@ -96,6 +145,7 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
         setUser(data.user);
         setToken(tokenToVerify);
+        setIsRestoringAuth(false); // Auth restoration complete
       } else {
         // Token is invalid, clear auth state
         logout();
@@ -105,6 +155,7 @@ export const AuthProvider = ({ children }) => {
       logout();
     } finally {
       setLoading(false);
+      setIsRestoringAuth(false); // Auth restoration complete (success or failure)
     }
   };
 
@@ -201,6 +252,7 @@ export const AuthProvider = ({ children }) => {
     user,
     token,
     loading,
+    isRestoringAuth,
     login,
     register,
     logout,

@@ -318,7 +318,7 @@ router.post('/metadata', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     logger.debug('Creating question set metadata:', req.body);
     
-    const { title, description, category, difficulty_level, is_public, estimated_duration, thumbnail_url, tags, status } = req.body;
+    const { title, description, category, difficulty_level, is_public, thumbnail_url, tags, status } = req.body;
     
     // Validate required fields
     if (!title?.trim()) {
@@ -363,7 +363,6 @@ router.post('/metadata', AuthMiddleware.authenticateToken, async (req, res) => {
       category: category || 'general',
       difficulty_level: difficulty_level || 'medium',
       is_public: is_public || false,
-      estimated_duration: estimated_duration || 5,
       total_questions: 0,
       thumbnail_url: thumbnail_url || null,
       tags: tags || [],
@@ -418,7 +417,7 @@ router.post('/metadata', AuthMiddleware.authenticateToken, async (req, res) => {
 router.patch('/:id/metadata', AuthMiddleware.authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, category, difficulty_level, is_public, estimated_duration, thumbnail_url, tags, status } = req.body;
+    const { title, description, category, difficulty_level, is_public, thumbnail_url, tags, status } = req.body;
     
     SecurityUtils.safeLog('info', 'Updating question set metadata', {
       questionSetId: id,
@@ -452,7 +451,6 @@ router.patch('/:id/metadata', AuthMiddleware.authenticateToken, async (req, res)
     if (category !== undefined) updateData.category = category;
     if (difficulty_level !== undefined) updateData.difficulty_level = difficulty_level;
     if (is_public !== undefined) updateData.is_public = is_public;
-    if (estimated_duration !== undefined) updateData.estimated_duration = estimated_duration;
     if (thumbnail_url !== undefined) updateData.thumbnail_url = thumbnail_url;
     if (tags !== undefined) updateData.tags = tags;
     if (status !== undefined) updateData.status = status;
@@ -557,7 +555,6 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
       category, 
       difficulty_level, 
       is_public,
-      estimated_duration,
       questions 
     } = req.body;
     
@@ -569,7 +566,6 @@ router.post('/', AuthMiddleware.authenticateToken, async (req, res) => {
       category: category || 'general',
       difficulty_level: difficulty_level || 'medium',
       is_public: is_public !== false, // Default to true for testing
-      estimated_duration: estimated_duration || 10,
       user_id: req.user.id, // Use the authenticated user ID
       total_questions: questions ? questions.length : 0
     };

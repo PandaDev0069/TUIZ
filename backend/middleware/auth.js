@@ -138,16 +138,18 @@ class AuthMiddleware {
       
       return result;
     } catch (error) {
-      logger.debug('❌ Token verification failed:', error.message);
+      // Only log in development mode to reduce noise in production
+      if (isDevelopment) {
+        logger.debug('Token verification failed:', error.message.split(':')[0]);
+      }
       
       // Fallback to manual JWT verification using Supabase JWT secret
       if (supabaseJwtSecret) {
         try {
           const decoded = jwt.verify(token, supabaseJwtSecret);
-          logger.debug('✅ Manual JWT verification successful:', {
-            userId: decoded.sub,
-            email: decoded.email
-          });
+          if (isDevelopment) {
+            logger.debug('Manual JWT verification successful for user:', decoded.sub);
+          }
           
           const fallbackResult = {
             success: true,
@@ -166,7 +168,10 @@ class AuthMiddleware {
           
           return fallbackResult;
         } catch (jwtError) {
-          logger.debug('❌ Manual JWT verification failed:', jwtError.message);
+          // Only log the type of error, not the full message
+          if (isDevelopment) {
+            logger.debug('JWT verification failed:', jwtError.name || 'Invalid token');
+          }
           throw new Error('Token verification failed: ' + jwtError.message);
         }
       }
@@ -242,8 +247,15 @@ class AuthMiddleware {
 
       next();
     } catch (error) {
-      // Always log authentication errors as they're security-related
-      logger.error('Authentication error:', error);
+      // Reduce logging noise for common auth failures
+      const isExpiredToken = error.message.includes('expired') || error.message.includes('jwt expired');
+      const isInvalidToken = error.message.includes('invalid') || error.message.includes('malformed');
+      
+      if (isDevelopment && !isExpiredToken && !isInvalidToken) {
+        // Only log unexpected auth errors in development
+        logger.error('Unexpected authentication error:', error.message);
+      }
+      
       return res.status(403).json({ 
         success: false, 
         message: 'Invalid or expired token' 

@@ -133,12 +133,19 @@ function SettingsForm({ settings, setSettings, questions, onPreviewQuiz, onReord
 
   // Update game_settings for non-database fields
   const updateGameSetting = async (key, value) => {
+    let updatedGameSettings = {
+      ...settings.game_settings,
+      [key]: value
+    };
+    
+    // Auto-enable autoAdvance when hybridMode is enabled
+    if (key === 'hybridMode' && value === true) {
+      updatedGameSettings.autoAdvance = true;
+    }
+    
     const newSettings = {
       ...settings,
-      game_settings: {
-        ...settings.game_settings,
-        [key]: value
-      }
+      game_settings: updatedGameSettings
     };
     
     setSettings(newSettings);
@@ -210,7 +217,12 @@ function SettingsForm({ settings, setSettings, questions, onPreviewQuiz, onReord
               <div className="setting-item">
                 <label className="setting-label">
                   ハイブリッドモード
-                  <span className="setting-hint">問題は自動進行するが、解説とスコアボードはホストが手動で進める</span>
+                  <span className="setting-hint">
+                    問題は自動進行するが、解説とスコアボードはホストが手動で進める
+                    {settings.game_settings?.hybridMode && (
+                      <span className="auto-enabled-note"> (自動進行も有効になります)</span>
+                    )}
+                  </span>
                 </label>
                 <div className="setting-input">
                   <label className="toggle-switch">
@@ -400,13 +412,6 @@ function SettingsForm({ settings, setSettings, questions, onPreviewQuiz, onReord
             <div className="stat-item">
               <span className="stat-label">問題数</span>
               <span className="stat-value">{questions.length}問</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-label">予想総時間</span>
-              <span className="stat-value">
-                {Math.ceil((questions.reduce((total, q) => total + (q.time_limit || 30), 0) + 
-                           (questions.length * (settings.game_settings?.explanationTime || 0))) / 60)}分
-              </span>
             </div>
             <div className="stat-item">
               <span className="stat-label">最大参加者</span>

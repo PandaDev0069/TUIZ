@@ -14,8 +14,8 @@ class ActiveGameUpdater {
     logger.debug('✅ ActiveGameUpdater: Set activeGames reference');
   }
 
-  // Update maxPlayers in game_settings for a specific game
-  updatePlayersCap(gameCode, newPlayersCap) {
+  // Update all game settings for a specific game
+  updateGameSettings(gameCode, newSettings) {
     if (!this.activeGamesRef) {
       console.warn('⚠️ ActiveGameUpdater: activeGames reference not set');
       return false;
@@ -32,10 +32,21 @@ class ActiveGameUpdater {
       activeGame.game_settings = {};
     }
 
-    const oldCap = activeGame.game_settings.maxPlayers;
-    activeGame.game_settings.maxPlayers = newPlayersCap;
-    logger.debug(`✅ ActiveGameUpdater: Updated game_settings.maxPlayers for game ${gameCode}: ${oldCap} → ${newPlayersCap}`);
+    // Update all settings
+    activeGame.game_settings = {
+      ...activeGame.game_settings,
+      ...newSettings
+    };
+
+    logger.debug(`✅ ActiveGameUpdater: Updated game_settings for game ${gameCode}`, {
+      updatedKeys: Object.keys(newSettings)
+    });
     return true;
+  }
+
+  // Update maxPlayers in game_settings for a specific game (legacy method)
+  updatePlayersCap(gameCode, newPlayersCap) {
+    return this.updateGameSettings(gameCode, { maxPlayers: newPlayersCap });
   }
 
   // Get current maxPlayers for a game

@@ -65,33 +65,25 @@ const gameConfig = {
     }
   },
 
-  // Default game settings
+  // Default game settings - Clean 9-setting structure
   defaults: {
     // Player Management
     maxPlayers: 50,
     
     // Game Flow
     autoAdvance: true,
+    hybridMode: false,
     showExplanations: true,
     explanationTime: 10, // seconds
     showLeaderboard: true,
     
-    // Timing
-    useCustomTiming: false,
-    questionTime: 30, // seconds
-    
     // Scoring
-    pointCalculation: 'time-bonus', // 'fixed', 'time-bonus', 'streak-bonus'
-    streakBonus: true,
-    basePoints: 100,
+    pointCalculation: 'fixed', // 'fixed', 'time-bonus'
+    streakBonus: false,
     
     // Display Options
     showProgress: true,
-    showCorrectAnswer: true,
-    allowAnswerChange: false,
-    
-    // Advanced Features
-    spectatorMode: false
+    showCorrectAnswer: true
   }
 };
 

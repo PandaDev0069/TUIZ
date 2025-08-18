@@ -72,7 +72,6 @@ function CreateQuiz() {
               description: quizData.quiz.description || '',
               category: quizData.quiz.category || '',
               difficulty_level: quizData.quiz.difficulty_level || '',
-              estimated_duration: quizData.quiz.estimated_duration || '',
               thumbnail_url: quizData.quiz.thumbnail_url || '',
               tags: quizData.quiz.tags || [],
               is_public: quizData.quiz.is_public || false,
@@ -195,8 +194,6 @@ function CreateQuiz() {
       description: "",
       category: "",
       difficulty_level: "",
-      estimated_duration: "",
-      estimated_duration_manual: false,
       thumbnail_url: "",
       thumbnail_file: null,
       tags: [],
@@ -338,9 +335,6 @@ function CreateQuiz() {
     }
     if (metadata.description && metadata.description.length > 5000) { // Text field can be longer
       errors.push('説明は5000文字以内で入力してください');
-    }
-    if (metadata.estimated_duration && metadata.estimated_duration <= 0) {
-      errors.push('推定時間は正の数で入力してください');
     }
     
     // Validate questions
@@ -660,7 +654,6 @@ function CreateQuiz() {
         description: metadata.description?.trim() || null,
         category: metadata.category,
         difficulty_level: metadata.difficulty_level,
-        estimated_duration: metadata.estimated_duration || calculateEstimatedDuration(questions),
         thumbnail_url: metadata.thumbnail_url || null,
         tags: metadata.tags || [],
         is_public: metadata.is_public || false
@@ -804,13 +797,6 @@ function CreateQuiz() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Helper function to calculate estimated duration
-  const calculateEstimatedDuration = (questions) => {
-    if (!questions.length) return 5;
-    // 30 seconds per question + 10 seconds buffer per question
-    return Math.ceil((questions.length * 0.5) + (questions.length * 0.17));
   };
 
   // Helper function to calculate difficulty based on questions

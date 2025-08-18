@@ -480,7 +480,6 @@ router.post('/create', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.aut
       description,
       category,
       difficulty_level,
-      estimated_duration,
       thumbnail_url,
       tags,
       is_public,
@@ -520,14 +519,6 @@ router.post('/create', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.aut
       });
     }
 
-    // Validate estimated_duration (must be positive if provided)
-    if (estimated_duration !== undefined && estimated_duration !== null && (typeof estimated_duration !== 'number' || estimated_duration <= 0)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Estimated duration must be a positive number'
-      });
-    }
-
     // Create user-scoped Supabase client for RLS compliance
     const userSupabase = AuthMiddleware.createUserScopedClient(req.userToken);
 
@@ -538,7 +529,6 @@ router.post('/create', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.aut
       description: description?.trim() || null, // Optional text
       category: category || null, // Optional, max 100 chars
       difficulty_level: difficulty_level || 'medium', // Default 'medium', max 20 chars
-      estimated_duration: estimated_duration || null, // Optional positive integer
       thumbnail_url: thumbnail_url || null, // Optional text
       tags: Array.isArray(tags) ? tags : [], // Default empty array
       is_public: Boolean(is_public), // Default false
@@ -600,7 +590,6 @@ router.get('/my-quizzes', RateLimitMiddleware.createReadLimit(), AuthMiddleware.
         description,
         category,
         difficulty_level,
-        estimated_duration,
         thumbnail_url,
         tags,
         is_public,
@@ -880,7 +869,6 @@ const logger = require('../../utils/logger');
       description: publicQuiz.description,
       category: publicQuiz.category,
       difficulty_level: publicQuiz.difficulty_level,
-      estimated_duration: publicQuiz.estimated_duration,
       total_questions: publicQuiz.total_questions || 0,
       thumbnail_url: clonedThumbnailUrl,
       is_public: false,
@@ -1169,15 +1157,7 @@ router.put('/:id', RateLimitMiddleware.createQuizLimit(), AuthMiddleware.authent
       }
     }
 
-    // Validate estimated_duration if provided
-    if (updateData.estimated_duration !== undefined && updateData.estimated_duration !== null) {
-      if (typeof updateData.estimated_duration !== 'number' || updateData.estimated_duration <= 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Estimated duration must be a positive number'
-        });
-      }
-    }
+
 
     // Validate total_questions if provided
     if (updateData.total_questions !== undefined && updateData.total_questions !== null) {
@@ -1728,15 +1708,12 @@ router.patch('/:id/publish', AuthMiddleware.authenticateToken, async (req, res) 
 
     // Merge new play_settings with existing ones, removing was_published flag
     if (play_settings || currentQuiz.play_settings) {
-      const existingSettings = currentQuiz.play_settings || {};
       const newSettings = play_settings || {};
       
-      // Remove was_published flag when republishing and merge settings
-      const { was_published: _, ...cleanExistingSettings } = existingSettings;
-      updateData.play_settings = {
-        ...cleanExistingSettings,
-        ...newSettings
-      };
+      // Use only the new clean settings (don't merge with old bloated settings)
+      // Remove was_published flag if it exists
+      const { was_published: _, ...cleanNewSettings } = newSettings;
+      updateData.play_settings = cleanNewSettings;
     }
 
     // Update total_questions to match actual question count
@@ -1959,6 +1936,89 @@ router.get('/:id/questions', RateLimitMiddleware.createReadLimit(), AuthMiddlewa
 
   } catch (error) {
     logger.error('Error fetching questions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
+// Check session status endpoint
+router.post('/session/check', RateLimitMiddleware.createReadLimit(), AuthMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const { gameId, room } = req.body;
+
+    if (!gameId || !room) {
+      return res.status(400).json({
+        success: false,
+        message: 'gameId and room are required'
+      });
+    }
+
+    logger.debug('🔍 Checking session status:', { gameId, room, userId: req.user.id });
+
+    // Get access to activeGames through ActiveGameUpdater
+    const ActiveGameUpdater = require('../../utils/ActiveGameUpdater');
+    
+    if (!ActiveGameUpdater.activeGamesRef) {
+      logger.error('❌ ActiveGameUpdater reference not set');
+      return res.status(500).json({
+        success: false,
+        message: 'Game session service not available'
+      });
+    }
+    
+    // Get game data from active games
+    const gameData = ActiveGameUpdater.activeGamesRef.get(room);
+    
+    if (!gameData) {
+      logger.debug('❌ Game not found in active games:', room);
+      return res.json({
+        success: true,
+        isActive: false,
+        message: 'Game session not found'
+      });
+    }
+
+    // Check if user is the host of this session
+    const expectedHostId = `host_${req.user.id}`;
+    if (gameData.host !== expectedHostId) {
+      logger.debug('❌ User is not the host of this session:', { 
+        userId: req.user.id, 
+        expectedHostId,
+        actualHostId: gameData.host 
+      });
+      return res.json({
+        success: true,
+        isActive: false,
+        message: 'User is not the host of this session'
+      });
+    }
+
+    // Verify game status
+    const isWaiting = gameData.status === 'waiting' || gameData.gameStatus === 'waiting';
+    
+    logger.debug('✅ Session check result:', {
+      gameId,
+      room,
+      isActive: isWaiting,
+      gameStatus: gameData.gameStatus,
+      status: gameData.status,
+      playerCount: gameData.players ? (gameData.players instanceof Map ? gameData.players.size : Object.keys(gameData.players).length) : 0
+    });
+
+    res.json({
+      success: true,
+      isActive: isWaiting,
+      gameStatus: gameData.status || gameData.gameStatus,
+      playerCount: gameData.players ? (gameData.players instanceof Map ? gameData.players.size : Object.keys(gameData.players).length) : 0,
+      createdAt: gameData.createdAt,
+      hostId: gameData.host
+    });
+
+  } catch (error) {
+    logger.error('Error checking session status:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

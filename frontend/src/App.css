@@ -1,6 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+/* Import Universal Theme System */
+@import './styles/universal-theme.css';
 
-/* Global Scrollbar Styles */
+/* Universal Theme System is now loaded via import above */
+
+/* Legacy Global Scrollbar Styles - Now handled by universal theme */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -50,7 +53,7 @@ body {
   font-family: 'Poppins', sans-serif;
 }
 
-/* Common styles */
+/* Common styles - Updated to use universal theme */
 .page-container {
   min-height: 100vh;
   width: 100vw;
@@ -60,30 +63,33 @@ body {
   justify-content: center;
   text-align: center;
   padding: 20px;
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-  color: white;
+  background: var(--tuiz-gradient-primary);
+  color: var(--tuiz-white);
+  font-family: var(--tuiz-font-family);
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--tuiz-glass-light);
   padding: 2rem;
-  border-radius: 16px;
-  backdrop-filter: blur(8px);
+  border-radius: var(--tuiz-radius-2xl);
+  backdrop-filter: var(--tuiz-blur-medium);
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--tuiz-shadow-glass);
   margin: 0 auto;
+  border: 1px solid var(--tuiz-glass-border-light);
 }
 
 .input {
   width: 100%;
-  padding: 1rem;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 1rem;
-  transition: all 0.3s ease;
+  padding: var(--tuiz-space-4);
+  border: 2px solid var(--tuiz-glass-border-light);
+  border-radius: var(--tuiz-radius-xl);
+  background: var(--tuiz-glass-light);
+  color: var(--tuiz-white);
+  font-size: var(--tuiz-text-base);
+  font-family: var(--tuiz-font-family);
+  transition: all var(--tuiz-duration-normal) var(--tuiz-ease-out);
   margin-bottom: 1rem;
 }
 
@@ -93,21 +99,23 @@ body {
 
 .input:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--tuiz-glass-border-heavy);
+  background: var(--tuiz-glass-medium);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
 }
 
 .button {
   width: 100%;
-  padding: 1rem;
+  padding: var(--tuiz-space-4);
   border: none;
-  border-radius: 12px;
-  background: white;
-  color: #4c1d95;
-  font-size: 1.1rem;
-  font-weight: 600;
+  border-radius: var(--tuiz-radius-xl);
+  background: var(--tuiz-white);
+  color: var(--tuiz-primary-600);
+  font-size: var(--tuiz-text-lg);
+  font-weight: var(--tuiz-font-semibold);
+  font-family: var(--tuiz-font-family);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all var(--tuiz-duration-normal) var(--tuiz-ease-out);
   margin-bottom: 1rem;
 }
 

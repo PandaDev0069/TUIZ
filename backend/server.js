@@ -17,6 +17,12 @@ const { validateStorageConfig } = require('./utils/storageConfig');
 const activeGameUpdater = require('./utils/ActiveGameUpdater');
 const RateLimitMiddleware = require('./middleware/rateLimiter');
 
+// Phase 6: Host Socket Handlers
+const HostSocketHandlers = require('./sockets/hostHandlers');
+
+// Session Restoration Handlers
+const SessionRestoreHandlers = require('./sockets/sessionRestoreHandlers');
+
 // Initialize database
 const db = new DatabaseManager();
 
@@ -465,8 +471,13 @@ const gamesRoutes = require('./routes/api/games');
 const quizRoutes = require('./routes/api/quiz');
 const uploadRoutes = require('./routes/upload');
 const playerManagementRoutes = require('./routes/api/playerManagement');
+const playersRoutes = require('./routes/api/players');
 const gameResultsRoutes = require('./routes/api/gameResults');
 const gameSettingsRoutes = require('./routes/api/gameSettings');
+
+// Host control routes (Phase 6)
+const hostGameControlRoutes = require('./routes/api/host/gameControl');
+const hostPlayerManagementRoutes = require('./routes/api/host/playerManagement');
 
 // Mount API routes
 app.use('/api/question-sets', questionSetsRoutes);
@@ -477,8 +488,15 @@ app.use('/api/games', gamesRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/player', playerManagementRoutes(db));
+app.use('/api/players', playersRoutes(db));
 app.use('/api/game-results', gameResultsRoutes);
 app.use('/api/game-settings', gameSettingsRoutes);
+
+// Host control API routes (Phase 6)
+const hostGameCreationRoutes = require('./routes/api/host/gameCreation');
+app.use('/api/host/game', hostGameControlRoutes);
+app.use('/api/host/player', hostPlayerManagementRoutes);
+app.use('/api/host/create', hostGameCreationRoutes);
 
 // Global error handler - must be after all routes
 app.use((error, req, res, next) => {
@@ -538,6 +556,45 @@ const io = new Server(server, {
     },
 });
 
+// Setup function to enable enhanced host handlers for host control games
+function setupHostHandlers(socket, gameCode, gameId) {
+  if (!socket || !gameCode || !gameId) {
+    logger.warn('Invalid parameters for host handlers setup', {
+      socket: !!socket,
+      gameCode,
+      gameId
+    });
+    return;
+  }
+
+  try {
+    // Mark socket as host control enabled
+    socket.hostControlEnabled = true;
+    socket.hostGameId = gameId;
+    socket.hostGameCode = gameCode;
+
+    // Setup host control events
+    if (hostHandlers && typeof hostHandlers.setupHostSocket === 'function') {
+      hostHandlers.setupHostSocket(socket, gameCode, gameId);
+    }
+
+    logger.info('Host control handlers enabled', {
+      socketId: socket.id,
+      gameCode,
+      gameId,
+      hostId: socket.hostOfGame
+    });
+
+  } catch (error) {
+    logger.error('Error setting up host control handlers', {
+      error: error.message,
+      socketId: socket.id,
+      gameCode,
+      gameId
+    });
+  }
+}
+
 // Export function to get Socket.IO instance
 module.exports.getIO = () => io;
 
@@ -546,6 +603,9 @@ const activeGames = new Map();
 
 // Initialize the active game updater with the activeGames reference
 activeGameUpdater.setActiveGamesRef(activeGames);
+
+// Phase 6: Initialize Host Socket Handlers (after activeGames is defined)
+const hostHandlers = new HostSocketHandlers(io, activeGames);
 
 // Helper function to check if question phase is complete and handle transitions
 const checkForQuestionCompletion = (gameCode) => {
@@ -564,14 +624,29 @@ const checkForQuestionCompletion = (gameCode) => {
   if (allPlayersAnswered) {
     if (isDevelopment || isLocalhost) {
       logger.debug(`📝 All players answered question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
+      logger.debug(`🔧 Debug manual mode check: autoAdvance=${gameSettings.autoAdvance}, type=${typeof gameSettings.autoAdvance}`);
     }
     
-    // Show immediate answer feedback first
+    // In manual mode, wait for host to advance regardless of explanation settings
+    if (gameSettings.autoAdvance === false) {
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`⏸️ Manual mode: All players answered, waiting for host to advance question ${activeGame.currentQuestionIndex + 1}`);
+      }
+      // Don't show explanation or leaderboard automatically, wait for host
+      return;
+    }
+    
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`🚀 Auto mode detected (autoAdvance=${gameSettings.autoAdvance}), proceeding with explanation logic`);
+    }
+    
+    // Auto mode: Show immediate answer feedback first
     setTimeout(async () => {
       // Debug the explanation check - only in development
       if (isDevelopment || isLocalhost) {
         logger.debug(`🔍 Checking explanation for question ${activeGame.currentQuestionIndex + 1}:
         gameSettings.showExplanations: ${gameSettings.showExplanations}
+        gameSettings.hybridMode: ${gameSettings.hybridMode}
         question.explanation_title: ${currentQuestion.explanation_title}
         question.explanation_text: ${currentQuestion.explanation_text}
         question.explanation_image_url: ${currentQuestion.explanation_image_url}
@@ -581,7 +656,7 @@ const checkForQuestionCompletion = (gameCode) => {
       const shouldShowExpl = GameSettingsService.shouldShowExplanation(currentQuestion, gameSettings);
       logger.debug(`🔍 Should show explanation: ${shouldShowExpl}`);
       
-      // Check if we should show explanation
+      // Check if we should show explanation (only in auto/hybrid modes)
       if (shouldShowExpl) {
         if (isDevelopment || isLocalhost) {
           logger.debug(`💡 Showing explanation for question ${activeGame.currentQuestionIndex + 1}`);
@@ -650,11 +725,41 @@ const showQuestionExplanation = (gameCode) => {
     
     // Timing - use explanationTime from settings (converted to ms)
     explanationTime: (gameSettings.explanationTime || 30) * 1000,
-    autoAdvance: gameSettings.autoAdvance !== false
+    autoAdvance: gameSettings.autoAdvance !== false,
+    hybridMode: gameSettings.hybridMode || false  // Include hybrid mode info
   };
   
   // Send explanation with leaderboard to all players immediately
-  io.to(gameCode).emit('showExplanation', explanationData);
+  if (isDevelopment || isLocalhost) {
+    logger.debug(`📊 Sending showExplanation to room ${gameCode}`);
+    logger.debug(`📊 Active players in room: ${Array.from(activeGame.players.keys())}`);
+    logger.debug(`📊 Sockets in room ${gameCode}: ${Array.from(io.sockets.adapter.rooms.get(gameCode) || [])}`);
+  }
+  
+  // Small delay to ensure all reconnected players are properly in the room
+  setTimeout(() => {
+    io.to(gameCode).emit('showExplanation', explanationData);
+    
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`📊 showExplanation event sent to room ${gameCode}`);
+    }
+  }, 100); // 100ms delay
+  
+  // Update game state for reconnection support
+  activeGame.showingResults = true;
+  activeGame.isTimerRunning = false;
+  activeGame.lastExplanationData = explanationData;
+  
+  // Set explanation timer tracking
+  activeGame.explanationStartTime = Date.now();
+  activeGame.explanationDuration = explanationData.explanationTime;
+  activeGame.explanationEndTime = Date.now() + explanationData.explanationTime;
+  
+  // Clear question timer if running
+  if (activeGame.questionTimer) {
+    clearInterval(activeGame.questionTimer);
+    activeGame.questionTimer = null;
+  }
   
   // Send individual player answer data to each player
   for (const [socketId, player] of activeGame.players) {
@@ -664,17 +769,42 @@ const showQuestionExplanation = (gameCode) => {
         questionId: currentQuestion.id,
         ...playerAnswerData
       });
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`📊 Sent playerAnswerData to ${player.name} (${socketId}) during explanation`);
+      }
+    } else {
+      if (isDevelopment || isLocalhost) {
+        logger.warn(`⚠️ No answer data found for player ${player.name} when sending explanation data`);
+      }
     }
   }
-  
+
   // After explanation, proceed to next question (leaderboard already shown during explanation)
-  setTimeout(async () => {
-    // Don't show additional leaderboard after explanation since it's already shown during explanation
+  // In hybrid mode, explanations wait for manual host advance
+  if (gameSettings.hybridMode) {
+    // Hybrid mode: Don't auto-advance after explanations, wait for host
     if (isDevelopment || isLocalhost) {
-      logger.debug(`⏭️ Proceeding to next question after explanation for question ${activeGame.currentQuestionIndex + 1}`);
+      logger.debug(`🔄 Hybrid mode: Waiting for host to advance after explanation for question ${activeGame.currentQuestionIndex + 1}`);
     }
-    await proceedToNextQuestion(gameCode);
-  }, explanationData.explanationTime);
+  } else if (gameSettings.autoAdvance !== false) {
+    // Auto mode: Auto-advance after explanation time
+    setTimeout(async () => {
+      // Don't show additional leaderboard after explanation since it's already shown during explanation
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`⏭️ Auto mode: Proceeding to next question after explanation for question ${activeGame.currentQuestionIndex + 1}`);
+      }
+      await proceedToNextQuestion(gameCode);
+    }, explanationData.explanationTime);
+    
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`⏰ Set explanation timer for ${explanationData.explanationTime}ms for question ${activeGame.currentQuestionIndex + 1}`);
+    }
+  } else {
+    // Manual mode: Wait for host to advance
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`⏸️ Manual mode: Waiting for host to advance after explanation for question ${activeGame.currentQuestionIndex + 1}`);
+    }
+  }
 };
 
 // Helper function to show intermediate leaderboard
@@ -713,6 +843,7 @@ const showIntermediateLeaderboard = (gameCode) => {
     displayTime: (gameSettings.explanationTime || 30) * 1000, // Use explanation time setting
     explanationTime: (gameSettings.explanationTime || 30) * 1000, // Also include for frontend consistency
     autoAdvance: gameSettings.autoAdvance !== false,
+    hybridMode: gameSettings.hybridMode || false,  // Include hybrid mode info
     
     // Add answer stats and correct answer for consistency with explanation events
     correctAnswer: currentQuestion.correctIndex,
@@ -723,6 +854,22 @@ const showIntermediateLeaderboard = (gameCode) => {
   // Send leaderboard to all players immediately
   io.to(gameCode).emit('showLeaderboard', leaderboardData);
   
+  // Update game state for reconnection support
+  activeGame.showingResults = true;
+  activeGame.isTimerRunning = false;
+  activeGame.lastExplanationData = leaderboardData;
+  
+  // Set leaderboard timer tracking
+  activeGame.explanationStartTime = Date.now();
+  activeGame.explanationDuration = leaderboardData.explanationTime;
+  activeGame.explanationEndTime = Date.now() + leaderboardData.explanationTime;
+  
+  // Clear question timer if running
+  if (activeGame.questionTimer) {
+    clearInterval(activeGame.questionTimer);
+    activeGame.questionTimer = null;
+  }
+  
   // Send individual player answer data to each player
   for (const [socketId, player] of activeGame.players) {
     const playerAnswerData = getCurrentPlayerAnswerData(activeGame.currentAnswers, player.name);
@@ -731,11 +878,25 @@ const showIntermediateLeaderboard = (gameCode) => {
         questionId: currentQuestion.id,
         ...playerAnswerData
       });
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`📊 Sent playerAnswerData to ${player.name} (${socketId}) during leaderboard`);
+      }
+    } else {
+      if (isDevelopment || isLocalhost) {
+        logger.warn(`⚠️ No answer data found for player ${player.name} when sending leaderboard data`);
+      }
     }
   }
-  
-  // Auto-advance to next question or end game (only if autoAdvance is enabled)
-  if (gameSettings.autoAdvance !== false) {
+
+  // Auto-advance to next question or end game 
+  // In hybrid mode, leaderboards wait for host (like explanations)
+  // In manual mode, everything waits for host
+  if (gameSettings.hybridMode) {
+    // Hybrid mode: Wait for host to advance from leaderboard
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`🔄 Hybrid mode: Waiting for host to advance after leaderboard for question ${activeGame.currentQuestionIndex + 1}`);
+    }
+  } else if (gameSettings.autoAdvance !== false) {
     setTimeout(async () => {
       await proceedToNextQuestion(gameCode);
     }, leaderboardData.displayTime);
@@ -814,6 +975,14 @@ const proceedToNextQuestion = async (gameCode) => {
     logger.debug(`➡️ Proceeding to next question in game ${gameCode}`);
   }
   
+  // Clear previous question timer and reset state
+  if (activeGame.questionTimer) {
+    clearInterval(activeGame.questionTimer);
+    activeGame.questionTimer = null;
+  }
+  activeGame.showingResults = false;
+  activeGame.lastExplanationData = null;
+  
   // Move to next question
   activeGame.currentQuestionIndex++;
   
@@ -844,6 +1013,22 @@ const sendNextQuestion = async (gameCode) => {
 
   // Reset answers for new question
   activeGame.currentAnswers = [];
+  
+  // Update timing and state information for reconnection support
+  activeGame.currentQuestion = {
+    id: question.id,
+    question: question.question,
+    options: question.options,
+    type: question.type,
+    timeLimit: question.timeLimit,
+    correctIndex: question.correctIndex,
+    _dbData: question._dbData,
+    imageUrl: question.image_url
+  };
+  activeGame.timeRemaining = question.timeLimit;
+  activeGame.isTimerRunning = true;
+  activeGame.questionStartTime = Date.now();
+  activeGame.showingResults = false;
 
   // Initialize player streaks if needed
   for (const [playerId, player] of activeGame.players) {
@@ -871,6 +1056,7 @@ const sendNextQuestion = async (gameCode) => {
     
     // Game flow configuration
     autoAdvance: gameFlowConfig.autoAdvance !== undefined ? gameFlowConfig.autoAdvance : true,
+    hybridMode: gameFlowConfig.hybridMode || false,  // Include hybrid mode info
     showExplanation: question.showExplanation !== undefined ? question.showExplanation : false,
     explanationTime: question.explanationTime || gameFlowConfig.explanationTime || 30000,
     
@@ -882,9 +1068,164 @@ const sendNextQuestion = async (gameCode) => {
   if (isDevelopment || isLocalhost) {
     logger.debug(`📋 Sent question ${questionIndex + 1} to game ${gameCode} (${Math.round(question.timeLimit/1000)}s): ${question.question.substring(0, 50)}...`);
   }
+  
+  // Start timer to track remaining time for reconnection
+  if (activeGame.questionTimer) {
+    clearInterval(activeGame.questionTimer);
+  }
+  
+  activeGame.questionTimer = setInterval(() => {
+    if (activeGame.timeRemaining <= 0) {
+      clearInterval(activeGame.questionTimer);
+      activeGame.isTimerRunning = false;
+      return;
+    }
+    
+    activeGame.timeRemaining -= 1000; // Decrease by 1 second
+  }, 1000);
+};
+
+// Helper function to update player rankings in database
+const updatePlayerRankings = async (activeGame) => {
+  if (!activeGame.id || !db) return;
+
+  try {
+    // Calculate rankings based on current scores
+    const playersArray = Array.from(activeGame.players.values())
+      .filter(player => player.playerId) // Only include players with database IDs
+      .map(player => ({
+        playerId: player.playerId,
+        playerName: player.name,
+        score: player.score || 0,
+        streak: player.streak || 0
+      }))
+      .sort((a, b) => b.score - a.score)
+      .map((player, index) => ({
+        ...player,
+        rank: index + 1
+      }));
+
+    // Bulk update player rankings
+    const updatePromises = playersArray.map(player => 
+      db.updateGamePlayer(activeGame.id, player.playerId, {
+        current_rank: player.rank
+      }).catch(error => {
+        logger.error(`❌ Failed to update rank for player ${player.playerName}:`, error);
+      })
+    );
+
+    await Promise.all(updatePromises);
+    
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`✅ Updated rankings for ${playersArray.length} players in game ${activeGame.id}`);
+    }
+
+  } catch (error) {
+    logger.error('❌ Error updating player rankings:', error);
+  }
 };
 
 // Helper function to end game
+// Helper function to create individual game results for each player
+const createGameResultsForPlayers = async (activeGame, scoreboard) => {
+  if (!db || !activeGame.id) return;
+
+  try {
+    const gameResultsPromises = Array.from(activeGame.players.values())
+      .filter(player => player.dbId) // Only process players with database IDs
+      .map(async (player) => {
+        try {
+          // First verify the player still exists in game_players table
+          const { data: playerExists, error: checkError } = await db.supabaseAdmin
+            .from('game_players')
+            .select('id')
+            .eq('id', player.dbId)
+            .single();
+
+          if (checkError || !playerExists) {
+            logger.warn(`⚠️ Player ${player.name} (${player.dbId}) not found in game_players table, skipping result creation`);
+            logger.debug(`Debug info: checkError=${checkError?.message}, playerExists=${!!playerExists}`);
+            return { success: false, error: 'Player not found in game_players', playerId: player.id };
+          }
+
+          logger.debug(`✅ Verified player ${player.name} exists in game_players table with ID: ${player.dbId}`);
+
+          // Find player's scoreboard entry for rank
+          const scoreboardEntry = scoreboard.find(entry => entry.name === player.name);
+          const finalRank = scoreboardEntry ? scoreboardEntry.rank : 0;
+
+        // Calculate player statistics
+        const totalQuestions = activeGame.totalQuestions || activeGame.questions?.length || 0;
+        const totalCorrect = player.correctAnswers || 0;
+        const completionPercentage = totalQuestions > 0 ? ((totalCorrect / totalQuestions) * 100) : 0;
+        
+        // Calculate average response time (if available)
+        const responseTimes = player.responseTimes || [];
+        const averageResponseTime = responseTimes.length > 0 
+          ? Math.round(responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length)
+          : 0;
+
+        // Create game result record
+        const gameResultData = {
+          game_id: activeGame.id,
+          player_id: player.dbId, // Use game_players.id (foreign key reference)
+          final_score: player.score || 0,
+          final_rank: finalRank,
+          total_correct: totalCorrect,
+          total_questions: totalQuestions,
+          average_response_time: averageResponseTime,
+          longest_streak: player.longestStreak || player.streak || 0,
+          completion_percentage: Math.round(completionPercentage * 100) / 100 // Round to 2 decimal places
+        };
+
+        logger.debug(`🔍 Creating game result for ${player.name}:`, {
+          game_id: gameResultData.game_id,
+          player_id: gameResultData.player_id,
+          player_name: player.name,
+          final_score: gameResultData.final_score,
+          final_rank: gameResultData.final_rank
+        });
+
+      // Insert into database
+      const { data, error } = await db.supabaseAdmin
+        .from('game_results')
+        .insert(gameResultData)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error(`❌ Failed to create game result for player ${player.name}:`, error);
+        return { success: false, error, playerId: player.id };
+      }
+
+      if (isDevelopment || isLocalhost) {
+        logger.database(`✅ Created game result for player ${player.name} (Score: ${player.score}, Rank: ${finalRank})`);
+      }
+
+      return { success: true, result: data, playerId: player.id };
+      
+        } catch (playerError) {
+          logger.error(`❌ Error creating result for player ${player.name}:`, playerError);
+          return { success: false, error: playerError.message, playerId: player.id };
+        }
+      });
+
+    const results = await Promise.allSettled(gameResultsPromises);
+    
+    const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+    const failed = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)).length;
+
+    if (isDevelopment || isLocalhost) {
+      logger.database(`📊 Game results creation summary: ${successful} successful, ${failed} failed`);
+    }
+
+    return { successful, failed, results };
+  } catch (error) {
+    logger.error('❌ Error in createGameResultsForPlayers:', error);
+    throw error;
+  }
+};
+
 const endGame = async (gameCode) => {
   const activeGame = activeGames.get(gameCode);
   if (!activeGame) return;
@@ -916,10 +1257,21 @@ const endGame = async (gameCode) => {
   // Update game status
   activeGame.status = 'finished';
   activeGame.ended_at = new Date().toISOString();
+  
+  // Clean up timers
+  if (activeGame.questionTimer) {
+    clearInterval(activeGame.questionTimer);
+    activeGame.questionTimer = null;
+  }
+  activeGame.isTimerRunning = false;
+  activeGame.showingResults = false;
 
   // Update database status to 'finished'
   if (activeGame.id && db) {
     try {
+      // Update final rankings in database before game ends
+      await updatePlayerRankings(activeGame);
+      
       const statusResult = await db.updateGameStatus(activeGame.id, 'finished', {
         ended_at: new Date().toISOString(),
         current_players: activeGame.players.size
@@ -959,8 +1311,37 @@ const endGame = async (gameCode) => {
     }
   }
 
+  // Create individual game results for each player
+  if (activeGame.id && db) {
+    try {
+      await createGameResultsForPlayers(activeGame, scoreboard);
+    } catch (resultsError) {
+      logger.error('❌ Error creating game results:', resultsError);
+    }
+  }
+
   // Send game over event
   io.to(gameCode).emit('game_over', { scoreboard });
+
+  // Update last_played_at for the question set
+  if (activeGame.question_set_id) {
+    try {
+      const { error: updateError } = await db.supabaseAdmin
+        .from('question_sets')
+        .update({ 
+          last_played_at: new Date().toISOString()
+        })
+        .eq('id', activeGame.question_set_id);
+
+      if (updateError) {
+        logger.error('❌ Error updating last_played_at:', updateError);
+      } else {
+        logger.debug('✅ Updated last_played_at for question set:', activeGame.question_set_id);
+      }
+    } catch (error) {
+      logger.error('❌ Error updating last_played_at:', error);
+    }
+  }
 
   // Emit game completion event for dashboard updates
   if (activeGame.question_set_id && activeGame.hostId) {
@@ -997,16 +1378,129 @@ io.on('connection', (socket) => {
     logger.connection(`🔌 New user connected: ${socket.id}`);
   }
 
+  // Initialize session restoration handlers for this socket
+  const sessionRestoreHandlers = new SessionRestoreHandlers(io, activeGames, db);
+
+  // Session restoration event handlers
+  socket.on('restoreSession', async (sessionData) => {
+    await sessionRestoreHandlers.handleSessionRestore(socket, sessionData);
+  });
+
+  // Host-specific restoration events (for compatibility)
+  socket.on('host:rejoinGame', async (sessionData) => {
+    const hostSessionData = { ...sessionData, isHost: true };
+    await sessionRestoreHandlers.handleSessionRestore(socket, hostSessionData);
+  });
+
+  // Player-specific restoration events (for compatibility)
+  socket.on('player:rejoinGame', async (sessionData) => {
+    const playerSessionData = { ...sessionData, isHost: false };
+    await sessionRestoreHandlers.handleSessionRestore(socket, playerSessionData);
+  });
+
+  // Legacy restoration events (for backward compatibility)
+  socket.on('requestStateRestoration', async (sessionData) => {
+    await sessionRestoreHandlers.handleSessionRestore(socket, sessionData);
+  });
+
+  socket.on('requestHostRestoration', async (sessionData) => {
+    const hostSessionData = { ...sessionData, isHost: true };
+    await sessionRestoreHandlers.handleSessionRestore(socket, hostSessionData);
+  });
+
+  socket.on('requestPlayerRestoration', async (sessionData) => {
+    const playerSessionData = { ...sessionData, isHost: false };
+    await sessionRestoreHandlers.handleSessionRestore(socket, playerSessionData);
+  });
+
+  // Additional session restoration helpers
+  socket.on('host:requestGameState', ({ gameId, room }) => {
+    try {
+      const gameCode = room;
+      const activeGame = activeGames.get(gameCode);
+      
+      if (activeGame) {
+        const connectedPlayers = Array.from(activeGame.players.values())
+          .filter(p => p.isConnected)
+          .map(p => ({
+            id: p.id,
+            name: p.name,
+            score: p.score,
+            joinedAt: p.joinedAt || Date.now()
+          }));
+
+        socket.emit('host:gameStateUpdate', {
+          gameCode,
+          gameId: activeGame.gameId,
+          status: activeGame.status,
+          players: connectedPlayers,
+          playerCount: connectedPlayers.length,
+          currentQuestionIndex: activeGame.currentQuestionIndex,
+          totalQuestions: activeGame.totalQuestions
+        });
+      } else {
+        socket.emit('host:gameNotFound', { gameCode, gameId });
+      }
+    } catch (error) {
+      logger.error('❌ Error getting game state:', error);
+      socket.emit('error', { message: 'Failed to get game state' });
+    }
+  });
+
+  socket.on('player:requestGameState', ({ playerName, room, gameId }) => {
+    try {
+      const gameCode = room;
+      const activeGame = activeGames.get(gameCode);
+      
+      if (activeGame) {
+        // Find player in game
+        let playerData = null;
+        for (const [playerId, player] of activeGame.players.entries()) {
+          if (player.name === playerName) {
+            playerData = player;
+            break;
+          }
+        }
+
+        if (playerData) {
+          socket.emit('player:gameStateUpdate', {
+            gameCode,
+            gameId: activeGame.gameId,
+            status: activeGame.status,
+            playerState: {
+              name: playerData.name,
+              score: playerData.score,
+              isReady: playerData.isReady
+            },
+            currentQuestionIndex: activeGame.currentQuestionIndex,
+            totalQuestions: activeGame.totalQuestions
+          });
+        } else {
+          socket.emit('player:notInGame', { playerName, gameCode });
+        }
+      } else {
+        socket.emit('player:gameNotFound', { gameCode, gameId });
+      }
+    } catch (error) {
+      logger.error('❌ Error getting player game state:', error);
+      socket.emit('error', { message: 'Failed to get game state' });
+    }
+  });
+
   // Create a new game
   socket.on('createGame', async ({ hostId, questionSetId, settings }) => {
     try {
       if (isDevelopment || isLocalhost) {
-        logger.game(`🎮 Creating game: Host ${hostId}, QuestionSet ${questionSetId}`);
+        logger.game(`🎮 [BRIDGE] Creating game via Socket (Host Control Integration): Host ${hostId}, QuestionSet ${questionSetId}`);
       }
       
       // Extract actual user ID from hostId (remove the temporary prefix)
       const actualHostId = hostId.includes('host_') ? 
         hostId.split('_')[1] : hostId;
+      
+      // === HOST CONTROL INTEGRATION BRIDGE ===
+      // Use the new host control game creation system internally
+      // while maintaining socket compatibility for frontend
       
       // If no manual title provided, fetch from question set along with play_settings
       let gameTitle = settings?.title;
@@ -1034,16 +1528,16 @@ io.on('connection', (socket) => {
             }
             
             if (isDevelopment) {
-              logger.debug(`✅ Retrieved from database - Title: ${gameTitle}`);
+              logger.debug(`✅ [BRIDGE] Retrieved from database - Title: ${gameTitle}`);
             }
           } else {
             if (isDevelopment) {
-              logger.warn(`⚠️ Could not fetch question set: ${qsError?.message || 'Not found'}`);
+              logger.warn(`⚠️ [BRIDGE] Could not fetch question set: ${qsError?.message || 'Not found'}`);
             }
             gameTitle = gameTitle || 'クイズゲーム'; // Default fallback title
           }
         } catch (fetchError) {
-          logger.error('❌ Error fetching question set:', fetchError);
+          logger.error('❌ [BRIDGE] Error fetching question set:', fetchError);
           gameTitle = gameTitle || 'クイズゲーム'; // Default fallback title
         }
       }
@@ -1055,54 +1549,46 @@ io.on('connection', (socket) => {
         title: gameTitle         // Always use resolved title
       };
       
-      // Clean settings - only keep game settings, not metadata
-      const cleanGameSettings = {
-        // Player Management - preserve question set value if it exists
+      // Enhanced settings for Phase 6 compatibility
+      const enhancedGameSettings = {
+        // Legacy settings (keep for backwards compatibility)
         maxPlayers: gameSettings.maxPlayers !== undefined ? gameSettings.maxPlayers : 50,
-        
-        // Game Flow
         autoAdvance: gameSettings.autoAdvance !== undefined ? gameSettings.autoAdvance : true,
         showExplanations: gameSettings.showExplanations !== undefined ? gameSettings.showExplanations : true,
         explanationTime: gameSettings.explanationTime !== undefined ? gameSettings.explanationTime : 30,
         showLeaderboard: gameSettings.showLeaderboard !== undefined ? gameSettings.showLeaderboard : true,
-        
-        // Scoring
-        pointCalculation: gameSettings.pointCalculation || 'fixed',
-        streakBonus: gameSettings.streakBonus !== undefined ? gameSettings.streakBonus : false,
-        
-        // Display Options
+        pointCalculation: gameSettings.pointCalculation || 'time-bonus',
+        streakBonus: gameSettings.streakBonus !== undefined ? gameSettings.streakBonus : true,
         showProgress: gameSettings.showProgress !== undefined ? gameSettings.showProgress : true,
-        showCorrectAnswer: gameSettings.showCorrectAnswer !== undefined ? gameSettings.showCorrectAnswer : true,
-        
-        // Advanced
-        spectatorMode: gameSettings.spectatorMode !== undefined ? gameSettings.spectatorMode : true,
-        allowAnswerChange: gameSettings.allowAnswerChange !== undefined ? gameSettings.allowAnswerChange : false
+        showCorrectAnswer: gameSettings.showCorrectAnswer !== undefined ? gameSettings.showCorrectAnswer : true
       };
       
-      // Use RoomManager to create the room
+      // Use RoomManager to create the room (legacy compatibility)
       const gameCode = roomManager.createRoom(
         `Host_${actualHostId}`,
         questionSetId,
-        cleanGameSettings
+        enhancedGameSettings
       );
       
       if (!gameCode) {
         throw new Error('Failed to create game room');
       }
 
-      // Create game in database as well for persistence
+      // Create game in database with Phase 6 enhanced structure
       const gameData = {
         host_id: actualHostId,
         question_set_id: questionSetId,
         game_code: gameCode,
         current_players: 0,
         status: 'waiting',
-        game_settings: cleanGameSettings, // Store only clean settings (includes maxPlayers)
-        created_at: new Date().toISOString()
+        game_settings: enhancedGameSettings, // Use enhanced settings
+        created_at: new Date().toISOString(),
+        // Host control metadata
+        host_control_enabled: true
       };
       
       if (isDevelopment) {
-        logger.debug(`🔄 Creating game in database...`);
+        logger.debug(`🔄 [BRIDGE] Creating Phase 6 compatible game in database...`);
       }
       const dbResult = await db.createGame(gameData);
       
@@ -1111,8 +1597,61 @@ io.on('connection', (socket) => {
       }
       
       const dbGame = dbResult.game;
+      
+      // === INITIALIZE RELATED TABLES ===
+      try {
+        // 1. Create host session tracking
+        const hostSessionResult = await db.createHostSession(dbGame.id, actualHostId, {
+          game_creation: true,
+          session_type: 'game_host',
+          initial_settings: enhancedGameSettings,
+          question_set_id: questionSetId,
+          creation_method: 'dashboard'
+        });
+        
+        if (!hostSessionResult.success) {
+          logger.warn(`⚠️ Failed to create host session: ${hostSessionResult.error}`);
+        }
+        
+        // 2. Create initial analytics snapshot
+        const analyticsResult = await db.createAnalyticsSnapshot(dbGame.id, 'game_start', null, {
+          initial_player_count: 0,
+          game_settings: enhancedGameSettings,
+          question_set_id: questionSetId,
+          created_via: 'dashboard',
+          host_id: actualHostId
+        });
+        
+        if (!analyticsResult.success) {
+          logger.warn(`⚠️ Failed to create analytics snapshot: ${analyticsResult.error}`);
+        }
+        
+        // 3. Log the game creation action (if log_host_action function exists)
+        try {
+          await db.supabaseAdmin.rpc('log_host_action', {
+            p_game_id: dbGame.id,
+            p_host_id: actualHostId,
+            p_action_type: 'game_created',
+            p_action_data: {
+              question_set_id: questionSetId,
+              initial_settings: enhancedGameSettings,
+              creation_method: 'dashboard'
+            }
+          });
+        } catch (logError) {
+          logger.warn(`⚠️ Failed to log host action: ${logError.message}`);
+        }
+        
+        if (isDevelopment) {
+          logger.debug(`✅ [INIT] Successfully initialized related tables for game ${dbGame.id}`);
+        }
+        
+      } catch (initError) {
+        logger.warn(`⚠️ [INIT] Some initialization steps failed: ${initError.message}`);
+        // Don't fail the entire game creation for initialization errors
+      }
       if (isDevelopment) {
-        logger.debug(`✅ Game created in database with UUID: ${dbGame.id}`);
+        logger.debug(`✅ [BRIDGE] Phase 6 game created in database with UUID: ${dbGame.id}`);
       }
       
       // Update the room in RoomManager with the database UUID
@@ -1121,13 +1660,14 @@ io.on('connection', (socket) => {
         room.gameId = dbGame.id; // Update to use database UUID
         room.gameUUID = dbGame.id; // Keep explicit reference
         room.roomCode = gameCode; // Keep room code reference
+        room.hostControlEnabled = true; // Enable host control features
       } else {
         if (isDevelopment) {
-          logger.error(`❌ Could not find room ${gameCode} in RoomManager to update gameId`);
+          logger.error(`❌ [BRIDGE] Could not find room ${gameCode} in RoomManager to update gameId`);
         }
       }
       
-      // Create a memory game object with database reference
+      // Create a memory game object with Phase 6 compatibility
       const game = {
         id: dbGame.id, // Use database UUID as primary ID
         game_code: gameCode,
@@ -1135,13 +1675,15 @@ io.on('connection', (socket) => {
         question_set_id: questionSetId,
         status: 'waiting',
         current_players: 0,
-        game_settings: cleanGameSettings, // Only use game_settings (includes maxPlayers)
+        game_settings: enhancedGameSettings, // Use enhanced settings
         created_at: dbGame.created_at,
-        dbGame: dbGame // Keep reference to full database object
+        dbGame: dbGame, // Keep reference to full database object
+        // Host control metadata
+        host_control_enabled: true
       };
       
       if (isDevelopment) {
-        logger.gameActivity(gameCode, `created: ${gameCode} (UUID: ${dbGame.id})`);
+        logger.gameActivity(gameCode, `[BRIDGE] Phase 6 compatible game created: ${gameCode} (UUID: ${dbGame.id})`);
       }
       
       // Store in activeGames for backwards compatibility
@@ -1152,23 +1694,51 @@ io.on('connection', (socket) => {
         questions: [],
         currentQuestionIndex: 0,
         currentAnswers: [],
-        questionInProgress: false
+        questionInProgress: false,
+        // Host control extensions
+        hostControlEnabled: true,
+        // Event logging for session restoration
+        eventLog: []
       });
       
       // Join the host to the game room
       socket.join(gameCode);
       
-      // Assign host role to socket
+      // Assign host role to socket with Phase 6 metadata
       socket.hostOfGame = gameCode;
+      socket.hostGameId = dbGame.id;
+      socket.hostControlEnabled = true;
+      
+      // Enable host control handlers for this socket
+      if (typeof setupHostHandlers === 'function') {
+        setupHostHandlers(socket, gameCode, dbGame.id);
+      }
       
       socket.emit('gameCreated', { 
         gameCode, 
-        game,
-        message: 'Game created successfully' 
+        game: {
+          ...game,
+          // Include Phase 6 capabilities in response
+          capabilities: {
+            hostControl: true,
+            playerManagement: true,
+            advancedSettings: true,
+            realTimeUpdates: true
+          }
+        },
+        message: 'Host control compatible game created successfully' 
+      });
+      
+      logger.info(`🎮 [BRIDGE] Phase 6 game creation completed successfully`, {
+        gameId: dbGame.id,
+        gameCode,
+        hostId: actualHostId,
+        questionSetId,
+        hostControlEnabled: true
       });
       
     } catch (error) {
-      logger.error('❌ Error creating game:', error);
+      logger.error('❌ [BRIDGE] Error creating host control game:', error);
       socket.emit('error', { message: 'Failed to create game', error: error.message });
     }
   });
@@ -1233,6 +1803,9 @@ io.on('connection', (socket) => {
         isAuthenticated: isAuthenticated,
         score: 0,
         streak: 0,
+        correctAnswers: 0,        // Track number of correct answers
+        responseTimes: [],        // Track response times for average calculation
+        longestStreak: 0,         // Track longest streak achieved
         isConnected: true,
         joinedAt: new Date().toISOString()
       };
@@ -1293,6 +1866,40 @@ io.on('connection', (socket) => {
                 logger.debug(`♻️ Restored returning player score: ${player.score}`);
               }
             }
+            
+            // === LOG PLAYER JOIN ACTION ===
+            try {
+              const actionType = result.isReturningPlayer ? 'rejoined' : 'joined';
+              const joinActionResult = await db.createPlayerAction(
+                gameUUID, 
+                playerUUID, 
+                'joined', // Use 'joined' for both new and returning players
+                {
+                  player_name: playerName,
+                  is_returning: result.isReturningPlayer,
+                  is_authenticated: isAuthenticated,
+                  is_guest: dbGamePlayer.is_guest,
+                  is_host: dbGamePlayer.is_host,
+                  socket_id: socket.id,
+                  user_agent: socket.handshake?.headers?.['user-agent'] || null,
+                  ip_address: socket.handshake?.address || null,
+                  join_method: 'direct_join'
+                },
+                result.isReturningPlayer ? 'Player rejoined the game' : 'Player joined the game',
+                null, // No performer for join actions
+                null  // No duration for join actions
+              );
+              
+              if (joinActionResult.success) {
+                if (isDevelopment) {
+                  logger.debug(`✅ Logged player join action for ${playerName} (${actionType})`);
+                }
+              } else {
+                logger.warn(`⚠️ Failed to log player join action: ${joinActionResult.error}`);
+              }
+            } catch (actionError) {
+              logger.warn(`⚠️ Error logging player join action:`, actionError);
+            }
           } else {
             if (isDevelopment || isLocalhost) {
               logger.warn(`⚠️ Failed to add player to database: ${result.error}`);
@@ -1330,6 +1937,7 @@ io.on('connection', (socket) => {
       try {
         socket.emit('joinedGame', {
           gameCode,
+          gameId: activeGame.gameId, // Add the UUID for session restoration
           playerCount: activeGame.players.size,
           gameStatus: activeGame.status,
           player: {
@@ -1344,7 +1952,7 @@ io.on('connection', (socket) => {
       }
       
       // Wait a brief moment to ensure the new player's frontend is ready to receive events
-      setTimeout(() => {
+      setTimeout(async () => {
         // Now notify all players (including the new one) about the updated player list
         const allPlayers = Array.from(activeGame.players.values()).map(p => ({
           id: p.id,
@@ -1355,6 +1963,24 @@ io.on('connection', (socket) => {
           isConnected: p.isConnected
         })).filter(p => p.isConnected);
         
+        // Log event for terminal restoration
+        if (activeGame.eventLog) {
+          activeGame.eventLog.push({
+            type: 'join',
+            playerName: player.name,
+            playerId: player.id,
+            time: Date.now(),
+            isAuthenticated: player.isAuthenticated,
+            isHost: player.isHost || false
+          });
+          
+          // Keep only last 100 events to prevent memory issues
+          if (activeGame.eventLog.length > 100) {
+            activeGame.eventLog = activeGame.eventLog.slice(-100);
+          }
+        }
+        
+        // Emit playerJoined to all clients in the game room (including the host)
         io.to(gameCode).emit('playerJoined', {
           player: {
             id: player.id,
@@ -1366,6 +1992,15 @@ io.on('connection', (socket) => {
           },
           totalPlayers: activeGame.players.size,
           allPlayers: allPlayers // Include complete player list
+        });
+        
+        // Debug: Log all sockets in the room to verify host is included
+        const socketsInRoom = await io.in(gameCode).fetchSockets();
+        logger.info(`🔍 Emitting playerJoined to room ${gameCode} with ${socketsInRoom.length} sockets:`);
+        socketsInRoom.forEach(s => {
+          const isHost = s.isHost || s.hostOfGame === gameCode;
+          const hasSessionRestored = s.sessionRestored;
+          logger.info(`  - Socket ${s.id}: ${isHost ? 'HOST' : 'player'}, restored: ${hasSessionRestored}, rooms: ${Array.from(s.rooms)}`);
         });
       }, 50); // Small delay to ensure frontend is ready
       
@@ -1381,9 +2016,17 @@ io.on('connection', (socket) => {
       const activeGame = activeGames.get(gameCode);
       
       if (!activeGame) {
+        console.log(`❌ getPlayerList: Game ${gameCode} not found`);
         socket.emit('error', { message: 'Game not found' });
         return;
       }
+      
+      console.log(`📋 getPlayerList request for game ${gameCode}`);
+      console.log(`👥 Active players in game:`, Array.from(activeGame.players.values()).map(p => ({
+        id: p.id,
+        name: p.name,
+        isConnected: p.isConnected
+      })));
       
       // Convert players map to array with relevant info
       const players = Array.from(activeGame.players.values()).map(player => ({
@@ -1395,6 +2038,7 @@ io.on('connection', (socket) => {
         isConnected: player.isConnected
       })).filter(player => player.isConnected); // Only send connected players
       
+      console.log(`📤 Sending player list:`, players);
       socket.emit('playerList', { players });
       
     } catch (error) {
@@ -1532,9 +2176,11 @@ io.on('connection', (socket) => {
       // Update game state with enhanced questions and flow config
       activeGame.status = 'active';
       activeGame.questions = finalQuestions;
+      activeGame.totalQuestions = finalQuestions.length; // Track total questions for game results
       activeGame.gameFlowConfig = gameFlowConfig;
       activeGame.currentQuestionIndex = 0;
       activeGame.started_at = new Date().toISOString();
+      activeGame.hostSocketId = socket.id; // Set the host socket ID for manual advance verification
       
       // Update database status to 'active'
       if (activeGame.id && db) {
@@ -1558,13 +2204,26 @@ io.on('connection', (socket) => {
       
       if (isDevelopment) {
         logger.debug(`✅ Game ${gameCode} started with ${activeGame.players.size} players`);
+        logger.debug(`🎮 Game ${gameCode} started by host via socket {
+  gameCode: '${gameCode}',
+  hostSocketId: '${activeGame.hostSocketId}',
+  playerCount: ${activeGame.players.size},
+  totalQuestions: ${activeGame.questions.length},
+  startedAt: '${activeGame.started_at}'
+}`);
       }
       
       // Notify all players that the game has started
       io.to(gameCode).emit('gameStarted', {
         message: 'Game has started!',
         totalQuestions: questions.length,
-        playerCount: activeGame.players.size
+        playerCount: activeGame.players.size,
+        gameSettings: {
+          autoAdvance: (settingsResult.gameSettings || activeGame.game_settings).autoAdvance !== false,
+          hybridMode: (settingsResult.gameSettings || activeGame.game_settings).hybridMode || false,
+          showExplanations: (settingsResult.gameSettings || activeGame.game_settings).showExplanations,
+          explanationTime: (settingsResult.gameSettings || activeGame.game_settings).explanationTime
+        }
       });
       
       // Send the first question after a short delay
@@ -1609,7 +2268,7 @@ io.on('connection', (socket) => {
   });
 
   // Handle player answers
-  socket.on('answer', ({ gameCode, questionId, selectedOption, timeTaken }) => {
+  socket.on('answer', async ({ gameCode, questionId, selectedOption, timeTaken }) => {
     try {
       if (isDevelopment || isLocalhost) {
         logger.debug(`💭 Answer received:
@@ -1648,6 +2307,27 @@ io.on('connection', (socket) => {
       // Validate the answer
       const isCorrect = selectedOption === currentQuestion.correctIndex;
       
+      // Record the answer in the database for detailed analytics
+      if (activeGame.id && db && player.dbId) {
+        try {
+          await db.submitPlayerAnswer({
+            player_id: player.dbId,
+            game_id: activeGame.id,
+            question_id: questionId,
+            answer_choice: selectedOption,
+            answer_text: currentQuestion.options?.[selectedOption] || null,
+            is_correct: isCorrect,
+            response_time: timeTaken ? Math.round(timeTaken * 1000) : null // Convert to milliseconds
+          });
+          
+          if (isDevelopment || isLocalhost) {
+            logger.debug(`📝 Recorded answer for ${player.name}: ${isCorrect ? 'correct' : 'incorrect'}`);
+          }
+        } catch (answerError) {
+          logger.error(`❌ Failed to record answer for ${player.name}:`, answerError);
+        }
+      }
+      
       // Calculate points using the new advanced scoring system
       const gameFlowConfig = activeGame.gameFlowConfig || {};
       const scoreResult = calculateGameScore({
@@ -1665,6 +2345,12 @@ io.on('connection', (socket) => {
         player.streak = scoreResult.newStreak;
         player.score += points;
         
+        // Track correct answers count
+        player.correctAnswers = (player.correctAnswers || 0) + 1;
+        
+        // Track longest streak achieved
+        player.longestStreak = Math.max(player.longestStreak || 0, player.streak);
+        
         // Log detailed breakdown for debugging
         if (scoreResult.breakdown && (isDevelopment || isLocalhost)) {
           const breakdown = scoreResult.breakdown;
@@ -1681,6 +2367,25 @@ io.on('connection', (socket) => {
         player.streak = 0;
         if (isDevelopment || isLocalhost) {
           logger.debug(`❌ ${player.name}: Wrong answer - streak reset`);
+        }
+      }
+
+      // Track response times for average calculation
+      if (!player.responseTimes) {
+        player.responseTimes = [];
+      }
+      player.responseTimes.push(timeTaken || 0);
+      
+      // Update player in database with current stats
+      if (activeGame.id && db && player.playerId) {
+        try {
+          await db.updateGamePlayer(activeGame.id, player.playerId, {
+            current_score: player.score,
+            current_streak: player.streak,
+            // Note: current_rank will be updated after all answers are processed
+          });
+        } catch (dbError) {
+          logger.error(`❌ Failed to update player ${player.name} in database:`, dbError);
         }
       }
       
@@ -1722,6 +2427,9 @@ io.on('connection', (socket) => {
         answeredCount: activeGame.currentAnswers.length,
         totalPlayers: activeGame.players.size
       });
+      
+      // Update player rankings in database
+      await updatePlayerRankings(activeGame);
       
       // Check if all players have answered or auto-advance conditions are met
       checkForQuestionCompletion(gameCode);
@@ -1783,8 +2491,102 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle host requests for current player list
+  socket.on('host:requestPlayerList', ({ room }) => {
+    try {
+      const gameCode = room;
+      const players = sessionRestoreHandlers.getCurrentPlayers(gameCode);
+      
+      socket.emit('host:playerListUpdate', {
+        gameCode,
+        players,
+        playerCount: players.length
+      });
+      
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`📋 Sent player list to host: ${players.length} players in ${gameCode}`);
+      }
+    } catch (error) {
+      logger.error('❌ Error getting player list:', error);
+      socket.emit('error', { message: 'Failed to get player list' });
+    }
+  });
+
+  // Handle host manual advance (for manual/hybrid modes)
+  socket.on('host_advance', async ({ gameCode, gameId, reason }) => {
+    try {
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`🎮 Host advance request received: gameCode=${gameCode}, gameId=${gameId}, reason=${reason}, socketId=${socket.id}`);
+      }
+      
+      const activeGame = activeGames.get(gameCode);
+      if (!activeGame) {
+        logger.error(`❌ Game not found for code: ${gameCode}`);
+        socket.emit('error', { message: 'Game not found' });
+        return;
+      }
+
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`🔍 Host verification: requestSocket=${socket.id}, gameHostSocket=${activeGame.hostSocketId}`);
+      }
+
+      // Verify the socket is the host
+      if (activeGame.hostSocketId !== socket.id) {
+        logger.error(`❌ Host verification failed: ${socket.id} is not the host (${activeGame.hostSocketId})`);
+        socket.emit('error', { message: 'Only the host can advance the game' });
+        return;
+      }
+
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`🎮 Host manually advancing game ${gameCode}, reason: ${reason}`);
+      }
+
+      // In manual mode, we need to handle different phases
+      const gameSettings = activeGame.game_settings || {};
+      const currentPhase = activeGame.showingResults ? 'explanation' : 'question';
+      
+      if (isDevelopment || isLocalhost) {
+        logger.debug(`🎮 Current phase: ${currentPhase}, autoAdvance: ${gameSettings.autoAdvance}, hybridMode: ${gameSettings.hybridMode}`);
+      }
+
+      if (currentPhase === 'question') {
+        // Host advancing from question phase - show explanation/leaderboard
+        const currentQuestion = activeGame.questions[activeGame.currentQuestionIndex];
+        const shouldShowExpl = GameSettingsService.shouldShowExplanation(currentQuestion, gameSettings);
+        
+        if (shouldShowExpl) {
+          if (isDevelopment || isLocalhost) {
+            logger.debug(`🎮 Host advancing to explanation for question ${activeGame.currentQuestionIndex + 1}`);
+          }
+          showQuestionExplanation(gameCode);
+        } else if (gameSettings.showLeaderboard) {
+          if (isDevelopment || isLocalhost) {
+            logger.debug(`🎮 Host advancing to leaderboard for question ${activeGame.currentQuestionIndex + 1}`);
+          }
+          showIntermediateLeaderboard(gameCode);
+        } else {
+          // No explanation or leaderboard, proceed to next question
+          if (isDevelopment || isLocalhost) {
+            logger.debug(`🎮 Host advancing to next question (no explanation/leaderboard)`);
+          }
+          await proceedToNextQuestion(gameCode);
+        }
+      } else {
+        // Host advancing from explanation/leaderboard phase - go to next question
+        if (isDevelopment || isLocalhost) {
+          logger.debug(`🎮 Host advancing from explanation/leaderboard to next question`);
+        }
+        await proceedToNextQuestion(gameCode);
+      }
+      
+    } catch (error) {
+      logger.error('❌ Error handling host advance:', error);
+      socket.emit('error', { message: 'Failed to advance game' });
+    }
+  });
+
   // Handle player disconnection
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     if (isDevelopment || isLocalhost) {
       logger.connection(`🔌 User disconnected: ${socket.id}`);
     }
@@ -1798,6 +2600,39 @@ io.on('connection', (socket) => {
         if (player) {
           player.isConnected = false;
           
+          // === LOG PLAYER DISCONNECT ACTION ===
+          if (player.playerId && activeGame.id) {
+            try {
+              const disconnectActionResult = await db.createPlayerAction(
+                activeGame.id, 
+                player.playerId, 
+                'left',
+                {
+                  player_name: player.name,
+                  is_authenticated: player.isAuthenticated,
+                  is_guest: player.isGuest,
+                  is_host: player.isHost,
+                  socket_id: socket.id,
+                  disconnect_reason: 'normal_disconnect',
+                  session_duration: player.joinedAt ? Date.now() - new Date(player.joinedAt).getTime() : null
+                },
+                'Player left the game',
+                null, // No performer for disconnect actions
+                null  // No duration for disconnect actions
+              );
+              
+              if (disconnectActionResult.success) {
+                if (isDevelopment) {
+                  logger.debug(`✅ Logged player disconnect action for ${player.name}`);
+                }
+              } else {
+                logger.warn(`⚠️ Failed to log player disconnect action: ${disconnectActionResult.error}`);
+              }
+            } catch (actionError) {
+              logger.warn(`⚠️ Error logging player disconnect action:`, actionError);
+            }
+          }
+          
           // Get updated player list (only connected players)
           const connectedPlayers = Array.from(activeGame.players.values())
             .filter(p => p.isConnected)
@@ -1809,6 +2644,23 @@ io.on('connection', (socket) => {
               isHost: p.isHost || false,
               isConnected: p.isConnected
             }));
+          
+          // Log event for terminal restoration
+          if (activeGame.eventLog) {
+            activeGame.eventLog.push({
+              type: 'left',
+              playerName: player.name,
+              playerId: socket.id,
+              time: Date.now(),
+              isAuthenticated: player.isAuthenticated,
+              isHost: player.isHost || false
+            });
+            
+            // Keep only last 100 events to prevent memory issues
+            if (activeGame.eventLog.length > 100) {
+              activeGame.eventLog = activeGame.eventLog.slice(-100);
+            }
+          }
           
           // Notify other players
           io.to(socket.gameCode).emit('playerDisconnected', {

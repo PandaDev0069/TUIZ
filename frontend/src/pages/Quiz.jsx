@@ -1,16 +1,43 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useManagedInterval } from "../utils/timerManager";
-import socket from "../socket";
-import QuestionRenderer from "../components/quiz/QuestionRenderer";
+import { usePlayerSocket, useConnectionStatus } from "../hooks/useSocket";
+import socketManager from "../utils/SocketManager";
+import QuizContent from "../components/quiz/QuizContent";
 import PostQuestionDisplay from "../components/quiz/PostQuestionDisplay/PostQuestionDisplay";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import "./quiz.css";
 
-function Quiz() {
+function Quiz({ previewMode = false, mockData = null }) {
   const { state } = useLocation();
-  const { name, room } = state || {};
+  const { name, room } = (previewMode && mockData) ? mockData : (state || {});
   const navigate = useNavigate();
+
+  // Use the player socket hook with session persistence - skip in preview mode
+  const socketHookResult = usePlayerSocket(
+    previewMode ? null : name, 
+    previewMode ? null : room, 
+    previewMode ? null : (state?.gameId)
+  );
+  
+  const { 
+    isConnected, 
+    playerState, 
+    sessionRestored, 
+    emit, 
+    on, 
+    off 
+  } = previewMode ? {
+    isConnected: true,
+    playerState: { connected: true },
+    sessionRestored: true,
+    emit: () => {},
+    on: () => {},
+    off: () => {}
+  } : socketHookResult;
+  
+  // Use connection status hook - skip in preview mode
+  const { connectionState } = previewMode ? { connectionState: 'connected' } : useConnectionStatus();
 
   const [question, setQuestion] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -31,13 +58,114 @@ function Quiz() {
   const [currentPlayerAnswerData, setCurrentPlayerAnswerData] = useState(null); // Store current player's answer data for accuracy
 
   useEffect(() => {
+    // Skip socket setup in preview mode
+    if (previewMode) {
+      // Set up mock data for preview
+      if (mockData?.mockQuestion) {
+        setQuestion(mockData.mockQuestion);
+        setTimer(mockData.mockQuestion.timeLimit || 30);
+      }
+      return;
+    }
+
     if (!name || !room) {
       navigate('/join');
       return;
     }
 
+    // Handle session restoration for active games
+    on('playerSessionRestored', (data) => {
+      if (import.meta.env.DEV) {
+        console.log('🔄 Player session restored:', data);
+      }
+      
+      // Update session data with complete information from server
+      if (data.playerState && data.gameState) {
+        socketManager.storeSessionData({
+          gameId: data.playerState.gameId || data.gameState.gameId,
+          room: data.playerState.gameCode || data.gameState.gameCode,
+          playerName: data.playerState.name,
+          isHost: false
+        });
+      }
+      
+      if (data.type === 'activeGame' && data.gameState) {
+        const { gameState } = data;
+        
+        // Update player score and state from restored data
+        if (data.playerState) {
+          setScore(data.playerState.score || 0);
+          setStreak(data.playerState.streak || 0);
+        }
+        
+        // If there's a current question, restore it
+        if (gameState.currentQuestion) {
+          if (import.meta.env.DEV) {
+            console.log('📋 Restoring current question:', gameState.currentQuestion);
+            console.log('📷 Question image URL:', gameState.currentQuestion.imageUrl);
+          }
+          
+          setQuestion(gameState.currentQuestion);
+          setSelected(null);
+          setFeedback("");
+          setShowExplanation(false);
+          setExplanationData(null);
+          setAnswerResult(null);
+          setLatestStandings(null);
+          setCurrentPlayerAnswerData(null);
+          
+          // Calculate remaining time based on server state
+          let remainingTime = 10; // default
+          if (gameState.timeRemaining && gameState.timeRemaining > 0) {
+            remainingTime = Math.ceil(gameState.timeRemaining / 1000);
+          } else if (gameState.currentQuestion.timeLimit) {
+            remainingTime = Math.ceil(gameState.currentQuestion.timeLimit / 1000);
+          }
+          
+          setTimer(remainingTime);
+          setQuestionScore(0);
+          
+          if (import.meta.env.DEV) {
+            console.log('⏰ Restored timer with remaining time:', remainingTime);
+          }
+        }
+        
+        // If showing results/explanation, handle that state
+        if (gameState.showingResults) {
+          if (import.meta.env.DEV) {
+            console.log('📊 Game is showing results, waiting for server events...');
+          }
+          // Don't set question to null here, let server events handle the explanation
+        }
+        
+        if (import.meta.env.DEV) {
+          console.log('✅ Successfully restored to active game');
+        }
+      }
+    });
+
+    // Handle session restore errors
+    on('sessionRestoreError', (error) => {
+      if (import.meta.env.DEV) {
+        console.error('❌ Session restore error:', error);
+      }
+      // Could redirect to join page or show error message
+    });
+
+    // Handle session expiration
+    on('sessionExpired', (data) => {
+      if (import.meta.env.DEV) {
+        console.log('⏰ Session expired:', data);
+      }
+      if (data.shouldRedirect) {
+        navigate(data.shouldRedirect);
+      } else {
+        navigate('/join');
+      }
+    });
+
     // Receive question from server
-    socket.on('question', (q) => {
+    on('question', (q) => {
       if (import.meta.env.DEV) {
         console.log('📋 Received question:', q);
       }
@@ -75,7 +203,7 @@ function Quiz() {
     });
 
     // Handle answer result from server
-    socket.on('answerResult', (result) => {
+    on('answerResult', (result) => {
       if (import.meta.env.DEV) {
         console.log('✅ Answer result:', result);
       }
@@ -92,20 +220,34 @@ function Quiz() {
     });
 
     // Handle explanation display
-    socket.on('showExplanation', (data) => {
+    on('showExplanation', (data) => {
       if (import.meta.env.DEV) {
-        console.log('💡 Showing explanation:', data);
+        console.log('📖 Received showExplanation event:', data);
       }
       setExplanationData(data);
       setShowExplanation(true);
       
-      // Set explanation timer
-      const explainTimer = Math.round(data.explanationTime / 1000) || 30;
-      setExplanationTimer(explainTimer);
-      setInitialExplanationDuration(explainTimer); // Store the original duration
+      // Set explanation timer - use remainingTime for reconnection sync, or full time for new explanations
+      let timerValue;
+      if (data.remainingTime !== undefined && data.remainingTime > 0) {
+        // Reconnection scenario - use remaining time from server
+        timerValue = Math.ceil(data.remainingTime / 1000);
+        if (import.meta.env.DEV) {
+          console.log('⏰ Using remaining explanation time from server:', timerValue, 'seconds');
+        }
+      } else {
+        // New explanation - use full time
+        timerValue = Math.round(data.explanationTime / 1000) || 30;
+        if (import.meta.env.DEV) {
+          console.log('⏰ Using full explanation time:', timerValue, 'seconds');
+        }
+      }
+      
+      setExplanationTimer(timerValue);
+      setInitialExplanationDuration(data.explanationTime); // Store in milliseconds (backend already converted)
       
       // Store the game's explanation time setting for use in leaderboard displays
-      setGameExplanationTime(explainTimer);
+      setGameExplanationTime(Math.round(data.explanationTime / 1000) || 30);
       
       // Hide question interface during explanation
       setQuestion(null);
@@ -129,7 +271,7 @@ function Quiz() {
     });
 
     // Handle individual player answer data for accurate status
-    socket.on('playerAnswerData', (data) => {
+    on('playerAnswerData', (data) => {
       if (import.meta.env.DEV) {
         console.log('🎯 Received player answer data:', data);
       }
@@ -137,7 +279,7 @@ function Quiz() {
     });
 
     // Handle intermediate scoreboard - for questions without explanations
-    socket.on('showLeaderboard', (data) => {
+    on('showLeaderboard', (data) => {
       if (import.meta.env.DEV) {
         console.log('🏆 Received intermediate leaderboard data:', data);
         console.log('Current player state:', { score, streak, questionScore, answerResult, feedback });
@@ -202,24 +344,81 @@ function Quiz() {
         ...leaderboardData 
       });
       setShowExplanation(true);
-      setExplanationTimer(data.explanationTime); // Use explanation time from server
-      setInitialExplanationDuration(data.explanationTime); // Store the original duration
+      
+      // Set leaderboard timer - use remainingTime for reconnection sync, or full time for new leaderboards
+      let timerValue;
+      if (data.remainingTime !== undefined && data.remainingTime > 0) {
+        // Reconnection scenario - use remaining time from server
+        timerValue = Math.ceil(data.remainingTime / 1000);
+        if (import.meta.env.DEV) {
+          console.log('⏰ Using remaining leaderboard time from server:', timerValue, 'seconds');
+        }
+      } else {
+        // New leaderboard - use full time
+        timerValue = data.explanationTime / 1000;
+        if (import.meta.env.DEV) {
+          console.log('⏰ Using full leaderboard time:', timerValue, 'seconds');
+        }
+      }
+      
+      setExplanationTimer(timerValue); // Convert to seconds for display
+      setInitialExplanationDuration(data.explanationTime); // Store in milliseconds (backend already converted)
     });
 
     // Handle game over
-    socket.on('game_over', ({ scoreboard }) => {
+    on('game_over', ({ scoreboard }) => {
       navigate('/scoreboard', { state: { scoreboard, name, room } });
     });
 
     return () => {
-      socket.off('question');
-      socket.off('answerResult');
-      socket.off('showExplanation');
-      socket.off('playerAnswerData');
-      socket.off('showLeaderboard');
-      socket.off('game_over');
+      // Skip cleanup in preview mode
+      if (previewMode) return;
+      
+      off('playerSessionRestored');
+      off('sessionRestoreError');
+      off('sessionExpired');
+      off('question');
+      off('answerResult');
+      off('showExplanation');
+      off('playerAnswerData');
+      off('showLeaderboard');
+      off('game_over');
     };
-  }, [name, room, navigate]);
+  }, [name, room, navigate, on, off, previewMode, sessionRestored, isConnected]);
+
+  // Separate useEffect for reconnection timeout to avoid infinite loops
+  useEffect(() => {
+    // Skip in preview mode
+    if (previewMode) return;
+    
+    // Only apply timeout if we're in a potential stuck state:
+    // - Connected to server
+    // - Have session data (name and room)
+    // - But no question AND no explanation showing AND not restored
+    // This indicates we're stuck in loading, not in normal game flow
+    const isStuckInLoading = isConnected && name && room && 
+                           !question && !showExplanation && !sessionRestored;
+    
+    if (isStuckInLoading) {
+      if (import.meta.env.DEV) {
+        console.log('🕐 Player appears stuck in loading state, setting timeout...');
+      }
+      
+      const timeout = setTimeout(() => {
+        // Final check before redirecting
+        if (!question && !showExplanation && !sessionRestored) {
+          if (import.meta.env.DEV) {
+            console.log('⏰ Reconnection timeout, redirecting to join page');
+          }
+          navigate('/join');
+        }
+      }, 15000); // 15 second timeout
+      
+      return () => {
+        clearTimeout(timeout);
+      };
+    }
+  }, [sessionRestored, isConnected, name, room, question, previewMode, navigate, showExplanation]);
 
   // Timer effect for questions - using managed interval
   useManagedInterval(
@@ -271,7 +470,7 @@ function Quiz() {
     
     const timeTaken = question ? Math.round((question.timeLimit / 1000) - timer) : 0;
     
-    socket.emit("answer", { 
+    emit("answer", { 
       gameCode: room, 
       questionId: question.id,
       selectedOption: index,
@@ -281,14 +480,14 @@ function Quiz() {
 
   useEffect(() => {
     // Receive result from server
-    socket.on('answer_result', ({ correct }) => {
+    on('answer_result', ({ correct }) => {
       setFeedback(correct ? "正解！" : " 残念!");
     });
 
     return () => {
-      socket.off('answer_result');
+      off('answer_result');
     };
-  }, []);
+  }, [on, off]);
 
   const handleExplanationComplete = () => {
     setShowExplanation(false);
@@ -363,21 +562,10 @@ function Quiz() {
         isIntermediate: explanationData.isIntermediate || false
       },
       
-      // Duration for timer - USE INITIAL DURATION, not current timer
-      duration: initialExplanationDuration * 1000
+      // Duration for timer - use current explanationTimer state (accounts for restored time)
+      duration: explanationTimer * 1000, // Convert seconds back to milliseconds for PostQuestionDisplay
+      initialDuration: initialExplanationDuration // Keep the original duration for reference
     };
-
-    if (import.meta.env.DEV) {
-      console.log('🔍 PostQuestionDisplay data:', {
-        hasExplanation: !!displayData.explanation,
-        hasAnswerStats: !!displayData.leaderboard.answerStats,
-        hasStandings: !!(displayData.leaderboard.standings && displayData.leaderboard.standings.length > 0),
-        standingsCount: displayData.leaderboard.standings?.length || 0,
-        currentPlayer: displayData.leaderboard.currentPlayer,
-        isIntermediate: displayData.leaderboard.isIntermediate,
-        duration: displayData.duration
-      });
-    }
 
     return (
       <PostQuestionDisplay
@@ -390,34 +578,37 @@ function Quiz() {
   if (!question) return (
     <div className="page-container">
       <div className="card">
-        <LoadingSkeleton type="question" count={1} />
+        {!sessionRestored && isConnected && !showExplanation ? (
+          <div className="quiz-loading reconnecting">
+            <div className="quiz-loading-skeleton">
+              <div className="loading-bar"></div>
+              <div className="loading-text">ゲームに再接続中...</div>
+              <div className="loading-subtext">
+                接続が復旧するまでお待ちください
+              </div>
+            </div>
+          </div>
+        ) : (
+          <LoadingSkeleton type="question" count={1} />
+        )}
       </div>
     </div>
   );
 
   return (
     <div className="page-container">
-      <div className="quiz-page">
-        <div className="quiz-header">
-          <div className="quiz-player-stats">
-            <div className="quiz-current-score">スコア: {score}</div>
-            {streak > 1 && <div className="quiz-streak-badge">🔥 {streak}連続!</div>}
-            {questionScore > 0 && <div className="quiz-last-points">+{questionScore}</div>}
-          </div>
-        </div>
-
-        
-        <QuestionRenderer
-          key={question?.id || question?.questionNumber}
-          question={question}
-          selected={selected}
-          answerResult={answerResult}
-          timer={timer}
-          onAnswer={handleAnswer}
-          showProgress={true}
-          showTimer={true}
-        />
-      </div>
+      <QuizContent
+        question={question}
+        selected={selected}
+        answerResult={answerResult}
+        timer={timer}
+        score={score}
+        streak={streak}
+        questionScore={questionScore}
+        onAnswer={handleAnswer}
+        showConnectionStatus={true}
+        previewMode={false}
+      />
     </div>
   );
 }

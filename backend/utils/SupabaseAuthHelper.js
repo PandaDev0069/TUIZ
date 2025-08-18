@@ -99,7 +99,13 @@ class SupabaseAuthHelper {
       return userProfile;
       
     } catch (error) {
-      logger.error('❌ Authentication error details:', error);
+      // Reduce logging noise for common auth failures
+      const isExpiredToken = error.message.includes('expired') || error.message.includes('jwt expired');
+      const isInvalidToken = error.message.includes('invalid') || error.message.includes('jwt');
+      
+      if (!isExpiredToken && !isInvalidToken) {
+        logger.error('Authentication error details:', error.message);
+      }
       
       // If Supabase method fails, try manual JWT verification as fallback
       if (this.jwtSecret && error.message.includes('Token verification failed')) {

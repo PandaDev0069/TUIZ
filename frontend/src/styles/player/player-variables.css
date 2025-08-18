@@ -1,0 +1,22 @@
+/* Player UI variables layered on top of universal theme */
+
+:root {
+  /* Player-specific accents (can be themed later) */
+  --player-accent: var(--tuiz-primary-500);
+  --player-accent-strong: var(--tuiz-primary-600);
+  --player-accent-weak: var(--tuiz-primary-300);
+  --player-good: var(--tuiz-success);
+  --player-warn: var(--tuiz-warning);
+  --player-danger: var(--tuiz-danger);
+
+  /* Surfaces & borders for player glass UI */
+  --player-surface: var(--tuiz-glass-light);
+  --player-surface-2: var(--tuiz-glass-medium);
+  --player-border: var(--tuiz-glass-border-light);
+  --player-border-strong: var(--tuiz-glass-border-heavy);
+
+  /* Radii & gaps */
+  --player-radius: var(--tuiz-radius-2xl);
+  --player-radius-md: var(--tuiz-radius-xl);
+  --player-gap: var(--tuiz-space-3);
+}

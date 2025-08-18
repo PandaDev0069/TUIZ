@@ -4,7 +4,8 @@ import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Analytics } from '@vercel/analytics/react'
 import socket from './socket'
 import { AuthProvider } from './contexts/AuthContext'
-import AuthDebugger from './components/AuthDebugger'
+import './utils/AnimationController' // Initialize animation controller
+import './utils/ViewportFix' // Initialize viewport fix for mobile
 import ToastContainer from './components/ToastContainer'
 import CleanupWarningHandler from './components/CleanupWarningHandler'
 import Home from './pages/Home'
@@ -16,10 +17,9 @@ import QuizPreview from './pages/QuizPreview'
 import QuizLibrary from './pages/QuizLibrary'
 import Join from './pages/Join'
 import WaitingRoom from './pages/WaitingRoom'
-import Host from './pages/Host'
 import HostLobby from './pages/HostLobby'
 import Quiz from './pages/Quiz'
-import QuizControl from './pages/QuizControl'
+import HostDashboard from './components/host/dashboard/HostDashboard'
 import Scoreboard from './pages/Scoreboard'
 import Privacy from './pages/Privacy'
 import License from './pages/License'
@@ -38,8 +38,6 @@ function App() {
     };
   }, []);
 
-  const isDevelopment = import.meta.env.DEV;
-
   return (
     <AuthProvider>
       <CleanupWarningHandler />
@@ -51,12 +49,11 @@ function App() {
         <Route path="/quiz-library" element={<QuizLibrary />} />
         <Route path="/create-quiz" element={<CreateQuiz />} />
         <Route path="/preview" element={<QuizPreview />} />
-        <Route path="/host" element={<Host/>} />
         <Route path="/host/lobby" element={<HostLobby />} />
+        <Route path="/host/dashboard" element={<HostDashboard />} />
         <Route path="/join" element={<Join />} />
         <Route path="/waiting" element={<WaitingRoom />} />
         <Route path="/quiz" element={<Quiz />} />
-        <Route path="/quiz/control" element={<QuizControl />} />
         <Route path="/scoreboard" element={<Scoreboard />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/license" element={<License />} />

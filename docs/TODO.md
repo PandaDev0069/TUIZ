@@ -1,7 +1,32 @@
 # 📋 TODO List
 
-**Last Updated**: August 10, 2025 - Dashboard metadata updates completed ✅
+**Last Updated**: August 16, 2025 - Fixed session check API endpoint
 
+### 🏗️ Core Features
+- [ ] **🎮 HOST CONTROL PANEL ENHANCEMENT** - ⚡ **MAJOR PROJECT** 
+  - [ ] **Real-time Analytics Dashboard** - Live game insights with Kahoot-style visualizations
+  - [ ] **Advanced Player Management** - Individual player controls, team management, spectator mode
+  - [ ] **Enhanced Game Controls** - Pause/resume, skip questions, timer adjustments, emergency stop
+  - [ ] **Comprehensive Results System** - Animated podium, detailed analytics, export functionality
+  - [ ] **Audio & Animation System** - Sound effects, background music, smooth transitions
+  - [ ] **Mobile Host Experience** - Touch-friendly controls, gesture support, responsive design
+- [ ] **Advanced Question Types**
+  - [ ] Multiple choice with images
+  - [ ] True/False questions
+  - [ ] Text input questions
+  - [ ] Drag and drop questions
+
+- [ ] **Game Management** (Enhanced by Host Control Panel)
+  - [x] Pause/Resume game functionality *(via Host Control Panel)*
+  - [x] Real-time player management *(via Host Control Panel)*
+  - [ ] Advanced scoring options
+  - [ ] Time limits per question
+
+- [ ] **Analytics & Reporting** (Enhanced by Host Control Panel)
+  - [x] Detailed game analytics *(via Host Control Panel)*
+  - [x] Player performance reports *(via Host Control Panel)*
+  - [x] Export results functionality *(via Host Control Panel)*
+  - [ ] Historical data visualization
 ## 🔥 High Priority Tasks
 
 ### ✅ Recently Completed
@@ -10,9 +35,29 @@
 - [x] **ReDoS Vulnerability Patched** - Fixed unsafe email validation regex
 - [x] **Environment-Specific Logging** - Implemented secure logging with development/production separation
 - [x] **Documentation Restructure** - Organized docs folder with professional GitHub Pages setup
+- [x] **Host Settings Panel Refactor** - Moved GameSettingsPanel to proper host folder structure with BEM CSS and React Icons integration (August 16, 2025)
+- [x] **Socket Reconnection Architecture** - Created comprehensive SocketManager with automatic reconnection, session persistence, and React hooks (August 16, 2025)
 
 ### 🚀 Immediate (This Week)
 - [x] **Dashboard Metadata Updates** - Fixed dashboard to properly update question set statistics like times_played when games end
+- [ ] **🎮 HOST CONTROL PANEL - FOUNDATION** - ⚡ **NEW PRIORITY** - Start Phase 1 of Kahoot-style host control panel
+  - [ ] Design system creation (host color palette, typography, components)
+  - [ ] Enhanced Host.jsx with modern visual design
+  - [ ] Improved HostLobby.jsx with animations and better UX
+  - [ ] Mobile-first responsive design implementation
+- [ ] **🔌 Socket Reconnection System Integration** - ⚡ **CRITICAL** - Complete integration of new socket architecture across all components
+  - [x] SocketManager.js - Core reconnection logic with exponential backoff and session persistence
+  - [x] useSocket.js hooks - React hooks for easy socket integration (useSocket, useHostSocket, usePlayerSocket, etc.)
+  - [x] ConnectionStatus.jsx - Visual connection status indicator component
+  - [x] connectionStatus.css - BEM styling for connection status component
+  - [x] HostLobby.jsx - Integrated with new socket system and connection status
+  - [ ] Quiz.jsx - Replace direct socket imports with useSocket hooks
+  - [ ] WaitingRoom.jsx - Replace direct socket imports with useSocket hooks
+  - [ ] Join.jsx - Replace direct socket imports with useSocket hooks
+  - [ ] HostControlPage.jsx - Replace direct socket imports with useSocket hooks
+  - [ ] GameControlPanel.jsx - Replace direct socket imports with useSocket hooks
+  - [ ] Dashboard.jsx - Replace direct socket imports with useSocket hooks
+  - [ ] Test reconnection scenarios (page reload, network interruption, etc.)
 - [ ] **Complete Format String Fixes** - Replace remaining console.* statements with secure logging
 - [ ] **Security Audit Remaining APIs** - Review all API endpoints for additional vulnerabilities
 - [ ] **Fix Quiz Results Generation** - Investigate why game completion doesn't create results
@@ -20,6 +65,11 @@
 - [ ] **Quiz Library Implementation** - Create dedicated quiz management page with advanced filtering
 
 ### 📈 Short Term (This Month)
+- [ ] **🎮 HOST CONTROL PANEL - CORE FEATURES** - ⚡ **HIGH PRIORITY** - Phase 2-3 Development
+  - [ ] Central HostDashboard with real-time game overview
+  - [ ] GameControlPanel with pause/resume/skip functionality
+  - [ ] PlayerManager with kick/mute capabilities and team management
+  - [ ] Backend API extensions for host control features
 - [ ] **Dashboard Redesign - Phase 2** - Complete integration of all modern dashboard components
 - [ ] **Quiz Library Advanced Features** - Add bulk operations, import/export, and public quiz discovery
 - [ ] **Answer Image Upload Feature** - Implement strategy for answer images in quiz creation
@@ -243,6 +293,32 @@
 - [x] **Player Capacity Bug Fix** - Resolved database schema sync issues
 - [ ] **Dashboard Redesign Planning** - Analyzed current dashboard structure and demo implementations
 - [ ] **Quiz Library Architecture** - Designed component structure for new quiz management system
+ - [x] **Profile Settings Modal - Dashboard Styling Alignment** - Updated ProfileSettingsModal to use universal theme tokens, glassmorphism, BEM classes, and react-icons; added a11y (dialog roles, Escape, initial focus)
+ - [x] **Dashboard Mobile Layout Fixes** - KPI footer anchoring via --vh; horizontal scroller cards compacted with 16:9 thumbs; kept inline actions inside scrollers to avoid tall cards; single-column grids on small screens
+
+### Progress
+ - [x] 2025-08-14: Wired host CSS to inherit universal theme/animations. Updated files: frontend/src/styles/host/host-variables.css, host-animations.css, host-components.css, host-responsive.css. Why: centralize tokens and ensure consistent theming. Next: audit host pages to remove any redundant hardcoded colors and rely on CSS variables; verify animations respect reduced-motion.
+ - [x] 2025-08-14: Aligned host color scheme with universal (primary/secondary mapped to tuiz primary/purple). Simplified interactive colors via color-mix; removed redundant --host-primary-rgb. Next: replace any remaining hard-coded colors in host-* with host variables.
+  - Files: `frontend/src/styles/player/player-variables.css`, `frontend/src/styles/player/player-components.css`, `frontend/src/styles/player/player-animations.css`, `frontend/src/pages/WaitingRoom.jsx`
+ - [x] 2025-08-14: HostLobby shows "player left" lines in terminal when users disconnect
+   - Files: `frontend/src/pages/HostLobby.jsx`, `frontend/src/pages/hostLobby.css`
+   - Why: Improve host awareness of live player changes; mirrors existing playerJoined terminal lines
+   - Next: Persist terminal log with capped length and auto-scroll; unify terminal feed (join/leave/system) with icons
+ - [x] 2025-08-14: HostLobby terminal UX upgrade (filter/sort/group, badges, icons, durations, export, context menu, resizable, live list)
+   - Files: `frontend/src/pages/HostLobby.jsx`, `frontend/src/pages/hostLobby.css`
+   - Why: Faster operator flow and better readability; adds kick/reconnect UI hooks and CSV export
+   - Next: Wire kick/reconnect to backend events if not present; add capped log size (e.g., 500 entries) and auto-scroll to latest; i18n wrap remaining strings
+
+ - [x] 2025-08-14: Remove kick/re-join feature from frontend
+   - Files: `frontend/src/pages/HostLobby.jsx`, `frontend/src/pages/WaitingRoom.jsx`
+   - Why: Product decision to simplify lobby controls and avoid partial backend dependency
+   - Notes: Removed context menu and emitKick/emitReconnect in HostLobby; removed kicked/rejoin UI and socket listeners in WaitingRoom. Backend endpoints left untouched for backward compatibility.
+
+## ⏸️ Deferred / Backlog
+- [ ] Universal dotted background utility (deferred 2025-08-14)
+  - Status: Deferred to avoid scope creep; keep current page-specific pattern.
+  - Current: `frontend/src/pages/hostLobby.css` uses a local ::before SVG data-URI pattern; no universal styles added.
+  - Future scope: Add theme tokens (--tuiz-dot-color/size/gap) and utilities (.tuiz-bg-dots, .tuiz-bg-dots--overlay), then refactor HostLobby to consume them and remove the page-specific overlay.
 
 ### Juy 2025
 - [x] **Database Migration** - Updated schema for better performance
@@ -268,3 +344,77 @@
 3. **Testing**: Quality assurance
 4. **Review**: Code review and feedback
 5. **Deployment**: Release to production
+
+## 📝 Recent Progress Log
+
+### August 16, 2025 - Host Settings Panel Refactor
+**Files Changed:**
+- Created: `frontend/src/components/host/settings/GameSettingsPanel.jsx`
+- Created: `frontend/src/components/host/settings/gameSettingsPanel.css`
+- Updated: `frontend/src/pages/HostLobby.jsx` (import path)
+- Removed: `frontend/src/components/GameSettingsPanel.jsx`
+- Removed: `frontend/src/components/gameSettingsPanel.css`
+
+**Changes Made:**
+- Moved settings panel to proper host folder structure following TUIZ conventions
+- Replaced emojis with React Icons (FiTarget, FiTrophy, FiEye, FiSliders)
+- Implemented BEM naming convention throughout CSS
+- Added CSS variables for icon colors (--host-accent, --host-warning, --host-success, --host-accent2)
+- Improved accessibility with proper ARIA labels and semantic HTML
+- Enhanced responsive design for mobile/desktop
+- Added high contrast and reduced motion support
+- Improved animation system with proper keyframes
+
+**Next Steps:**
+- Continue with universal theme integration
+- Add animation controller integration
+- Test cross-browser compatibility
+
+### August 16, 2025 - Active Session UI Refactor
+**Files Changed:**
+- Updated: `frontend/src/pages/Dashboard.jsx` (replaced Tailwind classes)
+- Updated: `frontend/src/pages/dashboard.css` (added BEM styles)
+
+**Changes Made:**
+- Replaced Tailwind CSS classes with project's custom BEM methodology
+- Added proper CSS classes: `dashboard__active-session-*` and `dashboard__session-check-*`
+- Used TUIZ universal theme tokens (--tuiz-space-*, --tuiz-radius-*, --tuiz-text-*)
+- Maintained visual consistency while following project conventions
+- Added proper hover states and transitions using `tuiz-hover-scale` class
+- Implemented responsive design with CSS variables
+
+**Why:**
+- Project uses custom BEM CSS methodology, not Tailwind
+- Ensures consistency with existing dashboard components
+- Follows copilot instructions for maintaining project architecture
+
+**Next Steps:**
+- Test UI appearance and functionality
+- Verify session restoration works correctly
+- Continue dashboard modernization following BEM patterns
+
+---
+
+## August 16, 2025 - Fixed Session Check API Endpoint
+
+**Files Modified:**
+- `backend/routes/api/quiz.js` - Fixed `/quiz/session/check` endpoint implementation
+
+**What Changed:**
+- Replaced non-existent `RoomManager.getGameData()` method call with proper `ActiveGameUpdater.activeGamesRef.get()` access
+- Fixed host ID comparison to use correct format (`host_${userId}` instead of raw user ID)
+- Fixed property access: changed `gameData.hostId` to `gameData.host` to match actual activeGames structure
+- Fixed player count calculation to handle Map objects correctly (`gameData.players.size` vs `Object.keys().length`)
+- Fixed game status check: look for both `gameData.status` and `gameData.gameStatus` properties (activeGames uses `status`)
+- Added proper error handling for missing ActiveGameUpdater reference
+- Improved logging for debugging session check process
+
+**Why:**
+- Dashboard was getting 500 Internal Server Error when checking for active sessions
+- Previous implementation tried to use a method that didn't exist in RoomManager
+- Backend architecture uses `activeGames` Map in server.js, accessible through ActiveGameUpdater
+
+**Next Steps:**
+- Test session check functionality in Dashboard
+- Verify active session restoration works correctly
+- Monitor for any remaining session-related errors

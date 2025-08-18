@@ -40,8 +40,18 @@ const AnswerOption = ({
   };
 
   const getOptionText = () => {
-    // Always use the provided option text, regardless of question type
-    return option;
+    // Handle both string and object options
+    if (typeof option === 'string') {
+      return option;
+    }
+    
+    // Handle object with text property
+    if (typeof option === 'object' && option !== null) {
+      return option.text || option.label || option.content || String(option);
+    }
+    
+    // Fallback
+    return String(option || '');
   };
 
   const getAriaLabel = () => {

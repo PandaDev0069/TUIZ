@@ -1,0 +1,285 @@
+/**
+ * TUIZ Host Control Panel Design System
+ * Maps host tokens to universal theme so host UI inherits global styles.
+ */
+
+/* Inherit global tokens, typography, and utilities */
+@import '../universal-theme.css';
+
+:root {
+  /* ========================================
+     HOST COLOR PALETTE - Original
+     ======================================== */
+  
+   /* Primary Colors - inherit from universal theme */
+   --host-primary: var(--tuiz-primary-500, #4285f4);
+   --host-primary-light: var(--tuiz-primary-400, #6ba3f7);
+   --host-primary-dark: var(--tuiz-primary-700, #2563eb);
+  
+   /* Secondary Colors - map to universal purple brand */
+    --host-secondary: var(--tuiz-purple-500, #a855f7);
+    --host-secondary-light: var(--tuiz-purple-400, #c084fc);
+    --host-secondary-dark: var(--tuiz-purple-700, #7c3aed);
+  
+  /* Semantic Colors */
+   --host-success: var(--tuiz-success, #34a853);
+   --host-warning: var(--tuiz-warning, #f59e0b);
+   --host-danger: var(--tuiz-danger, #ea4335);
+   --host-info: var(--tuiz-info, #4285f4);
+  
+  /* Neutral Colors */
+   --host-white: var(--tuiz-white, #ffffff);
+   --host-gray-50: var(--tuiz-gray-50, #f9fafb);
+   --host-gray-100: var(--tuiz-gray-100, #f3f4f6);
+   --host-gray-200: var(--tuiz-gray-200, #e5e7eb);
+   --host-gray-300: var(--tuiz-gray-300, #d1d5db);
+   --host-gray-400: var(--tuiz-gray-400, #9ca3af);
+   --host-gray-500: var(--tuiz-gray-500, #6b7280);
+   --host-gray-600: var(--tuiz-gray-600, #4b5563);
+   --host-gray-700: var(--tuiz-gray-700, #374151);
+   --host-gray-800: var(--tuiz-gray-800, #1f2937);
+   --host-gray-900: var(--tuiz-gray-900, #111827);
+  
+  /* Background Colors */
+   --host-bg-primary: var(--tuiz-gray-50, #f8f9fa);
+   --host-bg-secondary: var(--tuiz-white, #ffffff);
+   --host-bg-tertiary: var(--tuiz-gray-100, #f1f3f4);
+  --host-bg-overlay: rgba(0, 0, 0, 0.4); /* Modal overlays */
+  
+  /* Interactive Colors */
+   /* Use color-mix to derive interactive states from theme colors */
+   --host-hover-primary: color-mix(in srgb, var(--host-primary) 12%, transparent);
+   --host-hover-secondary: color-mix(in srgb, var(--host-secondary) 12%, transparent);
+   --host-hover-danger: color-mix(in srgb, var(--host-danger) 12%, transparent);
+   --host-focus-ring: color-mix(in srgb, var(--host-primary) 24%, transparent);
+  
+  /* ========================================
+     TYPOGRAPHY SYSTEM
+     ======================================== */
+  
+  /* Font Family */
+   --host-font-family: var(--tuiz-font-family, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif);
+   --host-font-family-mono: var(--tuiz-font-family-mono, 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace);
+  
+  /* Font Sizes - Mobile-first approach */
+   --host-font-size-xs: var(--tuiz-text-xs, 0.75rem);
+   --host-font-size-sm: var(--tuiz-text-sm, 0.875rem);
+   --host-font-size-base: var(--tuiz-text-base, 1rem);
+   --host-font-size-md: var(--tuiz-text-base, 1rem);
+   --host-font-size-lg: var(--tuiz-text-lg, 1.125rem);
+   --host-font-size-xl: var(--tuiz-text-xl, 1.25rem);
+   --host-font-size-2xl: var(--tuiz-text-2xl, 1.5rem);
+   --host-font-size-3xl: var(--tuiz-text-3xl, 1.875rem);
+   --host-font-size-4xl: var(--tuiz-text-4xl, 2.25rem);
+  
+  /* Font Weights */
+   --host-font-weight-normal: var(--tuiz-font-normal, 400);
+   --host-font-weight-medium: var(--tuiz-font-medium, 500);
+   --host-font-weight-semibold: var(--tuiz-font-semibold, 600);
+   --host-font-weight-bold: var(--tuiz-font-bold, 700);
+  
+  /* Line Heights */
+   --host-line-height-tight: var(--tuiz-leading-tight, 1.25);
+   --host-line-height-normal: var(--tuiz-leading-normal, 1.5);
+   --host-line-height-relaxed: var(--tuiz-leading-relaxed, 1.75);
+  
+  /* ========================================
+     SPACING SYSTEM - 8px base grid
+     ======================================== */
+  
+   --host-space-0: var(--tuiz-space-0, 0);
+   --host-space-px: 1px;
+   --host-space-0_5: calc(var(--tuiz-space-2, 0.5rem) / 4); /* 2px */
+   --host-space-1: var(--tuiz-space-1, 0.25rem);
+   --host-space-1_5: calc(var(--tuiz-space-2, 0.5rem) * 0.75);
+   --host-space-2: var(--tuiz-space-2, 0.5rem);
+   --host-space-2_5: calc(var(--tuiz-space-2, 0.5rem) + var(--tuiz-space-1, 0.25rem));
+   --host-space-3: var(--tuiz-space-3, 0.75rem);
+   --host-space-3_5: calc(var(--tuiz-space-3, 0.75rem) + var(--tuiz-space-0, 0));
+   --host-space-4: var(--tuiz-space-4, 1rem);
+   --host-space-5: var(--tuiz-space-5, 1.25rem);
+   --host-space-6: var(--tuiz-space-6, 1.5rem);
+   --host-space-7: calc(var(--tuiz-space-6, 1.5rem) + var(--tuiz-space-1, 0.25rem));
+   --host-space-8: var(--tuiz-space-8, 2rem);
+   --host-space-9: calc(var(--tuiz-space-8, 2rem) + var(--tuiz-space-1, 0.25rem));
+   --host-space-10: var(--tuiz-space-10, 2.5rem);
+   --host-space-11: calc(var(--tuiz-space-10, 2.5rem) + var(--tuiz-space-1, 0.25rem));
+   --host-space-12: var(--tuiz-space-12, 3rem);
+   --host-space-14: calc(var(--tuiz-space-12, 3rem) + var(--tuiz-space-2, 0.5rem));
+   --host-space-16: var(--tuiz-space-16, 4rem);
+   --host-space-20: var(--tuiz-space-20, 5rem);
+   --host-space-24: var(--tuiz-space-24, 6rem);
+   --host-space-32: var(--tuiz-space-32, 8rem);
+  
+  /* Semantic Spacing Aliases */
+  --host-space-xs: var(--host-space-1);    /* 4px */
+  --host-space-sm: var(--host-space-2);    /* 8px */
+  --host-space-md: var(--host-space-4);    /* 16px */
+  --host-space-lg: var(--host-space-6);    /* 24px */
+  --host-space-xl: var(--host-space-8);    /* 32px */
+  --host-space-2xl: var(--host-space-12);  /* 48px */
+  --host-space-3xl: var(--host-space-16);  /* 64px */
+  
+  /* ========================================
+     ANIMATION & TIMING
+     ======================================== */
+  
+  /* Transition Durations */
+   --host-duration-fast: var(--tuiz-duration-fast, 150ms);
+   --host-duration-medium: var(--tuiz-duration-normal, 300ms);
+   --host-duration-slow: var(--tuiz-duration-slow, 500ms);
+   --host-duration-slower: calc(var(--tuiz-duration-slow, 500ms) * 2);
+  
+  /* Transition Timings */
+   --host-ease-linear: linear;
+   --host-ease-in: var(--tuiz-ease-in, cubic-bezier(0.4, 0, 1, 1));
+   --host-ease-out: var(--tuiz-ease-out, cubic-bezier(0, 0, 0.2, 1));
+   --host-ease-in-out: var(--tuiz-ease-in-out, cubic-bezier(0.4, 0, 0.2, 1));
+   --host-ease-bounce: var(--tuiz-ease-bounce, cubic-bezier(0.68, -0.55, 0.265, 1.55));
+  
+  /* Combined Transition Properties */
+   --host-transition-fast: var(--host-duration-fast) var(--host-ease-out);
+   --host-transition-medium: var(--host-duration-medium) var(--host-ease-in-out);
+   --host-transition-slow: var(--host-duration-slow) var(--host-ease-in-out);
+   --host-transition-bounce: var(--host-duration-medium) var(--host-ease-bounce);
+  
+  /* ========================================
+     SHADOWS & ELEVATION
+     ======================================== */
+  
+  /* Box Shadows - Material Design inspired */
+   --host-shadow-none: none;
+   --host-shadow-xs: var(--tuiz-shadow-sm, 0 1px 2px 0 rgba(0,0,0,0.05));
+   --host-shadow-sm: var(--tuiz-shadow-md, 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06));
+   --host-shadow-md: var(--tuiz-shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05));
+   --host-shadow-lg: var(--tuiz-shadow-xl, 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04));
+   --host-shadow-xl: var(--tuiz-shadow-2xl, 0 25px 50px -12px rgba(0,0,0,0.25));
+   --host-shadow-2xl: var(--tuiz-shadow-2xl, 0 25px 50px -12px rgba(0,0,0,0.25));
+  
+  /* Focus Shadows */
+  --host-shadow-focus: 0 0 0 3px var(--host-focus-ring);
+  --host-shadow-focus-danger: 0 0 0 3px rgba(234, 67, 53, 0.24);
+  --host-shadow-focus-success: 0 0 0 3px rgba(52, 168, 83, 0.24);
+  
+  /* ========================================
+     BORDER RADIUS
+     ======================================== */
+  
+   --host-radius-none: 0;
+   --host-radius-xs: var(--tuiz-radius-sm, 0.125rem);
+   --host-radius-sm: var(--tuiz-radius-sm, 0.25rem);
+   --host-radius-md: var(--tuiz-radius-md, 0.375rem);
+   --host-radius-lg: var(--tuiz-radius-lg, 0.5rem);
+   --host-radius-xl: var(--tuiz-radius-xl, 0.75rem);
+   --host-radius-2xl: var(--tuiz-radius-2xl, 1rem);
+   --host-radius-3xl: var(--tuiz-radius-3xl, 1.5rem);
+   --host-radius-full: var(--tuiz-radius-full, 9999px);
+  
+  /* ========================================
+     Z-INDEX LAYERS
+     ======================================== */
+  
+  --host-z-auto: auto;
+  --host-z-0: 0;
+  --host-z-10: 10;     /* Dropdowns */
+  --host-z-20: 20;     /* Sticky elements */
+  --host-z-30: 30;     /* Fixed headers */
+  --host-z-40: 40;     /* Overlays */
+  --host-z-50: 50;     /* Modals */
+  --host-z-60: 60;     /* Tooltips */
+  --host-z-70: 70;     /* Notifications */
+  --host-z-80: 80;     /* Loading overlays */
+  --host-z-90: 90;     /* Critical alerts */
+  --host-z-100: 100;   /* Maximum priority */
+  
+  /* ========================================
+     BREAKPOINTS (for reference in calc())
+     ======================================== */
+  
+   --host-breakpoint-sm: var(--tuiz-screen-sm, 640px);
+   --host-breakpoint-md: var(--tuiz-screen-md, 768px);
+   --host-breakpoint-lg: var(--tuiz-screen-lg, 1024px);
+   --host-breakpoint-xl: var(--tuiz-screen-xl, 1280px);
+   --host-breakpoint-2xl: var(--tuiz-screen-2xl, 1536px);
+  
+  /* ========================================
+     COMPONENT-SPECIFIC VARIABLES
+     ======================================== */
+  
+  /* Button Heights */
+  --host-button-height-sm: 2rem;    /* 32px */
+  --host-button-height-md: 2.5rem;  /* 40px */
+  --host-button-height-lg: 3rem;    /* 48px */
+  --host-button-height-xl: 3.5rem;  /* 56px */
+  
+  /* Input Heights */
+  --host-input-height-sm: 2rem;     /* 32px */
+  --host-input-height-md: 2.5rem;   /* 40px */
+  --host-input-height-lg: 3rem;     /* 48px */
+  
+  /* Card Padding */
+  --host-card-padding-sm: var(--host-space-3);  /* 12px */
+  --host-card-padding-md: var(--host-space-4);  /* 16px */
+  --host-card-padding-lg: var(--host-space-6);  /* 24px */
+  --host-card-padding-xl: var(--host-space-8);  /* 32px */
+  
+  /* Header Heights */
+  --host-header-height: 4rem;       /* 64px */
+  --host-navbar-height: 3.5rem;     /* 56px */
+  
+  /* Sidebar Widths */
+  --host-sidebar-width-sm: 16rem;   /* 256px */
+  --host-sidebar-width-md: 18rem;   /* 288px */
+  --host-sidebar-width-lg: 20rem;   /* 320px */
+  
+  /* Container Max Widths */
+  --host-container-sm: 640px;
+  --host-container-md: 768px;
+  --host-container-lg: 1024px;
+  --host-container-xl: 1280px;
+  --host-container-2xl: 1536px;
+}
+
+/* ========================================
+   DARK MODE SUPPORT (Future Enhancement)
+   ======================================== */
+
+/* 
+@media (prefers-color-scheme: dark) {
+  :root {
+    Dark mode color overrides would go here
+    Currently focusing on light mode only
+  }
+}
+*/
+
+/* ========================================
+   REDUCED MOTION SUPPORT
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --host-duration-fast: 0ms;
+    --host-duration-medium: 0ms;
+    --host-duration-slow: 0ms;
+    --host-duration-slower: 0ms;
+    --host-transition-fast: none;
+    --host-transition-medium: none;
+    --host-transition-slow: none;
+    --host-transition-bounce: none;
+  }
+}
+
+/* ========================================
+   HIGH CONTRAST SUPPORT
+   ======================================== */
+
+@media (prefers-contrast: high) {
+  :root {
+   --host-gray-300: var(--tuiz-gray-400, #8e8e93);
+   --host-gray-400: var(--tuiz-gray-500, #6d6d70);
+   --host-primary: var(--tuiz-primary-600, #0066cc);
+   --host-danger: var(--tuiz-danger, #d70015);
+   --host-success: var(--tuiz-success, #1d6f2e);
+  }
+}

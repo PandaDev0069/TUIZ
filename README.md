@@ -2,7 +2,14 @@
 
 A Kahoot-style quiz app supporting **200-300 concurrent players** with real-time interactions, animations, and sound effects.
 
-## 📁 Project Structure
+## 📁 Project ## 📚 Project Documentation
+
+- **[Development Plan](./docs/plan.md)** - Project roadmap and architecture
+- **[TODO List](./docs/TODO's.md)** - Current development tasks and progress
+- **[Socket Reconnection Guide](./docs/SOCKET_RECONNECTION_GUIDE.md)** - Comprehensive guide to the socket reconnection system
+- **[Bug Tracker](./docs/Bug_Tracker.md)** - Known issues and resolutions
+- **[Database Schema](./docs/database/current_schema.sql)** - Complete database structure
+- **[Feature Requests](./docs/feature_req.md)** - Planned enhancements and ideasre
 
 ```
 /TUIZ
@@ -17,7 +24,9 @@ A Kahoot-style quiz app supporting **200-300 concurrent players** with real-time
 │       • Responsive UI (mobile-first design)
 │       • Framer Motion for smooth animations
 │       • Howler.js for immersive sound effects
-│       • Real-time Socket.IO communication
+│       • Real-time Socket.IO communication with automatic reconnection
+│       • Comprehensive socket reconnection system with session persistence
+│       • Visual connection status indicators across all pages
 │       • Quiz creation with image upload support
 │       • Live scoreboard and intermediate rankings
 │       • Interactive game settings panel with real-time updates

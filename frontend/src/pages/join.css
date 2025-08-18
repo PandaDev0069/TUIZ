@@ -1,237 +1,491 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+/* Import Universal Theme */
+@import '../styles/universal-theme.css';
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-}
-
-.join-container {
+/* ===== JOIN BLOCK ===== */
+.join {
   min-height: 100vh;
-  min-height: 100dvh; /* Dynamic viewport height for mobile */
+  min-height: 100dvh;
   width: 100%;
+  background: var(--tuiz-gradient-primary);
+  color: var(--tuiz-white);
+  font-family: var(--tuiz-font-family);
+  overflow-x: hidden;
+  position: relative;
+  /* Prevent flash - start invisible until animations are ready */
+  opacity: 0;
+  visibility: hidden;
+}
+
+.join__wrapper {
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 20px;
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-  color: white;
-  font-family: 'Poppins', sans-serif;
-}
-
-.join-card {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 2rem;
-  border-radius: 16px;
-  backdrop-filter: blur(8px);
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  padding: var(--tuiz-space-4);
+  max-width: 1200px;
   margin: 0 auto;
 }
 
-h1 {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.join__main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tuiz-space-8) 0;
+}
+
+/* Show join page when animations are ready */
+.join.tuiz-animations-ready {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease-out;
+}
+
+/* Fallback: show page after 200ms regardless of animation state */
+.join {
+  animation: joinFallbackShow 0.1s ease-out 0.2s both;
+}
+
+@keyframes joinFallbackShow {
+  to {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* ===== CONTAINER ELEMENT ===== */
+.join__container {
+  background: var(--tuiz-glass-light);
+  backdrop-filter: var(--tuiz-blur-medium);
+  border-radius: var(--tuiz-radius-3xl);
+  padding: var(--tuiz-space-12) var(--tuiz-space-8);
+  width: 100%;
+  max-width: 480px;
+  box-shadow: var(--tuiz-shadow-glass);
+  border: 1px solid var(--tuiz-glass-border-light);
+  position: relative;
+  overflow: hidden;
+  /* Prevent flash - start invisible until animated */
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.join__container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+/* ===== HEADER ELEMENT ===== */
+.join__header {
+  text-align: center;
+  margin-bottom: var(--tuiz-space-10);
+  /* Prevent flash - start invisible until animated */
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.join__title {
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  font-weight: 700;
+  margin-bottom: var(--tuiz-space-2);
+  background: linear-gradient(45deg, var(--tuiz-white), #e0e7ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.join__subtitle {
+  font-size: var(--tuiz-text-2xl);
   font-weight: 600;
+  margin-bottom: var(--tuiz-space-4);
+  color: rgba(255, 255, 255, 0.95);
 }
 
-p {
-  font-size: 1.1rem;
-  margin-bottom: 2rem;
-  opacity: 0.9;
+.join__description {
+  font-size: var(--tuiz-text-base);
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
 }
 
-.input-group {
+/* ===== FORM ELEMENT ===== */
+.join__form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: var(--tuiz-space-6);
+  /* Prevent flash - start invisible until animated */
+  opacity: 0;
+  transform: translateY(20px);
 }
 
-input {
+/* ===== INPUT GROUP ELEMENT ===== */
+.join__input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tuiz-space-2);
+  /* Prevent flash - start invisible until animated */
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.join__label {
+  font-size: var(--tuiz-text-sm);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: var(--tuiz-space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--tuiz-space-2);
+}
+
+.join__label-icon {
+  font-size: var(--tuiz-text-base);
+}
+
+.join__label-icon--user {
+  color: #34d399;
+}
+
+.join__label-icon--room {
+  color: #fbbf24;
+}
+
+/* ===== INPUT WRAPPER ELEMENT ===== */
+.join__input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.join__input {
   width: 100%;
-  box-sizing: border-box;
-  padding: 1rem;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 1rem;
-  transition: all 0.3s ease;
+  padding: var(--tuiz-space-4);
+  border: 2px solid var(--tuiz-glass-border-light);
+  border-radius: var(--tuiz-radius-xl);
+  background: var(--tuiz-glass-light);
+  color: var(--tuiz-white);
+  font-size: var(--tuiz-text-base);
+  transition: all var(--tuiz-duration-normal) var(--tuiz-ease-out);
+  font-family: var(--tuiz-font-family);
+  backdrop-filter: var(--tuiz-blur-light);
 }
 
-input::placeholder {
+.join__input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.join__input:focus {
+  outline: none;
+  border-color: var(--tuiz-glass-border-heavy);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+  transform: scale(1.01);
+}
+
+/* Special styling for room code input */
+.join__input--room-code {
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  text-align: center;
+}
+
+.join__input--room-code:focus {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
+}
+
+/* ===== ERROR MESSAGE ELEMENT ===== */
+.join__error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--tuiz-radius-lg);
+  padding: var(--tuiz-space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--tuiz-space-2);
+  font-size: var(--tuiz-text-sm);
+  color: #fecaca;
+  animation: errorSlideIn 0.4s ease-out;
+}
+
+.join__error-icon {
+  color: var(--tuiz-danger);
+  font-size: var(--tuiz-text-lg);
+  filter: drop-shadow(0 2px 4px rgba(239, 68, 68, 0.3));
+}
+
+/* ===== BUTTON ELEMENT ===== */
+.join__button {
+  width: 100%;
+  padding: var(--tuiz-space-4) var(--tuiz-space-8);
+  border: none;
+  border-radius: var(--tuiz-radius-xl);
+  font-size: var(--tuiz-text-lg);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--tuiz-duration-normal) var(--tuiz-ease-out);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tuiz-space-2);
+  margin-top: var(--tuiz-space-4);
+  font-family: var(--tuiz-font-family);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(45deg, var(--tuiz-success), #059669);
+  color: var(--tuiz-white);
+  /* Prevent flash - start invisible until animated */
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.join__button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.8s ease;
+}
+
+.join__button:hover::before {
+  left: 100%;
+}
+
+.join__button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.join__button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.join__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  background: var(--tuiz-glass-medium);
   color: rgba(255, 255, 255, 0.6);
 }
 
-input:focus {
-  outline: none;
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.15);
+.join__button-icon {
+  font-size: var(--tuiz-text-base);
+  animation: iconFloat 2s ease-in-out infinite;
 }
 
-button {
-  width: 100%;
-  padding: 1rem;
-  border: none;
-  border-radius: 12px;
-  background: white;
-  color: #4c1d95;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
+/* ===== FOOTER ELEMENT ===== */
+.join__footer {
+  text-align: center;
+  margin-top: auto;
+  padding: var(--tuiz-space-8) 0 var(--tuiz-space-4);
+  border-top: 1px solid var(--tuiz-glass-border-light);
+  /* Prevent flash - start invisible until animated */
+  opacity: 0;
+  transform: translateY(20px);
 }
 
-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.join__back-link {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-size: var(--tuiz-text-sm);
+  transition: color var(--tuiz-duration-fast) var(--tuiz-ease-out);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tuiz-space-1);
 }
 
-button:active {
-  transform: translateY(0);
+.join__back-link:hover {
+  color: var(--tuiz-white);
 }
 
-/* Error message styling */
-.error {
-  color: #fecaca;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
+.join__back-icon {
+  animation: arrowFloat 2s ease-in-out infinite;
 }
 
-/* Responsive design */
-@media (max-width: 480px) {
-  .join-card {
-    padding: 1.5rem;
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+  .join {
+    min-height: 100vh;
+    min-height: 100svh; /* Use small viewport height */
+    overflow-x: hidden;
+  }
+  
+  .join__wrapper {
+    min-height: 100vh;
+    min-height: 100svh;
+    padding: var(--tuiz-space-2);
+  }
+  
+  .join__main {
+    padding: var(--tuiz-space-4) 0;
+  }
+  
+  .join__container {
+    padding: var(--tuiz-space-8) var(--tuiz-space-6);
+    max-width: 100%;
   }
 
-  h1 {
+  .join__title {
     font-size: 2rem;
   }
 
-  input, button {
-    padding: 0.8rem;
-  }
-}
-
-/* Mobile keyboard support - Enhanced */
-@media (max-width: 768px) {
-  .join-container {
-    /* Ensure proper scrolling on mobile */
-    min-height: 100vh;
-    min-height: 100svh; /* Small viewport height - excludes mobile UI */
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    /* Smooth scrolling for better UX */
-    scroll-behavior: smooth;
-    /* Ensure container can accommodate keyboard */
-    padding-bottom: 2rem;
+  .join__subtitle {
+    font-size: var(--tuiz-text-xl);
   }
 
-  .join-card {
-    /* Allow the card to be scrollable */
-    max-height: none;
-    margin: auto;
-    /* Add padding for better keyboard experience */
-    margin-bottom: 2rem; /* Safe space for mobile UI */
-    /* Ensure card stays visible during keyboard interaction */
-    position: relative;
-    z-index: 1;
-    /* Better positioning for mobile keyboard scenarios */
-    transform-origin: center top;
-  }
-
-  /* Enhanced input styling for mobile keyboard interaction */
-  input {
-    /* Prevent zoom on iOS Safari */
-    font-size: 16px;
-    /* Improve mobile input experience */
+  .join__input {
+    font-size: 16px; /* Prevent zoom on iOS */
+    min-height: 50px;
     -webkit-appearance: none;
     appearance: none;
-    border-radius: 12px;
-    /* Better spacing for touch */
-    min-height: 50px;
-    /* Ensure inputs are always clickable */
-    position: relative;
-    z-index: 5;
-    /* Better touch target */
-    padding: 1rem;
   }
 
-  /* Enhanced focus states for better mobile visibility */
-  input:focus {
-    /* Ensure focused inputs have better visibility */
-    transform: scale(1.02);
-    transition: transform 0.2s ease;
-    /* Add a stronger glow effect for better visibility */
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
-    border-color: rgba(255, 255, 255, 0.9);
-    /* Ensure the focused input is always visible */
-    position: relative;
-    z-index: 10;
-    /* Force repaint to ensure visibility */
-    will-change: transform;
+  .join__input:focus {
+    transform: scale(1.005);
   }
 
-  /* Handle viewport changes for mobile keyboard */
-  .input-group {
-    scroll-margin-top: 120px; /* Increased for better spacing */
-    scroll-margin-bottom: 120px;
-    /* Ensure inputs have enough spacing */
-    gap: 1.5rem;
-    /* Better positioning for keyboard scenarios */
-    position: relative;
-    /* Ensure proper stacking */
-    z-index: 2;
-  }
-  
-  /* Special styling for room code input when focused */
-  input[placeholder="ルームコード"]:focus {
-    /* Extra prominent styling for room code input */
-    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.6);
-    transform: scale(1.03);
-    /* Ensure it stays above other elements */
-    z-index: 15;
-    /* Add subtle animation to draw attention */
-    animation: focusPulse 0.3s ease-in-out;
+  .join__input-group {
+    scroll-margin-top: 100px;
+    scroll-margin-bottom: 100px;
   }
 
-  @keyframes focusPulse {
-    0% { transform: scale(1.02); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1.03); }
-  }
-
-  /* Better button accessibility on mobile */
-  button {
+  .join__button {
     min-height: 50px;
     touch-action: manipulation;
-    /* Ensure button stays accessible */
-    margin-top: 1rem;
-  }
-
-  /* Add visual feedback for form interaction */
-  .input-group input:focus ~ input,
-  .input-group input:focus {
-    /* Highlight active state */
-    border-color: rgba(255, 255, 255, 0.8);
   }
 }
 
-/* iOS specific fixes */
+@media (max-width: 480px) {
+  .join {
+    min-height: 100vh;
+    min-height: 100svh;
+    width: 100vw;
+    overflow-x: hidden;
+  }
+  
+  .join__wrapper {
+    min-height: 100vh;
+    min-height: 100svh;
+    padding: var(--tuiz-space-2);
+    width: 100%;
+  }
+  
+  .join__container {
+    padding: var(--tuiz-space-6) var(--tuiz-space-4);
+    border-radius: var(--tuiz-radius-2xl);
+    width: 100%;
+  }
+
+  .join__header {
+    margin-bottom: var(--tuiz-space-8);
+  }
+
+  .join__input {
+    padding: var(--tuiz-space-3);
+  }
+
+  .join__button {
+    padding: var(--tuiz-space-3) var(--tuiz-space-6);
+    font-size: var(--tuiz-text-base);
+  }
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes errorSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes iconFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes arrowFloat {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-3px);
+  }
+}
+
+/* ===== ACCESSIBILITY ===== */
+@media (prefers-reduced-motion: reduce) {
+  .join,
+  .join__container,
+  .join__header,
+  .join__form,
+  .join__input-group,
+  .join__button,
+  .join__footer,
+  .join__title,
+  .join__label-icon,
+  .join__button-icon,
+  .join__back-icon,
+  .join__input {
+    animation: none !important;
+    transition: none;
+  }
+
+  .join__container::before {
+    animation: none !important;
+  }
+}
+
+/* ===== FOCUS STATES ===== */
+.join__input:focus-visible,
+.join__button:focus-visible,
+.join__back-link:focus-visible {
+  outline: 2px solid var(--tuiz-white);
+  outline-offset: 2px;
+}
+
+/* ===== iOS SPECIFIC FIXES ===== */
 @supports (-webkit-touch-callout: none) {
-  .page-container {
-    /* Better iOS support */
+  .join {
     min-height: -webkit-fill-available;
+  }
+  
+  .join__wrapper {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* ===== HIGH CONTRAST MODE ===== */
+@media (prefers-contrast: high) {
+  .join__input {
+    border-color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .join__input:focus {
+    border-color: var(--tuiz-white);
   }
 }

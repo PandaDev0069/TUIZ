@@ -15,14 +15,18 @@
     "framer-motion": "^12.23.6",
     "howler": "^2.2.4",
     "lucide-react": "^0.539.0",
+    "prop-types": "^15.8.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-frame-component": "^5.2.7",
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.7.0",
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
+    "@esbuild/linux-x64": "^0.24.0",
     "@eslint/js": "^9.30.1",
+    "@rollup/rollup-linux-x64-gnu": "^4.9.6",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
@@ -31,5 +35,8 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
     "vite": "^7.0.4"
+  },
+  "overrides": {
+    "rollup": "^4.9.6"
   }
 }

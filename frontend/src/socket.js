@@ -1,15 +1,14 @@
-import { io } from 'socket.io-client';
-import { apiConfig } from './utils/apiConfig';
-
-const socket = io(apiConfig.socketUrl, {
-    transports: ['websocket', 'polling'], // Added polling as fallback
-    timeout: 20000,
-    forceNew: true
-});
+import socketManager from './utils/SocketManager';
 
 // Only log socket connection in development
 if (import.meta.env.DEV) {
-  console.log(`🔌 Connecting to backend at: ${apiConfig.socketUrl}`);
+  const socketUrl = socketManager.getSocket()?.io?.uri || 'initializing...';
+  console.log(`🔌 Socket Manager initialized, connecting to: ${socketUrl}`);
 }
 
-export default socket;
+// Export the socket instance for backward compatibility
+// Note: This may be null initially until connection is established
+export default socketManager.getSocket();
+
+// Also export the manager for advanced usage
+export { socketManager };

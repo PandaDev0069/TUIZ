@@ -8,6 +8,7 @@ export const useConfirmation = () => {
     confirmText: '',
     cancelText: '',
     type: 'warning',
+    clickPosition: null,
     onConfirm: null,
     onCancel: null
   });
@@ -17,7 +18,8 @@ export const useConfirmation = () => {
     message = 'この操作を実行しますか？',
     confirmText = '確認',
     cancelText = 'キャンセル',
-    type = 'warning'
+    type = 'warning',
+    clickPosition = null
   }) => {
     return new Promise((resolve) => {
       setConfirmationState({
@@ -27,6 +29,7 @@ export const useConfirmation = () => {
         confirmText,
         cancelText,
         type,
+        clickPosition,
         onConfirm: () => {
           resolve(true);
           setConfirmationState(prev => ({ ...prev, isOpen: false }));
@@ -58,7 +61,8 @@ export const useConfirmation = () => {
       message: confirmationState.message,
       confirmText: confirmationState.confirmText,
       cancelText: confirmationState.cancelText,
-      type: confirmationState.type
+      type: confirmationState.type,
+      clickPosition: confirmationState.clickPosition
     }
   };
 };

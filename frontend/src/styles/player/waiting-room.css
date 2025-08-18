@@ -1,0 +1,69 @@
+/* Waiting Room page-specific BEM styles.
+   Built on top of player-components + universal theme.
+*/
+@import './player-variables.css';
+
+/* Root page adjustments */
+.waiting-room .player-card {
+  /* Slightly larger max width for lobby info */
+  width: min(740px, 92vw);
+}
+
+/* Title fine-tuning */
+.waiting-room .player-card__title {
+  text-align: center;
+}
+
+/* Room code pill */
+.waiting-room .player-pill {
+  justify-content: center;
+}
+
+/* Waiting subtitle */
+.waiting-room .waiting {
+  text-align: center;
+  opacity: .95;
+}
+
+/* Preload block refinements */
+.waiting-room .preload {
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.waiting-room .preload__title svg {
+  color: var(--player-good);
+}
+.waiting-room .preload__percent {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Completion */
+.waiting-room .preload-complete {
+  text-align: center;
+}
+
+/* Error */
+.waiting-room .preload-error {
+  text-align: center;
+}
+
+/* Default loading */
+.waiting-room .player-loading {
+  margin-top: 16px;
+}
+.waiting-room .player-loading svg {
+  font-size: 1.75rem;
+  color: var(--player-accent-weak);
+}
+
+/* Roster */
+.waiting-room .player-roster {
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .waiting-room .preload { padding: 12px; }
+  /* Ensure comfortable side gutters on very small screens */
+  .waiting-room .player-card { width: 89vw; margin-inline: auto; }
+}

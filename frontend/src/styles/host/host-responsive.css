@@ -1,0 +1,806 @@
+/**
+ * TUIZ Host Control Panel - Responsive Design
+ * Phase 1.1: Design System Creation
+ * 
+ * Mobile-first responsive breakpoints and layout utilities
+ * Optimized for Kahoot-style quiz hosting across all devices
+ */
+
+/* ========================================
+  IMPORT UNIVERSAL THEME + HOST TOKENS
+  ======================================== */
+
+@import '../universal-theme.css';
+@import './host-variables.css';
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS
+   ======================================== */
+
+/* 
+ * Mobile-first approach:
+ * - Base styles apply to mobile (320px+)
+ * - Progressively enhance for larger screens
+ * - Breakpoints align with common device sizes
+ */
+
+/* ========================================
+   CONTAINER UTILITIES
+   ======================================== */
+
+/* Block: host-container */
+.host-container {
+  width: 100%;
+  max-width: var(--host-max-width);
+  margin: 0 auto;
+  padding: 0 var(--host-space-4);
+}
+
+/* Container Size Modifiers */
+.host-container--small {
+  max-width: 640px;
+}
+
+.host-container--medium {
+  max-width: 768px;
+}
+
+.host-container--large {
+  max-width: 1024px;
+}
+
+.host-container--extra-large {
+  max-width: 1280px;
+}
+
+.host-container--full {
+  max-width: none;
+}
+
+/* Container Padding Modifiers */
+.host-container--tight {
+  padding: 0 var(--host-space-2);
+}
+
+.host-container--loose {
+  padding: 0 var(--host-space-6);
+}
+
+/* Responsive Container Padding */
+@media (min-width: 640px) {
+  .host-container {
+    padding: 0 var(--host-space-6);
+  }
+  
+  .host-container--tight {
+    padding: 0 var(--host-space-4);
+  }
+  
+  .host-container--loose {
+    padding: 0 var(--host-space-8);
+  }
+}
+
+@media (min-width: 1024px) {
+  .host-container {
+    padding: 0 var(--host-space-8);
+  }
+  
+  .host-container--loose {
+    padding: 0 var(--host-space-12);
+  }
+}
+
+/* ========================================
+   GRID SYSTEM
+   ======================================== */
+
+/* Block: host-grid */
+.host-grid {
+  display: grid;
+  gap: var(--host-space-4);
+}
+
+/* Grid Column Utilities */
+.host-grid--1 { grid-template-columns: 1fr; }
+.host-grid--2 { grid-template-columns: repeat(2, 1fr); }
+.host-grid--3 { grid-template-columns: repeat(3, 1fr); }
+.host-grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+/* Grid Gap Modifiers */
+.host-grid--gap-small { gap: var(--host-space-2); }
+.host-grid--gap-medium { gap: var(--host-space-4); }
+.host-grid--gap-large { gap: var(--host-space-6); }
+.host-grid--gap-extra-large { gap: var(--host-space-8); }
+
+/* Responsive Grid Columns */
+@media (min-width: 640px) {
+  .host-grid--sm-1 { grid-template-columns: 1fr; }
+  .host-grid--sm-2 { grid-template-columns: repeat(2, 1fr); }
+  .host-grid--sm-3 { grid-template-columns: repeat(3, 1fr); }
+  .host-grid--sm-4 { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (min-width: 768px) {
+  .host-grid--md-1 { grid-template-columns: 1fr; }
+  .host-grid--md-2 { grid-template-columns: repeat(2, 1fr); }
+  .host-grid--md-3 { grid-template-columns: repeat(3, 1fr); }
+  .host-grid--md-4 { grid-template-columns: repeat(4, 1fr); }
+  .host-grid--md-5 { grid-template-columns: repeat(5, 1fr); }
+  .host-grid--md-6 { grid-template-columns: repeat(6, 1fr); }
+}
+
+@media (min-width: 1024px) {
+  .host-grid--lg-1 { grid-template-columns: 1fr; }
+  .host-grid--lg-2 { grid-template-columns: repeat(2, 1fr); }
+  .host-grid--lg-3 { grid-template-columns: repeat(3, 1fr); }
+  .host-grid--lg-4 { grid-template-columns: repeat(4, 1fr); }
+  .host-grid--lg-5 { grid-template-columns: repeat(5, 1fr); }
+  .host-grid--lg-6 { grid-template-columns: repeat(6, 1fr); }
+}
+
+@media (min-width: 1280px) {
+  .host-grid--xl-1 { grid-template-columns: 1fr; }
+  .host-grid--xl-2 { grid-template-columns: repeat(2, 1fr); }
+  .host-grid--xl-3 { grid-template-columns: repeat(3, 1fr); }
+  .host-grid--xl-4 { grid-template-columns: repeat(4, 1fr); }
+  .host-grid--xl-5 { grid-template-columns: repeat(5, 1fr); }
+  .host-grid--xl-6 { grid-template-columns: repeat(6, 1fr); }
+}
+
+/* ========================================
+   FLEXBOX UTILITIES
+   ======================================== */
+
+/* Block: host-flex */
+.host-flex {
+  display: flex;
+}
+
+.host-flex--column {
+  flex-direction: column;
+}
+
+.host-flex--row {
+  flex-direction: row;
+}
+
+.host-flex--wrap {
+  flex-wrap: wrap;
+}
+
+.host-flex--nowrap {
+  flex-wrap: nowrap;
+}
+
+/* Flex Alignment */
+.host-flex--items-start { align-items: flex-start; }
+.host-flex--items-center { align-items: center; }
+.host-flex--items-end { align-items: flex-end; }
+.host-flex--items-stretch { align-items: stretch; }
+
+.host-flex--justify-start { justify-content: flex-start; }
+.host-flex--justify-center { justify-content: center; }
+.host-flex--justify-end { justify-content: flex-end; }
+.host-flex--justify-between { justify-content: space-between; }
+.host-flex--justify-around { justify-content: space-around; }
+.host-flex--justify-evenly { justify-content: space-evenly; }
+
+/* Flex Gap */
+.host-flex--gap-1 { gap: var(--host-space-1); }
+.host-flex--gap-2 { gap: var(--host-space-2); }
+.host-flex--gap-3 { gap: var(--host-space-3); }
+.host-flex--gap-4 { gap: var(--host-space-4); }
+.host-flex--gap-6 { gap: var(--host-space-6); }
+.host-flex--gap-8 { gap: var(--host-space-8); }
+
+/* Responsive Flex Direction */
+@media (min-width: 640px) {
+  .host-flex--sm-row { flex-direction: row; }
+  .host-flex--sm-column { flex-direction: column; }
+}
+
+@media (min-width: 768px) {
+  .host-flex--md-row { flex-direction: row; }
+  .host-flex--md-column { flex-direction: column; }
+}
+
+@media (min-width: 1024px) {
+  .host-flex--lg-row { flex-direction: row; }
+  .host-flex--lg-column { flex-direction: column; }
+}
+
+/* ========================================
+   RESPONSIVE TYPOGRAPHY
+   ======================================== */
+
+/* Mobile-first typography scaling */
+.host-text--responsive-xs {
+  font-size: var(--host-font-size-xs);
+}
+
+.host-text--responsive-sm {
+  font-size: var(--host-font-size-sm);
+}
+
+.host-text--responsive-base {
+  font-size: var(--host-font-size-base);
+}
+
+.host-text--responsive-lg {
+  font-size: var(--host-font-size-base);
+}
+
+.host-text--responsive-xl {
+  font-size: var(--host-font-size-lg);
+}
+
+.host-text--responsive-2xl {
+  font-size: var(--host-font-size-xl);
+}
+
+.host-text--responsive-3xl {
+  font-size: var(--host-font-size-2xl);
+}
+
+/* Scale up typography on larger screens */
+@media (min-width: 640px) {
+  .host-text--responsive-lg {
+    font-size: var(--host-font-size-lg);
+  }
+  
+  .host-text--responsive-xl {
+    font-size: var(--host-font-size-xl);
+  }
+  
+  .host-text--responsive-2xl {
+    font-size: var(--host-font-size-2xl);
+  }
+  
+  .host-text--responsive-3xl {
+    font-size: var(--host-font-size-3xl);
+  }
+}
+
+@media (min-width: 768px) {
+  .host-text--responsive-2xl {
+    font-size: var(--host-font-size-3xl);
+  }
+  
+  .host-text--responsive-3xl {
+    font-size: var(--host-font-size-4xl);
+  }
+}
+
+@media (min-width: 1024px) {
+  .host-text--responsive-3xl {
+    font-size: var(--host-font-size-5xl);
+  }
+}
+
+/* ========================================
+   RESPONSIVE SPACING
+   ======================================== */
+
+/* Responsive padding utilities */
+.host-padding--responsive-sm {
+  padding: var(--host-space-2);
+}
+
+.host-padding--responsive-md {
+  padding: var(--host-space-4);
+}
+
+.host-padding--responsive-lg {
+  padding: var(--host-space-4);
+}
+
+.host-padding--responsive-xl {
+  padding: var(--host-space-6);
+}
+
+@media (min-width: 640px) {
+  .host-padding--responsive-lg {
+    padding: var(--host-space-6);
+  }
+  
+  .host-padding--responsive-xl {
+    padding: var(--host-space-8);
+  }
+}
+
+@media (min-width: 768px) {
+  .host-padding--responsive-xl {
+    padding: var(--host-space-12);
+  }
+}
+
+/* Responsive margin utilities */
+.host-margin--responsive-sm {
+  margin: var(--host-space-2);
+}
+
+.host-margin--responsive-md {
+  margin: var(--host-space-4);
+}
+
+.host-margin--responsive-lg {
+  margin: var(--host-space-4);
+}
+
+.host-margin--responsive-xl {
+  margin: var(--host-space-6);
+}
+
+@media (min-width: 640px) {
+  .host-margin--responsive-lg {
+    margin: var(--host-space-6);
+  }
+  
+  .host-margin--responsive-xl {
+    margin: var(--host-space-8);
+  }
+}
+
+@media (min-width: 768px) {
+  .host-margin--responsive-xl {
+    margin: var(--host-space-12);
+  }
+}
+
+/* ========================================
+   RESPONSIVE COMPONENTS
+   ======================================== */
+
+/* Responsive Button Sizes */
+@media (max-width: 639px) {
+  .host-button--responsive {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .host-button--responsive.host-button--large {
+    padding: var(--host-space-3) var(--host-space-4);
+    font-size: var(--host-font-size-base);
+  }
+}
+
+/* Responsive Card Layouts */
+@media (max-width: 639px) {
+  .host-card--responsive .host-card__header,
+  .host-card--responsive .host-card__content,
+  .host-card--responsive .host-card__footer {
+    padding: var(--host-space-3);
+  }
+  
+  .host-card--responsive .host-card__footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--host-space-2);
+  }
+}
+
+/* Responsive Input Sizes */
+@media (max-width: 639px) {
+  .host-input--responsive {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+}
+
+/* Responsive Navigation */
+.host-nav--mobile {
+  display: block;
+}
+
+.host-nav--desktop {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .host-nav--mobile {
+    display: none;
+  }
+  
+  .host-nav--desktop {
+    display: block;
+  }
+}
+
+/* ========================================
+   RESPONSIVE LAYOUTS
+   ======================================== */
+
+/* Host Control Panel Layout */
+.host-layout {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+  gap: var(--host-space-4);
+}
+
+.host-layout__header {
+  grid-row: 1;
+  padding: var(--host-space-4);
+  background: var(--host-bg-secondary);
+  border-bottom: 1px solid var(--host-gray-200);
+}
+
+.host-layout__main {
+  grid-row: 2;
+  padding: 0 var(--host-space-4);
+  overflow-y: auto;
+}
+
+.host-layout__footer {
+  grid-row: 3;
+  padding: var(--host-space-4);
+  background: var(--host-bg-secondary);
+  border-top: 1px solid var(--host-gray-200);
+}
+
+/* Two-column layout for larger screens */
+@media (min-width: 1024px) {
+  .host-layout--sidebar {
+    grid-template-columns: 280px 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "sidebar header"
+      "sidebar main";
+  }
+  
+  .host-layout--sidebar .host-layout__sidebar {
+    grid-area: sidebar;
+    background: var(--host-bg-secondary);
+    border-right: 1px solid var(--host-gray-200);
+    padding: var(--host-space-6);
+    overflow-y: auto;
+  }
+  
+  .host-layout--sidebar .host-layout__header {
+    grid-area: header;
+    border-bottom: 1px solid var(--host-gray-200);
+    border-left: none;
+  }
+  
+  .host-layout--sidebar .host-layout__main {
+    grid-area: main;
+    padding: var(--host-space-6);
+  }
+}
+
+/* Quiz Control Specific Layout */
+.host-quiz-layout {
+  display: grid;
+  gap: var(--host-space-4);
+  grid-template-rows: auto auto 1fr auto;
+}
+
+.host-quiz-layout__status {
+  grid-row: 1;
+}
+
+.host-quiz-layout__question {
+  grid-row: 2;
+}
+
+.host-quiz-layout__controls {
+  grid-row: 3;
+}
+
+.host-quiz-layout__players {
+  grid-row: 4;
+}
+
+@media (min-width: 1024px) {
+  .host-quiz-layout {
+    grid-template-columns: 1fr 320px;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "status players"
+      "question players"
+      "controls players";
+  }
+  
+  .host-quiz-layout__status {
+    grid-area: status;
+  }
+  
+  .host-quiz-layout__question {
+    grid-area: question;
+  }
+  
+  .host-quiz-layout__controls {
+    grid-area: controls;
+  }
+  
+  .host-quiz-layout__players {
+    grid-area: players;
+  }
+}
+
+/* ========================================
+   RESPONSIVE VISIBILITY
+   ======================================== */
+
+/* Hide/show utilities for different screen sizes */
+.host-hidden { display: none !important; }
+.host-visible { display: block !important; }
+
+/* Mobile-specific visibility */
+.host-show-mobile { display: block; }
+.host-hide-mobile { display: none; }
+
+@media (min-width: 640px) {
+  .host-show-mobile { display: none; }
+  .host-hide-mobile { display: block; }
+}
+
+/* Tablet-specific visibility */
+.host-show-tablet { display: none; }
+.host-hide-tablet { display: block; }
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .host-show-tablet { display: block; }
+  .host-hide-tablet { display: none; }
+}
+
+/* Desktop-specific visibility */
+.host-show-desktop { display: none; }
+.host-hide-desktop { display: block; }
+
+@media (min-width: 1024px) {
+  .host-show-desktop { display: block; }
+  .host-hide-desktop { display: none; }
+}
+
+/* ========================================
+   RESPONSIVE TOUCH TARGETS
+   ======================================== */
+
+/* Ensure minimum touch target sizes on mobile */
+@media (max-width: 1023px) {
+  .host-button,
+  .host-input,
+  .host-card--interactive {
+    min-height: 44px; /* iOS Human Interface Guidelines */
+  }
+  
+  .host-button--small {
+    min-height: 40px;
+  }
+  
+  /* Increase tap target for small interactive elements */
+  .host-badge--interactive,
+  .host-notification__close {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* ========================================
+   RESPONSIVE ANIMATIONS
+   ======================================== */
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .host-button,
+  .host-card,
+  .host-input,
+  .host-badge,
+  .host-notification {
+    transition: none;
+    animation: none;
+  }
+  
+  .host-animate-spin,
+  .host-animate-pulse,
+  .host-animate-bounce,
+  .host-animate-fade-in,
+  .host-animate-fade-out,
+  .host-animate-slide-in,
+  .host-animate-slide-out {
+    animation: none;
+  }
+}
+
+/* ========================================
+   RESPONSIVE SCROLLING
+   ======================================== */
+
+/* Custom scrollbar for webkit browsers on desktop */
+@media (min-width: 1024px) {
+  .host-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .host-scroll::-webkit-scrollbar-track {
+    background: var(--host-gray-100);
+    border-radius: 3px;
+  }
+  
+  .host-scroll::-webkit-scrollbar-thumb {
+    background: var(--host-gray-300);
+    border-radius: 3px;
+  }
+  
+  .host-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--host-gray-400);
+  }
+}
+
+/* Scroll snap for horizontal lists on mobile */
+@media (max-width: 767px) {
+  .host-scroll-snap {
+    scroll-snap-type: x mandatory;
+    overflow-x: auto;
+    display: flex;
+    gap: var(--host-space-4);
+    padding: var(--host-space-4);
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .host-scroll-snap > * {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+}
+
+/* ========================================
+   PHASE 1.3: MOBILE OPTIMIZATION
+   ======================================== */
+
+/* Enhanced Touch Targets for Mobile */
+@media (max-width: 767px) {
+  /* Ensure all interactive elements meet accessibility guidelines */
+  .host-button,
+  .host-input,
+  .host-select,
+  .host-checkbox,
+  .host-radio {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Safe areas for devices with notches */
+  .host-header {
+    padding-top: max(var(--host-space-4), env(safe-area-inset-top));
+  }
+  
+  .host-main {
+    padding-left: max(var(--host-space-4), env(safe-area-inset-left));
+    padding-right: max(var(--host-space-4), env(safe-area-inset-right));
+  }
+  
+  .host-footer {
+    padding-bottom: max(var(--host-space-4), env(safe-area-inset-bottom));
+  }
+  
+  /* Improved focus indicators for touch devices */
+  .host-button:focus-visible,
+  .host-input:focus-visible {
+    outline: 3px solid var(--host-primary);
+    outline-offset: 2px;
+  }
+  
+  /* Larger text for better readability on small screens */
+  .host-card__title {
+    font-size: var(--host-font-size-xl);
+  }
+  
+  .host-help__text {
+    font-size: var(--host-font-size-base);
+    line-height: var(--host-line-height-relaxed);
+  }
+  
+  /* Enhanced spacing for mobile */
+  .host-form__group {
+    margin-bottom: var(--host-space-6);
+  }
+  
+  .host-card {
+    padding: var(--host-space-5);
+    margin-bottom: var(--host-space-5);
+  }
+  
+  /* Sticky bottom actions for mobile */
+  .host-actions--sticky {
+    position: sticky;
+    bottom: 0;
+    background: var(--host-white);
+    padding: var(--host-space-4);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+  }
+  
+  /* Prevent zoom on input focus (iOS) */
+  .host-input {
+    font-size: max(16px, var(--host-font-size-base));
+  }
+  
+  /* Enhanced modal for mobile */
+  .host-modal {
+    margin: var(--host-space-2);
+    border-radius: var(--host-radius-xl);
+    max-height: calc(100vh - var(--host-space-4));
+    overflow-y: auto;
+  }
+  
+  /* Improved loading states for touch */
+  .host-button--loading {
+    position: relative;
+    color: transparent;
+  }
+  
+  .host-button--loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+  }
+}
+
+/* Landscape mobile optimizations */
+@media (max-width: 767px) and (orientation: landscape) {
+  .host-container {
+    padding: var(--host-space-2) var(--host-space-4);
+  }
+  
+  .host-header {
+    padding: var(--host-space-2) var(--host-space-4);
+  }
+  
+  /* Compact layout for landscape */
+  .host-card {
+    padding: var(--host-space-3);
+  }
+  
+  .host-form__group {
+    margin-bottom: var(--host-space-4);
+  }
+}
+
+/* High DPI mobile displays */
+@media (max-width: 767px) and (-webkit-min-device-pixel-ratio: 2) {
+  .host-icon {
+    transform: translateZ(0); /* Force hardware acceleration */
+  }
+  
+  .host-button {
+    transform: translateZ(0); /* Smoother animations on retina */
+  }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .host-button,
+  .host-card,
+  .host-input {
+    transition: none;
+  }
+  
+  .host-loading-spinner {
+    animation: none;
+  }
+}
+
+/* Dark mode mobile optimizations */
+@media (max-width: 767px) and (prefers-color-scheme: dark) {
+  .host-input {
+    background: var(--host-gray-800);
+    border-color: var(--host-gray-600);
+    color: var(--host-white);
+  }
+  
+  .host-card {
+    background: var(--host-gray-900);
+    border-color: var(--host-gray-700);
+  }
+}

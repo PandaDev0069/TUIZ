@@ -10,60 +10,57 @@ const logger = require('../../utils/logger');
 // Initialize database
 const db = new DatabaseManager();
 
-// Helper function to update activeGame maxPlayers in game_settings
-function updateActiveGamePlayersCap(gameCode, maxPlayers) {
-  SecurityUtils.safeLog('info', 'Updating maxPlayers for game', {
+// Update all activeGame settings when they change in the lobby
+function updateActiveGameSettings(gameCode, newSettings) {
+  SecurityUtils.safeLog('info', 'Updating all activeGame settings', {
     gameCode: gameCode,
-    maxPlayers: maxPlayers
+    settingsKeys: Object.keys(newSettings)
   });
   
-  // Store the update in room manager for backup
-  const room = roomManager.getRoom(gameCode);
-  if (room) {
-    room._pendingPlayersCap = maxPlayers;
-    SecurityUtils.safeLog('info', 'Set pending players cap for room', {
+  try {
+    // Use ActiveGameUpdater to update the settings
+    const success = activeGameUpdater.updateGameSettings(gameCode, newSettings);
+    if (success) {
+      SecurityUtils.safeLog('info', 'Successfully updated activeGame settings', {
+        gameCode: gameCode,
+        updatedSettings: Object.keys(newSettings)
+      });
+      return true;
+    } else {
+      SecurityUtils.safeLog('warn', 'Failed to update activeGame settings', {
+        gameCode: gameCode,
+        reason: 'Game not found or activeGames reference not set'
+      });
+      return false;
+    }
+  } catch (error) {
+    SecurityUtils.safeLog('error', 'Failed to sync active game settings', {
       gameCode: gameCode,
-      maxPlayers: maxPlayers
+      error: error.message
     });
-  } else {
-    SecurityUtils.safeLog('warn', 'Room not found in roomManager', {
-      gameCode: gameCode
-    });
-  }
-  
-  // Try to update activeGame directly
-  const success = activeGameUpdater.updatePlayersCap(gameCode, maxPlayers);
-  if (success) {
-    SecurityUtils.safeLog('info', 'Successfully updated activeGame maxPlayers', {
-      gameCode: gameCode
-    });
-  } else {
-    SecurityUtils.safeLog('warn', 'Could not update activeGame directly, will rely on pending update');
+    return false;
   }
 }
 
-// Default simplified game settings based on the schema
+// Core game settings - simplified and focused on essential features
 const DEFAULT_SETTINGS = {
   // PLAYER MANAGEMENT
   maxPlayers: 50,
   
   // GAME FLOW
-  autoAdvance: true,
+  autoAdvance: true,     // auto mode: true, manual mode: false
+  hybridMode: false,     // hybrid mode: true (automatically enables autoAdvance)
   showExplanations: true,
   explanationTime: 30,
   showLeaderboard: true,
   
   // SCORING
-  pointCalculation: 'fixed',
-  streakBonus: false,
+  pointCalculation: 'time-bonus',
+  streakBonus: true,
   
   // DISPLAY OPTIONS
   showProgress: true,
-  showCorrectAnswer: true,
-  
-  // ADVANCED
-  spectatorMode: true,
-  allowAnswerChange: false
+  showCorrectAnswer: true
 };
 
 // GET /api/game-settings/:questionSetId
@@ -100,19 +97,18 @@ router.get('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
     const flattenedSettings = rawSettings.game_settings ? 
       { ...rawSettings, ...rawSettings.game_settings } : rawSettings;
     
-    // Extract only the simplified settings we support
+    // Extract only the core settings we support
     const cleanSettings = {
       maxPlayers: flattenedSettings.maxPlayers || flattenedSettings.players_cap || DEFAULT_SETTINGS.maxPlayers,
       autoAdvance: flattenedSettings.autoAdvance !== undefined ? flattenedSettings.autoAdvance : DEFAULT_SETTINGS.autoAdvance,
+      hybridMode: flattenedSettings.hybridMode !== undefined ? flattenedSettings.hybridMode : DEFAULT_SETTINGS.hybridMode,
       showExplanations: flattenedSettings.showExplanations !== undefined ? flattenedSettings.showExplanations : DEFAULT_SETTINGS.showExplanations,
       explanationTime: flattenedSettings.explanationTime || DEFAULT_SETTINGS.explanationTime,
       showLeaderboard: flattenedSettings.showLeaderboard !== undefined ? flattenedSettings.showLeaderboard : DEFAULT_SETTINGS.showLeaderboard,
       pointCalculation: flattenedSettings.pointCalculation || DEFAULT_SETTINGS.pointCalculation,
       streakBonus: flattenedSettings.streakBonus !== undefined ? flattenedSettings.streakBonus : DEFAULT_SETTINGS.streakBonus,
       showProgress: flattenedSettings.showProgress !== undefined ? flattenedSettings.showProgress : DEFAULT_SETTINGS.showProgress,
-      showCorrectAnswer: flattenedSettings.showCorrectAnswer !== undefined ? flattenedSettings.showCorrectAnswer : DEFAULT_SETTINGS.showCorrectAnswer,
-      spectatorMode: flattenedSettings.spectatorMode !== undefined ? flattenedSettings.spectatorMode : DEFAULT_SETTINGS.spectatorMode,
-      allowAnswerChange: flattenedSettings.allowAnswerChange !== undefined ? flattenedSettings.allowAnswerChange : DEFAULT_SETTINGS.allowAnswerChange
+      showCorrectAnswer: flattenedSettings.showCorrectAnswer !== undefined ? flattenedSettings.showCorrectAnswer : DEFAULT_SETTINGS.showCorrectAnswer
     };
 
     res.json({
@@ -163,10 +159,10 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
       });
     }
 
-    // Validate and clean incoming settings
+    // Validate and clean incoming settings - only core settings
     const validatedSettings = {};
     
-    // Validate each setting
+    // Validate each core setting
     if (settings.maxPlayers !== undefined) {
       const maxPlayers = parseInt(settings.maxPlayers);
       if (maxPlayers >= 2 && maxPlayers <= 300) {
@@ -176,6 +172,14 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
 
     if (settings.autoAdvance !== undefined) {
       validatedSettings.autoAdvance = Boolean(settings.autoAdvance);
+    }
+
+    if (settings.hybridMode !== undefined) {
+      validatedSettings.hybridMode = Boolean(settings.hybridMode);
+      // Auto-enable autoAdvance when hybridMode is enabled
+      if (validatedSettings.hybridMode) {
+        validatedSettings.autoAdvance = true;
+      }
     }
 
     if (settings.showExplanations !== undefined) {
@@ -209,14 +213,6 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
 
     if (settings.showCorrectAnswer !== undefined) {
       validatedSettings.showCorrectAnswer = Boolean(settings.showCorrectAnswer);
-    }
-
-    if (settings.spectatorMode !== undefined) {
-      validatedSettings.spectatorMode = Boolean(settings.spectatorMode);
-    }
-
-    if (settings.allowAnswerChange !== undefined) {
-      validatedSettings.allowAnswerChange = Boolean(settings.allowAnswerChange);
     }
 
     // Merge with existing play_settings
@@ -266,10 +262,8 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
           room.gameSettings = mergedRoomSettings;
           logger.debug(`🔄 Updated active game settings for room ${roomCode} (gameId: ${gameId})`);
           
-          // If maxPlayers was updated, schedule update for activeGame
-          if (validatedSettings.maxPlayers !== undefined) {
-            updateActiveGamePlayersCap(roomCode, validatedSettings.maxPlayers);
-          }
+          // Update all activeGame settings, not just maxPlayers
+          updateActiveGameSettings(roomCode, mergedRoomSettings);
           
           // Update settings in games table with complete merged settings
           const { error: gameUpdateError } = await db.supabaseAdmin
@@ -476,6 +470,51 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
     }
 
     // Add other validations similar to question set endpoint...
+    if (settings.autoAdvance !== undefined) {
+      validatedSettings.autoAdvance = Boolean(settings.autoAdvance);
+    }
+
+    if (settings.hybridMode !== undefined) {
+      validatedSettings.hybridMode = Boolean(settings.hybridMode);
+      // Auto-enable autoAdvance when hybridMode is enabled
+      if (validatedSettings.hybridMode) {
+        validatedSettings.autoAdvance = true;
+      }
+    }
+
+    if (settings.showExplanations !== undefined) {
+      validatedSettings.showExplanations = Boolean(settings.showExplanations);
+    }
+
+    if (settings.explanationTime !== undefined) {
+      const explanationTime = parseInt(settings.explanationTime);
+      if (explanationTime >= 10 && explanationTime <= 120) {
+        validatedSettings.explanationTime = explanationTime;
+      }
+    }
+
+    if (settings.showLeaderboard !== undefined) {
+      validatedSettings.showLeaderboard = Boolean(settings.showLeaderboard);
+    }
+
+    if (settings.pointCalculation !== undefined) {
+      if (['fixed', 'time-bonus'].includes(settings.pointCalculation)) {
+        validatedSettings.pointCalculation = settings.pointCalculation;
+      }
+    }
+
+    if (settings.streakBonus !== undefined) {
+      validatedSettings.streakBonus = Boolean(settings.streakBonus);
+    }
+
+    if (settings.showProgress !== undefined) {
+      validatedSettings.showProgress = Boolean(settings.showProgress);
+    }
+
+    if (settings.showCorrectAnswer !== undefined) {
+      validatedSettings.showCorrectAnswer = Boolean(settings.showCorrectAnswer);
+    }
+
     Object.keys(DEFAULT_SETTINGS).forEach(key => {
       if (settings[key] !== undefined) {
         validatedSettings[key] = settings[key];
@@ -489,9 +528,7 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
     };
 
     // Update activeGame players_cap if maxPlayers was changed
-    if (validatedSettings.maxPlayers !== undefined) {
-      updateActiveGamePlayersCap(roomCode, validatedSettings.maxPlayers);
-    }
+    updateActiveGameSettings(roomCode, room.gameSettings);
     
     // Update the database to keep it in sync
     try {

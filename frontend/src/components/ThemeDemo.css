@@ -1,0 +1,328 @@
+/**
+ * TUIZ Theme Demo Styles
+ * Demonstrates proper usage of universal theme variables
+ */
+
+.theme-demo {
+  /* Use universal page container styling */
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--tuiz-gradient-primary);
+  color: var(--tuiz-white);
+  font-family: var(--tuiz-font-family);
+  padding: var(--tuiz-space-8) var(--tuiz-space-4);
+}
+
+.theme-demo__container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tuiz-space-12);
+}
+
+/* Header Section */
+.theme-demo__header {
+  text-align: center;
+  margin-bottom: var(--tuiz-space-8);
+}
+
+.theme-demo__title {
+  font-size: var(--tuiz-text-4xl);
+  font-weight: var(--tuiz-font-bold);
+  margin-bottom: var(--tuiz-space-4);
+  /* Apply gradient text effect */
+  background: linear-gradient(45deg, var(--tuiz-white), #f0f9ff);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.theme-demo__subtitle {
+  font-size: var(--tuiz-text-lg);
+  font-weight: var(--tuiz-font-normal);
+  opacity: 0.9;
+  margin: 0;
+}
+
+/* Cards Section */
+.theme-demo__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--tuiz-space-6);
+}
+
+.theme-demo__card {
+  /* Use glass morphism styling */
+  background: var(--tuiz-glass-light);
+  backdrop-filter: var(--tuiz-blur-medium);
+  border: 1px solid var(--tuiz-glass-border-light);
+  border-radius: var(--tuiz-radius-2xl);
+  padding: var(--tuiz-space-6);
+  box-shadow: var(--tuiz-shadow-glass);
+  transition: all var(--tuiz-duration-normal) var(--tuiz-ease-out);
+  display: flex;
+  flex-direction: column;
+  gap: var(--tuiz-space-4);
+}
+
+.theme-demo__card:hover {
+  background: var(--tuiz-glass-medium);
+  border-color: var(--tuiz-glass-border-medium);
+  transform: translateY(-4px);
+  box-shadow: var(--tuiz-shadow-glass-lg);
+}
+
+.theme-demo__card--secondary {
+  /* Add shimmer effect on hover */
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-demo__card--secondary::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transform: rotate(45deg);
+  transition: all 0.6s ease;
+  opacity: 0;
+}
+
+.theme-demo__card--secondary:hover::before {
+  animation: tuizShimmer 0.6s ease-in-out;
+}
+
+.theme-demo__card--gradient {
+  background: var(--tuiz-gradient-subtle);
+  border-color: var(--tuiz-glass-border-medium);
+}
+
+.theme-demo__card h3 {
+  font-size: var(--tuiz-text-xl);
+  font-weight: var(--tuiz-font-semibold);
+  margin: 0;
+}
+
+.theme-demo__card p {
+  font-size: var(--tuiz-text-base);
+  opacity: 0.9;
+  margin: 0;
+  flex-grow: 1;
+}
+
+/* Buttons */
+.theme-demo__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tuiz-space-3) var(--tuiz-space-6);
+  border: none;
+  border-radius: var(--tuiz-radius-xl);
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-base);
+  font-weight: var(--tuiz-font-medium);
+  cursor: pointer;
+  transition: all var(--tuiz-duration-normal) var(--tuiz-ease-out);
+  text-decoration: none;
+}
+
+.theme-demo__button--primary {
+  background: var(--tuiz-white);
+  color: var(--tuiz-primary-600);
+}
+
+.theme-demo__button--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--tuiz-shadow-lg);
+}
+
+.theme-demo__button--secondary {
+  background: var(--tuiz-glass-light);
+  color: var(--tuiz-white);
+  border: 1px solid var(--tuiz-glass-border-light);
+}
+
+.theme-demo__button--secondary:hover {
+  background: var(--tuiz-glass-medium);
+  border-color: var(--tuiz-glass-border-medium);
+  transform: translateY(-2px);
+}
+
+.theme-demo__button--success {
+  background: var(--tuiz-gradient-success);
+  color: var(--tuiz-white);
+}
+
+.theme-demo__button--success:hover {
+  background: linear-gradient(45deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: var(--tuiz-shadow-lg);
+}
+
+/* Input Fields */
+.theme-demo__inputs {
+  text-align: center;
+}
+
+.theme-demo__section-title {
+  font-size: var(--tuiz-text-2xl);
+  font-weight: var(--tuiz-font-semibold);
+  margin-bottom: var(--tuiz-space-6);
+  text-align: center;
+}
+
+.theme-demo__input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tuiz-space-4);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.theme-demo__input,
+.theme-demo__textarea {
+  /* Use universal input styling */
+  width: 100%;
+  padding: var(--tuiz-space-4);
+  border: 2px solid var(--tuiz-glass-border-light);
+  border-radius: var(--tuiz-radius-xl);
+  background: var(--tuiz-glass-light);
+  color: var(--tuiz-white);
+  font-family: var(--tuiz-font-family);
+  font-size: var(--tuiz-text-base);
+  transition: all var(--tuiz-duration-normal) var(--tuiz-ease-out);
+  resize: vertical;
+}
+
+.theme-demo__input::placeholder,
+.theme-demo__textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.theme-demo__input:focus,
+.theme-demo__textarea:focus {
+  outline: none;
+  border-color: var(--tuiz-glass-border-heavy);
+  background: var(--tuiz-glass-medium);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+}
+
+/* Typography Examples */
+.theme-demo__typography {
+  text-align: center;
+}
+
+.theme-demo__text-samples {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tuiz-space-3);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.theme-demo__text {
+  margin: 0;
+  line-height: var(--tuiz-leading-normal);
+}
+
+.theme-demo__text--4xl {
+  font-size: var(--tuiz-text-4xl);
+  font-weight: var(--tuiz-font-bold);
+}
+
+.theme-demo__text--3xl {
+  font-size: var(--tuiz-text-3xl);
+  font-weight: var(--tuiz-font-semibold);
+}
+
+.theme-demo__text--2xl {
+  font-size: var(--tuiz-text-2xl);
+  font-weight: var(--tuiz-font-semibold);
+}
+
+.theme-demo__text--xl {
+  font-size: var(--tuiz-text-xl);
+  font-weight: var(--tuiz-font-medium);
+}
+
+.theme-demo__text--base {
+  font-size: var(--tuiz-text-base);
+  font-weight: var(--tuiz-font-normal);
+}
+
+.theme-demo__text--sm {
+  font-size: var(--tuiz-text-sm);
+  font-weight: var(--tuiz-font-normal);
+  opacity: 0.8;
+}
+
+/* Animation Examples */
+.theme-demo__animations {
+  text-align: center;
+}
+
+.theme-demo__animation-samples {
+  display: flex;
+  justify-content: center;
+  gap: var(--tuiz-space-8);
+  flex-wrap: wrap;
+}
+
+.theme-demo__animation-card {
+  background: var(--tuiz-glass-medium);
+  border: 1px solid var(--tuiz-glass-border-medium);
+  border-radius: var(--tuiz-radius-2xl);
+  padding: var(--tuiz-space-6);
+  text-align: center;
+  min-width: 200px;
+  backdrop-filter: var(--tuiz-blur-medium);
+}
+
+.theme-demo__animation-card span {
+  font-size: var(--tuiz-text-lg);
+  font-weight: var(--tuiz-font-medium);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .theme-demo {
+    padding: var(--tuiz-space-4) var(--tuiz-space-2);
+  }
+  
+  .theme-demo__container {
+    gap: var(--tuiz-space-8);
+  }
+  
+  .theme-demo__cards {
+    grid-template-columns: 1fr;
+    gap: var(--tuiz-space-4);
+  }
+  
+  .theme-demo__title {
+    font-size: var(--tuiz-text-3xl);
+  }
+  
+  .theme-demo__animation-samples {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tuiz-space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .theme-demo__card {
+    padding: var(--tuiz-space-4);
+  }
+  
+  .theme-demo__title {
+    font-size: var(--tuiz-text-2xl);
+  }
+  
+  .theme-demo__subtitle {
+    font-size: var(--tuiz-text-base);
+  }
+}
