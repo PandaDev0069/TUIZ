@@ -286,7 +286,9 @@ function HostDashboard() {
         setGameState(prev => ({
           ...prev,
           status: 'finished',
-          phase: 'finished'
+          phase: 'finished',
+          scoreboard: data.scoreboard,
+          finalScoreboard: data.scoreboard
         }));
       });
 

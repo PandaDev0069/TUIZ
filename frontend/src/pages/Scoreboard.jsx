@@ -9,18 +9,51 @@ import {
   FaStar, 
   FaChartBar, 
   FaRocket,
+  FaFire,
+  FaClock,
+  FaBullseye,
   FaGift
 } from 'react-icons/fa';
 import { useManagedTimeout } from '../utils/timerManager';
 import socket from '../socket';
 import './scoreboard.css';
 
-function Scoreboard() {
-  const { state } = useLocation();
+function Scoreboard({ state: propState } = {}) {
+  const { state: locationState } = useLocation();
   const navigate = useNavigate();
-  const { scoreboard = [], room, isHost } = state || {};
+  
+  // Use prop state if provided (for component usage), otherwise use location state (for route usage)
+  const state = propState || locationState || {};
+  
+  const { 
+    scoreboard = [], 
+    room, 
+    isHost,
+    // Enhanced: Accept rich analytics data from database
+    gameAnalytics,
+    gameInfo,
+    playerStats,
+    performanceStats
+  } = state || {};
   const [showAnimation, setShowAnimation] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  
+  // Debug logging for development
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log('🏆 Scoreboard component data:', {
+        scoreboard: scoreboard?.length || 0,
+        scoreboardData: scoreboard,
+        gameAnalytics,
+        gameInfo,
+        playerStats,
+        performanceStats,
+        propState,
+        locationState,
+        finalState: state
+      });
+    }
+  }, [scoreboard, gameAnalytics, gameInfo, playerStats, performanceStats, propState, locationState, state]);
   
   useEffect(() => {
     setShowAnimation(true);
@@ -123,10 +156,56 @@ function Scoreboard() {
     ));
   };
 
+  // Use database analytics data if available, otherwise fall back to live data
+  let finalScoreboard = scoreboard;
+  let analyticsAvailable = false;
+  
+  // Debug: Log initial scoreboard data
+  if (import.meta.env.DEV) {
+    console.log('🔍 Initial scoreboard data:', {
+      scoreboardLength: scoreboard?.length || 0,
+      scoreboardData: scoreboard,
+      hasGameAnalytics: !!gameAnalytics?.leaderboard,
+      gameAnalyticsLength: gameAnalytics?.leaderboard?.length || 0
+    });
+  }
+  
+  if (gameAnalytics?.leaderboard && gameAnalytics.leaderboard.length > 0) {
+    // Use comprehensive database analytics
+    finalScoreboard = gameAnalytics.leaderboard.map((player, index) => ({
+      id: player.id,
+      name: player.name,
+      score: player.total_score,
+      rank: index + 1,
+      correctAnswers: player.correct_answers,
+      totalAnswers: player.total_answers,
+      averageResponseTime: player.avg_response_time,
+      streak: player.longest_streak,
+      completionRate: ((player.total_answers / (gameInfo?.total_questions || 1)) * 100).toFixed(1),
+      // Add rich analytics
+      ...(playerStats && playerStats[player.id] ? {
+        improvement: playerStats[player.id].improvement_trend,
+        accuracy: ((player.correct_answers / Math.max(player.total_answers, 1)) * 100).toFixed(1)
+      } : {})
+    }));
+    analyticsAvailable = true;
+  }
+
   // Get top 3 players for podium
-  const topPlayers = scoreboard.slice(0, 3);
+  const topPlayers = finalScoreboard.slice(0, 3);
   // Get remaining players
-  const remainingPlayers = scoreboard.slice(3);
+  const remainingPlayers = finalScoreboard.slice(3);
+
+  // Debug: Log final scoreboard processing
+  if (import.meta.env.DEV) {
+    console.log('📊 Final scoreboard processing:', {
+      finalScoreboardLength: finalScoreboard?.length || 0,
+      topPlayersLength: topPlayers?.length || 0,
+      topPlayers,
+      analyticsAvailable,
+      remainingPlayersLength: remainingPlayers?.length || 0
+    });
+  }
 
   return (
     <div className="page-container">
@@ -142,6 +221,38 @@ function Scoreboard() {
           最終結果発表 
           <FaGift className="celebration-icon" />
         </p>
+
+        {/* Game analytics summary */}
+        {analyticsAvailable && gameInfo && (
+          <div className="game-summary">
+            <div className="summary-stats">
+              <div className="summary-stat">
+                <FaChartBar className="summary-icon" />
+                <span className="summary-value">{gameInfo.total_questions}</span>
+                <span className="summary-label">質問数</span>
+              </div>
+              <div className="summary-stat">
+                <FaStar className="summary-icon" />
+                <span className="summary-value">{finalScoreboard.length}</span>
+                <span className="summary-label">参加者</span>
+              </div>
+              {gameInfo.avg_completion_rate && (
+                <div className="summary-stat">
+                  <FaBullseye className="summary-icon" />
+                  <span className="summary-value">{gameInfo.avg_completion_rate.toFixed(1)}%</span>
+                  <span className="summary-label">完了率</span>
+                </div>
+              )}
+              {gameInfo.avg_score && (
+                <div className="summary-stat">
+                  <FaTrophy className="summary-icon" />
+                  <span className="summary-value">{Math.round(gameInfo.avg_score)}</span>
+                  <span className="summary-label">平均スコア</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Podium for top 3 */}
         <div className="podium-container">
@@ -164,6 +275,31 @@ function Scoreboard() {
                 >
                   {player.score?.toLocaleString() || 0}
                 </span>
+                
+                {/* Enhanced analytics display for database data */}
+                {analyticsAvailable && (
+                  <div className="player-analytics">
+                    {player.accuracy && (
+                      <div className="stat-badge accuracy">
+                        <FaBullseye className="stat-icon" />
+                        {player.accuracy}%
+                      </div>
+                    )}
+                    {player.averageResponseTime && (
+                      <div className="stat-badge response-time">
+                        <FaClock className="stat-icon" />
+                        {(player.averageResponseTime / 1000).toFixed(1)}s
+                      </div>
+                    )}
+                    {player.streak > 0 && (
+                      <div className="stat-badge streak">
+                        <FaFire className="stat-icon" />
+                        {player.streak}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 {player.rankChange && (
                   <span className="rank-change">{getRankChangeIcon(player.rankChange)}</span>
                 )}
@@ -188,6 +324,23 @@ function Scoreboard() {
                 <span className="name">
                   {player.name}
                 </span>
+                
+                {/* Enhanced analytics for remaining players */}
+                {analyticsAvailable && (
+                  <div className="player-analytics-compact">
+                    {player.accuracy && (
+                      <span className="stat-compact accuracy">
+                        {player.accuracy}% <FaBullseye />
+                      </span>
+                    )}
+                    {player.streak > 0 && (
+                      <span className="stat-compact streak">
+                        {player.streak} <FaFire />
+                      </span>
+                    )}
+                  </div>
+                )}
+                
                 {player.rankChange && (
                   <span className="rank-change">{getRankChangeIcon(player.rankChange)}</span>
                 )}
