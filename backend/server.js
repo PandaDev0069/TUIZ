@@ -646,6 +646,7 @@ const checkForQuestionCompletion = (gameCode) => {
       if (isDevelopment || isLocalhost) {
         logger.debug(`🔍 Checking explanation for question ${activeGame.currentQuestionIndex + 1}:
         gameSettings.showExplanations: ${gameSettings.showExplanations}
+        gameSettings.hybridMode: ${gameSettings.hybridMode}
         question.explanation_title: ${currentQuestion.explanation_title}
         question.explanation_text: ${currentQuestion.explanation_text}
         question.explanation_image_url: ${currentQuestion.explanation_image_url}
@@ -888,9 +889,14 @@ const showIntermediateLeaderboard = (gameCode) => {
   }
 
   // Auto-advance to next question or end game 
-  // In hybrid mode, questions still auto-advance (only explanations are manual)
+  // In hybrid mode, leaderboards wait for host (like explanations)
   // In manual mode, everything waits for host
-  if (gameSettings.autoAdvance !== false) {
+  if (gameSettings.hybridMode) {
+    // Hybrid mode: Wait for host to advance from leaderboard
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`🔄 Hybrid mode: Waiting for host to advance after leaderboard for question ${activeGame.currentQuestionIndex + 1}`);
+    }
+  } else if (gameSettings.autoAdvance !== false) {
     setTimeout(async () => {
       await proceedToNextQuestion(gameCode);
     }, leaderboardData.displayTime);
