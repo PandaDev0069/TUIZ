@@ -48,7 +48,8 @@ const DEFAULT_SETTINGS = {
   maxPlayers: 50,
   
   // GAME FLOW
-  autoAdvance: true,
+  autoAdvance: true,     // auto mode: true, manual mode: false
+  hybridMode: false,     // hybrid mode: true (automatically enables autoAdvance)
   showExplanations: true,
   explanationTime: 30,
   showLeaderboard: true,
@@ -100,6 +101,7 @@ router.get('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
     const cleanSettings = {
       maxPlayers: flattenedSettings.maxPlayers || flattenedSettings.players_cap || DEFAULT_SETTINGS.maxPlayers,
       autoAdvance: flattenedSettings.autoAdvance !== undefined ? flattenedSettings.autoAdvance : DEFAULT_SETTINGS.autoAdvance,
+      hybridMode: flattenedSettings.hybridMode !== undefined ? flattenedSettings.hybridMode : DEFAULT_SETTINGS.hybridMode,
       showExplanations: flattenedSettings.showExplanations !== undefined ? flattenedSettings.showExplanations : DEFAULT_SETTINGS.showExplanations,
       explanationTime: flattenedSettings.explanationTime || DEFAULT_SETTINGS.explanationTime,
       showLeaderboard: flattenedSettings.showLeaderboard !== undefined ? flattenedSettings.showLeaderboard : DEFAULT_SETTINGS.showLeaderboard,
@@ -170,6 +172,14 @@ router.put('/:questionSetId', AuthMiddleware.authenticateToken, async (req, res)
 
     if (settings.autoAdvance !== undefined) {
       validatedSettings.autoAdvance = Boolean(settings.autoAdvance);
+    }
+
+    if (settings.hybridMode !== undefined) {
+      validatedSettings.hybridMode = Boolean(settings.hybridMode);
+      // Auto-enable autoAdvance when hybridMode is enabled
+      if (validatedSettings.hybridMode) {
+        validatedSettings.autoAdvance = true;
+      }
     }
 
     if (settings.showExplanations !== undefined) {
@@ -460,6 +470,51 @@ router.put('/game/:gameId', AuthMiddleware.authenticateToken, async (req, res) =
     }
 
     // Add other validations similar to question set endpoint...
+    if (settings.autoAdvance !== undefined) {
+      validatedSettings.autoAdvance = Boolean(settings.autoAdvance);
+    }
+
+    if (settings.hybridMode !== undefined) {
+      validatedSettings.hybridMode = Boolean(settings.hybridMode);
+      // Auto-enable autoAdvance when hybridMode is enabled
+      if (validatedSettings.hybridMode) {
+        validatedSettings.autoAdvance = true;
+      }
+    }
+
+    if (settings.showExplanations !== undefined) {
+      validatedSettings.showExplanations = Boolean(settings.showExplanations);
+    }
+
+    if (settings.explanationTime !== undefined) {
+      const explanationTime = parseInt(settings.explanationTime);
+      if (explanationTime >= 10 && explanationTime <= 120) {
+        validatedSettings.explanationTime = explanationTime;
+      }
+    }
+
+    if (settings.showLeaderboard !== undefined) {
+      validatedSettings.showLeaderboard = Boolean(settings.showLeaderboard);
+    }
+
+    if (settings.pointCalculation !== undefined) {
+      if (['fixed', 'time-bonus'].includes(settings.pointCalculation)) {
+        validatedSettings.pointCalculation = settings.pointCalculation;
+      }
+    }
+
+    if (settings.streakBonus !== undefined) {
+      validatedSettings.streakBonus = Boolean(settings.streakBonus);
+    }
+
+    if (settings.showProgress !== undefined) {
+      validatedSettings.showProgress = Boolean(settings.showProgress);
+    }
+
+    if (settings.showCorrectAnswer !== undefined) {
+      validatedSettings.showCorrectAnswer = Boolean(settings.showCorrectAnswer);
+    }
+
     Object.keys(DEFAULT_SETTINGS).forEach(key => {
       if (settings[key] !== undefined) {
         validatedSettings[key] = settings[key];

@@ -41,11 +41,16 @@ const settingsConfig = {
     description: "ゲームの進行とタイミングを設定",
     settings: [
       {
-        key: "autoAdvance",
-        label: "自動進行",
-        type: "toggle",
-        description: "時間切れで自動的に次の問題へ進む",
-        defaultValue: true
+        key: "flowMode",
+        label: "進行モード",
+        type: "select",
+        options: [
+          { value: "manual", label: "手動進行 - ホストがすべてを制御" },
+          { value: "auto", label: "自動進行 - 全てタイマーで自動" },
+          { value: "hybrid", label: "ハイブリッド - 問題は自動、説明は手動" }
+        ],
+        description: "ゲームの進行方法を選択",
+        defaultValue: "auto"
       },
       {
         key: "showExplanations", 
@@ -63,6 +68,7 @@ const settingsConfig = {
         step: 5,
         unit: "秒",
         dependsOn: "showExplanations",
+        description: "自動進行時の解説表示時間",
         defaultValue: 30
       }
     ]
@@ -120,10 +126,10 @@ const settingsConfig = {
       }
     ]
   },
-  advanced: {
-    title: "高度な設定",
+  basic: {
+    title: "基本設定",
     icon: <FiUsers className="settings-category__icon" />,
-    description: "プレイヤー管理と拡張機能",
+    description: "基本的なゲーム設定",
     settings: [
       {
         key: "maxPlayers",
@@ -134,20 +140,6 @@ const settingsConfig = {
         step: 1,
         unit: "人",
         defaultValue: 50
-      },
-      {
-        key: "spectatorMode",
-        label: "観戦モード",
-        type: "toggle",
-        description: "参加していないユーザーも観戦可能",
-        defaultValue: false
-      },
-      {
-        key: "allowAnswerChange",
-        label: "回答変更",
-        type: "toggle", 
-        description: "時間内での回答変更を許可",
-        defaultValue: true
       }
     ]
   }
@@ -288,9 +280,35 @@ const GameSettingsPanel = ({ questionSetId, gameId, onClose }) => {
   const [hasChanges, setHasChanges] = useState(false);
   const timerManager = useTimerManager();
 
+  // Convert backend settings to UI flowMode
+  const getFlowModeFromSettings = (settings) => {
+    if (!settings.autoAdvance && !settings.hybridMode) return 'manual';
+    if (settings.autoAdvance && settings.hybridMode) return 'hybrid';
+    if (settings.autoAdvance && !settings.hybridMode) return 'auto';
+    return 'auto'; // default
+  };
+
+  // Convert UI flowMode to backend settings
+  const getSettingsFromFlowMode = (flowMode) => {
+    switch (flowMode) {
+      case 'manual':
+        return { autoAdvance: false, hybridMode: false };
+      case 'hybrid':
+        return { autoAdvance: true, hybridMode: true };
+      case 'auto':
+      default:
+        return { autoAdvance: true, hybridMode: false };
+    }
+  };
+
   useEffect(() => {
     if (settings) {
-      setLocalSettings(settings);
+      // Convert backend settings to UI settings with flowMode
+      const uiSettings = {
+        ...settings,
+        flowMode: getFlowModeFromSettings(settings)
+      };
+      setLocalSettings(uiSettings);
       setHasChanges(false);
     }
   }, [settings]);
@@ -308,14 +326,36 @@ const GameSettingsPanel = ({ questionSetId, gameId, onClose }) => {
   }, [onClose]);
 
   const handleSettingChange = (key, value) => {
-    const newSettings = { ...localSettings, [key]: value };
+    let settingsToUpdate = { [key]: value };
+    
+    // Handle flowMode conversion
+    if (key === 'flowMode') {
+      const backendSettings = getSettingsFromFlowMode(value);
+      settingsToUpdate = backendSettings;
+    }
+    
+    const newSettings = { ...localSettings, ...settingsToUpdate };
+    
+    // If flowMode changed, update the UI flowMode as well
+    if (key === 'flowMode') {
+      newSettings.flowMode = value;
+      // Update UI to reflect autoAdvance changes
+      if (value === 'hybrid') {
+        newSettings.autoAdvance = true;
+      } else if (value === 'manual') {
+        newSettings.autoAdvance = false;
+      } else if (value === 'auto') {
+        newSettings.autoAdvance = true;
+      }
+    }
+    
     setLocalSettings(newSettings);
     setHasChanges(true);
 
     // Debounced auto-save using managed timeout
     timerManager.clearAll(); // Clear any existing save timeout
     timerManager.setTimeout(async () => {
-      const success = await updateSettings({ [key]: value });
+      const success = await updateSettings(settingsToUpdate);
       if (success) {
         setHasChanges(false);
         showSuccess('設定を保存しました');
@@ -440,8 +480,12 @@ const GameSettingsPanel = ({ questionSetId, gameId, onClose }) => {
           <div className="settings-summary">
             <p className="settings-summary__text">
               最大 <strong>{localSettings.maxPlayers || 50}人</strong>まで参加可能 • 
-              自動進行: <strong>{localSettings.autoAdvance ? 'ON' : 'OFF'}</strong> • 
-              解説表示: <strong>{localSettings.showExplanations ? 'ON' : 'OFF'}</strong>
+              進行モード: <strong>
+                {localSettings.flowMode === 'manual' ? '手動進行' : 
+                 localSettings.flowMode === 'hybrid' ? 'ハイブリッド' : '自動進行'}
+              </strong> • 
+              解説表示: <strong>{localSettings.showExplanations ? 'ON' : 'OFF'}</strong> •
+              スコア計算: <strong>{localSettings.pointCalculation === 'time-bonus' ? '時間ボーナス付き' : '固定ポイント'}</strong>
             </p>
           </div>
         </footer>
