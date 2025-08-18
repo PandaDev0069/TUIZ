@@ -1,7 +1,6 @@
 require('dotenv').config();
 const logger = require('./utils/logger');
 const http = require('http');
-const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const DatabaseManager = require('./config/database');
 const SupabaseAuthHelper = require('./utils/SupabaseAuthHelper');
@@ -77,10 +76,12 @@ const activeGames = new Map();
 const server = http.createServer(app);
 
 // Initialize Socket.IO using the sockets module
-const io = initializeSocketIO(server, activeGames, db, registerMainSocketHandlers);
+const { io, gameHub } = initializeSocketIO(server, activeGames, db, registerMainSocketHandlers);
 
 // Export function to get Socket.IO instance
 module.exports.getIO = () => io;
+// Export function to get GameHub instance  
+module.exports.getGameHub = () => gameHub;
 
 // Setup function to enable enhanced host handlers for host control games
 function setupHostHandlers(socket, gameCode, gameId) {
@@ -258,10 +259,10 @@ const showQuestionExplanation = (gameCode) => {
   
   // Small delay to ensure all reconnected players are properly in the room
   setTimeout(() => {
-    io.to(gameCode).emit('showExplanation', explanationData);
+    gameHub.toRoom(gameCode).emit('showExplanation', explanationData);
     
     if (isDevelopment || isLocalhost) {
-      logger.debug(`📊 showExplanation event sent to room ${gameCode}`);
+      logger.debug(`📊 showExplanation event sent to room ${gameCode} via GameHub`);
     }
   }, 100); // 100ms delay
   
@@ -285,12 +286,12 @@ const showQuestionExplanation = (gameCode) => {
   for (const [socketId, player] of activeGame.players) {
     const playerAnswerData = getCurrentPlayerAnswerData(activeGame.currentAnswers, player.name);
     if (playerAnswerData) {
-      io.to(socketId).emit('playerAnswerData', {
+      gameHub.toSocket(socketId).emit('playerAnswerData', {
         questionId: currentQuestion.id,
         ...playerAnswerData
       });
       if (isDevelopment || isLocalhost) {
-        logger.debug(`📊 Sent playerAnswerData to ${player.name} (${socketId}) during explanation`);
+        logger.debug(`📊 Sent playerAnswerData to ${player.name} (${socketId}) during explanation via GameHub`);
       }
     } else {
       if (isDevelopment || isLocalhost) {
@@ -372,7 +373,7 @@ const showIntermediateLeaderboard = (gameCode) => {
   };
   
   // Send leaderboard to all players immediately
-  io.to(gameCode).emit('showLeaderboard', leaderboardData);
+  gameHub.toRoom(gameCode).emit('showLeaderboard', leaderboardData);
   
   // Update game state for reconnection support
   activeGame.showingResults = true;
@@ -394,12 +395,12 @@ const showIntermediateLeaderboard = (gameCode) => {
   for (const [socketId, player] of activeGame.players) {
     const playerAnswerData = getCurrentPlayerAnswerData(activeGame.currentAnswers, player.name);
     if (playerAnswerData) {
-      io.to(socketId).emit('playerAnswerData', {
+      gameHub.toSocket(socketId).emit('playerAnswerData', {
         questionId: currentQuestion.id,
         ...playerAnswerData
       });
       if (isDevelopment || isLocalhost) {
-        logger.debug(`📊 Sent playerAnswerData to ${player.name} (${socketId}) during leaderboard`);
+        logger.debug(`📊 Sent playerAnswerData to ${player.name} (${socketId}) during leaderboard via GameHub`);
       }
     } else {
       if (isDevelopment || isLocalhost) {
@@ -560,7 +561,7 @@ const sendNextQuestion = async (gameCode) => {
   // Send question to all players and host with game settings applied
   const gameFlowConfig = activeGame.gameFlowConfig || {};
   
-  io.to(gameCode).emit('question', {
+  gameHub.toRoom(gameCode).emit('question', {
     id: question.id,
     question: question.question,
     options: question.options,
@@ -841,7 +842,7 @@ const endGame = async (gameCode) => {
   }
 
   // Send game over event
-  io.to(gameCode).emit('game_over', { scoreboard });
+  gameHub.toRoom(gameCode).emit('game_over', { scoreboard });
 
   // Update last_played_at for the question set
   if (activeGame.question_set_id) {
@@ -894,10 +895,10 @@ const endGame = async (gameCode) => {
 // ================================================================
 
 /**
- * Registers main game event handlers on socket (temporary during Checkpoint 3)
+ * Registers main game event handlers on socket (temporary during Checkpoint 4)
  * TODO: Move these to separate event modules in future checkpoints
  */
-function registerMainSocketHandlers(socket, io, activeGames, db) {
+function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
 
   // Create a new game
   socket.on('createGame', async ({ hostId, questionSetId, settings }) => {
@@ -1393,7 +1394,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db) {
         }
         
         // Emit playerJoined to all clients in the game room (including the host)
-        io.to(gameCode).emit('playerJoined', {
+        gameHub.toRoom(gameCode).emit('playerJoined', {
           player: {
             id: player.id,
             name: player.name,
@@ -1626,7 +1627,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db) {
       }
       
       // Notify all players that the game has started
-      io.to(gameCode).emit('gameStarted', {
+      gameHub.toRoom(gameCode).emit('gameStarted', {
         message: 'Game has started!',
         totalQuestions: questions.length,
         playerCount: activeGame.players.size,
@@ -1834,7 +1835,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db) {
         }))
         .sort((a, b) => b.score - a.score);
       
-      io.to(gameCode).emit('scoreboard_update', {
+      gameHub.toRoom(gameCode).emit('scoreboard_update', {
         standings: playerStandings,
         answeredCount: activeGame.currentAnswers.length,
         totalPlayers: activeGame.players.size
@@ -2075,7 +2076,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db) {
           }
           
           // Notify other players
-          io.to(socket.gameCode).emit('playerDisconnected', {
+          gameHub.toRoom(socket.gameCode).emit('playerDisconnected', {
             playerId: socket.id,
             playerName: player.name,
             remainingPlayers: connectedPlayers.length,

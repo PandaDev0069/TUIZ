@@ -3,6 +3,7 @@ const logger = require('../utils/logger');
 const { getEnvironment } = require('../config/env');
 const { getSocketCorsConfig } = require('../config/cors');
 const sessionRestoreEvents = require('./events/sessionRestore');
+const GameHub = require('./GameHub');
 
 /**
  * Initializes Socket.IO server and registers event handlers
@@ -10,7 +11,7 @@ const sessionRestoreEvents = require('./events/sessionRestore');
  * @param {Map} activeGames - Active games map
  * @param {DatabaseManager} db - Database manager instance
  * @param {Function} registerMainHandlers - Function to register main game event handlers
- * @returns {Server} Socket.IO server instance
+ * @returns {Object} Object containing io server and gameHub instances
  */
 function initializeSocketIO(server, activeGames, db, registerMainHandlers = null) {
   const { isDevelopment, isLocalhost } = getEnvironment();
@@ -27,6 +28,9 @@ function initializeSocketIO(server, activeGames, db, registerMainHandlers = null
     cors: getSocketCorsConfig()
   });
 
+  // Create GameHub wrapper (Checkpoint 4)
+  const gameHub = new GameHub(io, activeGames);
+
   // Register connection handler
   io.on('connection', (socket) => {
     if (isDevelopment || isLocalhost) {
@@ -37,12 +41,13 @@ function initializeSocketIO(server, activeGames, db, registerMainHandlers = null
     sessionRestoreEvents.register(socket, io, activeGames, db);
 
     // Register main game event handlers (still in server.js for now)
+    // Pass gameHub to enable gradual migration to hub-based emissions
     if (registerMainHandlers) {
-      registerMainHandlers(socket, io, activeGames, db);
+      registerMainHandlers(socket, io, activeGames, db, gameHub);
     }
   });
 
-  return io;
+  return { io, gameHub };
 }
 
 module.exports = { initializeSocketIO };
