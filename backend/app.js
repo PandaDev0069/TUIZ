@@ -443,7 +443,7 @@ function createApp({ db, cleanupScheduler }) {
   app.use('/api/host/create', hostGameCreationRoutes);
 
   // Global error handler - must be after all routes
-  app.use((error, req, res) => {
+  app.use((error, req, res, next) => {
     logger.error('Global error handler:', error.message);
     
     // Handle specific error types
