@@ -1,4 +1,4 @@
-# 📄 utils/scoringSystem.js —
+# 📄 CHECKPOINT_7_DTOs_VALIDATION_SUMMARY.md —
 
 > One-liner: 
 
@@ -13,9 +13,6 @@
 
 ## 📤 Exports
 - [ ] Functions:
-  - `calculateScore`
-  - `getScoreBreakdown`
-  - `calculateGameScore`
 - [ ] Classes:
 - [ ] Constants:
 - [ ] Main factory (if any): `<createSomething()>`
@@ -29,34 +26,12 @@
 ---
 
 ## 🔧 Functions / Classes
-### `calculateScore(params)`
-- **Purpose:**  
-- **Inputs:** `<paramName: type>`  
-- **Outputs:** `<return type>`  
-- **Notes:** async? order-dependent? mutates state?
-
-### `getScoreBreakdown(params)`
-- **Purpose:**  
-- **Inputs:** `<paramName: type>`  
-- **Outputs:** `<return type>`  
-- **Notes:** async? order-dependent? mutates state?
-
-### `that(params)`
-- **Purpose:**  
-- **Inputs:** `<paramName: type>`  
-- **Outputs:** `<return type>`  
-- **Notes:** async? order-dependent? mutates state?
-
-### `calculateGameScore(params)`
-- **Purpose:**  
-- **Inputs:** `<paramName: type>`  
-- **Outputs:** `<return type>`  
-- **Notes:** async? order-dependent? mutates state?
+<!-- No functions detected -->
 
 ---
 
 ## 📊 Variables / Constants
-- [ ] Global constants: `finalScore, streakBonus, timeBonus, streakMultiplier, secondsSaved, pointsPerSecond, maxTimeBonus, timeBonusDescription, basePoints, timeLimit, currentStreak, points, breakdown`
+- [ ] Global constants: ``
 - [ ] Env configs used here: `<process.env.SOMETHING>`
 - [ ] Defaults: `<DEFAULT_TIMEOUT = 5000>`
 

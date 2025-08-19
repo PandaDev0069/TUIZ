@@ -1,34 +1,121 @@
-# utils/storageConfig.js
+# 📄 utils/storageConfig.js —
 
-## Imports
-- ./logger
+> One-liner: 
 
-## Exports
-- {
-  validateStorageConfig,
-  getStorageBucketInfo,
-  generateStoragePath,
-  getStorageBucket
-}
+---
 
-## Functions
-- validateStorageConfig
-- getStorageBucketInfo
-- generateStoragePath
-- getStorageBucket
+## 📦 Imports / Dependencies
+- [ ] External libs:
+- [ ] Internal modules:
+  - `./logger` – purpose
+- [ ] Side-effects? (Y/N)
 
-## Variables
-- logger
-- validateStorageConfig
-- getStorageBucketInfo
-- generateStoragePath
-- getStorageBucket
+---
 
-## Data Flow
-- Inputs: ./logger
-- Outputs: {
-  validateStorageConfig,
-  getStorageBucketInfo,
-  generateStoragePath,
-  getStorageBucket
-}
+## 📤 Exports
+- [ ] Functions:
+  - `validateStorageConfig`
+  - `getStorageBucketInfo`
+  - `generateStoragePath`
+  - `getStorageBucket`
+- [ ] Classes:
+- [ ] Constants:
+- [ ] Main factory (if any): `<createSomething()>`
+
+---
+
+## 🧠 Responsibilities
+- [ ] Owns: <what logic this file controls>
+- [ ] Delegates: <what is pushed down to helpers/services>
+
+---
+
+## 🔧 Functions / Classes
+### `validateStorageConfig(params)`
+- **Purpose:**  
+- **Inputs:** `<paramName: type>`  
+- **Outputs:** `<return type>`  
+- **Notes:** async? order-dependent? mutates state?
+
+### `getStorageBucketInfo(params)`
+- **Purpose:**  
+- **Inputs:** `<paramName: type>`  
+- **Outputs:** `<return type>`  
+- **Notes:** async? order-dependent? mutates state?
+
+### `generateStoragePath(params)`
+- **Purpose:**  
+- **Inputs:** `<paramName: type>`  
+- **Outputs:** `<return type>`  
+- **Notes:** async? order-dependent? mutates state?
+
+### `getStorageBucket(params)`
+- **Purpose:**  
+- **Inputs:** `<paramName: type>`  
+- **Outputs:** `<return type>`  
+- **Notes:** async? order-dependent? mutates state?
+
+---
+
+## 📊 Variables / Constants
+- [ ] Global constants: `logger, validateStorageConfig, errors, warnings, requiredVars, storageVars, maxUploadSize, isDefault, getStorageBucketInfo, generateStoragePath, fileExtension, timestamp, fileName, getStorageBucket, buckets`
+- [ ] Env configs used here: `<process.env.SOMETHING>`
+- [ ] Defaults: `<DEFAULT_TIMEOUT = 5000>`
+
+---
+
+## 🔄 Data Flow
+- **Inputs:** <where data comes from>  
+- **Processing:** <transformations or logic>  
+- **Outputs:** <what is returned / emitted / stored>
+
+---
+
+## ⚙️ Configuration
+| Key | Required | Default | Used by | Notes |
+|-----|----------|---------|---------|-------|
+| `EXAMPLE_ENV` | ✓ | none | this file | controls X |
+
+---
+
+## 🧰 Middleware / Pipeline (if applicable)
+| Order | Middleware | Purpose |
+|-------|------------|---------|
+| 1 | `<cors>` | handle origins |
+| 2 | `<rateLimiter>` | prevent abuse |
+
+---
+
+## 🌐 Route Map (if API file)
+| Prefix | Methods | Module | Auth | Rate Limit |
+|--------|---------|--------|------|------------|
+| `/example` | GET | `routes/example.js` | Public | Standard |
+
+---
+
+## 🔐 Security & Error Handling
+- [ ] Auth model: `<Bearer JWT>` / `<session>`  
+- [ ] Rate limits: `<100/min>`  
+- [ ] Error responses:  
+  ```jsonc
+  { "error": "BadRequest", "message": "Invalid input" }
+  ```
+
+🧪 Testing Notes
+	•	How to import in tests: `<supertest(app)>`
+	•	Mocks / stubs required: `<SupabaseAuthHelper.fake()>`
+	•	Edge cases: list them here
+
+⸻
+
+📝 Change Log
+	•	YYYY-MM-DD — 
+
+⸻
+
+✅ Maintenance Checklist
+	•	Imports match code
+	•	Env vars documented
+	•	Routes accurate
+	•	Error shapes consistent
+	•	Security notes up to date

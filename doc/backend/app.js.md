@@ -1,25 +1,41 @@
-# 📄 app.js — Express application factory
+# 📄 app.js —
 
-> One-liner: sets up the Express server with middleware, configuration, and API routes.
+> One-liner: 
 
 ---
 
 ## 📦 Imports / Dependencies
 - [ ] External libs:
-  - `express` – HTTP server framework
-  - `cors` – Cross-Origin Resource Sharing middleware
-  - `jsonwebtoken` – token decoding for debug endpoints
+  - `dotenv` – purpose
+  - `express` – purpose
+  - `cors` – purpose
+  - `jsonwebtoken` – purpose
 - [ ] Internal modules:
-  - `./utils/logger` – centralized logging
-  - `./config/database` – database manager
-  - `./utils/SupabaseAuthHelper` – Supabase auth helpers
-  - `./utils/CleanupScheduler` – schedules cleanup jobs
-  - `./middleware/rateLimiter` – rate limiting middleware
-  - `./utils/storageConfig` – storage configuration validator
-  - `./config/env` – environment helpers
-  - `./config/cors` – Express CORS configuration
-  - `./routes/*` – API route modules
-- [ ] Side-effects? (Y/N) Y (`dotenv` configuration)
+  - `./utils/logger` – purpose
+  - `./config/database` – purpose
+  - `./utils/SupabaseAuthHelper` – purpose
+  - `./utils/CleanupScheduler` – purpose
+  - `./middleware/rateLimiter` – purpose
+  - `./utils/storageConfig` – purpose
+  - `./config/env` – purpose
+  - `./config/cors` – purpose
+  - `./routes/auth` – purpose
+  - `./helpers/authHelper` – purpose
+  - `./routes/api/questionSets` – purpose
+  - `./routes/api/questions` – purpose
+  - `./routes/api/answers` – purpose
+  - `./routes/api/debug` – purpose
+  - `./routes/api/games` – purpose
+  - `./routes/api/quiz` – purpose
+  - `./routes/upload` – purpose
+  - `./routes/api/playerManagement` – purpose
+  - `./routes/api/players` – purpose
+  - `./routes/api/gameResults` – purpose
+  - `./routes/api/gameSettings` – purpose
+  - `./routes/api/host/gameControl` – purpose
+  - `./routes/api/host/playerManagement` – purpose
+  - `./routes/api/host/gameCreation` – purpose
+- [ ] Side-effects? (Y/N)
 
 ---
 
@@ -28,91 +44,96 @@
   - `createApp`
 - [ ] Classes:
 - [ ] Constants:
-- [ ] Main factory (if any): `createApp()`
+- [ ] Main factory (if any): `<createSomething()>`
 
 ---
 
 ## 🧠 Responsibilities
-- [ ] Owns: Express app initialization, middleware registration, and route mounting.
-- [ ] Delegates: authentication, business logic, and data access to route modules and services.
+- [ ] Owns: <what logic this file controls>
+- [ ] Delegates: <what is pushed down to helpers/services>
 
 ---
 
 ## 🔧 Functions / Classes
-### `createApp({ db, cleanupScheduler })`
-- **Purpose:** Build and return a configured Express instance.
-- **Inputs:** `db: DatabaseManager`, `cleanupScheduler: CleanupScheduler`
-- **Outputs:** `express.Application`
-- **Notes:** middleware order significant; returns configured app.
+### `createApp(params)`
+- **Purpose:**  
+- **Inputs:** `<paramName: type>`  
+- **Outputs:** `<return type>`  
+- **Notes:** async? order-dependent? mutates state?
+
+### `doesn(params)`
+- **Purpose:**  
+- **Inputs:** `<paramName: type>`  
+- **Outputs:** `<return type>`  
+- **Notes:** async? order-dependent? mutates state?
+
+### `not(params)`
+- **Purpose:**  
+- **Inputs:** `<paramName: type>`  
+- **Outputs:** `<return type>`  
+- **Notes:** async? order-dependent? mutates state?
 
 ---
 
 ## 📊 Variables / Constants
-- [ ] Env configs used here: `NODE_ENV`, Supabase keys via `getEnvironment()`/`getSupabaseConfig()`
-- [ ] Defaults: body size limit `50mb`, `parameterLimit` `10000`
+- [ ] Global constants: `express, cors, jwt, logger, DatabaseManager, SupabaseAuthHelper, CleanupScheduler, RateLimitMiddleware, app, isDbConnected, authRoutes, authHeader, token, tokenInfo, decoded, verificationResult, supabaseConfig, authenticatedUser, testResults, status, stats, error, statsResult, result, questionSetsRoutes, questionsRoutes, answersRoutes, debugRoutes, gamesRoutes, quizRoutes, uploadRoutes, playerManagementRoutes, playersRoutes, gameResultsRoutes, gameSettingsRoutes, hostGameControlRoutes, hostPlayerManagementRoutes, hostGameCreationRoutes`
+- [ ] Env configs used here: `<process.env.SOMETHING>`
+- [ ] Defaults: `<DEFAULT_TIMEOUT = 5000>`
 
 ---
 
 ## 🔄 Data Flow
-- **Inputs:** HTTP requests, database manager, cleanup scheduler.
-- **Processing:** applies CORS, rate limiting, body parsers; registers routes and debug handlers.
-- **Outputs:** API responses and health/debug information.
+- **Inputs:** <where data comes from>  
+- **Processing:** <transformations or logic>  
+- **Outputs:** <what is returned / emitted / stored>
 
 ---
 
 ## ⚙️ Configuration
 | Key | Required | Default | Used by | Notes |
 |-----|----------|---------|---------|-------|
-| `NODE_ENV` | ✗ | `development` | `getEnvironment` | toggles dev logging |
-| `SUPABASE_URL` | ✗ | none | `getSupabaseConfig` | used for debug auth info |
-| `SUPABASE_SERVICE_KEY` | ✗ | none | `getSupabaseConfig` | verifies tokens |
+| `EXAMPLE_ENV` | ✓ | none | this file | controls X |
 
 ---
 
-## 🧰 Middleware / Pipeline
+## 🧰 Middleware / Pipeline (if applicable)
 | Order | Middleware | Purpose |
 |-------|------------|---------|
-| 1 | `cors` | handle origins |
-| 2 | `RateLimitMiddleware.createGlobalLimit()` | prevent abuse |
-| 3 | `express.json` / `express.urlencoded` | parse request bodies |
-| 4 | error handler | handle invalid JSON / large payloads |
+| 1 | `<cors>` | handle origins |
+| 2 | `<rateLimiter>` | prevent abuse |
 
 ---
 
-## 🌐 Route Map
+## 🌐 Route Map (if API file)
 | Prefix | Methods | Module | Auth | Rate Limit |
 |--------|---------|--------|------|------------|
-| `/health` | GET | inline | Public | None |
-| `/api/auth` | various | `routes/auth` | varies | Global |
-| `/api/debug/verify-token` | POST | inline | Public | Global |
-| `/api/debug/auth-info` | GET | inline | Public | Global |
-| other `/api/*` | various | route modules | varies | Global |
+| `/example` | GET | `routes/example.js` | Public | Standard |
 
 ---
 
 ## 🔐 Security & Error Handling
-- [ ] Auth model: Supabase JWT via `Authorization: Bearer <token>`
-- [ ] Rate limits: global limiter on `/api/`
-- [ ] Error responses:
+- [ ] Auth model: `<Bearer JWT>` / `<session>`  
+- [ ] Rate limits: `<100/min>`  
+- [ ] Error responses:  
   ```jsonc
-  { "error": "Payload too large", "message": "Request payload is too large. Please reduce file sizes or split the request.", "limit": "50MB" }
+  { "error": "BadRequest", "message": "Invalid input" }
   ```
 
 🧪 Testing Notes
-• How to import in tests: `const app = createApp({ db, cleanupScheduler })`
-• Mocks / stubs required: mock `db` and `cleanupScheduler`
-• Edge cases: invalid JSON, oversized payloads, missing auth headers
+	•	How to import in tests: `<supertest(app)>`
+	•	Mocks / stubs required: `<SupabaseAuthHelper.fake()>`
+	•	Edge cases: list them here
 
 ⸻
 
 📝 Change Log
-• 2025-08-19 — initial documentation using standard template.
+	•	YYYY-MM-DD — 
 
 ⸻
 
 ✅ Maintenance Checklist
-• Imports match code
-• Env vars documented
-• Routes accurate
-• Error shapes consistent
-• Security notes up to date
+	•	Imports match code
+	•	Env vars documented
+	•	Routes accurate
+	•	Error shapes consistent
+	•	Security notes up to date
