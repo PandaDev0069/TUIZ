@@ -1,0 +1,92 @@
+# server.js
+
+## Imports
+- dotenv
+- ./utils/logger
+- http
+- ./config/database
+- ./utils/CleanupScheduler
+- ./utils/RoomManager
+- ./services/QuestionService
+- ./services/GameService
+- ./services/ResultsService
+- ./services/PlayerService
+- ./services/HostOpsService
+- ./adapters/QuestionFormatAdapter
+- ./services/GameSettingsService
+- ./utils/scoringSystem
+- ./utils/storageConfig
+- ./utils/ActiveGameUpdater
+- ./app
+- ./sockets
+- ./config/env
+- ./config/cors
+- ./validation
+- ./utils/responseHelpers
+- ./domain/game/actions
+- ./domain/game/endGame
+- ./domain/game/statistics
+- ./sockets/hostHandlers
+- ./domain/game/explanation
+
+## Exports
+- getIO
+- getGameHub
+
+## Functions
+- to
+- setupHostHandlers
+- registerMainSocketHandlers
+- exists
+- checkForQuestionCompletion
+- showQuestionExplanation
+- showIntermediateLeaderboard
+- proceedToNextQuestion
+- sendNextQuestion
+- updatePlayerRankings
+- createGameResultsForPlayers
+- endGame
+
+## Variables
+- logger
+- http
+- DatabaseManager
+- CleanupScheduler
+- roomManager
+- QuestionService
+- GameService
+- ResultsService
+- PlayerService
+- HostOpsService
+- QuestionFormatAdapter
+- GameSettingsService
+- activeGameUpdater
+- gameActions
+- gameEndModule
+- HostSocketHandlers
+- db
+- questionService
+- gameService
+- resultsService
+- playerService
+- hostOpsService
+- questionAdapter
+- cleanupScheduler
+- app
+- activeGames
+- server
+- hostHandlers
+- checkForQuestionCompletion
+- showQuestionExplanation
+- showIntermediateLeaderboard
+- getCorrectAnswerText
+- getCurrentPlayerAnswerData
+- proceedToNextQuestion
+- sendNextQuestion
+- updatePlayerRankings
+- createGameResultsForPlayers
+- endGame
+
+## Data Flow
+- Inputs: dotenv, ./utils/logger, http, ./config/database, ./utils/CleanupScheduler, ./utils/RoomManager, ./services/QuestionService, ./services/GameService, ./services/ResultsService, ./services/PlayerService, ./services/HostOpsService, ./adapters/QuestionFormatAdapter, ./services/GameSettingsService, ./utils/scoringSystem, ./utils/storageConfig, ./utils/ActiveGameUpdater, ./app, ./sockets, ./config/env, ./config/cors, ./validation, ./utils/responseHelpers, ./domain/game/actions, ./domain/game/endGame, ./domain/game/statistics, ./sockets/hostHandlers, ./domain/game/explanation
+- Outputs: getIO, getGameHub
