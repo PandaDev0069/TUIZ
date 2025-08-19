@@ -1969,11 +1969,17 @@ router.post('/session/check', RateLimitMiddleware.createReadLimit(), AuthMiddlew
       });
     }
     
+    // Debug: Log all active games for troubleshooting
+    const allActiveGames = Array.from(ActiveGameUpdater.activeGamesRef.keys());
+    logger.debug('🎮 All active games:', allActiveGames);
+    logger.debug('🔍 Looking for room:', room);
+    
     // Get game data from active games
     const gameData = ActiveGameUpdater.activeGamesRef.get(room);
     
     if (!gameData) {
       logger.debug('❌ Game not found in active games:', room);
+      logger.debug('🔄 Available games:', allActiveGames.join(', '));
       return res.json({
         success: true,
         isActive: false,

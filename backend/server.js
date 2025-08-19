@@ -344,10 +344,10 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
   // Create a new game
   socket.on('createGame', async ({ hostId, questionSetId, settings }, callback) => {
     try {
-      // Validate payload
+      // Validate payload - use a more appropriate field name for validation
       const payload = {
-        hostName: hostId || 'Host',
-        questionSetId,
+        hostName: hostId || 'Host', // Use hostId as hostName for validation
+        questionSetId: questionSetId, // Keep as UUID string
         settings
       };
       if (!validateSocketPayload('gameCreation', payload, callback)) {
@@ -591,7 +591,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
         gameId: dbGame.id,
         gameCode,
         hostId: actualHostId,
-        questionSetId,
+        questionSetId: questionSetId,
         hostControlEnabled: true
       });
       
