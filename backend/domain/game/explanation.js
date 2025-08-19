@@ -46,10 +46,10 @@ function prepareExplanationData(currentQuestion, activeGame, leaderboard) {
  * Prepare leaderboard data for display
  * @param {Object} activeGame - Current game state
  * @param {Array} leaderboard - Current player standings
- * @param {Object} currentQuestion - Current question object
+ * @param {Object|null} currentQuestion - Current question object (optional, null for final leaderboard)
  * @returns {Object} Complete leaderboard data ready for emission
  */
-function prepareLeaderboardData(activeGame, leaderboard, currentQuestion) {
+function prepareLeaderboardData(activeGame, leaderboard, currentQuestion = null) {
   const gameSettings = activeGame.game_settings || {};
   
   return {
@@ -63,9 +63,10 @@ function prepareLeaderboardData(activeGame, leaderboard, currentQuestion) {
     hybridMode: gameSettings.hybridMode || false,
     
     // Add answer stats and correct answer for consistency with explanation events
-    correctAnswer: currentQuestion.correctIndex,
-    correctOption: getCorrectAnswerText(currentQuestion),
-    answerStats: calculateAnswerStatistics(activeGame.currentAnswers, currentQuestion)
+    // Handle case where currentQuestion might be undefined (e.g., final leaderboard)
+    correctAnswer: currentQuestion?.correctIndex || null,
+    correctOption: currentQuestion ? getCorrectAnswerText(currentQuestion) : null,
+    answerStats: currentQuestion ? calculateAnswerStatistics(activeGame.currentAnswers, currentQuestion) : {}
   };
 }
 

@@ -178,14 +178,16 @@ class GameService {
       // Update rankings in parallel
       const updatePromises = playersWithIds.map(async (player) => {
         try {
-          const updateResult = await this.db.updateGamePlayer(activeGame.id, player.playerId, {
-            final_score: player.score,
-            final_rank: player.rank,
-            questions_answered: player.questionsAnswered || 0,
-            questions_correct: player.correctAnswers || 0,
-            streak: player.streak || 0,
-            updated_at: new Date().toISOString()
-          });
+          const updateData = {
+            current_score: player.score,        // Changed from final_score to current_score
+            current_rank: player.rank,          // Changed from final_rank to current_rank
+            current_streak: player.streak || 0  // Changed from streak to current_streak
+            // Note: questions_answered, questions_correct, updated_at are not valid fields for game_players table
+          };
+          
+          logger.debug(`🔍 Updating player ${player.name} with data:`, updateData);
+          
+          const updateResult = await this.db.updateGamePlayer(activeGame.id, player.playerId, updateData);
 
           if (updateResult.success) {
             results.successful++;

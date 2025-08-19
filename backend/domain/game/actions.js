@@ -102,6 +102,15 @@ async function proceedToNextQuestion(gameCode, activeGames, sendNextQuestionFn, 
   const activeGame = activeGames.get(gameCode);
   if (!activeGame) return;
   
+  // Check if game is already ending/finished
+  if (activeGame.status === 'finished' || activeGame._ending) {
+    const { isDevelopment, isLocalhost } = require('../../config/env').getEnvironment();
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`⚠️ proceedToNextQuestion called but game ${gameCode} is already ending/finished`);
+    }
+    return;
+  }
+  
   // Prevent double question sending
   if (activeGame.questionInProgress) {
     const { isDevelopment, isLocalhost } = require('../../config/env').getEnvironment();
@@ -120,11 +129,9 @@ async function proceedToNextQuestion(gameCode, activeGames, sendNextQuestionFn, 
     logger.debug(`➡️ Proceeding to next question in game ${gameCode}`);
   }
   
-  // Clear previous question timer and reset state
-  if (activeGame.questionTimer) {
-    clearInterval(activeGame.questionTimer);
-    activeGame.questionTimer = null;
-  }
+  // Clear all game timers and reset state
+  cleanupGameTimers(activeGame);
+  
   activeGame.showingResults = false;
   activeGame.lastExplanationData = null;
   
@@ -178,11 +185,21 @@ function sendPlayerAnswerData(activeGame, currentQuestion, gameHub, logger) {
  * @param {Function} proceedToNextQuestionFn - Function to proceed to next question
  * @param {string} gameCode - Game code
  * @param {number} questionIndex - Current question index
+ * @param {Object} activeGame - Active game object (for timer management)
  * @param {Object} logger - Logger instance
  * @returns {void}
  */
-function handleExplanationAutoAdvance(gameSettings, explanationData, proceedToNextQuestionFn, gameCode, questionIndex, logger) {
+function handleExplanationAutoAdvance(gameSettings, explanationData, proceedToNextQuestionFn, gameCode, questionIndex, activeGame, logger) {
   const { isDevelopment, isLocalhost } = require('../../config/env').getEnvironment();
+
+  // Clear any existing explanation timer to prevent multiple timers
+  if (activeGame.explanationTimer) {
+    clearTimeout(activeGame.explanationTimer);
+    activeGame.explanationTimer = null;
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`🧹 Cleared previous explanation timer for game ${gameCode}`);
+    }
+  }
 
   if (gameSettings.hybridMode) {
     // Hybrid mode: Don't auto-advance after explanations, wait for host
@@ -191,7 +208,20 @@ function handleExplanationAutoAdvance(gameSettings, explanationData, proceedToNe
     }
   } else if (gameSettings.autoAdvance !== false) {
     // Auto mode: Auto-advance after explanation time
-    setTimeout(async () => {
+    activeGame.explanationTimer = setTimeout(async () => {
+      // Clear the timer reference before proceeding
+      if (activeGame.explanationTimer) {
+        activeGame.explanationTimer = null;
+      }
+      
+      // Check if game is already ending/finished before proceeding
+      if (activeGame.status === 'finished' || activeGame._ending) {
+        if (isDevelopment || isLocalhost) {
+          logger.debug(`⚠️ Explanation timer fired but game ${gameCode} is already ending/finished`);
+        }
+        return;
+      }
+      
       if (isDevelopment || isLocalhost) {
         logger.debug(`⏭️ Auto mode: Proceeding to next question after explanation for question ${questionIndex + 1}`);
       }
@@ -266,6 +296,7 @@ async function showQuestionExplanation(gameCode, activeGames, gameHub, logger, G
     proceedToNextQuestionFn, 
     gameCode, 
     activeGame.currentQuestionIndex,
+    activeGame, // Pass activeGame for timer management
     logger
   );
 }
@@ -277,11 +308,21 @@ async function showQuestionExplanation(gameCode, activeGames, gameHub, logger, G
  * @param {Function} proceedToNextQuestionFn - Function to proceed to next question
  * @param {string} gameCode - Game code
  * @param {number} questionIndex - Current question index
+ * @param {Object} activeGame - Active game object (for timer management)
  * @param {Object} logger - Logger instance
  * @returns {void}
  */
-function handleLeaderboardAutoAdvance(gameSettings, leaderboardData, proceedToNextQuestionFn, gameCode, questionIndex, logger) {
+function handleLeaderboardAutoAdvance(gameSettings, leaderboardData, proceedToNextQuestionFn, gameCode, questionIndex, activeGame, logger) {
   const { isDevelopment, isLocalhost } = require('../../config/env').getEnvironment();
+
+  // Clear any existing leaderboard timer to prevent multiple timers
+  if (activeGame.leaderboardTimer) {
+    clearTimeout(activeGame.leaderboardTimer);
+    activeGame.leaderboardTimer = null;
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`🧹 Cleared previous leaderboard timer for game ${gameCode}`);
+    }
+  }
 
   if (gameSettings.hybridMode) {
     // Hybrid mode: Wait for host to advance from leaderboard
@@ -289,9 +330,26 @@ function handleLeaderboardAutoAdvance(gameSettings, leaderboardData, proceedToNe
       logger.debug(`🔄 Hybrid mode: Waiting for host to advance after leaderboard for question ${questionIndex + 1}`);
     }
   } else if (gameSettings.autoAdvance !== false) {
-    setTimeout(async () => {
+    activeGame.leaderboardTimer = setTimeout(async () => {
+      // Clear the timer reference before proceeding
+      if (activeGame.leaderboardTimer) {
+        activeGame.leaderboardTimer = null;
+      }
+      
+      // Check if game is already ending/finished before proceeding
+      if (activeGame.status === 'finished' || activeGame._ending) {
+        if (isDevelopment || isLocalhost) {
+          logger.debug(`⚠️ Leaderboard timer fired but game ${gameCode} is already ending/finished`);
+        }
+        return;
+      }
+      
       await proceedToNextQuestionFn(gameCode);
     }, leaderboardData.displayTime);
+    
+    if (isDevelopment || isLocalhost) {
+      logger.debug(`⏰ Set leaderboard timer for ${leaderboardData.displayTime}ms for question ${questionIndex + 1}`);
+    }
   } else {
     if (isDevelopment || isLocalhost) {
       logger.debug(`⏸️ Manual advance mode - waiting for host to continue`);
@@ -349,6 +407,7 @@ async function showIntermediateLeaderboard(gameCode, activeGames, gameHub, logge
     proceedToNextQuestionFn, 
     gameCode, 
     activeGame.currentQuestionIndex,
+    activeGame, // Pass activeGame for timer management
     logger
   );
 }
