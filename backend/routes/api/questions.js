@@ -8,6 +8,9 @@ const AuthMiddleware = require('../../middleware/auth');
 const RateLimitMiddleware = require('../../middleware/rateLimiter');
 const SecurityUtils = require('../../utils/SecurityUtils');
 
+// Validation middleware
+const { createValidator } = require('../../validation');
+
 // Initialize database
 const db = new DatabaseManager();
 const OrderManager = require('../../utils/OrderManager');

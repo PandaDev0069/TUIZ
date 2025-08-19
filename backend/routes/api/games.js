@@ -6,6 +6,9 @@ const DatabaseManager = require('../../config/database');
 const RateLimitMiddleware = require('../../middleware/rateLimiter');
 const logger = require('../../utils/logger');
 
+// Validation middleware
+const { createValidator } = require('../../validation');
+
 // Initialize database
 const db = new DatabaseManager();
 

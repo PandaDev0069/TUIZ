@@ -1,48 +1,60 @@
 require('dotenv').config();
 const logger = require('./utils/logger');
-const express = require('express');
 const http = require('http');
-const cors = require('cors');
-const { Server } = require('socket.io');
-const jwt = require('jsonwebtoken');
 const DatabaseManager = require('./config/database');
-const SupabaseAuthHelper = require('./utils/SupabaseAuthHelper');
 const CleanupScheduler = require('./utils/CleanupScheduler');
 const roomManager = require('./utils/RoomManager');
 const QuestionService = require('./services/QuestionService');
+const GameService = require('./services/GameService');
+const ResultsService = require('./services/ResultsService');
+const PlayerService = require('./services/PlayerService');
+const HostOpsService = require('./services/HostOpsService');
 const QuestionFormatAdapter = require('./adapters/QuestionFormatAdapter');
 const GameSettingsService = require('./services/GameSettingsService');
 const { calculateGameScore } = require('./utils/scoringSystem');
 const { validateStorageConfig } = require('./utils/storageConfig');
 const activeGameUpdater = require('./utils/ActiveGameUpdater');
-const RateLimitMiddleware = require('./middleware/rateLimiter');
+const { createApp } = require('./app');
+const { initializeSocketIO } = require('./sockets');
+const { getEnvironment, getServerConfig } = require('./config/env');
+const { getSocketCorsConfig } = require('./config/cors');
+
+// Validation and DTOs
+const { validateSocketPayload } = require('./validation');
+const { 
+  createSocketResponse, 
+  formatGameState, 
+  formatPlayer, 
+  formatLeaderboard 
+} = require('./utils/responseHelpers');
+
+// Domain modules for game logic
+const gameActions = require('./domain/game/actions');
+const gameEndModule = require('./domain/game/endGame');
+const { calculateAnswerStatistics } = require('./domain/game/statistics');
 
 // Phase 6: Host Socket Handlers
 const HostSocketHandlers = require('./sockets/hostHandlers');
 
-// Session Restoration Handlers
-const SessionRestoreHandlers = require('./sockets/sessionRestoreHandlers');
-
 // Initialize database
 const db = new DatabaseManager();
 
-// Initialize question service
+// Initialize services
 const questionService = new QuestionService();
+const gameService = new GameService(db);
+const resultsService = new ResultsService(db);
+const playerService = new PlayerService(db);
+const hostOpsService = new HostOpsService(db);
 
 // Initialize question format adapter
 const questionAdapter = new QuestionFormatAdapter();
 
-// Initialize auth helper
-const authHelper = new SupabaseAuthHelper(db.supabaseAdmin);
-
 // Initialize cleanup scheduler
 const cleanupScheduler = new CleanupScheduler(db);
 
-// Environment detection for logging
-const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
-const isLocalhost = process.env.IS_LOCALHOST === 'true' || !process.env.NODE_ENV;
+// Environment detection using centralized config
+const { isDevelopment, isLocalhost } = getEnvironment();
 
-// Test database connection and validate storage configuration on startup
 (async () => {
   try {
     const isConnected = await db.testConnection();
@@ -68,462 +80,11 @@ const isLocalhost = process.env.IS_LOCALHOST === 'true' || !process.env.NODE_ENV
   }
 })();
 
-const app = express();
+// Create Express app using the app.js module
+const app = createApp({ db, cleanupScheduler });
 
-// Trust proxy for Render platform (fixes X-Forwarded-For header issues)
-// Set to 1 to trust only the first proxy (Render's load balancer)
-// This is more secure than trusting all proxies (true)
-app.set('trust proxy', 1);
-
-// CORS configuration for Supabase - Allow network access
-const allowedOrigins = [
-  process.env.CORS_ORIGIN || 'http://localhost:5173',
-  'https://tuiz-nine.vercel.app', // Add your Vercel domain
-  /^https:\/\/.*\.vercel\.app$/, // Allow any Vercel preview domains
-  /^http:\/\/192\.168\.\d+\.\d+:5173$/, // Allow local network IPs
-  /^http:\/\/10\.\d+\.\d+\.\d+:5173$/, // Allow 10.x.x.x network
-  /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:5173$/ // Allow 172.16-31.x.x network
-];
-
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
-}));
-
-// Apply global rate limiting for DDoS protection
-app.use('/api/', RateLimitMiddleware.createGlobalLimit());
-
-// Increase payload limits for image uploads and large quiz data
-app.use(express.json({ 
-  limit: '50mb',
-  parameterLimit: 10000
-}));
-app.use(express.urlencoded({ 
-  extended: true, 
-  limit: '50mb',
-  parameterLimit: 10000
-}));
-
-// Middleware to handle payload size errors
-app.use((error, req, res, next) => {
-  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
-    if (isDevelopment || isLocalhost) {
-      logger.error('Bad JSON body:', error.message);
-    }
-    return res.status(400).json({ 
-      error: 'Invalid JSON format',
-      message: 'Request body contains invalid JSON' 
-    });
-  }
-  
-  if (error.type === 'entity.too.large') {
-    if (isDevelopment || isLocalhost) {
-      logger.error('Payload too large:', error.message);
-    }
-    return res.status(413).json({ 
-      error: 'Payload too large',
-      message: 'Request payload is too large. Please reduce file sizes or split the request.',
-      limit: '50MB'
-    });
-  }
-  
-  next(error);
-});
-
-// Health check endpoint
-app.get('/health', async (req, res) => {
-  try {
-    const isDbConnected = await db.testConnection();
-    res.json({
-      status: 'OK',
-      timestamp: new Date().toISOString(),
-      database: isDbConnected ? 'Connected' : 'Disconnected',
-      environment: process.env.NODE_ENV || 'development'
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: 'ERROR',
-      timestamp: new Date().toISOString(),
-      database: 'Error',
-      error: error.message
-    });
-  }
-});
-
-// ================================================================
-// AUTHENTICATION ROUTES
-// ================================================================
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
-
-// ================================================================
-// DEBUG ROUTES (Development Only)
-// ================================================================
-
-// Debug endpoint for token verification
-app.post('/api/debug/verify-token', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(400).json({ 
-        error: 'Missing or invalid authorization header',
-        expected: 'Authorization: Bearer <token>',
-        received: authHeader ? `${authHeader.substring(0, 20)}...` : 'undefined'
-      });
-    }
-    
-    const token = authHeader.substring(7);
-    
-    // Debug token information using Supabase JWT
-    let tokenInfo;
-    
-    try {
-      // Decode without verification to inspect token structure
-      const decoded = jwt.decode(token, { complete: true });
-      
-      tokenInfo = {
-        header: decoded?.header,
-        payload: {
-          sub: decoded?.payload?.sub,
-          email: decoded?.payload?.email,
-          aud: decoded?.payload?.aud,
-          exp: decoded?.payload?.exp,
-          iat: decoded?.payload?.iat,
-          iss: decoded?.payload?.iss,
-          role: decoded?.payload?.role
-        },
-        isExpired: decoded?.payload?.exp ? Date.now() >= decoded.payload.exp * 1000 : false,
-        expiresAt: decoded?.payload?.exp ? new Date(decoded.payload.exp * 1000).toISOString() : null
-      };
-    } catch (decodeError) {
-      tokenInfo = { error: 'Failed to decode token', details: decodeError.message };
-    }
-    
-    // Verify the token with Supabase
-    let verificationResult;
-    
-    try {
-      const { data: user, error } = await db.supabaseAdmin.auth.getUser(token);
-      
-      verificationResult = {
-        valid: !error && !!user?.user,
-        user: user?.user ? {
-          id: user.user.id,
-          email: user.user.email,
-          name: user.user.user_metadata?.name,
-          created_at: user.user.created_at
-        } : null,
-        error: error?.message
-      };
-    } catch (verifyError) {
-      verificationResult = {
-        valid: false,
-        error: verifyError.message
-      };
-    }
-    
-    res.json({
-      tokenInfo,
-      verification: verificationResult,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    res.status(500).json({
-      error: 'Debug verification failed',
-      details: error.message
-    });
-  }
-});
-
-// Authentication info endpoint
-app.get('/api/debug/auth-info', (req, res) => {
-  res.json({
-    authType: 'Supabase JWT',
-    description: 'This application uses Supabase Auth JWT tokens',
-    tokenSource: 'Generated by Supabase Auth via /api/auth/login or /api/auth/register endpoints',
-    headerFormat: 'Authorization: Bearer <supabase_jwt_token>',
-    supabaseConfigured: {
-      hasUrl: !!process.env.SUPABASE_URL,
-      hasAnonKey: !!process.env.SUPABASE_ANON_KEY,
-      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
-    },
-    endpoints: {
-      login: 'POST /api/auth/login',
-      register: 'POST /api/auth/register',
-      refresh: 'POST /api/auth/refresh'
-    }
-  });
-});
-
-// Test RLS policies endpoint
-app.post('/api/debug/test-rls', async (req, res) => {
-  const { getAuthenticatedUser } = require('./helpers/authHelper');
-  
-  try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        error: 'Authorization header required for RLS testing' 
-      });
-    }
-    
-    // Get authenticated user
-    let authenticatedUser;
-    try {
-      authenticatedUser = await getAuthenticatedUser(authHeader);
-    } catch (authError) {
-      return res.status(401).json({ error: authError.message });
-    }
-    
-    const testResults = {
-      user: authenticatedUser,
-      tests: {},
-      timestamp: new Date().toISOString()
-    };
-    
-    // Test 1: Can read own question sets
-    try {
-      const { data: ownSets, error: ownSetsError } = await db.supabaseAdmin
-        .from('question_sets')
-        .select('id, title, user_id')
-        .eq('user_id', authenticatedUser.id)
-        .limit(5);
-      
-      testResults.tests.readOwnQuestionSets = {
-        success: !ownSetsError,
-        count: ownSets?.length || 0,
-        error: ownSetsError?.message
-      };
-    } catch (error) {
-      testResults.tests.readOwnQuestionSets = {
-        success: false,
-        error: error.message
-      };
-    }
-    
-    // Test 2: Can read public question sets
-    try {
-      const { data: publicSets, error: publicSetsError } = await db.supabaseAdmin
-        .from('question_sets')
-        .select('id, title, is_public')
-        .eq('is_public', true)
-        .limit(5);
-      
-      testResults.tests.readPublicQuestionSets = {
-        success: !publicSetsError,
-        count: publicSets?.length || 0,
-        error: publicSetsError?.message
-      };
-    } catch (error) {
-      testResults.tests.readPublicQuestionSets = {
-        success: false,
-        error: error.message
-      };
-    }
-    
-    // Test 3: Try to create a test question set
-    try {
-      const { data: testSet, error: createError } = await db.supabaseAdmin
-        .from('question_sets')
-        .insert({
-          user_id: authenticatedUser.id,
-          title: 'RLS Test Question Set',
-          description: 'Testing RLS policies',
-          category: 'test',
-          is_public: false,
-          total_questions: 0
-        })
-        .select()
-        .single();
-      
-      testResults.tests.createQuestionSet = {
-        success: !createError,
-        questionSetId: testSet?.id,
-        error: createError?.message
-      };
-      
-      // Clean up test data
-      if (testSet?.id) {
-        await db.supabaseAdmin
-          .from('question_sets')
-          .delete()
-          .eq('id', testSet.id);
-      }
-    } catch (error) {
-      testResults.tests.createQuestionSet = {
-        success: false,
-        error: error.message
-      };
-    }
-    
-    // Test 4: Database connection and service role
-    try {
-      const { data: dbTest, error: dbError } = await db.supabaseAdmin
-        .from('users')
-        .select('count', { count: 'exact', head: true });
-      
-      testResults.tests.databaseConnection = {
-        success: !dbError,
-        serviceRole: true,
-        error: dbError?.message
-      };
-    } catch (error) {
-      testResults.tests.databaseConnection = {
-        success: false,
-        serviceRole: false,
-        error: error.message
-      };
-    }
-    
-    res.json(testResults);
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// ================================================================
-// CLEANUP MANAGEMENT ENDPOINTS
-// ================================================================
-
-// Get cleanup status and stats
-app.get('/api/cleanup/status', async (req, res) => {
-  try {
-    const status = cleanupScheduler.getStatus();
-    let stats = null;
-    let error = null;
-    
-    // Try to get cleanup stats, but handle gracefully if function doesn't exist
-    try {
-      const statsResult = await db.getCleanupStats();
-      if (statsResult.success) {
-        stats = statsResult.stats;
-      } else {
-        error = statsResult.error;
-        logger.warn('⚠️ Cleanup stats function not available:', statsResult.error);
-      }
-    } catch (statsError) {
-      error = 'Cleanup stats function not available in database';
-      logger.warn('⚠️ Cleanup stats error:', statsError.message);
-    }
-    
-    res.json({
-      scheduler: status,
-      stats: stats,
-      error: error,
-      message: error ? 'Some cleanup features may not be available until database functions are deployed' : null
-    });
-  } catch (error) {
-    logger.error('❌ Cleanup status endpoint error:', error);
-    res.status(500).json({ 
-      error: error.message,
-      scheduler: cleanupScheduler ? cleanupScheduler.getStatus() : null
-    });
-  }
-});
-
-// Preview cleanup operations (dry run)
-app.get('/api/cleanup/preview', async (req, res) => {
-  try {
-    const result = await cleanupScheduler.previewCleanup();
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Run manual cleanup
-app.post('/api/cleanup/run', async (req, res) => {
-  try {
-    const result = await cleanupScheduler.runManualCleanup();
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Test warnings manually (for debugging)
-app.post('/api/cleanup/test-warnings', async (req, res) => {
-  try {
-    logger.debug('🧪 Testing warning system manually...');
-    await cleanupScheduler.checkAndSendWarnings();
-    res.json({ success: true, message: 'Warning check completed' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ================================================================
-// MODULAR API ROUTES
-// ================================================================
-
-// Import and use API route modules
-const questionSetsRoutes = require('./routes/api/questionSets');
-const questionsRoutes = require('./routes/api/questions');
-const answersRoutes = require('./routes/api/answers');
-const debugRoutes = require('./routes/api/debug');
-const gamesRoutes = require('./routes/api/games');
-const quizRoutes = require('./routes/api/quiz');
-const uploadRoutes = require('./routes/upload');
-const playerManagementRoutes = require('./routes/api/playerManagement');
-const playersRoutes = require('./routes/api/players');
-const gameResultsRoutes = require('./routes/api/gameResults');
-const gameSettingsRoutes = require('./routes/api/gameSettings');
-
-// Host control routes (Phase 6)
-const hostGameControlRoutes = require('./routes/api/host/gameControl');
-const hostPlayerManagementRoutes = require('./routes/api/host/playerManagement');
-
-// Mount API routes
-app.use('/api/question-sets', questionSetsRoutes);
-app.use('/api/questions', questionsRoutes);
-app.use('/api/answers', answersRoutes);
-app.use('/api/debug', debugRoutes);
-app.use('/api/games', gamesRoutes);
-app.use('/api/quiz', quizRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/player', playerManagementRoutes(db));
-app.use('/api/players', playersRoutes(db));
-app.use('/api/game-results', gameResultsRoutes);
-app.use('/api/game-settings', gameSettingsRoutes);
-
-// Host control API routes (Phase 6)
-const hostGameCreationRoutes = require('./routes/api/host/gameCreation');
-app.use('/api/host/game', hostGameControlRoutes);
-app.use('/api/host/player', hostPlayerManagementRoutes);
-app.use('/api/host/create', hostGameCreationRoutes);
-
-// Global error handler - must be after all routes
-app.use((error, req, res, next) => {
-  logger.error('Global error handler:', error.message);
-  
-  // Handle specific error types
-  if (error.type === 'entity.too.large') {
-    return res.status(413).json({
-      error: 'Payload too large',
-      message: 'Request payload exceeds the 50MB limit. Please reduce file sizes.',
-      limit: '50MB'
-    });
-  }
-  
-  if (error.name === 'MulterError') {
-    return res.status(400).json({
-      error: 'File upload error',
-      message: error.message
-    });
-  }
-  
-  // Default error response
-  res.status(500).json({
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : error.message
-  });
-});
+// Store active games in memory (you could also use Redis for production)
+const activeGames = new Map();
 
 // ================================================================
 // SERVER SETUP
@@ -531,30 +92,13 @@ app.use((error, req, res, next) => {
 
 const server = http.createServer(app);
 
-// Socket.IO server with enhanced CORS - Allow network access
-const socketAllowedOrigins = [
-  process.env.SOCKET_CORS_ORIGIN || 'http://localhost:5173',
-  'https://tuiz-nine.vercel.app', // Add your Vercel domain
-  /^https:\/\/.*\.vercel\.app$/, // Allow any Vercel preview domains
-  /^http:\/\/192\.168\.\d+\.\d+:5173$/, // Allow local network IPs
-  /^http:\/\/10\.\d+\.\d+\.\d+:5173$/, // Allow 10.x.x.x network
-  /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:5173$/ // Allow 172.16-31.x.x network
-];
+// Initialize Socket.IO using the sockets module
+const { io, gameHub } = initializeSocketIO(server, activeGames, db, registerMainSocketHandlers);
 
-// Only log Socket.IO configuration in development
-if (isDevelopment || isLocalhost) {
-  logger.debug('🔌 Socket.IO CORS Configuration:');
-  logger.debug('  Environment SOCKET_CORS_ORIGIN:', process.env.SOCKET_CORS_ORIGIN || 'Not set');
-  logger.debug('  Socket origins include Vercel domain: ✅');
-}
-
-const io = new Server(server, {
-    cors: {
-        origin: socketAllowedOrigins,
-        methods: ['GET', 'POST'],
-        credentials: true
-    },
-});
+// Export function to get Socket.IO instance
+module.exports.getIO = () => io;
+// Export function to get GameHub instance  
+module.exports.getGameHub = () => gameHub;
 
 // Setup function to enable enhanced host handlers for host control games
 function setupHostHandlers(socket, gameCode, gameId) {
@@ -595,16 +139,10 @@ function setupHostHandlers(socket, gameCode, gameId) {
   }
 }
 
-// Export function to get Socket.IO instance
-module.exports.getIO = () => io;
-
-// Store active games in memory (you could also use Redis for production)
-const activeGames = new Map();
-
 // Initialize the active game updater with the activeGames reference
 activeGameUpdater.setActiveGamesRef(activeGames);
 
-// Phase 6: Initialize Host Socket Handlers (after activeGames is defined)
+// Initialize Host Socket Handlers (after io and activeGames are defined)
 const hostHandlers = new HostSocketHandlers(io, activeGames);
 
 // Helper function to check if question phase is complete and handle transitions
@@ -678,416 +216,40 @@ const checkForQuestionCompletion = (gameCode) => {
 };
 
 // Helper function to show explanation for current question
+// Moved to domain/game/actions.js - keeping wrapper for compatibility
 const showQuestionExplanation = (gameCode) => {
-  const activeGame = activeGames.get(gameCode);
-  if (!activeGame) return;
-  
-  const currentQuestion = activeGame.questions[activeGame.currentQuestionIndex];
-  const gameSettings = activeGame.game_settings || {};
-  
-  if (isDevelopment || isLocalhost) {
-    logger.debug(`💡 Showing explanation for question ${activeGame.currentQuestionIndex + 1} in game ${gameCode}`);
-  }
-  
-  // Calculate current standings for leaderboard
-  const leaderboard = Array.from(activeGame.players.values())
-    .map(player => ({
-      name: player.name,
-      score: player.score || 0,
-      streak: player.streak || 0
-    }))
-    .sort((a, b) => b.score - a.score)
-    .map((player, index) => ({
-      ...player,
-      rank: index + 1
-    }));
-
-  // Prepare explanation data with leaderboard
-  const explanationData = {
-    questionId: currentQuestion.id,
-    questionNumber: activeGame.currentQuestionIndex + 1,
-    totalQuestions: activeGame.questions.length,
-    correctAnswer: currentQuestion.correctIndex,
-    correctOption: currentQuestion.options[currentQuestion.correctIndex],
-    
-    // Explanation content from database
-    explanation: {
-      title: currentQuestion._dbData?.explanation_title || currentQuestion.explanation_title,
-      text: currentQuestion._dbData?.explanation_text || currentQuestion.explanation_text,
-      image_url: currentQuestion._dbData?.explanation_image_url || currentQuestion.explanation_image_url
-    },
-    
-    // Flattened leaderboard data for consistency with showLeaderboard events
-    standings: leaderboard,
-    isGameOver: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length,
-    isLastQuestion: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length,
-    answerStats: calculateAnswerStatistics(activeGame.currentAnswers, currentQuestion),
-    
-    // Timing - use explanationTime from settings (converted to ms)
-    explanationTime: (gameSettings.explanationTime || 30) * 1000,
-    autoAdvance: gameSettings.autoAdvance !== false,
-    hybridMode: gameSettings.hybridMode || false  // Include hybrid mode info
-  };
-  
-  // Send explanation with leaderboard to all players immediately
-  if (isDevelopment || isLocalhost) {
-    logger.debug(`📊 Sending showExplanation to room ${gameCode}`);
-    logger.debug(`📊 Active players in room: ${Array.from(activeGame.players.keys())}`);
-    logger.debug(`📊 Sockets in room ${gameCode}: ${Array.from(io.sockets.adapter.rooms.get(gameCode) || [])}`);
-  }
-  
-  // Small delay to ensure all reconnected players are properly in the room
-  setTimeout(() => {
-    io.to(gameCode).emit('showExplanation', explanationData);
-    
-    if (isDevelopment || isLocalhost) {
-      logger.debug(`📊 showExplanation event sent to room ${gameCode}`);
-    }
-  }, 100); // 100ms delay
-  
-  // Update game state for reconnection support
-  activeGame.showingResults = true;
-  activeGame.isTimerRunning = false;
-  activeGame.lastExplanationData = explanationData;
-  
-  // Set explanation timer tracking
-  activeGame.explanationStartTime = Date.now();
-  activeGame.explanationDuration = explanationData.explanationTime;
-  activeGame.explanationEndTime = Date.now() + explanationData.explanationTime;
-  
-  // Clear question timer if running
-  if (activeGame.questionTimer) {
-    clearInterval(activeGame.questionTimer);
-    activeGame.questionTimer = null;
-  }
-  
-  // Send individual player answer data to each player
-  for (const [socketId, player] of activeGame.players) {
-    const playerAnswerData = getCurrentPlayerAnswerData(activeGame.currentAnswers, player.name);
-    if (playerAnswerData) {
-      io.to(socketId).emit('playerAnswerData', {
-        questionId: currentQuestion.id,
-        ...playerAnswerData
-      });
-      if (isDevelopment || isLocalhost) {
-        logger.debug(`📊 Sent playerAnswerData to ${player.name} (${socketId}) during explanation`);
-      }
-    } else {
-      if (isDevelopment || isLocalhost) {
-        logger.warn(`⚠️ No answer data found for player ${player.name} when sending explanation data`);
-      }
-    }
-  }
-
-  // After explanation, proceed to next question (leaderboard already shown during explanation)
-  // In hybrid mode, explanations wait for manual host advance
-  if (gameSettings.hybridMode) {
-    // Hybrid mode: Don't auto-advance after explanations, wait for host
-    if (isDevelopment || isLocalhost) {
-      logger.debug(`🔄 Hybrid mode: Waiting for host to advance after explanation for question ${activeGame.currentQuestionIndex + 1}`);
-    }
-  } else if (gameSettings.autoAdvance !== false) {
-    // Auto mode: Auto-advance after explanation time
-    setTimeout(async () => {
-      // Don't show additional leaderboard after explanation since it's already shown during explanation
-      if (isDevelopment || isLocalhost) {
-        logger.debug(`⏭️ Auto mode: Proceeding to next question after explanation for question ${activeGame.currentQuestionIndex + 1}`);
-      }
-      await proceedToNextQuestion(gameCode);
-    }, explanationData.explanationTime);
-    
-    if (isDevelopment || isLocalhost) {
-      logger.debug(`⏰ Set explanation timer for ${explanationData.explanationTime}ms for question ${activeGame.currentQuestionIndex + 1}`);
-    }
-  } else {
-    // Manual mode: Wait for host to advance
-    if (isDevelopment || isLocalhost) {
-      logger.debug(`⏸️ Manual mode: Waiting for host to advance after explanation for question ${activeGame.currentQuestionIndex + 1}`);
-    }
-  }
+  return gameActions.showQuestionExplanation(gameCode, activeGames, gameHub, logger, GameSettingsService, proceedToNextQuestion);
 };
 
 // Helper function to show intermediate leaderboard
+// Moved to domain/game/actions.js - keeping wrapper for compatibility
 const showIntermediateLeaderboard = (gameCode) => {
-  const activeGame = activeGames.get(gameCode);
-  if (!activeGame) return;
-  
-  const gameSettings = activeGame.game_settings || {};
-  
-  if (isDevelopment || isLocalhost) {
-    logger.debug(`🏆 Showing intermediate leaderboard for game ${gameCode}`);
-  }
-  
-  // Calculate current standings
-  const leaderboard = Array.from(activeGame.players.values())
-    .map(player => ({
-      name: player.name,
-      score: player.score || 0,
-      streak: player.streak || 0
-    }))
-    .sort((a, b) => b.score - a.score)
-    .map((player, index) => ({
-      ...player,
-      rank: index + 1
-    }));
-  
-  // Get current question for answer data
-  const currentQuestion = activeGame.questions[activeGame.currentQuestionIndex];
-  
-  // Prepare leaderboard data
-  const leaderboardData = {
-    questionNumber: activeGame.currentQuestionIndex + 1,
-    totalQuestions: activeGame.questions.length,
-    standings: leaderboard,
-    isGameOver: (activeGame.currentQuestionIndex + 1) >= activeGame.questions.length,
-    displayTime: (gameSettings.explanationTime || 30) * 1000, // Use explanation time setting
-    explanationTime: (gameSettings.explanationTime || 30) * 1000, // Also include for frontend consistency
-    autoAdvance: gameSettings.autoAdvance !== false,
-    hybridMode: gameSettings.hybridMode || false,  // Include hybrid mode info
-    
-    // Add answer stats and correct answer for consistency with explanation events
-    correctAnswer: currentQuestion.correctIndex,
-    correctOption: getCorrectAnswerText(currentQuestion),
-    answerStats: calculateAnswerStatistics(activeGame.currentAnswers, currentQuestion)
-  };
-  
-  // Send leaderboard to all players immediately
-  io.to(gameCode).emit('showLeaderboard', leaderboardData);
-  
-  // Update game state for reconnection support
-  activeGame.showingResults = true;
-  activeGame.isTimerRunning = false;
-  activeGame.lastExplanationData = leaderboardData;
-  
-  // Set leaderboard timer tracking
-  activeGame.explanationStartTime = Date.now();
-  activeGame.explanationDuration = leaderboardData.explanationTime;
-  activeGame.explanationEndTime = Date.now() + leaderboardData.explanationTime;
-  
-  // Clear question timer if running
-  if (activeGame.questionTimer) {
-    clearInterval(activeGame.questionTimer);
-    activeGame.questionTimer = null;
-  }
-  
-  // Send individual player answer data to each player
-  for (const [socketId, player] of activeGame.players) {
-    const playerAnswerData = getCurrentPlayerAnswerData(activeGame.currentAnswers, player.name);
-    if (playerAnswerData) {
-      io.to(socketId).emit('playerAnswerData', {
-        questionId: currentQuestion.id,
-        ...playerAnswerData
-      });
-      if (isDevelopment || isLocalhost) {
-        logger.debug(`📊 Sent playerAnswerData to ${player.name} (${socketId}) during leaderboard`);
-      }
-    } else {
-      if (isDevelopment || isLocalhost) {
-        logger.warn(`⚠️ No answer data found for player ${player.name} when sending leaderboard data`);
-      }
-    }
-  }
-
-  // Auto-advance to next question or end game 
-  // In hybrid mode, leaderboards wait for host (like explanations)
-  // In manual mode, everything waits for host
-  if (gameSettings.hybridMode) {
-    // Hybrid mode: Wait for host to advance from leaderboard
-    if (isDevelopment || isLocalhost) {
-      logger.debug(`🔄 Hybrid mode: Waiting for host to advance after leaderboard for question ${activeGame.currentQuestionIndex + 1}`);
-    }
-  } else if (gameSettings.autoAdvance !== false) {
-    setTimeout(async () => {
-      await proceedToNextQuestion(gameCode);
-    }, leaderboardData.displayTime);
-  } else {
-    if (isDevelopment || isLocalhost) {
-      logger.debug(`⏸️ Manual advance mode - waiting for host to continue`);
-    }
-  }
+  return gameActions.showIntermediateLeaderboard(gameCode, activeGames, gameHub, logger, proceedToNextQuestion);
 };
 
 // Helper function to get correct answer text
-const getCorrectAnswerText = (question) => {
-  if (!question.options || !question.correct_answer_index) return null;
-  
-  const correctIndex = question.correct_answer_index;
-  if (correctIndex >= 0 && correctIndex < question.options.length) {
-    return question.options[correctIndex];
-  }
-  
-  return null;
-};
+// Moved to domain/game/explanation.js - keeping wrapper for compatibility
+const getCorrectAnswerText = require('./domain/game/explanation').getCorrectAnswerText;
 
 // Helper function to get current player answer data
-const getCurrentPlayerAnswerData = (answers, playerName) => {
-  const playerAnswer = answers.find(answer => answer.playerName === playerName);
-  if (playerAnswer) {
-    return {
-      selectedOption: playerAnswer.selectedOption,
-      isCorrect: playerAnswer.isCorrect,
-      points: playerAnswer.points,
-      timeTaken: playerAnswer.timeTaken,
-      answeredAt: playerAnswer.answeredAt
-    };
-  }
-  return null;
-};
-
-// Helper function to calculate answer statistics
-const calculateAnswerStatistics = (answers, question) => {
-  const stats = {
-    totalAnswers: answers.length,
-    correctCount: 0,
-    optionCounts: question.options.map(() => 0),
-    correctPercentage: 0
-  };
-  
-  answers.forEach(answer => {
-    if (answer.isCorrect) stats.correctCount++;
-    if (answer.selectedOption >= 0 && answer.selectedOption < stats.optionCounts.length) {
-      stats.optionCounts[answer.selectedOption]++;
-    }
-  });
-  
-  stats.correctPercentage = stats.totalAnswers > 0 ? 
-    Math.round((stats.correctCount / stats.totalAnswers) * 100) : 0;
-  
-  return stats;
-};
+// Moved to domain/game/statistics.js - keeping wrapper for compatibility
+const getCurrentPlayerAnswerData = require('./domain/game/statistics').getCurrentPlayerAnswerData;
 
 // Helper function to proceed to next question
+// Moved to domain/game/actions.js - keeping wrapper for compatibility
 const proceedToNextQuestion = async (gameCode) => {
-  const activeGame = activeGames.get(gameCode);
-  if (!activeGame) return;
-  
-  // Prevent double question sending
-  if (activeGame.questionInProgress) {
-    if (isDevelopment || isLocalhost) {
-      logger.debug(`⚠️ Question transition already in progress for game ${gameCode}`);
-    }
-    return;
-  }
-  
-  activeGame.questionInProgress = true;
-  
-  if (isDevelopment || isLocalhost) {
-    logger.debug(`➡️ Proceeding to next question in game ${gameCode}`);
-  }
-  
-  // Clear previous question timer and reset state
-  if (activeGame.questionTimer) {
-    clearInterval(activeGame.questionTimer);
-    activeGame.questionTimer = null;
-  }
-  activeGame.showingResults = false;
-  activeGame.lastExplanationData = null;
-  
-  // Move to next question
-  activeGame.currentQuestionIndex++;
-  
-  // Send next question or end game
-  await sendNextQuestion(gameCode);
-  
-  // Reset the flag after sending the question
-  setTimeout(() => {
-    if (activeGame) {
-      activeGame.questionInProgress = false;
-    }
-  }, 1000); // 1 second buffer
+  return gameActions.proceedToNextQuestion(gameCode, activeGames, sendNextQuestion, logger);
 };
 
 // Helper function to send next question
+// Moved to domain/game/actions.js - keeping wrapper for compatibility
 const sendNextQuestion = async (gameCode) => {
-  const activeGame = activeGames.get(gameCode);
-  if (!activeGame) return;
-
-  const questionIndex = activeGame.currentQuestionIndex;
-  const question = activeGame.questions[questionIndex];
-
-  if (!question) {
-    // Game over - send final results
-    await endGame(gameCode);
-    return;
-  }
-
-  // Reset answers for new question
-  activeGame.currentAnswers = [];
-  
-  // Update timing and state information for reconnection support
-  activeGame.currentQuestion = {
-    id: question.id,
-    question: question.question,
-    options: question.options,
-    type: question.type,
-    timeLimit: question.timeLimit,
-    correctIndex: question.correctIndex,
-    _dbData: question._dbData,
-    imageUrl: question.image_url
-  };
-  activeGame.timeRemaining = question.timeLimit;
-  activeGame.isTimerRunning = true;
-  activeGame.questionStartTime = Date.now();
-  activeGame.showingResults = false;
-
-  // Initialize player streaks if needed
-  for (const [playerId, player] of activeGame.players) {
-    if (!player.hasOwnProperty('streak')) {
-      player.streak = 0;
-    }
-  }
-
-  // Send question to all players and host with game settings applied
-  const gameFlowConfig = activeGame.gameFlowConfig || {};
-  
-  io.to(gameCode).emit('question', {
-    id: question.id,
-    question: question.question,
-    options: question.options,
-    type: question.type,
-    timeLimit: question.timeLimit, // This now comes from GameSettingsService
-    questionNumber: questionIndex + 1,
-    totalQuestions: activeGame.questions.length,
-    
-    // Enhanced settings from GameSettingsService
-    showProgress: question.showProgress !== undefined ? question.showProgress : true,
-    allowAnswerChange: question.allowAnswerChange !== undefined ? question.allowAnswerChange : false,
-    showCorrectAnswer: question.showCorrectAnswer !== undefined ? question.showCorrectAnswer : true,
-    
-    // Game flow configuration
-    autoAdvance: gameFlowConfig.autoAdvance !== undefined ? gameFlowConfig.autoAdvance : true,
-    hybridMode: gameFlowConfig.hybridMode || false,  // Include hybrid mode info
-    showExplanation: question.showExplanation !== undefined ? question.showExplanation : false,
-    explanationTime: question.explanationTime || gameFlowConfig.explanationTime || 30000,
-    
-    // Image support (preserved from transformation)
-    image_url: question.image_url,
-    _dbData: question._dbData // Contains explanation data
-  });
-
-  if (isDevelopment || isLocalhost) {
-    logger.debug(`📋 Sent question ${questionIndex + 1} to game ${gameCode} (${Math.round(question.timeLimit/1000)}s): ${question.question.substring(0, 50)}...`);
-  }
-  
-  // Start timer to track remaining time for reconnection
-  if (activeGame.questionTimer) {
-    clearInterval(activeGame.questionTimer);
-  }
-  
-  activeGame.questionTimer = setInterval(() => {
-    if (activeGame.timeRemaining <= 0) {
-      clearInterval(activeGame.questionTimer);
-      activeGame.isTimerRunning = false;
-      return;
-    }
-    
-    activeGame.timeRemaining -= 1000; // Decrease by 1 second
-  }, 1000);
+  return gameActions.sendNextQuestion(gameCode, activeGames, gameHub, logger, endGame);
 };
 
 // Helper function to update player rankings in database
 const updatePlayerRankings = async (activeGame) => {
-  if (!activeGame.id || !db) return;
+  if (!activeGame.id) return { success: false, error: 'No game ID' };
 
   try {
     // Calculate rankings based on current scores
@@ -1095,9 +257,11 @@ const updatePlayerRankings = async (activeGame) => {
       .filter(player => player.playerId) // Only include players with database IDs
       .map(player => ({
         playerId: player.playerId,
-        playerName: player.name,
+        name: player.name,
         score: player.score || 0,
-        streak: player.streak || 0
+        streak: player.streak || 0,
+        questionsAnswered: player.questionsAnswered || 0,
+        correctAnswers: player.correctAnswers || 0
       }))
       .sort((a, b) => b.score - a.score)
       .map((player, index) => ({
@@ -1105,396 +269,96 @@ const updatePlayerRankings = async (activeGame) => {
         rank: index + 1
       }));
 
-    // Bulk update player rankings
-    const updatePromises = playersArray.map(player => 
-      db.updateGamePlayer(activeGame.id, player.playerId, {
-        current_rank: player.rank
-      }).catch(error => {
-        logger.error(`❌ Failed to update rank for player ${player.playerName}:`, error);
-      })
-    );
-
-    await Promise.all(updatePromises);
+    // Use GameService to update rankings
+    const result = await gameService.updatePlayerRankings(activeGame, playersArray);
     
+    const { isDevelopment, isLocalhost } = require('./config/env').getEnvironment();
     if (isDevelopment || isLocalhost) {
       logger.debug(`✅ Updated rankings for ${playersArray.length} players in game ${activeGame.id}`);
     }
 
+    return result;
+
   } catch (error) {
     logger.error('❌ Error updating player rankings:', error);
+    return { success: false, error: error.message };
   }
 };
 
 // Helper function to end game
 // Helper function to create individual game results for each player
 const createGameResultsForPlayers = async (activeGame, scoreboard) => {
-  if (!db || !activeGame.id) return;
+  if (!activeGame.id) {
+    return { 
+      successful: 0, 
+      failed: 0, 
+      results: [],
+      success: false,
+      error: 'No game ID provided'
+    };
+  }
 
   try {
-    const gameResultsPromises = Array.from(activeGame.players.values())
-      .filter(player => player.dbId) // Only process players with database IDs
-      .map(async (player) => {
-        try {
-          // First verify the player still exists in game_players table
-          const { data: playerExists, error: checkError } = await db.supabaseAdmin
-            .from('game_players')
-            .select('id')
-            .eq('id', player.dbId)
-            .single();
+    // Use ResultsService to create game results
+    const result = await resultsService.createGameResultsForPlayers(activeGame, scoreboard);
 
-          if (checkError || !playerExists) {
-            logger.warn(`⚠️ Player ${player.name} (${player.dbId}) not found in game_players table, skipping result creation`);
-            logger.debug(`Debug info: checkError=${checkError?.message}, playerExists=${!!playerExists}`);
-            return { success: false, error: 'Player not found in game_players', playerId: player.id };
-          }
-
-          logger.debug(`✅ Verified player ${player.name} exists in game_players table with ID: ${player.dbId}`);
-
-          // Find player's scoreboard entry for rank
-          const scoreboardEntry = scoreboard.find(entry => entry.name === player.name);
-          const finalRank = scoreboardEntry ? scoreboardEntry.rank : 0;
-
-        // Calculate player statistics
-        const totalQuestions = activeGame.totalQuestions || activeGame.questions?.length || 0;
-        const totalCorrect = player.correctAnswers || 0;
-        const completionPercentage = totalQuestions > 0 ? ((totalCorrect / totalQuestions) * 100) : 0;
-        
-        // Calculate average response time (if available)
-        const responseTimes = player.responseTimes || [];
-        const averageResponseTime = responseTimes.length > 0 
-          ? Math.round(responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length)
-          : 0;
-
-        // Create game result record
-        const gameResultData = {
-          game_id: activeGame.id,
-          player_id: player.dbId, // Use game_players.id (foreign key reference)
-          final_score: player.score || 0,
-          final_rank: finalRank,
-          total_correct: totalCorrect,
-          total_questions: totalQuestions,
-          average_response_time: averageResponseTime,
-          longest_streak: player.longestStreak || player.streak || 0,
-          completion_percentage: Math.round(completionPercentage * 100) / 100 // Round to 2 decimal places
-        };
-
-        logger.debug(`🔍 Creating game result for ${player.name}:`, {
-          game_id: gameResultData.game_id,
-          player_id: gameResultData.player_id,
-          player_name: player.name,
-          final_score: gameResultData.final_score,
-          final_rank: gameResultData.final_rank
-        });
-
-      // Insert into database
-      const { data, error } = await db.supabaseAdmin
-        .from('game_results')
-        .insert(gameResultData)
-        .select()
-        .single();
-
-      if (error) {
-        logger.error(`❌ Failed to create game result for player ${player.name}:`, error);
-        return { success: false, error, playerId: player.id };
-      }
-
-      if (isDevelopment || isLocalhost) {
-        logger.database(`✅ Created game result for player ${player.name} (Score: ${player.score}, Rank: ${finalRank})`);
-      }
-
-      return { success: true, result: data, playerId: player.id };
-      
-        } catch (playerError) {
-          logger.error(`❌ Error creating result for player ${player.name}:`, playerError);
-          return { success: false, error: playerError.message, playerId: player.id };
-        }
-      });
-
-    const results = await Promise.allSettled(gameResultsPromises);
-    
-    const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
-    const failed = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)).length;
-
+    const { isDevelopment, isLocalhost } = require('./config/env').getEnvironment();
     if (isDevelopment || isLocalhost) {
-      logger.database(`📊 Game results creation summary: ${successful} successful, ${failed} failed`);
+      logger.database(`📊 Game results creation summary: ${result.results.successful} successful, ${result.results.failed} failed`);
     }
 
-    return { successful, failed, results };
+    return {
+      successful: result.results.successful,
+      failed: result.results.failed,
+      results: result.outcomes || [],
+      success: result.success,
+      error: result.error
+    };
+
   } catch (error) {
     logger.error('❌ Error in createGameResultsForPlayers:', error);
-    throw error;
+    return {
+      successful: 0,
+      failed: scoreboard?.length || 0,
+      results: [],
+      success: false,
+      error: error.message
+    };
   }
 };
 
 const endGame = async (gameCode) => {
-  const activeGame = activeGames.get(gameCode);
-  if (!activeGame) return;
-
-  // Prevent duplicate endGame calls for the same game
-  if (activeGame.status === 'finished' || activeGame._ending) {
-    if (isDevelopment || isLocalhost) {
-      logger.gameActivity(gameCode, `⚠️ endGame called but already finished/ending`);
-    }
-    return;
-  }
-
-  // Mark game as ending to prevent race conditions
-  activeGame._ending = true;
-
-  // Calculate final scoreboard
-  const scoreboard = Array.from(activeGame.players.values())
-    .map(player => ({
-      name: player.name,
-      score: player.score || 0,
-      streak: player.streak || 0
-    }))
-    .sort((a, b) => b.score - a.score)
-    .map((player, index) => ({
-      ...player,
-      rank: index + 1
-    }));
-
-  // Update game status
-  activeGame.status = 'finished';
-  activeGame.ended_at = new Date().toISOString();
-  
-  // Clean up timers
-  if (activeGame.questionTimer) {
-    clearInterval(activeGame.questionTimer);
-    activeGame.questionTimer = null;
-  }
-  activeGame.isTimerRunning = false;
-  activeGame.showingResults = false;
-
-  // Update database status to 'finished'
-  if (activeGame.id && db) {
-    try {
-      // Update final rankings in database before game ends
-      await updatePlayerRankings(activeGame);
-      
-      const statusResult = await db.updateGameStatus(activeGame.id, 'finished', {
-        ended_at: new Date().toISOString(),
-        current_players: activeGame.players.size
-      });
-      
-      if (statusResult.success) {
-        if (isDevelopment || isLocalhost) {
-          logger.database(`✅ Updated database game status to 'finished' for game ${activeGame.id}`);
-        }
-      } else {
-        logger.error(`❌ Failed to update database game status: ${statusResult.error}`);
-      }
-
-      // Increment times_played for the question set if this game was based on a question set
-      if (activeGame.question_set_id) {
-        try {
-          const incrementResult = await db.incrementQuestionSetTimesPlayed(activeGame.question_set_id);
-          if (incrementResult.success) {
-            if (incrementResult.skipped) {
-              if (isDevelopment || isLocalhost) {
-                logger.database(`⚠️ Skipped times_played increment for question set ${activeGame.question_set_id} (too recent)`);
-              }
-            } else {
-              if (isDevelopment || isLocalhost) {
-                logger.database(`✅ Incremented times_played for question set ${activeGame.question_set_id}`);
-              }
-            }
-          } else {
-            logger.error(`❌ Failed to increment times_played: ${incrementResult.error}`);
-          }
-        } catch (incrementError) {
-          logger.error('❌ Error incrementing times_played:', incrementError);
-        }
-      }
-    } catch (dbError) {
-      logger.error('❌ Database error updating game status:', dbError);
-    }
-  }
-
-  // Create individual game results for each player
-  if (activeGame.id && db) {
-    try {
-      await createGameResultsForPlayers(activeGame, scoreboard);
-    } catch (resultsError) {
-      logger.error('❌ Error creating game results:', resultsError);
-    }
-  }
-
-  // Send game over event
-  io.to(gameCode).emit('game_over', { scoreboard });
-
-  // Update last_played_at for the question set
-  if (activeGame.question_set_id) {
-    try {
-      const { error: updateError } = await db.supabaseAdmin
-        .from('question_sets')
-        .update({ 
-          last_played_at: new Date().toISOString()
-        })
-        .eq('id', activeGame.question_set_id);
-
-      if (updateError) {
-        logger.error('❌ Error updating last_played_at:', updateError);
-      } else {
-        logger.debug('✅ Updated last_played_at for question set:', activeGame.question_set_id);
-      }
-    } catch (error) {
-      logger.error('❌ Error updating last_played_at:', error);
-    }
-  }
-
-  // Emit game completion event for dashboard updates
-  if (activeGame.question_set_id && activeGame.hostId) {
-    io.emit('game_completed', { 
-      questionSetId: activeGame.question_set_id,
-      hostId: activeGame.hostId,
-      gameCode: gameCode,
-      playerCount: activeGame.players.size
-    });
-  }
-
-  if (isDevelopment || isLocalhost) {
-    logger.gameActivity(gameCode, `ended. Winner: ${scoreboard[0]?.name || 'No players'}`);
-  }
-
-  // Clean up the ending flag and optionally remove the game after a delay
-  activeGame._ending = false;
-  
-  // Optional: Remove the game from memory after a delay to prevent memory leaks
-  // setTimeout(() => {
-  //   activeGames.delete(gameCode);
-  //   if (isDevelopment || isLocalhost) {
-  //     logger.gameActivity(gameCode, `🗑️ Cleaned up from memory`);
-  //   }
-  // }, 30000); // Clean up after 30 seconds
+  return gameEndModule.endGame(gameCode, activeGames, gameHub, io, db, logger, updatePlayerRankings, createGameResultsForPlayers);
 };
 
 // ================================================================
-// SOCKET.IO EVENT HANDLERS
+// SOCKET.IO EVENT HANDLERS (Non-Session Restore)  
 // ================================================================
 
-io.on('connection', (socket) => {
-  if (isDevelopment || isLocalhost) {
-    logger.connection(`🔌 New user connected: ${socket.id}`);
-  }
-
-  // Initialize session restoration handlers for this socket
-  const sessionRestoreHandlers = new SessionRestoreHandlers(io, activeGames, db);
-
-  // Session restoration event handlers
-  socket.on('restoreSession', async (sessionData) => {
-    await sessionRestoreHandlers.handleSessionRestore(socket, sessionData);
-  });
-
-  // Host-specific restoration events (for compatibility)
-  socket.on('host:rejoinGame', async (sessionData) => {
-    const hostSessionData = { ...sessionData, isHost: true };
-    await sessionRestoreHandlers.handleSessionRestore(socket, hostSessionData);
-  });
-
-  // Player-specific restoration events (for compatibility)
-  socket.on('player:rejoinGame', async (sessionData) => {
-    const playerSessionData = { ...sessionData, isHost: false };
-    await sessionRestoreHandlers.handleSessionRestore(socket, playerSessionData);
-  });
-
-  // Legacy restoration events (for backward compatibility)
-  socket.on('requestStateRestoration', async (sessionData) => {
-    await sessionRestoreHandlers.handleSessionRestore(socket, sessionData);
-  });
-
-  socket.on('requestHostRestoration', async (sessionData) => {
-    const hostSessionData = { ...sessionData, isHost: true };
-    await sessionRestoreHandlers.handleSessionRestore(socket, hostSessionData);
-  });
-
-  socket.on('requestPlayerRestoration', async (sessionData) => {
-    const playerSessionData = { ...sessionData, isHost: false };
-    await sessionRestoreHandlers.handleSessionRestore(socket, playerSessionData);
-  });
-
-  // Additional session restoration helpers
-  socket.on('host:requestGameState', ({ gameId, room }) => {
-    try {
-      const gameCode = room;
-      const activeGame = activeGames.get(gameCode);
-      
-      if (activeGame) {
-        const connectedPlayers = Array.from(activeGame.players.values())
-          .filter(p => p.isConnected)
-          .map(p => ({
-            id: p.id,
-            name: p.name,
-            score: p.score,
-            joinedAt: p.joinedAt || Date.now()
-          }));
-
-        socket.emit('host:gameStateUpdate', {
-          gameCode,
-          gameId: activeGame.gameId,
-          status: activeGame.status,
-          players: connectedPlayers,
-          playerCount: connectedPlayers.length,
-          currentQuestionIndex: activeGame.currentQuestionIndex,
-          totalQuestions: activeGame.totalQuestions
-        });
-      } else {
-        socket.emit('host:gameNotFound', { gameCode, gameId });
-      }
-    } catch (error) {
-      logger.error('❌ Error getting game state:', error);
-      socket.emit('error', { message: 'Failed to get game state' });
-    }
-  });
-
-  socket.on('player:requestGameState', ({ playerName, room, gameId }) => {
-    try {
-      const gameCode = room;
-      const activeGame = activeGames.get(gameCode);
-      
-      if (activeGame) {
-        // Find player in game
-        let playerData = null;
-        for (const [playerId, player] of activeGame.players.entries()) {
-          if (player.name === playerName) {
-            playerData = player;
-            break;
-          }
-        }
-
-        if (playerData) {
-          socket.emit('player:gameStateUpdate', {
-            gameCode,
-            gameId: activeGame.gameId,
-            status: activeGame.status,
-            playerState: {
-              name: playerData.name,
-              score: playerData.score,
-              isReady: playerData.isReady
-            },
-            currentQuestionIndex: activeGame.currentQuestionIndex,
-            totalQuestions: activeGame.totalQuestions
-          });
-        } else {
-          socket.emit('player:notInGame', { playerName, gameCode });
-        }
-      } else {
-        socket.emit('player:gameNotFound', { gameCode, gameId });
-      }
-    } catch (error) {
-      logger.error('❌ Error getting player game state:', error);
-      socket.emit('error', { message: 'Failed to get game state' });
-    }
-  });
+/**
+ * Registers main game event handlers on socket
+ * Note: These handlers orchestrate game flow and delegate to domain modules and services
+ */
+function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
 
   // Create a new game
-  socket.on('createGame', async ({ hostId, questionSetId, settings }) => {
+  socket.on('createGame', async ({ hostId, questionSetId, settings }, callback) => {
     try {
+      // Validate payload
+      const payload = {
+        hostName: hostId || 'Host',
+        questionSetId,
+        settings
+      };
+      if (!validateSocketPayload('gameCreation', payload, callback)) {
+        return;
+      }
+
       if (isDevelopment || isLocalhost) {
         logger.game(`🎮 [BRIDGE] Creating game via Socket (Host Control Integration): Host ${hostId}, QuestionSet ${questionSetId}`);
       }
       
-      // Extract actual user ID from hostId (remove the temporary prefix)
+      // Extract actual user ID from hostId (handle prefixed format for backwards compatibility)
       const actualHostId = hostId.includes('host_') ? 
         hostId.split('_')[1] : hostId;
       
@@ -1508,13 +372,10 @@ io.on('connection', (socket) => {
       
       if (!gameTitle || !settings?.fromQuestionSet) {
         try {
-          const { data: questionSet, error: qsError } = await db.supabaseAdmin
-            .from('question_sets')
-            .select('title, play_settings')
-            .eq('id', questionSetId)
-            .single();
+          const questionSetResult = await gameService.getQuestionSetMetadata(questionSetId);
           
-          if (!qsError && questionSet) {
+          if (questionSetResult.success && questionSetResult.data) {
+            const questionSet = questionSetResult.data;
             gameTitle = gameTitle || questionSet.title;
             questionSetSettings = questionSet.play_settings || {};
             
@@ -1532,7 +393,7 @@ io.on('connection', (socket) => {
             }
           } else {
             if (isDevelopment) {
-              logger.warn(`⚠️ [BRIDGE] Could not fetch question set: ${qsError?.message || 'Not found'}`);
+              logger.warn(`⚠️ [BRIDGE] Could not fetch question set: ${questionSetResult?.error || 'Not found'}`);
             }
             gameTitle = gameTitle || 'クイズゲーム'; // Default fallback title
           }
@@ -1590,7 +451,7 @@ io.on('connection', (socket) => {
       if (isDevelopment) {
         logger.debug(`🔄 [BRIDGE] Creating Phase 6 compatible game in database...`);
       }
-      const dbResult = await db.createGame(gameData);
+      const dbResult = await gameService.createGame(gameData);
       
       if (!dbResult.success) {
         throw new Error(`Database game creation failed: ${dbResult.error}`);
@@ -1601,7 +462,7 @@ io.on('connection', (socket) => {
       // === INITIALIZE RELATED TABLES ===
       try {
         // 1. Create host session tracking
-        const hostSessionResult = await db.createHostSession(dbGame.id, actualHostId, {
+        const hostSessionResult = await hostOpsService.createHostSession(dbGame.id, actualHostId, {
           game_creation: true,
           session_type: 'game_host',
           initial_settings: enhancedGameSettings,
@@ -1614,7 +475,7 @@ io.on('connection', (socket) => {
         }
         
         // 2. Create initial analytics snapshot
-        const analyticsResult = await db.createAnalyticsSnapshot(dbGame.id, 'game_start', null, {
+        const analyticsResult = await hostOpsService.createAnalyticsSnapshot(dbGame.id, 'game_start', null, {
           initial_player_count: 0,
           game_settings: enhancedGameSettings,
           question_set_id: questionSetId,
@@ -1628,15 +489,12 @@ io.on('connection', (socket) => {
         
         // 3. Log the game creation action (if log_host_action function exists)
         try {
-          await db.supabaseAdmin.rpc('log_host_action', {
-            p_game_id: dbGame.id,
-            p_host_id: actualHostId,
-            p_action_type: 'game_created',
-            p_action_data: {
-              question_set_id: questionSetId,
-              initial_settings: enhancedGameSettings,
-              creation_method: 'dashboard'
-            }
+          await hostOpsService.logHostAction(dbGame.id, actualHostId, 'game_created', {
+            game_code: gameCode,
+            action_type: 'game_created',
+            question_set_data: { question_set_id: questionSetId },
+            game_settings: enhancedGameSettings,
+            creation_method: 'dashboard'
           });
         } catch (logError) {
           logger.warn(`⚠️ Failed to log host action: ${logError.message}`);
@@ -1744,8 +602,14 @@ io.on('connection', (socket) => {
   });
 
   // Join an existing game
-  socket.on('joinGame', async ({ playerName, gameCode, isAuthenticated = false, userId = null }) => {
+  socket.on('joinGame', async ({ playerName, gameCode, isAuthenticated = false, userId = null }, callback) => {
     try {
+      // Validate payload
+      const payload = { playerName, gameCode, playerId: socket.id };
+      if (!validateSocketPayload('gameJoin', payload, callback)) {
+        return;
+      }
+
       if (isDevelopment) {
         logger.debug(`👤 Join Game Request:
         Player: ${playerName}
@@ -1834,7 +698,7 @@ io.on('connection', (socket) => {
             }
           }
           
-          const result = await db.addPlayerToGame(gameUUID, playerData);
+          const result = await playerService.addToGame(gameUUID, playerData);
           
           if (result.success) {
             dbGamePlayer = result.gamePlayer;
@@ -1870,7 +734,7 @@ io.on('connection', (socket) => {
             // === LOG PLAYER JOIN ACTION ===
             try {
               const actionType = result.isReturningPlayer ? 'rejoined' : 'joined';
-              const joinActionResult = await db.createPlayerAction(
+              const joinActionResult = await playerService.recordAction(
                 gameUUID, 
                 playerUUID, 
                 'joined', // Use 'joined' for both new and returning players
@@ -1937,7 +801,7 @@ io.on('connection', (socket) => {
       try {
         socket.emit('joinedGame', {
           gameCode,
-          gameId: activeGame.gameId, // Add the UUID for session restoration
+          gameId: activeGame.id, // Add the UUID for session restoration
           playerCount: activeGame.players.size,
           gameStatus: activeGame.status,
           player: {
@@ -1981,7 +845,7 @@ io.on('connection', (socket) => {
         }
         
         // Emit playerJoined to all clients in the game room (including the host)
-        io.to(gameCode).emit('playerJoined', {
+        gameHub.toRoom(gameCode).emit('playerJoined', {
           player: {
             id: player.id,
             name: player.name,
@@ -2011,8 +875,14 @@ io.on('connection', (socket) => {
   });
 
   // Get current player list for a game
-  socket.on('getPlayerList', ({ gameCode }) => {
+  socket.on('getPlayerList', ({ gameCode }, callback) => {
     try {
+      // Validate payload
+      const payload = { gameCode, action: 'get_player_list', timestamp: Date.now() };
+      if (!validateSocketPayload('hostAction', payload, callback)) {
+        return;
+      }
+
       const activeGame = activeGames.get(gameCode);
       
       if (!activeGame) {
@@ -2048,8 +918,14 @@ io.on('connection', (socket) => {
   });
 
   // Start the game
-  socket.on('startGame', async ({ gameCode }) => {
+  socket.on('startGame', async ({ gameCode }, callback) => {
     try {
+      // Validate payload
+      const payload = { gameCode, action: 'start_game', timestamp: Date.now() };
+      if (!validateSocketPayload('hostAction', payload, callback)) {
+        return;
+      }
+
       if (isDevelopment) {
         logger.debug(`🚀 Start Game Request for: ${gameCode}`);
       }
@@ -2183,9 +1059,9 @@ io.on('connection', (socket) => {
       activeGame.hostSocketId = socket.id; // Set the host socket ID for manual advance verification
       
       // Update database status to 'active'
-      if (activeGame.id && db) {
+      if (activeGame.id) {
         try {
-          const statusResult = await db.updateGameStatus(activeGame.id, 'active', {
+          const statusResult = await gameService.updateGameStatus(activeGame.id, 'active', {
             started_at: new Date().toISOString(),
             current_players: activeGame.players.size
           });
@@ -2214,7 +1090,7 @@ io.on('connection', (socket) => {
       }
       
       // Notify all players that the game has started
-      io.to(gameCode).emit('gameStarted', {
+      gameHub.toRoom(gameCode).emit('gameStarted', {
         message: 'Game has started!',
         totalQuestions: questions.length,
         playerCount: activeGame.players.size,
@@ -2268,8 +1144,19 @@ io.on('connection', (socket) => {
   });
 
   // Handle player answers
-  socket.on('answer', async ({ gameCode, questionId, selectedOption, timeTaken }) => {
+  socket.on('answer', async ({ gameCode, questionId, selectedOption, timeTaken }, callback) => {
     try {
+      // Validate payload
+      const payload = {
+        gameCode,
+        playerId: socket.id,
+        answer: selectedOption,
+        timestamp: Date.now()
+      };
+      if (!validateSocketPayload('answerSubmission', payload, callback)) {
+        return;
+      }
+
       if (isDevelopment || isLocalhost) {
         logger.debug(`💭 Answer received:
         Game: ${gameCode}
@@ -2308,16 +1195,17 @@ io.on('connection', (socket) => {
       const isCorrect = selectedOption === currentQuestion.correctIndex;
       
       // Record the answer in the database for detailed analytics
-      if (activeGame.id && db && player.dbId) {
+      if (activeGame.id && player.dbId) {
         try {
-          await db.submitPlayerAnswer({
+          await playerService.recordAnswer({
             player_id: player.dbId,
             game_id: activeGame.id,
             question_id: questionId,
-            answer_choice: selectedOption,
+            answer_id: selectedOption?.toString(), // Convert to string for consistency
             answer_text: currentQuestion.options?.[selectedOption] || null,
             is_correct: isCorrect,
-            response_time: timeTaken ? Math.round(timeTaken * 1000) : null // Convert to milliseconds
+            time_taken: timeTaken ? Math.round(timeTaken * 1000) : null, // Convert to milliseconds
+            points_earned: scoreData?.points || 0
           });
           
           if (isDevelopment || isLocalhost) {
@@ -2377,9 +1265,9 @@ io.on('connection', (socket) => {
       player.responseTimes.push(timeTaken || 0);
       
       // Update player in database with current stats
-      if (activeGame.id && db && player.playerId) {
+      if (activeGame.id && player.playerId) {
         try {
-          await db.updateGamePlayer(activeGame.id, player.playerId, {
+          await gameService.updateGamePlayer(activeGame.id, player.playerId, {
             current_score: player.score,
             current_streak: player.streak,
             // Note: current_rank will be updated after all answers are processed
@@ -2422,7 +1310,7 @@ io.on('connection', (socket) => {
         }))
         .sort((a, b) => b.score - a.score);
       
-      io.to(gameCode).emit('scoreboard_update', {
+      gameHub.toRoom(gameCode).emit('scoreboard_update', {
         standings: playerStandings,
         answeredCount: activeGame.currentAnswers.length,
         totalPlayers: activeGame.players.size
@@ -2495,7 +1383,21 @@ io.on('connection', (socket) => {
   socket.on('host:requestPlayerList', ({ room }) => {
     try {
       const gameCode = room;
-      const players = sessionRestoreHandlers.getCurrentPlayers(gameCode);
+      const activeGame = activeGames.get(gameCode);
+      if (!activeGame) {
+        socket.emit('error', { message: 'Game not found' });
+        return;
+      }
+      const players = Array.from(activeGame.players.values())
+        .filter(p => p.isConnected)
+        .map(p => ({
+          id: p.id,
+          name: p.name,
+          score: p.score,
+          isAuthenticated: p.isAuthenticated,
+          isHost: p.isHost || false,
+          isConnected: p.isConnected,
+        }));
       
       socket.emit('host:playerListUpdate', {
         gameCode,
@@ -2603,7 +1505,7 @@ io.on('connection', (socket) => {
           // === LOG PLAYER DISCONNECT ACTION ===
           if (player.playerId && activeGame.id) {
             try {
-              const disconnectActionResult = await db.createPlayerAction(
+              const disconnectActionResult = await playerService.recordAction(
                 activeGame.id, 
                 player.playerId, 
                 'left',
@@ -2663,7 +1565,7 @@ io.on('connection', (socket) => {
           }
           
           // Notify other players
-          io.to(socket.gameCode).emit('playerDisconnected', {
+          gameHub.toRoom(socket.gameCode).emit('playerDisconnected', {
             playerId: socket.id,
             playerName: player.name,
             remainingPlayers: connectedPlayers.length,
@@ -2680,19 +1582,17 @@ io.on('connection', (socket) => {
           if (isDevelopment || isLocalhost) {
             logger.debug(`🎮 Host disconnected from game ${socket.hostOfGame}`);
           }
-          // Could transfer host to another player or end the game
         }
       }
     }
   });
-});
+}
 
 // ================================================================
 // SERVER STARTUP
 // ================================================================
 
-const PORT = 3001;
-const HOST = '0.0.0.0'; // Listen on all network interfaces
+const { port: PORT, host: HOST } = getServerConfig();
 server.listen(PORT, HOST, () => {
     logger.showConfig(); // Show logging configuration
     logger.info(`🚀 Server is running on ${HOST}:${PORT}`);

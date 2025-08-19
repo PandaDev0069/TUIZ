@@ -7,6 +7,9 @@ const QuestionFormatAdapter = require('../adapters/QuestionFormatAdapter');
 const QuestionService = require('../services/QuestionService');
 const GameSettingsService = require('../services/GameSettingsService');
 
+// Validation system
+const { validateSocketPayload } = require('../validation');
+
 /**
  * Host-specific Socket.IO event handlers
  * Implements real-time host control functionality
