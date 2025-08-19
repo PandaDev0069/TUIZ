@@ -310,11 +310,15 @@ const schemas = {
     const { hostName, questionSetId, settings } = payload;
     
     validators.required(hostName, 'hostName');
-    validators.stringLength(hostName, 'hostName', { min: 1, max: 30 });
+    validators.stringLength(hostName, 'hostName', { min: 1, max: 100 }); // Increased to accommodate UUIDs with prefixes
     
     if (questionSetId !== null && questionSetId !== undefined) {
-      validators.number(questionSetId, 'questionSetId');
-      validators.numberRange(questionSetId, 'questionSetId', { min: 1 });
+      validators.string(questionSetId, 'questionSetId'); // Changed from number to string for UUID
+      // Validate UUID format (optional but recommended)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(questionSetId)) {
+        throw new ValidationError('questionSetId must be a valid UUID', 'questionSetId', 'INVALID_FORMAT');
+      }
     }
     
     if (settings) {
