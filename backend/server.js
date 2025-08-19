@@ -489,9 +489,9 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
         
         // 3. Log the game creation action (if log_host_action function exists)
         try {
-          await hostOpsService.logHostAction(dbGame.id, actualHostId, 'game_created', {
+          await hostOpsService.logHostAction(dbGame.id, actualHostId, 'created_game', {
             game_code: gameCode,
-            action_type: 'game_created',
+            action_type: 'created_game',
             question_set_data: { question_set_id: questionSetId },
             game_settings: enhancedGameSettings,
             creation_method: 'dashboard'
@@ -1194,29 +1194,7 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
       // Validate the answer
       const isCorrect = selectedOption === currentQuestion.correctIndex;
       
-      // Record the answer in the database for detailed analytics
-      if (activeGame.id && player.dbId) {
-        try {
-          await playerService.recordAnswer({
-            player_id: player.dbId,
-            game_id: activeGame.id,
-            question_id: questionId,
-            answer_id: selectedOption?.toString(), // Convert to string for consistency
-            answer_text: currentQuestion.options?.[selectedOption] || null,
-            is_correct: isCorrect,
-            time_taken: timeTaken ? Math.round(timeTaken * 1000) : null, // Convert to milliseconds
-            points_earned: scoreData?.points || 0
-          });
-          
-          if (isDevelopment || isLocalhost) {
-            logger.debug(`📝 Recorded answer for ${player.name}: ${isCorrect ? 'correct' : 'incorrect'}`);
-          }
-        } catch (answerError) {
-          logger.error(`❌ Failed to record answer for ${player.name}:`, answerError);
-        }
-      }
-      
-      // Calculate points using the new advanced scoring system
+      // Calculate points using the new advanced scoring system (before recording)
       const gameFlowConfig = activeGame.gameFlowConfig || {};
       const scoreResult = calculateGameScore({
         question: currentQuestion,
@@ -1227,6 +1205,28 @@ function registerMainSocketHandlers(socket, io, activeGames, db, gameHub) {
       });
       
       const points = scoreResult.points;
+      
+      // Record the answer in the database for detailed analytics
+      if (activeGame.id && player.playerId) {
+        try {
+          await playerService.recordAnswer({
+            player_id: player.playerId, // Use player UUID, not game_players row ID
+            game_id: activeGame.id,
+            question_id: questionId,
+            answer_id: selectedOption?.toString(), // Convert to string for consistency
+            answer_text: currentQuestion.options?.[selectedOption] || null,
+            is_correct: isCorrect,
+            time_taken: timeTaken ? Math.round(timeTaken * 1000) : null, // Convert to milliseconds
+            points_earned: points || 0 // Use calculated points instead of scoreData
+          });
+          
+          if (isDevelopment || isLocalhost) {
+            logger.debug(`📝 Recorded answer for ${player.name}: ${isCorrect ? 'correct' : 'incorrect'}`);
+          }
+        } catch (answerError) {
+          logger.error(`❌ Failed to record answer for ${player.name}:`, answerError);
+        }
+      }
       
       if (isCorrect) {
         // Update player streak and score

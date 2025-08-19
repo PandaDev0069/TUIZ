@@ -138,6 +138,18 @@ function cleanupGameTimers(activeGame) {
     clearInterval(activeGame.questionTimer);
     activeGame.questionTimer = null;
   }
+  
+  // Clean up explanation timer
+  if (activeGame.explanationTimer) {
+    clearTimeout(activeGame.explanationTimer);
+    activeGame.explanationTimer = null;
+  }
+  
+  // Clean up leaderboard timer
+  if (activeGame.leaderboardTimer) {
+    clearTimeout(activeGame.leaderboardTimer);
+    activeGame.leaderboardTimer = null;
+  }
 }
 
 module.exports = {

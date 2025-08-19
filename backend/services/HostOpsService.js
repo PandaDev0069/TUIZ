@@ -95,7 +95,7 @@ class HostOpsService {
    * Log host action for audit trail
    * @param {string} gameId - Database game ID
    * @param {string} hostId - Host user ID
-   * @param {string} actionType - Type of action ('create_game', 'start_game', 'advance_question')
+   * @param {string} actionType - Type of action ('game_created', 'start_game', 'advance_question')
    * @param {Object} actionData - Action-specific data
    * @param {string} actionData.game_code - Game code
    * @param {string} actionData.action_type - Action type
@@ -113,12 +113,13 @@ class HostOpsService {
       });
 
       // Call the database RPC function for host action logging
+      // Note: Function signature is log_host_action(p_action_data, p_action_type, p_game_id, p_host_id, p_target_player_id)
       const { data, error } = await this.db.supabaseAdmin.rpc('log_host_action', {
+        p_action_data: actionData,
+        p_action_type: actionType,
         p_game_id: gameId,
         p_host_id: hostId,
-        p_action_type: actionType,
-        p_game_code: actionData.game_code,
-        p_action_data: actionData
+        p_target_player_id: null // Not applicable for game creation
       });
 
       if (error) {
